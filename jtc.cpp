@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define VERSION "1.17"
+#define VERSION "1.18"
 
 
 // option definitions

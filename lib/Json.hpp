@@ -587,20 +587,17 @@ class Jnode {
                          value_ = jnv->value_;
                          descendants_ = jnv->descendants_;
                         }
-
                         Jnode(Jnode &&jn): Jnode() {            // MC
                          auto *jnv = &jn.value();
                          if(jnv == nullptr)
                           { std::swap(type_, jn.type_); return; }
                          swap(*this, jn);
                         }
-
     Jnode &             operator=(const Jnode & jn) {           // CA
                          Jnode copy{jn};                        // if moved to param, clashes w. MA
                          swap(*this, copy);
                          return *this;
                         }
-
     Jnode &             operator=(Jnode &&jn) {                 // MA
                          auto *jnv = &jn.value();
                          if(jnv == nullptr)
@@ -816,7 +813,7 @@ class Jnode {
 };
 
 // class static definitions
-char Jnode::endl_{PRINT_PRT};                                   // default is a raw format
+char Jnode::endl_{PRINT_PRT};                                   // default is pretty format
 uint8_t Jnode::tab_{3};
 
 STRINGIFY(Jnode::ThrowReason, THROWREASON)
@@ -885,7 +882,7 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
     friend Jnode;
     friend Json;
     friend void         swap(Jnode::Iterator<T> &l, Jnode::Iterator<T> &r) {
-                         using std::swap;                       // enable ADL
+                         using std::swap;                           // enable ADL
                          swap(l.ji_, r.ji_);
                          swap(l.sn_.typeRef_(), r.sn_.typeRef_());  // supernode swapping requires
                                                                     // swapping of type_ values only
@@ -927,16 +924,13 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                          ji_(it.ji_) {
                          sn_.type_ = it.sn_.type_;
                         }
-
                         Iterator(Iterator &&it) {               // MC
                          swap(*this, it);
                         }
-
     Iterator &          operator=(Iterator it) {                // CA
                          swap(*this, it);
                          return *this;
                         }
-
     Iterator &          operator=(Iterator &&it) {              // MA
                          swap(*this, it);
                          return *this;
@@ -1311,7 +1305,6 @@ class Json{
                             WalkStep(void) = default;
                             WalkStep(std::string && l, Jsearch js): // enable emplacement
                              lexeme(std::move(l)), jsearch(js) {}
-        //WalkStep &          operator=(WalkStep &&) = default;
 
         std::string         lexeme;                             // lexeme w/o suffix and quatifier
         Jsearch             jsearch;                            // Jsearch type
@@ -1655,7 +1648,6 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
                          swap(l.ws_, r.ws_);
                          swap(l.jp_, r.jp_);
                          swap(l.pv_, r.pv_);
-                         //swap(l.sc_, r.sc_);
                          swap(l.sn_.typeRef_(), r.sn_.typeRef_());  // supernode swapping requires
                                                                     // swapping of type_ values only
                         }
@@ -1710,16 +1702,13 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
                          ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {//, sc_(it.sc_) {
                          sn_.type_ = it.sn_.type_;
                         }
-
                         iterator(iterator &&it) {               // MC
                          swap(*this, it);
                         }
-
     iterator &          operator=(iterator it) {                // CA
                          swap(*this, it);
                          return *this;
                         }
-
     iterator &          operator=(iterator &&it) {              // MA
                          swap(*this, it);
                          return *this;
@@ -1802,10 +1791,6 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
   std::vector<WalkStep> ws_;                                    // walk state vector (path)
     Json *              jp_;                                    // json pointer (for json().end())
     path_vector         pv_;                                    // path_vector
-    //std::map<Jnode *, std::vector<path_vector>>
-    //                    sc_;                                    // search cache:
-    // if a search lexeme is non-iterable, don't engage search cache, just find the walk iterator
-    // otherwise (if search cache is empty) build one and then return the entry from cache
     SuperJnode          sn_{Jnode::Neither};                    // super node
 
  private:
