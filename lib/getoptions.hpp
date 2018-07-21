@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, July 3, 2014
+ * Created by Dmitry Lyssenko, last updated: July 21, 2018
  *
  * this class is a simple wrapper of unix getopt with easy interface.
  *
@@ -11,11 +11,10 @@
  * and has following synopsis:
  *
  *    Getopt opt;
- *    try{
- *     opt.parse(argc, argv, format);
- *    }
- *    catch(Getopt::ThrowReason exp)
- *     { std::cout << "exception: " << Getopt::ThrowReason_[e] << std::endl; exit(0); }
+ *    try
+ *     { opt.parse(argc, argv, format); }
+ *    catch(stdException & e)
+ *     { std::cout << "exception: " << e.what() << std::endl; exit(e.code()); }
  *
  * Method parse() takes 3 arguments: main's standard (argc, argv) and optional format
  * "format" is the optional c-like std::string that follows the same syntax as in system getopt()
