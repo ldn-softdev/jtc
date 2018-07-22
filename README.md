@@ -41,7 +41,7 @@ here's the example steps:
 #### Quick usage guide:
 *run `jtc -g` for walk path explanations and additional usage examples*
 
-Consider following JSON (a mockup of a bookmark storage):
+Consider a following JSON (a mockup of a bookmark storage), stored in a file Bookmarks:
 ```
 {
 	"Bookmarks": [{
@@ -95,3 +95,20 @@ Consider following JSON (a mockup of a bookmark storage):
 	]
 }
 ```
+
+
+1. let's start with a simple thing: list all urls:
+'''
+bash $ jtc -w "<url>l+0" Bookmarks
+"https://www.nytimes.com/"
+"https://www.huffingtonpost.co.uk/"
+"https://www.dpreview.com/"
+"https://stackoverflow.com/"
+"https://en.cppreference.com/"
+```
+- search lexemes are enclosed in angular brackets '<', '>'
+- suffix 'l' instructs to search among labels only
+- quantifier '+0' instructs to find all occurrences starting from the first one (zero based)
+
+
+
