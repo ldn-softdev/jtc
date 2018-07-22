@@ -42,7 +42,7 @@ folder:
 #### Quick usage guide:
 *run `jtc -g` for walk path explanations and additional usage examples*
 
-Consider a following JSON (a mockup of a bookmark storage), stored in a file Bookmarks:
+Consider a following JSON (a mockup of a bookmark storage), stored in a file `Bookmarks`:
 ```
 {
 	"Bookmarks": [{
@@ -128,13 +128,13 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 based)
 5. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets '[', ']' and may have different meaning:
- * numerical offsets  (e.g.: '[0]', '5', etc) select a respective JSON child in the addressed
+  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
- * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
+  * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
 given index will be selected
- * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
+  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
 selected/found node, parent of a parent, etc
- * text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
+  * text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, run the series of cli gradually adding lexemes
@@ -245,7 +245,8 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0[-1][name]" -jl Bookmarks
 - remove (purge) entry `-p`
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
-say, let's delete all the stamps from the JSON:
+
+Say, let's delete all the stamps from the JSON:
 ```
 bash $ jtc -w"<stamp>l+0" -p Bookmarks
 {
