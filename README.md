@@ -106,13 +106,13 @@ bash $ jtc -w "<url>l+0" Bookmarks
 "https://en.cppreference.com/"
 ```
 
-- search lexemes are enclosed in angular brackets '<', '>'
+- search lexemes are enclosed in angular brackets `<`, `>`
 - suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifier (preceded with `+`) makes the path *iterable*
 
 
-2. dump all bookmark names from the 'Work' folder:
+2. dump all bookmark names from the `Work` folder:
 ```
 bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 "Stack Overflow"
@@ -125,7 +125,7 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 4. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
 based)
 5. `[name]`: select a node whose label is "name"
-- offsets enclosed into square brackets '[', ']' and may have different meaning:
+- offsets enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
   * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
