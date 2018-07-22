@@ -110,6 +110,14 @@ bash $ jtc -w "<url>l+0" Bookmarks
 
 - search lexemes are enclosed in angular brackets `<`, `>`
 - suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
+  * `r`: default (could be omitted), fully matches *JSON string* value
+  * `R`: same as `r`, but lexeme is a search RE
+  * `l`: fully matches *JSON label*
+  * `L`: same as `l`, but lexeme is a search RE
+  * `d`: fully matches *JSON number*
+  * `D`: same as `d`, but lexeme is an RE
+  * `b`: matches JSON boolean value, lexeme must be sppelled as `<true>b` or `<false>b` 
+  * `n`: matches JSON null value, lexeme value is ignored, could be like `<null>n`, or `<>n`
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifier (preceded with `+`) makes the path *iterable*
 
