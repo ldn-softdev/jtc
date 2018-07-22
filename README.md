@@ -1,6 +1,4 @@
-# jtc
-JSON test console
-
+# jtc - JSON test console
 
 #### Simple offline cli tool to manipulate JSON data format
 
@@ -299,5 +297,10 @@ the resulting JSON is only printed
 - options `-i` and `-u` require an argument in a fully qualified JSON notation
 
 
-for more examples and a complete options list run *`jtc -h`* and *`jtc -g`*
+for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
+
+
+##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
+
+
 
