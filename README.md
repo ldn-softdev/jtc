@@ -42,10 +42,57 @@ here's the example steps:
 *run `jtc -g` for walk path explanations and additional usage examples*
 
 Consider following JSON (a mockup of a bookmark storage):
+>{
+>	"Bookmarks": [{
+>			"stamp": "2018-07-22, 12:05:19",
+>			"name": "Personal",
+>			"children": [{
+>					"stamp": "2018-07-22, 12:05:19",
+>					"name": "News",
+>					"children": [{
+>							"stamp": "2018-07-22, 12:05:19",
+>							"name": "The New York Times",
+>							"url": "https://www.nytimes.com/"
+>						},
+>						{
+>							"stamp": "2018-07-22, 12:05:19",
+>							"name": "HuffPost UK",
+>							"url": "https://www.huffingtonpost.co.uk/"
+>						}
+>					]
+>				},
 >
+>				{
+>					"stamp": "2018-07-22, 12:05:19",
+>					"name": "Photography",
+>					"children": [{
+>							"stamp": "2018-07-22, 12:05:19",
+>							"name": "Digital Photography Review",
+>							"url": "https://www.dpreview.com/"
+>						}
 >
+>					]
+>				}
+>			]
+>		},
+>		{
+>			"stamp": "2018-07-22, 12:07:29",
+>			"name": "Work",
+>			"children": [{
+>					"stamp": "2018-07-22, 12:05:19",
+>					"name": "Stack Overflow",
+>					"url": "https://stackoverflow.com/"
+>				},
+>				{
+>					"stamp": "2018-07-22, 12:05:19",
+>					"name": "C++ reference",
+>					"url": "https://en.cppreference.com/"
+>				}
+>			]
 >
-
+>		}
+>	]
+>}
 
 
 
