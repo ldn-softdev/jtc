@@ -501,8 +501,8 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom,
                 << ", actuals: " << actual_instances.size() << endl;
   output_by_iterator(wpi[actual_instances.front()], actual_instances.size(), opt, jout);
  }
- else
-  wpi.clear();                                                  // normally should never be the case
+ else                                                           // normally should never be the case
+  wpi.clear();                                                  // in case, avoiding endless loop
 }
 
 
