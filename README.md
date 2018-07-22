@@ -128,13 +128,13 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 based)
 5. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets '[', ']' and may have different meaning:
--- numerical offsets  (e.g.: '[0]', '5', etc) select a respective JSON child in the addressed
+ * numerical offsets  (e.g.: '[0]', '5', etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
--- numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
+ * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
 given index will be selected
--- numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
+ * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
 selected/found node, parent of a parent, etc
--- text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
+ * text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, run the series of cli gradually adding lexemes
