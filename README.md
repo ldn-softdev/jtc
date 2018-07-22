@@ -45,18 +45,18 @@ Consider a following JSON (a mockup of a bookmark storage), stored in a file Boo
 ```
 {
 	"Bookmarks": [{
-			"stamp": "2018-07-22, 12:05:19",
+			"stamp": "2017-01-22, 12:05:19",
 			"name": "Personal",
 			"children": [{
-					"stamp": "2018-07-22, 12:05:19",
+					"stamp": "2011-10-02, 12:05:19",
 					"name": "News",
 					"children": [{
-							"stamp": "2018-07-22, 12:05:19",
+							"stamp": "2017-10-03, 12:05:19",
 							"name": "The New York Times",
 							"url": "https://www.nytimes.com/"
 						},
 						{
-							"stamp": "2018-07-22, 12:05:19",
+							"stamp": "2017-11-23, 12:05:19",
 							"name": "HuffPost UK",
 							"url": "https://www.huffingtonpost.co.uk/"
 						}
@@ -64,10 +64,10 @@ Consider a following JSON (a mockup of a bookmark storage), stored in a file Boo
 				},
 
 				{
-					"stamp": "2018-07-22, 12:05:19",
+					"stamp": "2017-02-27, 12:05:19",
 					"name": "Photography",
 					"children": [{
-							"stamp": "2018-07-22, 12:05:19",
+							"stamp": "2017-02-27, 12:05:19",
 							"name": "Digital Photography Review",
 							"url": "https://www.dpreview.com/"
 						}
@@ -77,15 +77,15 @@ Consider a following JSON (a mockup of a bookmark storage), stored in a file Boo
 			]
 		},
 		{
-			"stamp": "2018-07-22, 12:07:29",
+			"stamp": "2018-03-06, 12:07:29",
 			"name": "Work",
 			"children": [{
-					"stamp": "2018-07-22, 12:05:19",
+					"stamp": "2018-05-01, 12:05:19",
 					"name": "Stack Overflow",
 					"url": "https://stackoverflow.com/"
 				},
 				{
-					"stamp": "2018-07-22, 12:05:19",
+					"stamp": "2018-06-21, 12:05:19",
 					"name": "C++ reference",
 					"url": "https://en.cppreference.com/"
 				}
@@ -97,8 +97,8 @@ Consider a following JSON (a mockup of a bookmark storage), stored in a file Boo
 ```
 
 
-1. let's start with a simple thing: list all urls:
-'''
+1. let's start with a simple thing: list all URLs:
+```
 bash $ jtc -w "<url>l+0" Bookmarks
 "https://www.nytimes.com/"
 "https://www.huffingtonpost.co.uk/"
@@ -106,9 +106,93 @@ bash $ jtc -w "<url>l+0" Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
+
 - search lexemes are enclosed in angular brackets '<', '>'
-- suffix 'l' instructs to search among labels only
-- quantifier '+0' instructs to find all occurrences starting from the first one (zero based)
+- suffix 'l' instructs to search among labels only (all suffixes; rRlLdDbn)
+- quantifier '+0' instructs to find all occurrences starting from the first (zero based),
+such quantifier (preceded with '+') makes the path *iterable*
+
+
+2. let's dump all bookmark names from the 'Work' folder:
+```
+bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks 
+"Stack Overflow"
+"C++ reference"
+```
+
+1. first find within JSON a location where a string is matching "Work"
+2. step up one tier in JSON tree hierarchy
+3. select a node with the label "children" (it'll be a JSON array)
+4. select all nodes in the array (stating from the first one, indexes are always zero based)
+5. select a node whose label is "name"
+- offsets enclosed into square brackets '[', ']' and may have different meaning:
+- - numerical offsets  (e.g.: '[0]', '5', etc) select a respective JSON child in the addressed node -
+a.k.a. numerical subscripts
+- - numerical offsets proceeded with '+' make the path *iterable* - all children starting with the
+given index will be selected
+- - numerical negative offsets (e.g.'[-1]', '[-2]', etc ) will select parent of currently selected/found
+node, parent of a parent, etc
+- - text offsets (e.g. '[name]', '[children]', etc) select nodes with corresponding labels among immediate
+children (i.e. textual subscripts)
+
+in order to understand better how walk path works, run the series of cli gradually adding lexems to the 
+path (perhaps with the option `-l` to see also the labels:
+```
+bash $ jtc -w "<Work>" -l Bookmarks 
+"name": "Work"
+bash $ jtc -w "<Work>[-1]" -l Bookmarks 
+{
+   "children": [
+      {
+         "name": "Stack Overflow",
+         "stamp": "2018-07-22, 12:05:19",
+         "url": "https://stackoverflow.com/"
+      },
+      {
+         "name": "C++ reference",
+         "stamp": "2018-07-22, 12:05:19",
+         "url": "https://en.cppreference.com/"
+      }
+   ],
+   "name": "Work",
+   "stamp": "2018-07-22, 12:07:29"
+}
+bash $ jtc -w "<Work>[-1][children]" -l Bookmarks 
+"children": [
+   {
+      "name": "Stack Overflow",
+      "stamp": "2018-07-22, 12:05:19",
+      "url": "https://stackoverflow.com/"
+   },
+   {
+      "name": "C++ reference",
+      "stamp": "2018-07-22, 12:05:19",
+      "url": "https://en.cppreference.com/"
+   }
+]
+bash $ jtc -w "<Work>[-1][children][0]" -l Bookmarks 
+{
+   "name": "Stack Overflow",
+   "stamp": "2018-07-22, 12:05:19",
+   "url": "https://stackoverflow.com/"
+}
+bash $ jtc -w "<Work>[-1][children][+0]" -l Bookmarks 
+{
+   "name": "Stack Overflow",
+   "stamp": "2018-07-22, 12:05:19",
+   "url": "https://stackoverflow.com/"
+}
+{
+   "name": "C++ reference",
+   "stamp": "2018-07-22, 12:05:19",
+   "url": "https://en.cppreference.com/"
+}
+bash $ jtc -w "<Work>[-1][children][+0][name]" -l Bookmarks 
+"name": "Stack Overflow"
+"name": "C++ reference"
+```
+
+
 
 
 
