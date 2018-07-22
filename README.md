@@ -97,6 +97,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 
+
 1. let's start with a simple thing: list all URLs:
 ```
 bash $ jtc -w "<url>l+0" Bookmarks
@@ -114,6 +115,7 @@ such quantifier (preceded with `+`) makes the path *iterable*
 
 
 
+
 2. dump all bookmark names from the `Work` folder:
 ```
 bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
@@ -121,12 +123,12 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 "C++ reference"
 ```
 
-1. `<Work>`: first find within JSON a location where a string is matching "Work"
-2. `[-1]`: step up one tier in JSON tree hierarchy
-3. `[children]`: select a node with the label "children" (it'll be a JSON array)
-4. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
+  1. `<Work>`: first find within JSON a location where a string is matching "Work"
+  2. `[-1]`: step up one tier in JSON tree hierarchy
+  3. `[children]`: select a node with the label "children" (it'll be a JSON array)
+  4. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
 based)
-5. `[name]`: select a node whose label is "name"
+  5. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
@@ -196,6 +198,7 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" -l Bookmarks
 
 
 
+
 3. dump all URL's names:
 ```
 bash $ jtc -w "<url>l+0[-1][name]" Bookmarks
@@ -205,6 +208,7 @@ bash $ jtc -w "<url>l+0[-1][name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
+
 
 
 
@@ -238,6 +242,7 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0[-1][name]" -jl Bookmarks
 - yes, multiple walks (`-w`) are allowed
 - option `-j` will wrap the walked outputs into a JSON, but not just
 - option `-l` together with `-j` will ensure relevant walks are grouped together (try without `-l`)
+
 
 
 
