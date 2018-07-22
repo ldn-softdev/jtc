@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, September 1, 2017. last modified July 20, 2018
+ * Created by Dmitry Lyssenko. last modified July 22, 2018
  *
  * yet another JSON implementation featuring:
  *  - easy c++ API
@@ -583,26 +583,30 @@ class Jnode {
                           { type_ = jn.type_; return; }         // supernode's type is parent's type
                          // why volatile? compiler (mistakenly) believes that address of a returned
                          // reference can never be null, hence optimizes out above 2 lines, which
-                         // lead to the crash eventually. "volatile" disables such optimization
+                         // leads to the crash eventually. "volatile" disables such optimization
                          type_ = jnv->type_;
                          value_ = jnv->value_;
                          descendants_ = jnv->descendants_;
                         }
                         Jnode(Jnode &&jn): Jnode() {            // MC
-                         auto *jnv = &jn.value();
-                         if(jnv == nullptr)
+                         auto * volatile jnv = &jn.value();     // same here: moved jn could be an
+                         if(jnv == nullptr)                     // empty supernoe, hence checking 
                           { std::swap(type_, jn.type_); return; }
-                         swap(*this, jn);
+                         swap(*this, jn);                       // swap will resolve supernode
                         }
     Jnode &             operator=(const Jnode & jn) {           // CA
                          Jnode copy{jn};                        // if moved to param, clashes w. MA
-                         swap(*this, copy);
+                         swap(*this, copy);                     // CC takes care of an empty jn 
                          return *this;
                         }
     Jnode &             operator=(Jnode &&jn) {                 // MA
-                         auto *jnv = &jn.value();
-                         if(jnv == nullptr)
-                          { std::swap(type_, jn.type_); return *this; }
+                         auto * volatile jnv = &jn.value();
+                         if(jnv == nullptr) {                   // if jn is an empty supernode
+                          std::swap(value_, jn.value_);         // they swap values w/o resolution
+                          std::swap(type_, jn.type_); 
+                          std::swap(descendants_, jn.descendants_); 
+                          return *this;
+                         }
                          swap(*this, jn);
                          return *this;
                         }
@@ -928,8 +932,8 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                         Iterator(Iterator &&it) {               // MC
                          swap(*this, it);
                         }
-    Iterator &          operator=(Iterator it) {                // CA
-                         swap(*this, it);
+    Iterator &          operator=(Iterator it) {                // CA (likely to clash with MA,
+                         swap(*this, it);                       // will see/fix later)
                          return *this;
                         }
     Iterator &          operator=(Iterator &&it) {              // MA
@@ -1706,8 +1710,8 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
                         iterator(iterator &&it) {               // MC
                          swap(*this, it);
                         }
-    iterator &          operator=(iterator it) {                // CA
-                         swap(*this, it);
+    iterator &          operator=(iterator it) {                // CA (likely to clash with MA,
+                         swap(*this, it);                       // will see/fix later)
                          return *this;
                         }
     iterator &          operator=(iterator &&it) {              // MA

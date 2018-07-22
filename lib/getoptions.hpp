@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last updated: July 21, 2018
+ * Created by Dmitry Lyssenko, last modified: July 21, 2018
  *
  * this class is a simple wrapper of unix getopt with easy interface.
  *

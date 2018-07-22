@@ -40,7 +40,7 @@ folder:
 #### Quick usage guide:
 *run `jtc -g` for walk path explanations and additional usage examples*
 
-Consider a following JSON (a mockup of a bookmark storage), stored in a file `Bookmarks`:
+Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
 ```
 {
 	"Bookmarks": [{
@@ -96,6 +96,7 @@ Consider a following JSON (a mockup of a bookmark storage), stored in a file `Bo
 ```
 
 
+
 1. let's start with a simple thing: list all URLs:
 ```
 bash $ jtc -w "<url>l+0" Bookmarks
@@ -110,6 +111,7 @@ bash $ jtc -w "<url>l+0" Bookmarks
 - suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifier (preceded with `+`) makes the path *iterable*
+
 
 
 2. dump all bookmark names from the `Work` folder:
@@ -193,6 +195,7 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" -l Bookmarks
 ```
 
 
+
 3. dump all URL's names:
 ```
 bash $ jtc -w "<url>l+0[-1][name]" Bookmarks
@@ -202,6 +205,7 @@ bash $ jtc -w "<url>l+0[-1][name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
+
 
 
 4. dump all URLs and their corresponding names, preferably wrap found pairs in JSON:
@@ -234,6 +238,7 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0[-1][name]" -jl Bookmarks
 - yes, multiple walks (`-w`) are allowed
 - option `-j` will wrap the walked outputs into a JSON, but not just
 - option `-l` together with `-j` will ensure relevant walks are grouped together (try without `-l`)
+
 
 
 5. There are 4 operations to modify source JSON:

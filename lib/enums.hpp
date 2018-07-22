@@ -1,4 +1,7 @@
-/* Macro definitions for ENUM stringification for in-class enum declarations:
+/* 
+ * Created by Dmitry Lyssenko. last modified July 22, 2018
+ *
+ * Macro definitions for ENUM stringification for in-class enum declarations:
  *
  * ENUM - will declare enum type w/o any possibility for stringification (mimics enum declaration)
  * ENUMSTR - will declare enum type with a possibility for later stringification

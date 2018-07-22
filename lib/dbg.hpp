@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, July 3, 2015
+ * Created by Dmitry Lyssenko, last modified July 3, 2015
  *
  *
  * an easy Debug class, featuring following qualities:
