@@ -55,32 +55,52 @@ ENUM(ReturnCodes, RETURN_CODES)
 #define OFF_REGEX (OFF_JSON + Jnode::end_of_trhow)              // offset for Regex exceptions
 
 
+
+// holding common resources, and declaration helper macro
+struct CommonResources {
+    Getopt              opt;
+    Json                json, jout;                             // source, output
+    DEBUGGABLE()
+};
+
+#define __REFX__(A) auto & A = __common_resource__.A;
+#define EXPOSE(X, ARGS...) \
+        auto & __common_resource__ = X; \
+        MACRO_TO_ARGS(__REFX__, ARGS)
+// usage: EXPOSE(cr, opt, DBG())
+
+
+
 // forward declarations
 typedef vector<Json::iterator> walk_vec;
 typedef deque<Json::iterator> walk_deq;
 
-int demux_opt(Getopt &, Json &, Debug &);
-void read_json(Getopt &, Json &, Debug &);
-int purge_json(Getopt &, Json &, Debug &);
-int insert_json(Getopt &, Json &, Debug &);
-int update_json(Getopt &, Json &, Debug &);
-int swap_json(Getopt &, Json &, Debug &);
-void collect_walks(Getopt &opt, Json &json, vector<walk_vec> & swap_points);
-int walk_json(Getopt &, Json &, Debug &);
-void walk_sequentual (Getopt &, Json &, Debug &);
-void walk_interleaved(Getopt &, Json &, Debug &);
-void print_walk(vector<walk_deq> &, Getopt &, Json &, Debug &);
+int demux_opt(CommonResources &);
+void read_json(CommonResources &);
+int insert_json(CommonResources &);
+int purge_json(CommonResources &);
+int update_json(CommonResources &);
+int swap_json(CommonResources &);
+void collect_walks(vector<walk_vec> & swap_points, CommonResources &);
+int walk_json(CommonResources &);
+void walk_sequentual (CommonResources &);
+void walk_interleaved(CommonResources &);
+void print_walk(vector<walk_deq> &walk_iterators, CommonResources &r);
 void process_offsets(vector<walk_deq> &, vector<vector<long>> &,
-                     size_t, vector<size_t> &, Getopt &, Json &jout, Debug &);
-size_t build_front_matrix(vector<vector<long>> &, const vector<walk_deq> &, Debug &);
-void output_by_iterator(walk_deq &, size_t, Getopt &, Json &);
+                     size_t, vector<size_t> &, CommonResources &);
+size_t build_front_matrix(vector<vector<long>> &, const vector<walk_deq> &, CommonResources &);
+void output_by_iterator(walk_deq &, size_t, CommonResources &);
 int wp_guide(void);
+
+
 
 
 
 int main(int argc, char *argv[]){
 
- Getopt opt;
+ CommonResources r;
+ EXPOSE(r, opt, json, jout, DBG())
+ 
  opt.prolog("\nJSON test console. Version " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
@@ -135,18 +155,19 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
   opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
 
+
  // prepare debugs
- Json json;
- json.tab(abs(opt[CHR(OPT_IND)])).raw(opt[CHR(OPT_RAW)]);
- DEBUGGABLE()
+ json.tab(abs(opt[CHR(OPT_IND)]))
+     .raw(opt[CHR(OPT_RAW)]);
  DBG().level(opt[CHR(OPT_DBG)])
       .use_ostream(cerr)
-      .severity(json);
+      .severity(json, jout);
+
 
  // read json and execute as per options
  try {
-  read_json(opt, json, DBG());
-  return demux_opt(opt, json, DBG());
+  read_json(r);
+  return demux_opt(r);
  }
  catch( stdException & e ) {
   cerr << opt.prog_name() << " exception: " << e.what() << endl;
@@ -162,8 +183,10 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
 
 
 
-void read_json(Getopt &opt, Json &json, Debug &DBG()) {
+void read_json(CommonResources &r) {
  // read and parse json
+ EXPOSE(r, opt, json, DBG())
+
  ifstream file(opt[0].c_str(), ifstream::in);
  bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
  DBG(0)
@@ -198,20 +221,22 @@ void write_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-int demux_opt(Getopt &opt, Json &json, Debug &DBG()) {
+int demux_opt(CommonResources &r) {
  // demultiplex functional options, execute only once
+ EXPOSE(r, opt, json)
+
  for(auto &op: opt)
   switch(op.second.hits() > 0? op.first: 0) {
    case CHR(OPT_INS):
-         return insert_json(opt, json, DBG());
+         return insert_json(r);
    case CHR(OPT_PRG):
-         return purge_json(opt, json, DBG());
+         return purge_json(r);
    case CHR(OPT_UPD):
-         return update_json(opt, json, DBG());
+         return update_json(r);
    case CHR(OPT_SWP):
-         return swap_json(opt, json, DBG());
+         return swap_json(r);
    case CHR(OPT_WLK):
-         return walk_json(opt, json, DBG());
+         return walk_json(r);
   }
 
  cout << json << endl;                                          // in case no exec options given
@@ -222,9 +247,13 @@ int demux_opt(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-int insert_json(Getopt &opt, Json &json, Debug &DBG()) {
+int insert_json(CommonResources &r) {
  // if wp points to an array - insert json as it is.
  // if wp is an object - then json must be object type itself and inserted by labels
+ auto &opt = r.opt;
+ auto &json = r.json;
+ auto &__dbg__ = r.DBG();
+
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when inserting" << endl;
   return RC_WLK_MISS;
@@ -263,8 +292,10 @@ int insert_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-int purge_json(Getopt &opt, Json &json, Debug &DBG()) {
+int purge_json(CommonResources &r) {
  // remove all json nodes pointed by iterator(s)
+ EXPOSE(r, opt, json, DBG())
+
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when purging" << endl;
   return RC_WLK_MISS;
@@ -292,8 +323,10 @@ int purge_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-int update_json(Getopt &opt, Json &json, Debug &DBG()) {
+int update_json(CommonResources &r) {
  // update json in -u into all iterator(s) points
+ EXPOSE(r, opt, json, DBG())
+
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when updating" << endl;
   return RC_WLK_MISS;
@@ -323,15 +356,17 @@ int update_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-int swap_json(Getopt &opt, Json &json, Debug &DBG()) {
+int swap_json(CommonResources &r) {
  // swap around nodes pointed by 2 walk paths
+ EXPOSE(r, opt, json, DBG())
+
  if(opt[CHR(OPT_WLK)].hits() != 2) {
   cerr << "error: exactly 2 -" STR(OPT_WLK) " must be given when swapping" << endl;
   return RC_WP_TWO;
  }
 
  vector<walk_vec> swaps{2};                                     // collect all walks in here
- collect_walks(opt, json, swaps);
+ collect_walks(swaps, r);
 
  size_t maxi = min(swaps[0].size(), swaps[1].size());
  for(size_t i = 0; i < maxi; ++i) {                             // swap only paired walks
@@ -351,8 +386,10 @@ int swap_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-void collect_walks(Getopt &opt, Json &json, vector<walk_vec> & sp) {
+void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
  // load up all swap iterators (swap points), check walk restrictions
+ EXPOSE(r, opt, json)
+
  long i = 0;
  for(auto &wp: opt[CHR(OPT_WLK)]) {
   for(auto it = json.walk(wp); it != json.end(); ++it)
@@ -365,8 +402,10 @@ void collect_walks(Getopt &opt, Json &json, vector<walk_vec> & sp) {
 
 
 
-int walk_json(Getopt &opt, Json &json, Debug &DBG()) {
+int walk_json(CommonResources &r) {
  // process demux sequential or interleaved walks
+ EXPOSE(r, opt, json, DBG())
+
  Json jdb;                                                      // integrity check in debugs only
  DBG(0) {
   DOUT() << "copying input json for integrity check (debug only)" << endl;
@@ -374,9 +413,9 @@ int walk_json(Getopt &opt, Json &json, Debug &DBG()) {
  }
 
  if(opt[CHR(OPT_WLK)].hits() >= 2 and not opt[CHR(OPT_SEQ)])     // no -n and more than 2 walks given
-  walk_interleaved(opt, json, DBG());
+  walk_interleaved(r);
  else
-  walk_sequentual(opt, json, DBG());
+  walk_sequentual(r);
 
  // check json integrity...
  DBG(0)
@@ -387,24 +426,25 @@ int walk_json(Getopt &opt, Json &json, Debug &DBG()) {
 
 
 
-void walk_sequentual(Getopt &opt, Json &json, Debug &DBG()) {
+void walk_sequentual(CommonResources &r) {
  // process walks sequentially
- Json jout = ARY{};                                             // output container for OPT_JSN
+ EXPOSE(r, opt, json, jout, DBG())
+ jout = ARY{};                                                  // output container for OPT_JSN
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // -n given, walk paths sequentially
   DBG(0) DOUT() << "walking path: " << wp << endl;
 
   for(auto jit = json.walk(wp); jit != jit.end(); ++jit) {
-   auto &r = *jit;
+   auto &rec = *jit;
     if( opt[CHR(OPT_JSN)] ) {                                   // -j option given
      walk_deq deq(1, jit);                                      // required by output_by_iterator
-     output_by_iterator(deq, 0, opt, jout);
+     output_by_iterator(deq, 0, r);
      continue;
    }                                                            // else, no -j given
    if( opt[CHR(OPT_LBL)] )                                      // -l given
-    if(not r.is_root() and r[-1].is_object())                   // if label exists
-     cout << '"' << r.label() << "\": ";
-   cout << r << endl;
+    if(not rec.is_root() and rec[-1].is_object())               // if label exists
+     cout << '"' << rec.label() << "\": ";
+   cout << rec << endl;
   }
  }
 
@@ -426,9 +466,10 @@ void walk_sequentual(Getopt &opt, Json &json, Debug &DBG()) {
 // 4. output the most actual iterator and remove it from the wpi
 // 5. repeat until entire wpi is empty
 
-void walk_interleaved(Getopt &opt, Json &json, Debug &DBG()) {
+void walk_interleaved(CommonResources &r) {
  // process interleaved walks
- Json jout = ARY{};                                             // output container for -j
+ EXPOSE(r, opt, json, jout, DBG())
+ jout = ARY{};                                             // output container for -j
  vector<walk_deq> wpi;
 
  for(const auto &walk_str: opt[CHR(OPT_WLK)]) {                 // process all -w arguments
@@ -447,32 +488,32 @@ void walk_interleaved(Getopt &opt, Json &json, Debug &DBG()) {
  }
 
  while( any_of(wpi.begin(), wpi.end(), [](walk_deq &wi){ return not wi.empty(); }) )
-  print_walk(wpi, opt, jout, DBG());
+  print_walk(wpi, r);
 
  if( opt[CHR(OPT_JSN)] ) cout << jout << endl;
 }
 
 
 
-void print_walk(vector<walk_deq> &wpi, Getopt &opt, Json &jout, Debug &DBG()) {
+void print_walk(vector<walk_deq> &wpi, CommonResources &r) {
  // build front iterators offset matrix: wpi may contain empty deque
  vector<vector<long>> fom(wpi.size());                          // front offset matrix
 
- size_t longest_walk = build_front_matrix(fom, wpi, DBG());
+ size_t longest_walk = build_front_matrix(fom, wpi, r);
 
  vector<size_t> actual_instances;
  for(size_t idx = 0; idx < fom.size(); ++idx)                   // init non-empty fom indices
   if(not fom[idx].empty()) actual_instances.push_back(idx);
 
- process_offsets(wpi, fom, longest_walk, actual_instances, opt, jout, DBG());
+ process_offsets(wpi, fom, longest_walk, actual_instances, r);
 }
 
 
 
-void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom,
-                     size_t longest_walk, vector<size_t> &actual_instances,
-                     Getopt &opt, Json &jout, Debug &DBG()) {
+void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t longest_walk, 
+                     vector<size_t> &actual_instances, CommonResources &r) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
+ EXPOSE(r, DBG())
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset=0; offset<longest_walk; ++offset) {          // go across all offsets
   vector<size_t> new_ai;
@@ -483,7 +524,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom,
     if(DBG()(2)) DOUT() << endl;
     DBG(2) DOUT() << "output instance: " << ai
                   << ", actuals: " << actual_instances.size() << endl;
-    output_by_iterator(wpi[ai], actual_instances.size(), opt, jout);
+    output_by_iterator(wpi[ai], actual_instances.size(), r);
     return;
    }
    if(DBG()(2)) DOUT() << ' ' << ai;
@@ -499,7 +540,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom,
  if(not actual_instances.empty()) {
   DBG(2) DOUT() << "output instance: " << actual_instances.front()
                 << ", actuals: " << actual_instances.size() << endl;
-  output_by_iterator(wpi[actual_instances.front()], actual_instances.size(), opt, jout);
+  output_by_iterator(wpi[actual_instances.front()], actual_instances.size(), r);
  }
  else                                                           // normally should never be the case
   wpi.clear();                                                  // in case, avoiding endless loop
@@ -508,8 +549,10 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom,
 
 
 size_t build_front_matrix(vector<vector<long>> &fom,
-                          const vector<walk_deq> &wpi, Debug &DBG()) {
+                          const vector<walk_deq> &wpi, CommonResources &r) {
  // build matrix from front iterator of each walk: using iterator's counter() method
+ EXPOSE(r, DBG())
+
  size_t longest = 0;
  for(size_t idx = 0; idx < wpi.size(); ++idx) {
   auto & wi = wpi[idx];
@@ -528,9 +571,10 @@ size_t build_front_matrix(vector<vector<long>> &fom,
 
 
 
-void output_by_iterator(walk_deq &wi, size_t actuals, Getopt &opt, Json &jout) {
+void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
+ EXPOSE(cr, opt, jout)
  static size_t last_actuals{0};                                 // walking happens once per run,
                                                                 // so it's okay to make it static
  auto &r = *(wi.front());

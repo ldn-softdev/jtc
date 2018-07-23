@@ -43,55 +43,57 @@ folder:
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
 ```
 {
-	"Bookmarks": [{
-			"stamp": "2017-01-22, 12:05:19",
-			"name": "Personal",
-			"children": [{
-					"stamp": "2017-10-02, 12:05:19",
-					"name": "News",
-					"children": [{
-							"stamp": "2017-10-03, 12:05:19",
-							"name": "The New York Times",
-							"url": "https://www.nytimes.com/"
-						},
-						{
-							"stamp": "2017-11-23, 12:05:19",
-							"name": "HuffPost UK",
-							"url": "https://www.huffingtonpost.co.uk/"
-						}
-					]
-				},
-
-				{
-					"stamp": "2017-02-27, 12:05:19",
-					"name": "Photography",
-					"children": [{
-							"stamp": "2017-02-27, 12:05:19",
-							"name": "Digital Photography Review",
-							"url": "https://www.dpreview.com/"
-						}
-
-					]
-				}
-			]
-		},
-		{
-			"stamp": "2018-03-06, 12:07:29",
-			"name": "Work",
-			"children": [{
-					"stamp": "2018-05-01, 12:05:19",
-					"name": "Stack Overflow",
-					"url": "https://stackoverflow.com/"
-				},
-				{
-					"stamp": "2018-06-21, 12:05:19",
-					"name": "C++ reference",
-					"url": "https://en.cppreference.com/"
-				}
-			]
-
-		}
-	]
+   "Bookmarks": [
+      {
+         "children": [
+            {
+               "children": [
+                  {
+                     "name": "The New York Times",
+                     "stamp": "2017-10-03, 12:05:19",
+                     "url": "https://www.nytimes.com/"
+                  },
+                  {
+                     "name": "HuffPost UK",
+                     "stamp": "2017-11-23, 12:05:19",
+                     "url": "https://www.huffingtonpost.co.uk/"
+                  }
+               ],
+               "name": "News",
+               "stamp": "2017-10-02, 12:05:19"
+            },
+            {
+               "children": [
+                  {
+                     "name": "Digital Photography Review",
+                     "stamp": "2017-02-27, 12:05:19",
+                     "url": "https://www.dpreview.com/"
+                  }
+               ],
+               "name": "Photography",
+               "stamp": "2017-02-27, 12:05:19"
+            }
+         ],
+         "name": "Personal",
+         "stamp": "2017-01-22, 12:05:19"
+      },
+      {
+         "children": [
+            {
+               "name": "Stack Overflow",
+               "stamp": "2018-05-01, 12:05:19",
+               "url": "https://stackoverflow.com/"
+            },
+            {
+               "name": "C++ reference",
+               "stamp": "2018-06-21, 12:05:19",
+               "url": "https://en.cppreference.com/"
+            }
+         ],
+         "name": "Work",
+         "stamp": "2018-03-06, 12:07:29"
+      }
+   ]
 }
 ```
 
