@@ -1,5 +1,5 @@
-/* 
- * Created by Dmitry Lyssenko. last modified July 22, 2018
+/*
+ * Created by Dmitry Lyssenko, last modified July 22, 2018
  *
  * Macro definitions for ENUM stringification for in-class enum declarations:
  *

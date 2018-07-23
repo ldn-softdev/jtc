@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko. last modified July 22, 2018
+ * Created by Dmitry Lyssenko, last modified July 22, 2018
  *
  * yet another JSON implementation featuring:
  *  - easy c++ API
@@ -301,7 +301,7 @@
  *        L - same as l with Regex search
  *        d - match a number (i.e. searching only numeric json values),
  *        D - same as d with Regex search
- *        b - match a boolean (i.e. searching only boolean values), true/false
+ *        b - match a boolean (i.e. searching only boolean values), true/false/any
  *            must be fully spelled, e.g.: "<true>b",
  *        n - match null value (), the content within the encasement could be empty,
  *            or anything - it's ignored, e.g.: "<>n", ">null<n", etc
@@ -490,6 +490,7 @@
 #define CHR_RTRN '\n'                                           // end of line
 #define STR_TRUE "true"                                         // Json true sting value
 #define STR_FALSE "false"                                       // Json false sting value
+#define STR_ANY "any"                                           // to match any boolean
 #define STR_NULL "null"                                         // Json null sting value
 #define JSN_OBJ_OPN '{'                                         // Json open object
 #define JSN_OBJ_CLS '}'                                         // Json close object
@@ -2267,7 +2268,9 @@ bool Json::iterator::bullMatch_(const Jnode *jn, const char *lbl, const WalkStep
         if(ws.stripped.size() > 1)                              // label attached: try matching
          if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_bool() and
-               (jn->bul()? ws.stripped.front() == STR_TRUE: ws.stripped.front() == STR_FALSE);
+               (ws.stripped.front() == STR_ANY or (jn->bul()?
+                                                   ws.stripped.front() == STR_TRUE:
+                                                   ws.stripped.front() == STR_FALSE));
   case null_match:
         if(ws.stripped.size() > 1)                              // label attached: try matching
          if(lbl == nullptr or ws.stripped.back() != lbl) return false;
@@ -2346,6 +2349,7 @@ long Json::iterator::wpNextIterable(long idx) const {
 #undef CHR_RTRN
 #undef STR_TRUE
 #undef STR_FALSE
+#undef STR_ANY
 #undef STR_NULL
 #undef JSN_OBJ_OPN
 #undef JSN_OBJ_CLS
