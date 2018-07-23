@@ -107,7 +107,6 @@ bash $ jtc -w "<url>l+0" Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
-
 - search lexemes are enclosed in angular brackets `<`, `>`
 - suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
   * `r`: default (could be omitted), fully matches *JSON string* value
