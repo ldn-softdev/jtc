@@ -116,7 +116,7 @@ bash $ jtc -w "<url>l+0" Bookmarks
   * `L`: same as `l`, but lexeme is a search RE
   * `d`: fully matches *JSON number*
   * `D`: same as `d`, but lexeme is an RE
-  * `b`: matches JSON boolean value, lexeme must be sppelled as `<true>b` or `<false>b` 
+  * `b`: matches JSON boolean value, lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b` 
   * `n`: matches JSON null value, lexeme value is ignored, could be like `<null>n`, or `<>n`
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifier (preceded with `+`) makes the path *iterable*
@@ -130,12 +130,12 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-   a. `<Work>`: first find within JSON a location where a string is matching "Work"  
-   b. `[-1]`: step up one tier in JSON tree hierarchy  
-   c. `[children]`: select a node with the label "children" (it'll be a JSON array)  
-   d. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
+a. `<Work>`: first find within JSON a location where a string is matching "Work"  
+b. `[-1]`: step up one tier in JSON tree hierarchy  
+c. `[children]`: select a node with the label "children" (it'll be a JSON array)  
+d. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
 based)  
-   e. `[name]`: select a node whose label is "name"  
+e. `[name]`: select a node whose label is "name"  
 - offsets enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
