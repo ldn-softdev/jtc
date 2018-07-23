@@ -204,10 +204,12 @@ void read_json(CommonResources &r) {
 
 
 
-void write_json(Getopt &opt, Json &json, Debug &DBG()) {
+void write_json(CommonResources &r) {
  // write updated JSON (i.e. resulting from -i/-u/-s/-p options into:
  // a) input json file (if -f given and if the input is not <stdin> ('-' option)
  // b) stdout
+ EXPOSE(r, opt, json, DBG())
+ 
  bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
  if(not opt[CHR(OPT_FRC)] or redirect)                          // stdout if no -f given,
   { cout << json << endl; return; }                             // or redirect '-' is present
@@ -284,7 +286,7 @@ int insert_json(CommonResources &r) {
   }
  }
 
- write_json(opt, json, DBG());
+ write_json(r);
  return RC_OK;
 }
 
@@ -315,7 +317,7 @@ int purge_json(CommonResources &r) {
   }
  }
 
- write_json(opt, json, DBG());
+ write_json(r);
  return RC_OK;
 }
 
@@ -348,7 +350,7 @@ int update_json(CommonResources &r) {
   }
  }
 
- write_json(opt, json, DBG());
+ write_json(r);
  return RC_OK;
 }
 
@@ -358,7 +360,7 @@ int update_json(CommonResources &r) {
 
 int swap_json(CommonResources &r) {
  // swap around nodes pointed by 2 walk paths
- EXPOSE(r, opt, json, DBG())
+ EXPOSE(r, opt)
 
  if(opt[CHR(OPT_WLK)].hits() != 2) {
   cerr << "error: exactly 2 -" STR(OPT_WLK) " must be given when swapping" << endl;
@@ -380,7 +382,7 @@ int swap_json(CommonResources &r) {
   //*swaps[1][i] = src;
  }
 
- write_json(opt, json, DBG());
+ write_json(r);
  return RC_OK;
 }
 
