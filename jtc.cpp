@@ -64,10 +64,10 @@ struct CommonResources {
 };
 
 #define __REFX__(A) auto & A = __common_resource__.A;
-#define EXPOSE(X, ARGS...) \
+#define REVEAL(X, ARGS...) \
         auto & __common_resource__ = X; \
         MACRO_TO_ARGS(__REFX__, ARGS)
-// usage: EXPOSE(cr, opt, DBG())
+// usage: REVEAL(cr, opt, DBG())
 
 
 
@@ -99,7 +99,7 @@ int wp_guide(void);
 int main(int argc, char *argv[]){
 
  CommonResources r;
- EXPOSE(r, opt, json, jout, DBG())
+ REVEAL(r, opt, json, jout, DBG())
  
  opt.prolog("\nJSON test console. Version " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
@@ -185,7 +185,7 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
 
 void read_json(CommonResources &r) {
  // read and parse json
- EXPOSE(r, opt, json, DBG())
+ REVEAL(r, opt, json, DBG())
 
  ifstream file(opt[0].c_str(), ifstream::in);
  bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
@@ -208,7 +208,7 @@ void write_json(CommonResources &r) {
  // write updated JSON (i.e. resulting from -i/-u/-s/-p options into:
  // a) input json file (if -f given and if the input is not <stdin> ('-' option)
  // b) stdout
- EXPOSE(r, opt, json, DBG())
+ REVEAL(r, opt, json, DBG())
  
  bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
  if(not opt[CHR(OPT_FRC)] or redirect)                          // stdout if no -f given,
@@ -225,7 +225,7 @@ void write_json(CommonResources &r) {
 
 int demux_opt(CommonResources &r) {
  // demultiplex functional options, execute only once
- EXPOSE(r, opt, json)
+ REVEAL(r, opt, json)
 
  for(auto &op: opt)
   switch(op.second.hits() > 0? op.first: 0) {
@@ -252,9 +252,7 @@ int demux_opt(CommonResources &r) {
 int insert_json(CommonResources &r) {
  // if wp points to an array - insert json as it is.
  // if wp is an object - then json must be object type itself and inserted by labels
- auto &opt = r.opt;
- auto &json = r.json;
- auto &__dbg__ = r.DBG();
+REVEAL(r, opt, DBG(), json)
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when inserting" << endl;
@@ -296,7 +294,7 @@ int insert_json(CommonResources &r) {
 
 int purge_json(CommonResources &r) {
  // remove all json nodes pointed by iterator(s)
- EXPOSE(r, opt, json, DBG())
+ REVEAL(r, opt, json, DBG())
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when purging" << endl;
@@ -327,7 +325,7 @@ int purge_json(CommonResources &r) {
 
 int update_json(CommonResources &r) {
  // update json in -u into all iterator(s) points
- EXPOSE(r, opt, json, DBG())
+ REVEAL(r, opt, json, DBG())
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when updating" << endl;
@@ -360,7 +358,7 @@ int update_json(CommonResources &r) {
 
 int swap_json(CommonResources &r) {
  // swap around nodes pointed by 2 walk paths
- EXPOSE(r, opt)
+ REVEAL(r, opt)
 
  if(opt[CHR(OPT_WLK)].hits() != 2) {
   cerr << "error: exactly 2 -" STR(OPT_WLK) " must be given when swapping" << endl;
@@ -377,9 +375,6 @@ int swap_json(CommonResources &r) {
   if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid())
    { cerr << "error: walk path instance " << i << " became invalid" << endl; return RC_SP_INV; }
   swap(*swaps[0][i], *swaps[1][i]);
-  //Json src{ *swaps[0][i] };
-  //*swaps[0][i] = *swaps[1][i];
-  //*swaps[1][i] = src;
  }
 
  write_json(r);
@@ -390,7 +385,7 @@ int swap_json(CommonResources &r) {
 
 void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
  // load up all swap iterators (swap points), check walk restrictions
- EXPOSE(r, opt, json)
+ REVEAL(r, opt, json)
 
  long i = 0;
  for(auto &wp: opt[CHR(OPT_WLK)]) {
@@ -406,7 +401,7 @@ void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
 
 int walk_json(CommonResources &r) {
  // process demux sequential or interleaved walks
- EXPOSE(r, opt, json, DBG())
+ REVEAL(r, opt, json, DBG())
 
  Json jdb;                                                      // integrity check in debugs only
  DBG(0) {
@@ -430,7 +425,7 @@ int walk_json(CommonResources &r) {
 
 void walk_sequentual(CommonResources &r) {
  // process walks sequentially
- EXPOSE(r, opt, json, jout, DBG())
+ REVEAL(r, opt, json, jout, DBG())
  jout = ARY{};                                                  // output container for OPT_JSN
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // -n given, walk paths sequentially
@@ -459,9 +454,8 @@ void walk_sequentual(CommonResources &r) {
 // 1. collect all iterators produced by all walk paths (wpi)
 // 2. for all instances build a matrix from front iterators offsets (fom) only, for
 //    entire walk state:
-//    - iterator offset for a built walk state returns -1 if walk step is non-iterable
-//      or requested position does not exist within a built walk state, otherwise
-//      walk position's current offset is returned
+//    - iterator offset for a built walk state returns -1 if walk step is non-iterable,
+//      otherwise walk position's current offset is returned
 // 3. then build a vector of actual instances (actual_instances): actual is the
 //    instance that is either the shortest (in fom), or whose actual (i.e. non -1)
 //    offset index is the lowest
@@ -470,7 +464,7 @@ void walk_sequentual(CommonResources &r) {
 
 void walk_interleaved(CommonResources &r) {
  // process interleaved walks
- EXPOSE(r, opt, json, jout, DBG())
+ REVEAL(r, opt, json, jout, DBG())
  jout = ARY{};                                             // output container for -j
  vector<walk_deq> wpi;
 
@@ -515,7 +509,7 @@ void print_walk(vector<walk_deq> &wpi, CommonResources &r) {
 void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t longest_walk, 
                      vector<size_t> &actual_instances, CommonResources &r) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
- EXPOSE(r, DBG())
+ REVEAL(r, DBG())
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset=0; offset<longest_walk; ++offset) {          // go across all offsets
   vector<size_t> new_ai;
@@ -553,7 +547,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
 size_t build_front_matrix(vector<vector<long>> &fom,
                           const vector<walk_deq> &wpi, CommonResources &r) {
  // build matrix from front iterator of each walk: using iterator's counter() method
- EXPOSE(r, DBG())
+ REVEAL(r, DBG())
 
  size_t longest = 0;
  for(size_t idx = 0; idx < wpi.size(); ++idx) {
@@ -576,7 +570,7 @@ size_t build_front_matrix(vector<vector<long>> &fom,
 void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
- EXPOSE(cr, opt, jout)
+ REVEAL(cr, opt, jout)
  static size_t last_actuals{0};                                 // walking happens once per run,
                                                                 // so it's okay to make it static
  auto &r = *(wi.front());
