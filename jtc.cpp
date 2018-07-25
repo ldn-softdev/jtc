@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define VERSION "1.19"
+#define VERSION "1.21"
 
 
 // option definitions
@@ -23,6 +23,7 @@ using namespace std;
 #define OPT_LBL l
 #define OPT_SEQ n
 #define OPT_PRG p
+#define OPT_SLD q
 #define OPT_RAW r
 #define OPT_SWP s
 #define OPT_IND t
@@ -108,6 +109,7 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_SZE)].desc("print json size (total number of nodes in json)");
  opt[CHR(OPT_RAW)].desc("force printing json in a raw format");
  opt[CHR(OPT_PRG)].desc("purge json elements (one or more -" STR(OPT_WLK) " must be given)");
+ opt[CHR(OPT_SLD)].desc("enforce quoted solidus parsing");
  opt[CHR(OPT_SWP)].desc("swap around two json elements (two -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SEQ)].desc("do not print walks interleaved (i.e. print sequentually)");
  opt[CHR(OPT_LBL)].desc("print labels too (if any) for walked json");
@@ -155,14 +157,13 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
   opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
 
-
  // prepare debugs
  json.tab(abs(opt[CHR(OPT_IND)]))
-     .raw(opt[CHR(OPT_RAW)]);
+     .raw(opt[CHR(OPT_RAW)])
+     .quoted_solidus(opt[CHR(OPT_SLD)]);
  DBG().level(opt[CHR(OPT_DBG)])
       .use_ostream(cerr)
       .severity(json, jout);
-
 
  // read json and execute as per options
  try {

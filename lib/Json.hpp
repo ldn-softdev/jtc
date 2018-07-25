@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified July 22, 2018
+ * Created by Dmitry Lyssenko, last modified July 25, 2018
  *
  * yet another JSON implementation featuring:
  *  - easy c++ API
@@ -186,7 +186,7 @@
  *  an object-type) and assign a new Json to it:
  *      json["Address Book"][1]["email"] = STR{ "sherlock.holmes@gmail.com" };
  *
- *  for extending arrays use good old push_back():
+ *  for extending arrays use good old push_back()/push_front():
  *      json["Address Book"].push_back( OBJ{ LBL{ "Name", STR{"Sirius Black"} } } );
  *
  *
@@ -504,8 +504,12 @@
 #define PFX_ITR '+'                                             // prefix of iterable offset
 #define PFX_WFR '^'                                             // walk from root offset
 #define PFX_WFL '-'                                             // walk from end-leaf offset
+
 #define JSN_FBDN "\b\f\n\r\t"                                   // forbidden JSON chars
-#define JSN_QTD "\"\\/bfnrtu"                                   // chars following quotation in JSON
+#define JSN_QTD "\"\\bfnrtu"                                    // chars following quotation in JSON
+// NOTE: strict JSON behavior requires quoting solidus char '/', however it seems a common
+//       behavior is to ignore it. A user will have an option to switch between behaviors, 
+//       defaulting to *ignore* option
 
 
 class Json;
@@ -546,7 +550,8 @@ class Jnode {
                 /* now define Json exceptions */ \
                 unexpected_end_of_string, \
                 unexpected_end_of_line, \
-                unexpected_control_character, \
+                unquoted_character, \
+                unexpected_character_escape, \
                 expected_valid_label, \
                 missing_label_separator, \
                 expected_json_value, \
@@ -737,6 +742,11 @@ class Jnode {
                          return *this;
                         }
 
+    Jnode &             push_back(const Jnode & jn) {
+                         if(not is_array()) throw EXP(expected_array_type);
+                         children_().emplace(next_key_(), jn);
+                         return *this;
+                        }
 
     Jnode &             push_back(Jnode && jn) {
                          if(not is_array()) throw EXP(expected_array_type);
@@ -744,10 +754,15 @@ class Jnode {
                          return *this;
                         }
 
-
-    Jnode &             push_back(const Jnode & jn) {
+    Jnode &             push_front(const Jnode & jn) {
                          if(not is_array()) throw EXP(expected_array_type);
-                         children_().emplace(next_key_(), jn);
+                         children_().emplace(prior_key_(), jn);
+                         return *this;
+                        }
+
+    Jnode &             push_front(Jnode && jn) {
+                         if(not is_array()) throw EXP(expected_array_type);
+                         children_().emplace(prior_key_(), std::forward<Jnode>(jn));
                          return *this;
                         }
 
@@ -784,12 +799,19 @@ class Jnode {
 
                         // global print setting
     bool                is_pretty(void) const { return endl_ == PRINT_PRT; }
-    bool                is_raw(void) const { return endl_ == PRINT_RAW; }
     Jnode &             pretty(bool x=true)
                          { endl_ = x? PRINT_PRT: PRINT_RAW; return *this; }
+    bool                is_raw(void) const { return endl_ == PRINT_RAW; }
     Jnode &             raw(bool x=true)
                          { endl_ = x? PRINT_RAW: PRINT_PRT; return *this; }
-    Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
+    uint8_t             tab(void) const { return tab_; }
+    Jnode &             tab(uint8_t n){ tab_ = n; return *this; }
+    Jnode &             quoted_solidus(bool x) {
+                         if(x) { jf_=JSN_FBDN"/"; jq_ = JSN_QTD"/"; }
+                         else { jf_=JSN_FBDN; jq_ = JSN_QTD; }
+                         return *this;
+                        }
+
 
     //SERDES(type_, value_, descendants_)                       // not really needed
     //DEBUGGABLE()                                              // there are no debugs in Jnode
@@ -802,6 +824,7 @@ class Jnode {
     iter_jn             iter_by_key_(size_t idx);
     const_iter_jn       iter_by_key_(size_t idx) const;
     std::string         next_key_(void) const;
+    std::string         prior_key_(void) const;
 
                         // data
     Jtype               type_{Object};
@@ -814,6 +837,8 @@ class Jnode {
 
     static char         endl_;                                  // either for raw or pretty printing
     static uint8_t      tab_;                                   // tab size (for indention)
+    static const char * jf_;                                    // JSN_FBDN pointer
+    static const char * jq_;                                    // JSN_QTD pointer
 
     EXCEPTIONS(ThrowReason)                                     // see "enums.hpp"
 };
@@ -821,6 +846,8 @@ class Jnode {
 // class static definitions
 char Jnode::endl_{PRINT_PRT};                                   // default is pretty format
 uint8_t Jnode::tab_{3};
+const char * Jnode::jf_ = JSN_FBDN;                             // json forbidden
+const char * Jnode::jq_ = JSN_QTD;                              // chars following quotations
 
 STRINGIFY(Jnode::ThrowReason, THROWREASON)
 #undef THROWREASON
@@ -1104,9 +1131,21 @@ Jnode::const_iter_jn Jnode::iter_by_key_(size_t idx) const {
 
 
 std::string Jnode::next_key_(void) const {
- size_t key{0};
+ size_t key{0x80000000};
  if(not children_().empty())
   key = stoul(children_().rbegin()->KEY, nullptr, 16) + 1;
+ std::stringstream ss;
+ ss << std::hex << std::setfill('0') << std::setw(8) << key;
+
+ return ss.str();
+}
+
+
+
+std::string Jnode::prior_key_(void) const {
+ size_t key{0x80000000};
+ if(not children_().empty())
+  key = stoul(children_().begin()->KEY, nullptr, 16) - 1;
  std::stringstream ss;
  ss << std::hex << std::setfill('0') << std::setw(8) << key;
 
@@ -1238,6 +1277,10 @@ class Json{
                          { root().push_back(std::forward<Jnode>(jn)); return *this; }
     Json &              push_back(const Jnode & jn)
                          { root().push_back(jn); return *this; }
+    Json &              push_front(Jnode && jn)
+                         { root().push_front(std::forward<Jnode>(jn)); return *this; }
+    Json &              push_front(const Jnode & jn)
+                         { root().push_front(jn); return *this; }
 
     Jnode::iterator     begin(void) { return root().begin(); }
   Jnode::const_iterator begin(void) const { return root().begin(); }
@@ -1253,10 +1296,12 @@ class Json{
   Jnode::const_iterator find(size_t i) const { return root().find(i); };
 
     bool                is_pretty(void) const { return root().is_pretty(); }
-    bool                is_raw(void) const { return root().is_raw(); }
     Json &              pretty(bool x=true) { root().pretty(x); return *this; }
+    bool                is_raw(void) const { return root().is_raw(); }
     Json &              raw(bool x=true) { root().raw(x); return *this; }
+    uint8_t             tab(void) const { return root().tab(); }
     Json &              tab(uint8_t n) { root().tab(n); return *this; }
+    Json &              quoted_solidus(bool x) { root().quoted_solidus(x); return *this; }
 
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
@@ -1504,13 +1549,14 @@ std::string::const_iterator & Json::findDelimiter_(char c, std::string::const_it
  while(*jsp != c) {
   if(*jsp == CHR_NULL or *jsp == CHR_RTRN)
    { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
-  if(strchr(JSN_FBDN, *jsp) != nullptr)                         // i.e. found illegal JSON control
-   { ep_ = jsp; throw EXP(Jnode::unexpected_control_character); }
+  if(strchr(Jnode::jf_, *jsp) != nullptr)                         // i.e. found illegal JSON control
+   { ep_ = jsp; throw EXP(Jnode::unquoted_character); }
   if(*jsp == '\\') {
    ++jsp;                                                       // skip presumably quoted char
    if(*jsp == CHR_NULL)
     { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
-   if(strchr(JSN_QTD, *jsp) == nullptr) continue;               // it's not JSON char quotation
+   if(strchr(Jnode::jq_, *jsp) == nullptr)                      // it's not JSON char quotation
+    { ep_ = jsp; throw EXP(Jnode::unexpected_character_escape); }
   }
   ++jsp;
  }
