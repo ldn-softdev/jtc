@@ -795,7 +795,7 @@ class Jnode {
 
     virtual const std::string &
                         label(void) const { throw EXP(label_accessed_not_via_iterator); }
-    virtual size_t      index(void) const { throw EXP(index_accessed_not_via_iterator); }
+    virtual int64_t     index(void) const { throw EXP(index_accessed_not_via_iterator); }
     virtual bool        is_root(void) const { throw EXP(method_accessed_not_via_iterator); }
                         // label() / index() / is_root() supposed to be used by a super
                         // node only (cannot be pure defined, hence throwing)
@@ -927,7 +927,7 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                              if(type_ != Object) throw EXP(label_request_for_non_object_enclosed);
                              return *lbl_;
                             }
-        size_t        	    index(void) const {
+        int64_t             index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
                              return std::stoul(lbl_->c_str(), nullptr, 16) - IDX_0_OFFSET;
                             }
@@ -1725,7 +1725,7 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
                              if(type_ != Object) throw EXP(label_request_for_non_object_enclosed);
                              return *lbl_;
                             }
-        size_t        	    index(void) const {
+        int64_t             index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
                              return std::stoul(lbl_->c_str(), nullptr, 16) - IDX_0_OFFSET;
                             }
