@@ -478,6 +478,7 @@
 
 
 #define DBG_WIDTH 80                                            // max print len upon parser's debug
+#define IDX_0_OFFSET 0x80000000
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
 #define GLAMBDA(FUNC) [this](auto&&... arg) { FUNC(std::forward<decltype(arg)>(arg)...); }
@@ -657,6 +658,9 @@ class Jnode {
                          return i;
                         }
 
+    bool                empty(void) const
+                         { return not has_children(); }
+
     bool                has_children(void) const
                          { return type() <= Array? not children_().empty(): false; }
 
@@ -783,6 +787,7 @@ class Jnode {
     Jnode &             erase(iterator & it);
     Jnode &             erase(const_iterator & it);
     Jnode &             erase(const_iterator && it);
+    size_t              count(const std::string & l) const;
     iterator            find(const std::string & l);            // only for objects
     const_iterator      find(const std::string & l) const;      // only for objects
     iterator            find(size_t i);                         // for both arrays and objects
@@ -806,11 +811,6 @@ class Jnode {
                          { endl_ = x? PRINT_RAW: PRINT_PRT; return *this; }
     uint8_t             tab(void) const { return tab_; }
     Jnode &             tab(uint8_t n){ tab_ = n; return *this; }
-    Jnode &             quoted_solidus(bool x) {
-                         if(x) { jf_=JSN_FBDN"/"; jq_ = JSN_QTD"/"; }
-                         else { jf_=JSN_FBDN; jq_ = JSN_QTD; }
-                         return *this;
-                        }
 
 
     //SERDES(type_, value_, descendants_)                       // not really needed
@@ -837,8 +837,6 @@ class Jnode {
 
     static char         endl_;                                  // either for raw or pretty printing
     static uint8_t      tab_;                                   // tab size (for indention)
-    static const char * jf_;                                    // JSN_FBDN pointer
-    static const char * jq_;                                    // JSN_QTD pointer
 
     EXCEPTIONS(ThrowReason)                                     // see "enums.hpp"
 };
@@ -846,8 +844,6 @@ class Jnode {
 // class static definitions
 char Jnode::endl_{PRINT_PRT};                                   // default is pretty format
 uint8_t Jnode::tab_{3};
-const char * Jnode::jf_ = JSN_FBDN;                             // json forbidden
-const char * Jnode::jq_ = JSN_QTD;                              // chars following quotations
 
 STRINGIFY(Jnode::ThrowReason, THROWREASON)
 #undef THROWREASON
@@ -933,7 +929,7 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                             }
         size_t        	    index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
-                             return std::stoul(lbl_->c_str(), nullptr, 16);
+                             return std::stoul(lbl_->c_str(), nullptr, 16) - IDX_0_OFFSET;
                             }
         Jnode &             value(void) { return *jnp_; }       // do not template
         const Jnode &       value(void) const { return *jnp_; } // these methods
@@ -1064,6 +1060,13 @@ Jnode & Jnode::erase(const_iterator && it) {
 }
 
 
+size_t Jnode::count(const std::string & l) const {
+ if(not is_object())
+  throw EXP(expected_object_type);
+ return children_().count(l);
+}
+
+
 Jnode::iterator Jnode::find(const std::string & l) {
  if(not is_object())
   throw EXP(expected_object_type);
@@ -1076,6 +1079,7 @@ Jnode::const_iterator Jnode::find(const std::string & l) const {
   throw EXP(expected_object_type);
  return {children_().find(l), type()};
 }
+
 
 Jnode::iterator Jnode::find(size_t idx) {
  if(not is_iterable())
@@ -1131,7 +1135,7 @@ Jnode::const_iter_jn Jnode::iter_by_key_(size_t idx) const {
 
 
 std::string Jnode::next_key_(void) const {
- size_t key{0x80000000};
+ size_t key{IDX_0_OFFSET};
  if(not children_().empty())
   key = stoul(children_().rbegin()->KEY, nullptr, 16) + 1;
  std::stringstream ss;
@@ -1143,7 +1147,7 @@ std::string Jnode::next_key_(void) const {
 
 
 std::string Jnode::prior_key_(void) const {
- size_t key{0x80000000};
+ size_t key{IDX_0_OFFSET};
  if(not children_().empty())
   key = stoul(children_().begin()->KEY, nullptr, 16) - 1;
  std::stringstream ss;
@@ -1254,6 +1258,7 @@ class Json{
     bool                is_iterable(void) const { return root().is_iterable(); }
     bool                is_atomic(void) const { return root().is_atomic(); }
     size_t              size(void) const { return root().size(); }
+    bool                empty(void) const { return root().empty(); }
     bool                has_children(void) const { return root().has_children(); }
     size_t              children(void) const { return root().children(); }
     Json &              clear(void) { root().clear(); return *this; }
@@ -1290,6 +1295,7 @@ class Json{
   Jnode::const_iterator cend(void) const { return root().cend(); }
     Json &              erase(Jnode::iterator & it) { root().erase(it); return *this; };
     Json &              erase(Jnode::const_iterator & it) { root().erase(it); return *this; };
+    size_t              count(const std::string & l) const { return root().count(l); };
     Jnode::iterator     find(const std::string & l) { return root().find(l); }
   Jnode::const_iterator find(const std::string & l) const { return root().find(l); }
     Jnode::iterator     find(size_t i) { return root().find(i); }
@@ -1301,7 +1307,11 @@ class Json{
     Json &              raw(bool x=true) { root().raw(x); return *this; }
     uint8_t             tab(void) const { return root().tab(); }
     Json &              tab(uint8_t n) { root().tab(n); return *this; }
-    Json &              quoted_solidus(bool x) { root().quoted_solidus(x); return *this; }
+    Json &              quoted_solidus(bool x) {
+                         if(x) { jsn_fbdn_=JSN_FBDN"/"; jsn_qtd_ = JSN_QTD"/"; }
+                         else { jsn_fbdn_=JSN_FBDN; jsn_qtd_ = JSN_QTD; }
+                         return *this;
+                        }
 
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
@@ -1310,6 +1320,8 @@ class Json{
     Jnode               root_;
     std::string::const_iterator
                         ep_;                                    // exception pointer
+    const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
+    const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
 
  private:
 
@@ -1549,13 +1561,13 @@ std::string::const_iterator & Json::findDelimiter_(char c, std::string::const_it
  while(*jsp != c) {
   if(*jsp == CHR_NULL or *jsp == CHR_RTRN)
    { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
-  if(strchr(Jnode::jf_, *jsp) != nullptr)                         // i.e. found illegal JSON control
+  if(strchr(jsn_fbdn_, *jsp) != nullptr)                              // i.e. found illegal JSON control
    { ep_ = jsp; throw EXP(Jnode::unquoted_character); }
   if(*jsp == '\\') {
    ++jsp;                                                       // skip presumably quoted char
    if(*jsp == CHR_NULL)
     { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
-   if(strchr(Jnode::jq_, *jsp) == nullptr)                      // it's not JSON char quotation
+   if(strchr(jsn_qtd_, *jsp) == nullptr)                        // it's not JSON char quotation
     { ep_ = jsp; throw EXP(Jnode::unexpected_character_escape); }
   }
   ++jsp;
@@ -1715,7 +1727,7 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
                             }
         size_t        	    index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
-                             return std::stoul(lbl_->c_str(), nullptr, 16);
+                             return std::stoul(lbl_->c_str(), nullptr, 16) - IDX_0_OFFSET;
                             }
         Jnode &             value(void) { return *jnp_; }
         const Jnode &       value(void) const { return *jnp_; }
@@ -2406,10 +2418,13 @@ long Json::iterator::wpNextIterable(long idx) const {
 #undef LXM_SCH_OPN
 #undef LXM_SCH_CLS
 
+#undef LBL_SPR
 #undef PFX_ITR
 #undef PFX_WFR
 #undef PFX_WFL
 
+#undef JSN_FBDN
+#undef JSN_QTD
 
 
 
