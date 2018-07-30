@@ -478,7 +478,7 @@
 
 
 #define DBG_WIDTH 80                                            // max print len upon parser's debug
-#define IDX_0_OFFSET 0x80000000
+#define IDX_0_OFFSET 0x80000000                                 // virtual zero index
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
 #define GLAMBDA(FUNC) [this](auto&&... arg) { FUNC(std::forward<decltype(arg)>(arg)...); }
@@ -511,6 +511,14 @@
 // NOTE: strict JSON behavior requires quoting solidus char '/', however it seems a common
 //       behavior is to ignore it. A user will have an option to switch between behaviors, 
 //       defaulting to *ignore* option
+
+
+// template meta to calculate number of bits required to represent an integer
+template<uint64_t I>
+struct BITS { enum { NUM = 1 + BITS<(I>>1)>::NUM }; };
+template<>
+struct BITS<1> { enum { NUM = 1 }; };
+
 
 
 class Json;
@@ -1139,7 +1147,7 @@ std::string Jnode::next_key_(void) const {
  if(not children_().empty())
   key = stoul(children_().rbegin()->KEY, nullptr, 16) + 1;
  std::stringstream ss;
- ss << std::hex << std::setfill('0') << std::setw(8) << key;
+ ss << std::hex << std::setfill('0') << std::setw( (BITS<IDX_0_OFFSET>::NUM+3)/4 ) << key;
 
  return ss.str();
 }
@@ -1151,7 +1159,7 @@ std::string Jnode::prior_key_(void) const {
  if(not children_().empty())
   key = stoul(children_().begin()->KEY, nullptr, 16) - 1;
  std::stringstream ss;
- ss << std::hex << std::setfill('0') << std::setw(8) << key;
+ ss << std::hex << std::setfill('0') << std::setw( (BITS<IDX_0_OFFSET>::NUM+3)/4 ) << key;
 
  return ss.str();
 }
