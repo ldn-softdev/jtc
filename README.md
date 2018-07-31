@@ -22,6 +22,12 @@ For compiling c++14 (or later) is required:
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
 there's no performance gain from doing so*
 
+or download latest precompiled binary:
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.21)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.21)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.21)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.21)
+
 
 #### Compile and install instructions:
 
