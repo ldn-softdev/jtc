@@ -2138,8 +2138,6 @@ Json::iterator & Json::iterator::walk_(void) {
  pv_.clear();                                                   // path-vector being built
 
  for(size_t i{0}; i<ws_.size(); ++i) {
- //for(const auto & ws: walkPath_()) {
-  //auto &ws = ws_[i];
   walkStep_(i, jnp);                                            // walkStep builds up path-vector
   if(pv_.empty())
    jnp = & json_().root();
@@ -2405,7 +2403,7 @@ bool Json::iterator::increment_(long l) {
  if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
  // unsuccessful walk (out of iterations)
- if(pv_.back().wsi > l) {                                       // i.e. not my position and MSP
+ if((signed)pv_.back().wsi > l) {                               // i.e. not my position and MSP
   DBG(json_(), 2)
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
