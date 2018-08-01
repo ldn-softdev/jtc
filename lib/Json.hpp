@@ -192,7 +192,7 @@
  *
  * CAVEAT for using push_front():
  *  - given that internally array is stored in std::map container, pushing into array's
- *    front makes newly added front items to be indexed as -1, -2, -3, etc, until the 
+ *    front makes newly added front items to be indexed as -1, -2, -3, etc, until the
  *    JSON is re-parsed
  *
  *
@@ -516,7 +516,7 @@
 #define JSN_FBDN "\b\f\n\r\t"                                   // forbidden JSON chars
 #define JSN_QTD "\"\\bfnrtu"                                    // chars following quotation in JSON
 // NOTE: strict JSON behavior requires quoting solidus char '/', however it seems a common
-//       behavior is to ignore it. A user will have an option to switch between behaviors, 
+//       behavior is to ignore it. A user will have an option to switch between behaviors,
 //       defaulting to *ignore* option
 
 
@@ -612,21 +612,21 @@ class Jnode {
                         }
                         Jnode(Jnode &&jn): Jnode() {            // MC
                          auto * volatile jnv = &jn.value();     // same here: moved jn could be an
-                         if(jnv == nullptr)                     // empty supernoe, hence checking 
+                         if(jnv == nullptr)                     // empty supernoe, hence checking
                           { std::swap(type_, jn.type_); return; }
                          swap(*this, jn);                       // swap will resolve supernode
                         }
     Jnode &             operator=(const Jnode & jn) {           // CA
                          Jnode copy{jn};                        // if moved to param, clashes w. MA
-                         swap(*this, copy);                     // CC takes care of an empty jn 
+                         swap(*this, copy);                     // CC takes care of an empty jn
                          return *this;
                         }
     Jnode &             operator=(Jnode &&jn) {                 // MA
                          auto * volatile jnv = &jn.value();
                          if(jnv == nullptr) {                   // if jn is an empty supernode
                           std::swap(value_, jn.value_);         // they swap values w/o resolution
-                          std::swap(type_, jn.type_); 
-                          std::swap(descendants_, jn.descendants_); 
+                          std::swap(type_, jn.type_);
+                          std::swap(descendants_, jn.descendants_);
                           return *this;
                          }
                          swap(*this, jn);
@@ -1405,11 +1405,11 @@ class Json{
     // - is used by walk iterator and search cache key
     struct Itl {
                             Itl(void) = default;                // for pv_.resize()
-                            Itl(const iter_jn &it, const std::string &l, const WalkStep *p=nullptr):
-                             jit(it), lbl(l), wsp(p) {}         // enable emplacement
+                            Itl(const iter_jn &it, const std::string &l, size_t i=0):
+                             jit(it), lbl(l), wsi(i) {}         // enable emplacement
         iter_jn             jit;
         std::string         lbl;                                // preserved label for validation
-        const WalkStep *    wsp;                                // walk step pointer
+        size_t              wsi;                                // walk step pointer
     };
     // Search Cache Key:
     // - made of jnode pointer and walk step
@@ -1419,7 +1419,8 @@ class Json{
                              jnp(jp), ws(w) {}
         const Jnode *       jnp;
         WalkStep            ws;
-                            COUTABLE(SearchCacheKey, jnp, ws)
+        const Jnode *       json_node(void) const { return jnp; }
+                            COUTABLE(SearchCacheKey, json_node(), ws)
 
         static bool 	    cmp(const SearchCacheKey &l, const SearchCacheKey &r)
                              { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
@@ -1883,10 +1884,11 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
     auto &              cType_(void) { return sn_.type_; }
 
     Json::iterator &    walk_(void);
-    void                walkStep_(const WalkStep &, Jnode *);
-    void                walkNumOffset_(const WalkStep &, Jnode *);
-    void                walkTextOffset_(const WalkStep &, Jnode *);
-    void                walkSearch_(const WalkStep &, Jnode *);
+    void                walkStep_(size_t wsi, Jnode *);
+    void                showBuiltPv_(std::ostream &out) const;
+    void                walkNumOffset_(size_t wsi, Jnode *);
+    void                walkTextOffset_(size_t wsi, Jnode *);
+    void                walkSearch_(size_t wsi, Jnode *);
     void                searchAll_(Jnode *, const char *, const
                                     WalkStep &w, std::vector<path_vector> &);
     bool                searchFwd_(Jnode *, const char *lbl, const WalkStep &, long &);
@@ -1921,6 +1923,8 @@ Json::iterator Json::walk(const std::string & wstr) {
  it.walk_();
  if(it.pv_.empty()) return itr;                                 // must resolve reference
  if(it.pv_.back().jit != root().children_().end()) return itr;  // must resolve reference
+ // here walk_() returned end(), but it might not be a true end, an increment step is required
+ // in order to confirm that it's either a true end, or return then incremented reference
  it.pv_.clear();                                                // here walk_() returned end(), thus
  return ++it;                                                   // advance to next point or true end
 }
@@ -2100,8 +2104,12 @@ void Json::parseOffsetType_(WalkStep & ws) const {
 
 
 //
+//
 // Json::iterator methods
 //
+//
+
+
 bool Json::iterator::is_nested(iterator & it) const {
  // check if we're nesting iterator. end() iterator considered to be non-nested
  if(pv_.empty()) return true;                                   // root always nest
@@ -2129,23 +2137,18 @@ Json::iterator & Json::iterator::walk_(void) {
  Jnode * jnp{& json_().root()};
  pv_.clear();                                                   // path-vector being built
 
- for(const auto & ws: walkPath_()) {
-  walkStep_(ws, jnp);                                           // walkStep builds up path-vector
+ for(size_t i{0}; i<ws_.size(); ++i) {
+ //for(const auto & ws: walkPath_()) {
+  //auto &ws = ws_[i];
+  walkStep_(i, jnp);                                            // walkStep builds up path-vector
   if(pv_.empty())
    jnp = & json_().root();
   else {
-   if(pv_.back().jit == json_().root().children_().end()) {
-    DBG(json_(), 2) DOUT(json_()) << "built path vector: ... <out of iterations>" << std::endl;
-    return *this;
-    }
+   if(pv_.back().jit == json_().root().children_().end())
+    { DBG(json_(), 2) showBuiltPv_(DOUT(json_())); return *this; }
    jnp = &pv_.back().jit->VALUE;
   }
-
-  DBG(json_(), 2) {
-   DOUT(json_()) << "built path vector:";
-   for(auto &ji: pv_) DOUT(json_()) << (&ji==&pv_.front()? " ":" -> ") << ji.lbl;
-   DOUT(json_()) << std::endl;
-  }
+  DBG(json_(), 2) showBuiltPv_(DOUT(json_()));
  }
 
  if(pv_.empty())
@@ -2158,29 +2161,41 @@ Json::iterator & Json::iterator::walk_(void) {
 }
 
 
-void Json::iterator::walkStep_(const WalkStep &ws, Jnode *jn) {
- DBG(json_(), 3) DOUT(json_()) << "walking step: " << ws << std::endl;
+void Json::iterator::showBuiltPv_(std::ostream &out) const {
+ out << "built path vector:";
+ for(auto &it: pv_)
+  out << (&it == &pv_.front()? " ":" -> ")
+      << (it.jit == json_().root().children_().end()?
+          "[end]":
+          it.lbl);
+ out << std::endl;
+}
+
+
+void Json::iterator::walkStep_(size_t idx, Jnode *jn) {
+ DBG(json_(), 3) DOUT(json_()) << "walking step: [" << idx << "]" << std::endl;
  // walk a single lexeme
- switch(ws.jsearch) {
+ switch(ws_[idx].jsearch) {
   case generic_offset:
-        return walkNumOffset_(ws, jn);
+        return walkNumOffset_(idx, jn);
   case text_offset:
-        return walkTextOffset_(ws, jn);
+        return walkTextOffset_(idx, jn);
   default:
-        return walkSearch_(ws, jn);
+        return walkSearch_(idx, jn);
  }
 }
 
 
-void Json::iterator::walkNumOffset_(const WalkStep &ws, Jnode *jn) {
+void Json::iterator::walkNumOffset_(size_t idx, Jnode *jn) {
  // walk a numerical offset, e.g.: [3], [+0], [-1]
+ auto &ws = ws_[idx];
  if(ws.init == -2) {                                            // e.g.: [^2]
   pv_.resize(ws.offset > (signed)pv_.size()? pv_.size(): ws.offset);    // shrinking path
   return;
  }
  if(ws.offset >=0) {                                            // [0], [+1], etc
   if(ws.offset >= (signed)jn->children_().size())               // address beyond children's size
-   { pv_.emplace_back(json_().root().children_().end(), "", &ws); return; }
+   { pv_.emplace_back(json_().root().children_().end(), "", idx); return; }
   auto it = jn->iter_by_key_(ws.offset);
   pv_.emplace_back(it, it->KEY);
   return;
@@ -2190,39 +2205,41 @@ void Json::iterator::walkNumOffset_(const WalkStep &ws, Jnode *jn) {
 }
 
 
-void Json::iterator::walkTextOffset_(const WalkStep &ws, Jnode *jn) {
+void Json::iterator::walkTextOffset_(size_t idx, Jnode *jn) {
  // walk a text offset, e.g.: [label]
+ auto &ws = ws_[idx];
  auto it = jn->children_().find(ws.stripped.front());
  if(it == jn->children_().end())
-  pv_.emplace_back(json_().root().children_().end(), "", &ws);
+  pv_.emplace_back(json_().root().children_().end(), "", idx);
  else
   pv_.emplace_back(it, it->KEY);
 }
 
 
-void Json::iterator::walkSearch_(const WalkStep &ws, Jnode *jn) {
+void Json::iterator::walkSearch_(size_t idx, Jnode *jn) {
  // build cache if needed, demultiplex fwd and bwd searches
+ auto &ws = ws_[idx];
  auto i = ws.offset;                                            // needed stateful, for recursion
  if(ws.init < 0) {                                              // non-iterable, find once
   bool found{ ws.lexeme.front() == LXM_SCH_OPN?
                 searchFwd_(jn, nullptr, ws, i):
                 searchBwd_(jn, nullptr, ws, i) };
   if(not found)
-   pv_.emplace_back(json_().root().children_().end(), "", &ws);
+   pv_.emplace_back(json_().root().children_().end(), "", idx);
   return;
  }
 
  auto & cache = cache_();
  SearchCacheKey skey{jn, ws};
  if(cache.count(skey) == 0) {                                   // cache does not exits
-  DBG(json_(), 1) DOUT(json_()) << "caching searches for key: " << skey << std::endl;
+  DBG(json_(), 1) DOUT(json_()) << skey << std::endl;
   cache[skey].resize(1);
-  searchAll_(jn, nullptr, ws, cache[skey]);                    // build cache
+  searchAll_(jn, nullptr, ws, cache[skey]);                     // build cache
   cache[skey].pop_back();
   DBG(json_(), 1) DOUT(json_()) << "cached " << cache[skey].size() << " searches" << std::endl;
  }
  if(i >= (signed)cache[skey].size())                            // offset outside of cache -
-  pv_.emplace_back(json_().root().children_().end(), "", &ws);  // return end iterator
+  pv_.emplace_back(json_().root().children_().end(), "", idx);  // return end iterator
  else                                                           // otherwise augment the path
   for(auto &path: cache[skey][ws.lexeme.front() == LXM_SCH_OPN? i: cache[skey].size()-i-1])
    pv_.push_back(path);
@@ -2388,15 +2405,15 @@ bool Json::iterator::increment_(long l) {
  if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
  // unsuccessful walk (out of iterations)
- if(pv_.back().wsp != &ws) {                                    // i.e. not my position
+ if(pv_.back().wsi > l) {                                       // i.e. not my position and MSP
   DBG(json_(), 2)
-   DOUT(json_()) << "walk is out of iterations (in walk index > " << l << ")" << std::endl;
+   DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required  to handle irregular JSON
   return increment_(l);
  }
- 
+
  l = wpNextIterable(l);
  if(l < 0) return false;
  ws.offset = ws.init;
