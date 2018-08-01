@@ -155,6 +155,7 @@ immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, run the series of cli gradually adding lexemes
 to the path (perhaps with the option `-l` to see also the labels (if any) of the selected elements:
+
 ```
 bash $ jtc -w "<Work>" -l Bookmarks
 "name": "Work"
