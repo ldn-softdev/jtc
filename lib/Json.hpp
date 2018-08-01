@@ -190,6 +190,12 @@
  *      json["Address Book"].push_back( OBJ{ LBL{ "Name", STR{"Sirius Black"} } } );
  *
  *
+ * CAVEAT for using push_front():
+ *  - given that internally array is stored in std::map container, pushing into array's
+ *    front makes newly added front items to be indexed as -1, -2, -3, etc, until the 
+ *    JSON is re-parsed
+ *
+ *
  * 4. Erasing Json.
  *  non-atomic Json (a.k.a iterables) could be cleared (all their children destroyed):
  *      json["Address Book"][0]["Phone"]["Work"].clear();
@@ -243,6 +249,7 @@
  *      index() - returns an entry's ordinal index - can only be used by super
  *                nodes dereferenced from iterators over arrays, otherwise
  *                'index_accessed_not_via_iterator' exception will be thrown
+ *                see also: CAVEAT for using push_front()
  *      value() - returns reference to a Jnode - optionally used by super nodes
  *                (methods label() and value() facilitate the same meaning as members
  *                'first' and 'second' when dereferencing map's iterators)
@@ -675,7 +682,7 @@ class Jnode {
     size_t              children(void) const
                          { return children_().size(); }
 
-    Jnode &             clear(void){
+    Jnode &             clear(void) {
                          if(is_atomic()) throw EXP(type_non_iterable);
                          children_().clear();
                          return *this;
@@ -818,7 +825,7 @@ class Jnode {
     Jnode &             raw(bool x=true)
                          { endl_ = x? PRINT_RAW: PRINT_PRT; return *this; }
     uint8_t             tab(void) const { return tab_; }
-    Jnode &             tab(uint8_t n){ tab_ = n; return *this; }
+    Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
 
 
     //SERDES(type_, value_, descendants_)                       // not really needed
@@ -1111,10 +1118,10 @@ Jnode::iter_jn Jnode::iter_by_key_(size_t idx) {
  if(idx >= children_().size())
   throw EXP(index_out_of_range);
  if(is_array()) {
-  size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
+  size_t key{ stoul(children_().rbegin()->KEY, nullptr, 16) };
   if(key < children_().size()) {                                // if so, indices are non-tampered
    std::stringstream ss;
-   ss << std::hex << std::setfill('0') << std::setw(8) << idx;
+   ss << std::hex << std::setfill('0') << std::setw( (BITS<IDX_0_OFFSET>::NUM+3)/4 ) << idx;
    return children_().find( ss.str() );
   }
  }                                                              // else: traverse map
@@ -1129,10 +1136,10 @@ Jnode::const_iter_jn Jnode::iter_by_key_(size_t idx) const {
  if(idx >= children_().size())
   throw EXP(index_out_of_range);
  if(is_array()) {
-  size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
+  size_t key{ stoul(children_().rbegin()->KEY, nullptr, 16) };
   if(key < children_().size()) {                                // if so, indices are non-tampered
    std::stringstream ss;
-   ss << std::hex << std::setfill('0') << std::setw(8) << idx;
+   ss << std::hex << std::setfill('0') << std::setw( (BITS<IDX_0_OFFSET>::NUM+3)/4 ) << idx;
    return children_().find(std::move(ss.str()));
   }
  }                                                              // else: traverse map
@@ -1362,15 +1369,6 @@ class Json{
 
     // Properties and structures used by walk iterator:
     //
-    // Itl (iterator-label pair):
-    // - is used by walk iterator and search cache key
-    struct Itl {
-                            Itl(void) = default;                // for pv_.resize()
-                            Itl(const iter_jn &it, const std::string &l):   // enable emplacement
-                             jit(it), lbl(l) {}
-        iter_jn             jit;
-        std::string         lbl;                                // preserved label for validation
-    };
     // WalkStep:
     // - is used by walk iterator and search cache key
     struct WalkStep {
@@ -1402,6 +1400,16 @@ class Json{
                                       stripped.front() < r.stripped.front()));
                             }
                             COUTABLE(WalkStep, offset, init, search_type(), label(), lexeme)
+    };
+    // Itl (iterator-label pair):
+    // - is used by walk iterator and search cache key
+    struct Itl {
+                            Itl(void) = default;                // for pv_.resize()
+                            Itl(const iter_jn &it, const std::string &l, const WalkStep *p=nullptr):
+                             jit(it), lbl(l), wsp(p) {}         // enable emplacement
+        iter_jn             jit;
+        std::string         lbl;                                // preserved label for validation
+        const WalkStep *    wsp;                                // walk step pointer
     };
     // Search Cache Key:
     // - made of jnode pointer and walk step
@@ -1461,7 +1469,7 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
  DBG(2) {                                                       // print currently parsed point
    static const char* pfx{"parsing point ->"};
    bool truncate{std::strlen(&*jsp) > (DBG_WIDTH-sizeof(pfx))};
-   std::string str(jsp, jsp + (truncate? DBG_WIDTH - sizeof(pfx) - 3: strlen(&*jsp)));
+   std::string str{jsp, jsp + (truncate? DBG_WIDTH - sizeof(pfx) - 3: strlen(&*jsp))};
    for(auto &c: str)
     if(c == CHR_RTRN) c = '|';
    DOUT() << pfx << str << (truncate? "...":"") << std::endl;
@@ -1508,7 +1516,7 @@ void Json::parseNumber_(Jnode & node, std::string::const_iterator &jsp) {
 
 
 void Json::parseArray_(Jnode & node, std::string::const_iterator &jsp) {
- for(bool comma_read = false; true;) {
+ for(bool comma_read{ false}; true;) {
   Jnode child;
   parse_(child, jsp);
 
@@ -1531,7 +1539,7 @@ void Json::parseArray_(Jnode & node, std::string::const_iterator &jsp) {
 
 
 void Json::parseObject_(Jnode & node, std::string::const_iterator &jsp) {
- for(bool comma_read = false; true;) {
+ for(bool comma_read{ false }; true;) {
   skipBlanks_(jsp);
   auto lsp = jsp;                                               // label's begin pointer
 
@@ -1930,7 +1938,7 @@ void Json::parseLexemes_(const std::string & wstr, iterator & it) const {
  auto & ws = it.walkPath_();
  std::vector<std::string> req_label;                            // would hold stripped [label]:
 
- for(auto si = wstr.begin(); si != wstr.end();) {               // si: input string iterator
+ for(auto si{ wstr.begin() }; si != wstr.end();) {              // si: input string iterator
   DBG(1) {
    DOUT() << "walked string: " << wstr << std::endl;
    DOUT() << DBG_PROMPT(1) << "parsing here: "
@@ -1968,7 +1976,7 @@ std::string Json::parseOffset_(std::string::const_iterator &si, char open, char 
  // offset lexemes: [], [n], [+n], [-n], [any text, possibly with \]]
  // search lexemes w/o suffix: <>, <text<\>>
  auto begin{si};
- while(*si != close) {                                           // advance till closing bracket
+ while(*si != close) {                                          // advance till closing bracket
   if(*si == CHR_NULL)
    throw EXP(Jnode::walk_offset_missing_closure);
   if(*si == '\\')
@@ -1976,9 +1984,10 @@ std::string Json::parseOffset_(std::string::const_iterator &si, char open, char 
   ++si;
  }
 
- std::string lexeme{begin, ++si}, quoted{"\\"};                 // replace quoted closing bracket
+ std::string lexeme{begin, ++si};
+ std::string quoted{"\\"};                                      // replace quoted closing bracket
  quoted += close;
- for(size_t p = lexeme.find(quoted); p != std::string::npos; p = lexeme.find(quoted))
+ for(size_t p{ lexeme.find(quoted) }; p != std::string::npos; p = lexeme.find(quoted))
   lexeme.replace(p, 2, 1, close);
 
  DBG(1) DOUT() << "parsed lexeme: " << lexeme << std::endl;
@@ -2004,7 +2013,7 @@ void Json::parseSuffix_(std::string::const_iterator &si, iterator & it, v_str &r
  if(lastStep.lexeme.front() == LXM_OFS_OPN)
   throw EXP(Jnode::walk_unexpexted_suffix);                     // suffix may only follow the search
 
- Jsearch sfx = searchSuffix_(*si);                              // see if a search suffix present
+ Jsearch sfx{ searchSuffix_(*si) };                             // see if a search suffix present
  if(sfx < end_of_match) {
   lastStep.jsearch = sfx;
   if(sfx == Regex_search or sfx == Label_RE_search or sfx == Ditital_regex)
@@ -2050,7 +2059,7 @@ long Json::parseIndex_(std::string::const_iterator &si, bool throwing) const {
  char *endptr;
  const char * str{&*si};
 
- long idx = strtol(str, &endptr, 10);
+ long idx{ strtol(str, &endptr, 10) };
  if(endptr == str) {
   if(throwing) throw EXP(Jnode::walk_bad_number);
   else return 0;
@@ -2071,12 +2080,12 @@ void Json::parseOffsetType_(WalkStep & ws) const {
  }
 
  auto si{ ++ws.lexeme.cbegin() };
- char pfx{'\0'};                                                // collect prefis '-','+', or '^'
+ char pfx{'\0'};                                                // collect prefix '-','+', or '^'
  if(*si == PFX_ITR or *si == PFX_WFR or *si == PFX_WFL) pfx = *(si++);
  if(not isdigit(*si))
   { ws.jsearch = text_offset; return; };                        // it's a text lexeme
 
- long idx = parseIndex_(si, false);                             // parse number, but don't throw
+ long idx{ parseIndex_(si, false) };                            // parse number, but don't throw
  if(*si != LXM_OFS_CLS)
   { ws.jsearch = text_offset; return; }                         // parsing failed - it's a text
  // PFX behavior explained:
@@ -2125,7 +2134,10 @@ Json::iterator & Json::iterator::walk_(void) {
   if(pv_.empty())
    jnp = & json_().root();
   else {
-   if(pv_.back().jit == json_().root().children_().end()) return *this;
+   if(pv_.back().jit == json_().root().children_().end()) {
+    DBG(json_(), 2) DOUT(json_()) << "built path vector: ... <out of iterations>" << std::endl;
+    return *this;
+    }
    jnp = &pv_.back().jit->VALUE;
   }
 
@@ -2168,12 +2180,12 @@ void Json::iterator::walkNumOffset_(const WalkStep &ws, Jnode *jn) {
  }
  if(ws.offset >=0) {                                            // [0], [+1], etc
   if(ws.offset >= (signed)jn->children_().size())               // address beyond children's size
-   { pv_.emplace_back(json_().root().children_().end(), ""); return; }
+   { pv_.emplace_back(json_().root().children_().end(), "", &ws); return; }
   auto it = jn->iter_by_key_(ws.offset);
   pv_.emplace_back(it, it->KEY);
   return;
  }
- // i.e.: ws.offset < 0, e.g.: [-2]
+ // negative offset, ws.offset < 0, e.g.: [-2]
  pv_.resize(-ws.offset <= (signed)pv_.size()? pv_.size() + ws.offset: 0);
 }
 
@@ -2182,7 +2194,7 @@ void Json::iterator::walkTextOffset_(const WalkStep &ws, Jnode *jn) {
  // walk a text offset, e.g.: [label]
  auto it = jn->children_().find(ws.stripped.front());
  if(it == jn->children_().end())
-  pv_.emplace_back(json_().root().children_().end(), "");
+  pv_.emplace_back(json_().root().children_().end(), "", &ws);
  else
   pv_.emplace_back(it, it->KEY);
 }
@@ -2192,11 +2204,11 @@ void Json::iterator::walkSearch_(const WalkStep &ws, Jnode *jn) {
  // build cache if needed, demultiplex fwd and bwd searches
  auto i = ws.offset;                                            // needed stateful, for recursion
  if(ws.init < 0) {                                              // non-iterable, find once
-  bool found = ws.lexeme.front() == LXM_SCH_OPN?
+  bool found{ ws.lexeme.front() == LXM_SCH_OPN?
                 searchFwd_(jn, nullptr, ws, i):
-                searchBwd_(jn, nullptr, ws, i);
+                searchBwd_(jn, nullptr, ws, i) };
   if(not found)
-   pv_.emplace_back(json_().root().children_().end(), "");
+   pv_.emplace_back(json_().root().children_().end(), "", &ws);
   return;
  }
 
@@ -2210,7 +2222,7 @@ void Json::iterator::walkSearch_(const WalkStep &ws, Jnode *jn) {
   DBG(json_(), 1) DOUT(json_()) << "cached " << cache[skey].size() << " searches" << std::endl;
  }
  if(i >= (signed)cache[skey].size())                            // offset outside of cache -
-  pv_.emplace_back(json_().root().children_().end(), "");       // return end iterator
+  pv_.emplace_back(json_().root().children_().end(), "", &ws);  // return end iterator
  else                                                           // otherwise augment the path
   for(auto &path: cache[skey][ws.lexeme.front() == LXM_SCH_OPN? i: cache[skey].size()-i-1])
    pv_.push_back(path);
@@ -2354,7 +2366,7 @@ bool Json::iterator::increment(void) {
   if(pv_.back().jit == json_().root().children_().end())        // don't attempt incrementing end()
    return false;
 
- long i = wpNextIterable(walkPath_().size());
+ long i{ wpNextIterable(walkPath_().size()) };
  if(i < 0) {
   pv_.emplace_back(json_().root().children_().end(), "");
   DBG(json_(), 2) DOUT(json_()) << "path is non-iterable" << std::endl;
@@ -2373,16 +2385,18 @@ bool Json::iterator::increment_(long l) {
  DBG(json_(), 2) DOUT(json_()) << "next increment: [" << l << "] " << ws << std::endl;
  walk_();
  if(pv_.empty()) return true;                                   // successful walk
- if(pv_.back().jit != json_().root().children_().end()) return true;    // here too
+ if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
- // unsuccessful walk:
- if((signed)pv_.size()-1 > l)                                   // -1: to account end() iterator
-  // even if walk_ does not yield a result for a given idx, if pv_ size is > idx,
-  // it means that the offset of the given idx still might be incremented, because
-  // next walk still might yield a match in the next record. That logic is required
-  // to handle irregular JSON
-  return increment_(wpNextIterable(walkPath_().size()));
-
+ // unsuccessful walk (out of iterations)
+ if(pv_.back().wsp != &ws) {                                    // i.e. not my position
+  DBG(json_(), 2)
+   DOUT(json_()) << "walk is out of iterations (in walk index > " << l << ")" << std::endl;
+  // even if walk_ does not yield a result for a given idx, if walk failed because of
+  // other walk step (index), then next walk still might yield a match in the next record.
+  // That logic is required  to handle irregular JSON
+  return increment_(l);
+ }
+ 
  l = wpNextIterable(l);
  if(l < 0) return false;
  ws.offset = ws.init;

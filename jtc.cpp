@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define VERSION "1.21"
+#define VERSION "1.22"
 
 
 // option definitions
@@ -188,14 +188,14 @@ void read_json(CommonResources &r) {
  // read and parse json
  REVEAL(r, opt, json, DBG())
 
- ifstream file(opt[0].c_str(), ifstream::in);
- bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
+ bool redirect{ opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0 };
  DBG(0)
-  DOUT() << "start parsing json from file: "
-         << (redirect? "<stdin>": opt[0].c_str()) <<endl;
+  DOUT() << "start parsing json from file: " << (redirect? "<stdin>": opt[0].c_str()) <<endl;
 
- json.parse( string(istream_iterator<char>(redirect? cin>>noskipws : file>>noskipws),
-                    istream_iterator<char>{}) );
+ json.parse( string{istream_iterator<char>(redirect?
+                                           cin>>noskipws: 
+                                           ifstream{opt[0].c_str(), ifstream::in}>>noskipws),
+                    istream_iterator<char>{}} );
 
  if(opt[CHR(OPT_SZE)])
   cout << "read json size: " << json.size() << endl;
@@ -211,13 +211,12 @@ void write_json(CommonResources &r) {
  // b) stdout
  REVEAL(r, opt, json, DBG())
  
- bool redirect = opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0;
+ bool redirect{ opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0 };
  if(not opt[CHR(OPT_FRC)] or redirect)                          // stdout if no -f given,
   { cout << json << endl; return; }                             // or redirect '-' is present
 
  DBG(0) DOUT() << "updating changes into json file: " << opt[0].c_str() << endl;
- ofstream file(opt[0].c_str(), ofstream::out);
- file << json << endl;
+ ofstream{opt[0].c_str(), ofstream::out} << json << endl;
 }
 
 
@@ -253,7 +252,7 @@ int demux_opt(CommonResources &r) {
 int insert_json(CommonResources &r) {
  // if wp points to an array - insert json as it is.
  // if wp is an object - then json must be object type itself and inserted by labels
-REVEAL(r, opt, DBG(), json)
+ REVEAL(r, opt, DBG(), json)
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when inserting" << endl;
@@ -266,11 +265,11 @@ REVEAL(r, opt, DBG(), json)
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process each walk
   walk_vec ji;                                                  // collect all insertion points
-  for(auto it = json.walk(wp); it != json.end(); ++it)
+  for(auto it{ json.walk(wp) }; it != json.end(); ++it)
    ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
-  for(size_t i = 0; i < ji.size(); ++i) {                       // insert json into walked instances
+  for(size_t i{0}; i < ji.size(); ++i) {                       // insert json into walked instances
   auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to insert into instance " << i << endl;
    if(rec.is_array())
@@ -304,10 +303,10 @@ int purge_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all purging points
-  for(auto it = json.walk(wp); it != json.end(); ++it) ji.push_back(it);
+  for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
-  for(size_t i = 0; i < ji.size(); ++i) {                       // purge all walked instances
+  for(size_t i{0}; i < ji.size(); ++i) {                        // purge all walked instances
    auto & rec = *ji[i];
    if(ji[i].is_valid()) {                                       // i.e. hasn't been deleted already
     DBG(1) DOUT() << "purging walk instance " << i << endl;
@@ -339,10 +338,10 @@ int update_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all update points
-  for(auto it = json.walk(wp); it != json.end(); ++it) ji.push_back(it);
+  for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
-  for(size_t i = 0; i < ji.size(); ++i) {
+  for(size_t i{0}; i < ji.size(); ++i) {
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
    rec = update;
@@ -369,8 +368,8 @@ int swap_json(CommonResources &r) {
  vector<walk_vec> swaps{2};                                     // collect all walks in here
  collect_walks(swaps, r);
 
- size_t maxi = min(swaps[0].size(), swaps[1].size());
- for(size_t i = 0; i < maxi; ++i) {                             // swap only paired walks
+ size_t maxi{ min(swaps[0].size(), swaps[1].size()) };
+ for(size_t i{0}; i < maxi; ++i) {                              // swap only paired walks
   if(swaps[0][i].is_nested(swaps[1][i]))
    { cerr << "error: walk paths must not nest one another" << endl; return RC_SP_NST; }
   if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid())
@@ -388,9 +387,9 @@ void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
  // load up all swap iterators (swap points), check walk restrictions
  REVEAL(r, opt, json)
 
- long i = 0;
+ long i{0};
  for(auto &wp: opt[CHR(OPT_WLK)]) {
-  for(auto it = json.walk(wp); it != json.end(); ++it)
+  for(auto it{ json.walk(wp) }; it != json.end(); ++it)
    sp[i].push_back(it);
   ++i;
  }
@@ -432,7 +431,7 @@ void walk_sequentual(CommonResources &r) {
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // -n given, walk paths sequentially
   DBG(0) DOUT() << "walking path: " << wp << endl;
 
-  for(auto jit = json.walk(wp); jit != jit.end(); ++jit) {
+  for(auto jit{ json.walk(wp) }; jit != jit.end(); ++jit) {
    auto &rec = *jit;
     if( opt[CHR(OPT_JSN)] ) {                                   // -j option given
      walk_deq deq(1, jit);                                      // required by output_by_iterator
@@ -480,7 +479,7 @@ void walk_interleaved(CommonResources &r) {
 
  DBG(1) {
   DOUT() << "walk path instances: " << wpi.size() << ":" << endl;
-  for(size_t i = 0; i < wpi.size(); ++i)
+  for(size_t i{0}; i < wpi.size(); ++i)
    DOUT() << DBG_PROMPT(1) << "instance: " << i << ", iterations: " << wpi[i].size() << endl;
  }
 
@@ -496,10 +495,10 @@ void print_walk(vector<walk_deq> &wpi, CommonResources &r) {
  // build front iterators offset matrix: wpi may contain empty deque
  vector<vector<long>> fom(wpi.size());                          // front offset matrix
 
- size_t longest_walk = build_front_matrix(fom, wpi, r);
+ size_t longest_walk{ build_front_matrix(fom, wpi, r) };
 
  vector<size_t> actual_instances;
- for(size_t idx = 0; idx < fom.size(); ++idx)                   // init non-empty fom indices
+ for(size_t idx{0}; idx < fom.size(); ++idx)                    // init non-empty fom indices
   if(not fom[idx].empty()) actual_instances.push_back(idx);
 
  process_offsets(wpi, fom, longest_walk, actual_instances, r);
@@ -514,7 +513,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset=0; offset<longest_walk; ++offset) {          // go across all offsets
   vector<size_t> new_ai;
-  long lowest_offset = LONG_MAX;
+  long lowest_offset{ LONG_MAX };
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
   for(auto ai: actual_instances) {                              // a.inst. are with lowest offset
    if(offset >= fom[ai].size()) {                               // more generic path, print first
@@ -550,8 +549,8 @@ size_t build_front_matrix(vector<vector<long>> &fom,
  // build matrix from front iterator of each walk: using iterator's counter() method
  REVEAL(r, DBG())
 
- size_t longest = 0;
- for(size_t idx = 0; idx < wpi.size(); ++idx) {
+ size_t longest{0};
+ for(size_t idx{0}; idx < wpi.size(); ++idx) {
   auto & wi = wpi[idx];
   if(wi.empty()) continue;                                        // no more iterators in this walk
 
