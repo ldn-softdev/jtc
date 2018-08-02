@@ -2243,7 +2243,8 @@ void Json::iterator::walkSearch_(size_t idx, Jnode *jn) {
  if(i >= (signed)cache[skey].size())                            // offset outside of cache -
   pv_.emplace_back(json_().root().children_().end(), "", idx);  // return end iterator
  else                                                           // otherwise augment the path
-  pv_ = cache[skey][i];
+  for(auto &path: cache[skey][ws.lexeme.front() == LXM_SCH_OPN? i: cache[skey].size()-i-1])
+   pv_.push_back(path);
 }
 
 
