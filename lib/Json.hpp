@@ -1376,13 +1376,13 @@ class Json{
                             WalkStep(std::string && l, Jsearch js): // enable emplacement
                              lexeme(std::move(l)), jsearch(js) {}
 
-        std::string         lexeme;                             // lexeme w/o suffix and quatifier
+        std::string         lexeme;                             // lexeme w/o suffix and quantifier
         Jsearch             jsearch;                            // Jsearch type
         long                offset{0};                          // current offset
         long                init{-1};
                             // init -1: init is not used. offset can be positive or negative
-                            // init -2: offset is used as absolute selector from root
-                            // init >0: offset is used as iterable, init keeps original offset
+                            // init -2: offset is used as absolute selector from root, like in [^n]
+                            // init >0: offset is used as an iterable, init keeps original offset
    std::vector<std::string> stripped;
                             // stripped[0] -> a stripped lexeme (required)
                             // stripped[1] -> attached label match (optional)
@@ -1391,13 +1391,13 @@ class Json{
         const char *        search_type() const { return Jsearch_str[jsearch]; }
         const std::string   label() const { return stripped.size()==2? stripped.back(): "-"; }
         bool                operator<(const WalkStep &r) const {
+                            // provided only for SearchCacheKey, which would require to
+                            // distinguish WalkSteps based on below members only
                              return stripped.back() != r.stripped.back()?
                                     stripped.back() < r.stripped.back():
                                     (jsearch != r.jsearch?
                                      jsearch < r.jsearch:
-                                     (init != r.init?
-                                      init < r.init:
-                                      stripped.front() < r.stripped.front()));
+                                     stripped.front() < r.stripped.front());
                             }
                             COUTABLE(WalkStep, offset, init, search_type(), label(), lexeme)
     };
@@ -2239,8 +2239,7 @@ void Json::iterator::walkSearch_(size_t idx, Jnode *jn) {
  if(i >= (signed)cache[skey].size())                            // offset outside of cache -
   pv_.emplace_back(json_().root().children_().end(), "", idx);  // return end iterator
  else                                                           // otherwise augment the path
-  for(auto &path: cache[skey][ws.lexeme.front() == LXM_SCH_OPN? i: cache[skey].size()-i-1])
-   pv_.push_back(path);
+  pv_ = cache[skey][ws.lexeme.front() == LXM_SCH_OPN? i: cache[skey].size()-i-1];
 }
 
 

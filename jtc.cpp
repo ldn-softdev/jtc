@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define VERSION "1.23"
+#define VERSION "1.24"
 
 
 // option definitions
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]){
 
  CommonResources r;
  REVEAL(r, opt, json, jout, DBG())
- 
+
  opt.prolog("\nJSON test console. Version " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
@@ -193,7 +193,7 @@ void read_json(CommonResources &r) {
   DOUT() << "start parsing json from file: " << (redirect? "<stdin>": opt[0].c_str()) <<endl;
 
  json.parse( string{istream_iterator<char>(redirect?
-                                           cin>>noskipws: 
+                                           cin>>noskipws:
                                            ifstream{opt[0].c_str(), ifstream::in}>>noskipws),
                     istream_iterator<char>{}} );
 
@@ -210,7 +210,7 @@ void write_json(CommonResources &r) {
  // a) input json file (if -f given and if the input is not <stdin> ('-' option)
  // b) stdout
  REVEAL(r, opt, json, DBG())
- 
+
  bool redirect{ opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0 };
  if(not opt[CHR(OPT_FRC)] or redirect)                          // stdout if no -f given,
   { cout << json << endl; return; }                             // or redirect '-' is present
@@ -506,7 +506,7 @@ void print_walk(vector<walk_deq> &wpi, CommonResources &r) {
 
 
 
-void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t longest_walk, 
+void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t longest_walk,
                      vector<size_t> &actual_instances, CommonResources &r) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
  REVEAL(r, DBG())
@@ -651,18 +651,18 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform
      applied, otherwise (i.e. ">...<") - backward
    - "<text>": performs search  of "text" under a JSON tree off the given node
    among JSON strings only (default behavior).
-   - optionally a one letter suffix could be used, either of these: [rlRLdbn],
+   - optionally a one letter suffix could be used, either of these: [rRlLdDbn],
      each one affecting the search in a following way:
-     r - apply exact match (default) while searching string values,
-     l - apply exact match while searching labels only,
-     d - match a number (i.e. searching only numeric JSON values),
-     b - match a boolean (i.e. searching only boolean values), true/false
-         must be fully spelled, e.g.: "<true>b",
+     r - apply exact match (default) while searching string values
+     R - same as r, but expression in braces is a Regex (regex search applied)
+     l - apply exact match while searching labels only
+     L - same as l, but expression in braces is a Regex (regex search applied)
+     d - match a number (i.e. searching only numeric JSON values)
+     D - same as d, but expression in braces is a Regex (regex search applied)
+     b - match a boolean (i.e. searching only boolean values), true/false/any
+         must be fully spelled, e.g.: "<true>b", "<any>b"
      n - match null values, the content within the encasement could be empty,
          or anything - it's ignored, e.g.: <>n, >null<Nn, etc
-     R - same as r, but expression in braces is a Regex (regex search applied)
-     L - same as l, but expression in braces is a Regex (regex search applied)
-     D - same as d, but expression in braces is a Regex (regex search applied)
    n - an integer quantifier specifying search match instance, e.g.: "<text>2"
        will match only upon a 3rd (quantifiers are zero based) encounter of
        the word "text"
