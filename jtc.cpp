@@ -643,12 +643,14 @@ a. offset lexemes: enclosed into square braces '[', ']', their meaning deppends
 b. search lexemes: enclosed into angular braces '<', '>', instruct to perform
    a textual search everywhere under given JSON element tree. Following
    notations are possible:
-   "<txt>", "<txt>n", "<txt>+n", "<txt>s", "<txt>sn", "<txt>s+n"
-   and respective reverse forms:
-   ">txt<", ">txt<n", ">txt<+n", ">txt<s", ">txt<sn", ">txt<s+n",
+   "<txt>", "<txt>N", "<txt>+N", "<txt>s", "<txt>sN", "<txt>s+N"
+   and respective non-recursive search lexemes:
+   ">txt<", ">txt<N", ">txt<+N", ">txt<s", ">txt<sN", ">txt<s+N",
    where txt - is any text to search for, s - an optional one letter suffix
-   - if a lexeme is given using "<...>" encasement, then forward search is
-     applied, otherwise (i.e. ">...<") - backward
+   - if a lexeme is given using "<...>" encasement, then a recursive search is
+     applied (from current JSON node),
+     otherwise (i.e. ">...<" encasement given) - a non-recursive search is
+     performed among immediate JSON node's children only
    - "<text>": performs search  of "text" under a JSON tree off the given node
    among JSON strings only (default behavior).
    - optionally a one letter suffix could be used, either of these: [rRlLdDbn],
@@ -662,11 +664,11 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform
      b - match a boolean (i.e. searching only boolean values), true/false/any
          must be fully spelled, e.g.: "<true>b", "<any>b"
      n - match null values, the content within the encasement could be empty,
-         or anything - it's ignored, e.g.: <>n, >null<Nn, etc
-   n - an integer quantifier specifying search match instance, e.g.: "<text>2"
+         or anything - it's ignored, e.g.: <>n, >null<n, etc
+   N - an integer quantifier specifying search match instance, e.g.: "<text>2"
        will match only upon a 3rd (quantifiers are zero based) encounter of
        the word "text"
-  +n - collects all search instances staring from n (zero based) that produce
+  +N - collects all search instances staring from n (zero based) that produce
        a match, e.g.: "<text>+1" will match 2nd found instance of "text", 3rd,
        4th and so on untill all matches found.
    - empty lexemes "<>", "><" may only have either r suffix - matches an empty
@@ -746,21 +748,6 @@ R"( then compiled and executed. That syntax is supposed to save the input
 - to select all children, from the node whose parent's name starts with "John",
   run:
 jtc -)" STR(OPT_WLK) R"( "[Relation]<^John>R[-1][children][+0]" example.json
-"Sophia"
-"Olivia"
-
-(!) However, the same operation in reverse direction would fail:
-    jtc -)" STR(OPT_WLK) R"( "[Relation]>^John<R[-1][children][+0]" example.json
-    <empty output>
-    Why? Any search operation (in that case, a reverse search of regexp "^John")
-    continues only until a complete walk path produces failure (does not yield
-    a match). In the example, search ">^John<R" would match on JSON value
-    "John" - son of "Anna Johnson", but that JSON value's parent (which is an
-    array), does not have the label "children", hence walk fails.
-    A proper way to accomplish the task requires specifying search attached to
-    the specific label "parent". Following example has fixed syntax:
-
-jtc -)" STR(OPT_WLK) R"( "[Relation] [parent]:>^John<R [-1] [children] [+0]" example.json
 "Sophia"
 "Olivia"
 
