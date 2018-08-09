@@ -30,6 +30,10 @@
  *                    ARY{ NUL{}, BUL{true}, NUM{2}, STR{"three"} } }
  *             };
  *
+ * CAUTION: be careful with DSL declarations - ARY and OBJ rely on std::initializer_list,
+ *          which always produces copies of holding objects, thus move semantic is
+ *          unachievable (as of C++14/17, might be lifted later)
+ *
  *  b) build JSON by parsing the std::string:
  *      json.parse( "{ \"label 1\": [ null, true, 2, \"three\" ] }" );
  *
@@ -674,7 +678,7 @@ class Jnode {
                         }
 
     bool                empty(void) const
-                         { return not has_children(); }
+                         { return type() <= Array? children_().empty(): false; }
 
     bool                has_children(void) const
                          { return type() <= Array? not children_().empty(): false; }
@@ -773,6 +777,12 @@ class Jnode {
                          return *this;
                         }
 
+    Jnode &             pop_back(void) {
+                         if(not is_iterable()) throw EXP(type_non_iterable);
+                         children_().erase(std::prev(children_().end()));
+                         return *this;
+                        }
+
     Jnode &             push_front(const Jnode & jn) {
                          if(not is_array()) throw EXP(expected_array_type);
                          children_().emplace(prior_key_(), jn);
@@ -782,6 +792,12 @@ class Jnode {
     Jnode &             push_front(Jnode && jn) {
                          if(not is_array()) throw EXP(expected_array_type);
                          children_().emplace(prior_key_(), std::forward<Jnode>(jn));
+                         return *this;
+                        }
+
+    Jnode &             pop_front(void) {
+                         if(not is_iterable()) throw EXP(type_non_iterable);
+                         children_().erase(children_().begin());
                          return *this;
                         }
 
@@ -889,12 +905,14 @@ struct NUM: public Jnode {
 struct STR: public Jnode {
     STR(const std::string & x): Jnode{String}
      { value_ = x; }
+    STR(std::string && x): Jnode{String}
+     { value_ = std::move(x); }
 };
 
 struct ARY: public Jnode {
     ARY(const std::initializer_list<Jnode> & array): Jnode{Array} {
      for(auto &jn: array)
-      children_().emplace(next_key_(), std::move(jn));
+      children_().emplace(next_key_(), jn);
     }
 };
 
@@ -907,7 +925,7 @@ struct LBL: public Jnode {
 struct OBJ: public Jnode {
     OBJ(const std::initializer_list<LBL> & labels): Jnode{Object} {
      for(auto &l: labels)
-      children_().emplace(std::move(l.label), std::move(l));
+      children_().emplace(std::move(l.label), l);
     }
 };
 
@@ -1297,10 +1315,14 @@ class Json{
                          { root().push_back(std::forward<Jnode>(jn)); return *this; }
     Json &              push_back(const Jnode & jn)
                          { root().push_back(jn); return *this; }
+    Json &              pop_back(void)
+                         { root().pop_back(); return *this; }
     Json &              push_front(Jnode && jn)
                          { root().push_front(std::forward<Jnode>(jn)); return *this; }
     Json &              push_front(const Jnode & jn)
                          { root().push_front(jn); return *this; }
+    Json &              pop_front(void)
+                         { root().pop_front(); return *this; }
 
     Jnode::iterator     begin(void) { return root().begin(); }
   Jnode::const_iterator begin(void) const { return root().begin(); }
@@ -1352,7 +1374,7 @@ class Json{
                         findDelimiter_(char c, std::string::const_iterator & jsp);
     std::string::const_iterator &
                         validateNumber_(std::string::const_iterator & jsp);
-    bool                json_number_definition(std::string::const_iterator & jsp);
+    Jnode::Jtype        json_number_definition(std::string::const_iterator & jsp);
 
     typedef std::map<std::string, Jnode>::iterator iter_jn;
     typedef std::map<std::string, Jnode>::const_iterator const_iter_jn;
@@ -1409,7 +1431,7 @@ class Json{
                              jit(it), lbl(l), wsi(i) {}         // enable emplacement
         iter_jn             jit;
         std::string         lbl;                                // preserved label for validation
-        size_t              wsi;                                // walk step pointer
+        size_t              wsi;                                // walk step index
     };
     // Search Cache Key:
     // - made of jnode pointer and walk step
@@ -1467,7 +1489,7 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
  skipBlanks_(jsp);
  node.type_ = classifyJnode_(jsp);
 
- DBG(2) {                                                       // print currently parsed point
+ DBG(4) {                                                       // print currently parsed point
    static const char* pfx{"parsing point ->"};
    bool truncate{std::strlen(&*jsp) > (DBG_WIDTH-sizeof(pfx))};
    std::string str{jsp, jsp + (truncate? DBG_WIDTH - sizeof(pfx) - 3: strlen(&*jsp))};
@@ -1477,7 +1499,7 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
  }
 
  if(node.type_ == Jnode::Neither) return;
- DBG(3) DOUT() << "classified as: " << Jnode::Jtype_str[node.type()] << std::endl;
+ DBG(4) DOUT() << "classified as: " << Jnode::Jtype_str[node.type()] << std::endl;
 
  switch(node.type()) {
   case Jnode::Object: parseObject_(node, ++jsp); break;         // skip '{' with ++jsp
@@ -1594,33 +1616,33 @@ std::string::const_iterator & Json::findDelimiter_(char c, std::string::const_it
 
 
 std::string::const_iterator & Json::validateNumber_(std::string::const_iterator & jsp) {
- if(not json_number_definition(jsp))                            // failed to convert
+ if(json_number_definition(jsp) != Jnode::Number)               // failed to convert
   { ep_ = jsp; throw EXP(Jnode::invalid_number); }
  return jsp;
 }
 
 
-bool Json::json_number_definition(std::string::const_iterator & jsp) {
+Jnode::Jtype Json::json_number_definition(std::string::const_iterator & jsp) {
  // conform JSON's definition of a number
  if(*jsp == '-') ++jsp;
- if(not isdigit(*jsp)) return false;                            // digit must follow '-'
+ if(not isdigit(*jsp)) return Jnode::Neither;                   // digit must follow '-'
  if(*jsp > '0')
   while(isdigit(*jsp)) ++jsp;
  else                                                           // next could be only [.eE] or end
   ++jsp;                                                        // skip leading 0
  // here it could be either of [.eE] or end
  if(*jsp == '.') {
-  if(not isdigit(*++jsp)) return false;                         // digit must follow '.'
+  if(not isdigit(*++jsp)) return Jnode::Neither;                // digit must follow '.'
   while(isdigit(*jsp)) ++jsp;
  }
  // here could be [eE] or end
  if(*jsp == 'e' or *jsp == 'E') {
   ++jsp;                                                        // skip [eE]
   if(*jsp == '+' or *jsp == '-') ++jsp;                         // skip [+-]
-  if(not isdigit(*jsp)) return false;                           // digit must follow [eE][+/]
+  if(not isdigit(*jsp)) return Jnode::Neither;                  // digit must follow [eE][+/]
   while(isdigit(*jsp)) ++jsp;
  }
- return true;
+ return Jnode::Number;
 }
 
 
@@ -2163,9 +2185,7 @@ void Json::iterator::showBuiltPv_(std::ostream &out) const {
  out << "built path vector:";
  for(auto &it: pv_)
   out << (&it == &pv_.front()? " ":" -> ")
-      << (it.jit == json_().root().children_().end()?
-          "[end]":
-          it.lbl);
+      << (it.jit == json_().root().children_().end()? "(end)": it.lbl);
  out << std::endl;
 }
 
@@ -2407,13 +2427,14 @@ bool Json::iterator::increment_(long l) {
  if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
  // unsuccessful walk (out of iterations)
- if((signed)pv_.back().wsi > l) {                               // i.e. not my position and MSP
-  DBG(json_(), 2)
+ if(l < (signed)pv_.back().wsi) {                               // it's not my position, plus
+  DBG(json_(), 2)                                               // it's in less significant place
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required  to handle irregular JSON
-  return increment_(l);
+  long n = wpNextIterable(walkPath_().size());
+  return n<0? false: increment_( n );
  }
 
  l = wpNextIterable(l);

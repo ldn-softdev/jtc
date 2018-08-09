@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define VERSION "1.24"
+#define VERSION "1.25"
 
 
 // option definitions
@@ -573,33 +573,35 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
  REVEAL(cr, opt, jout)
  static size_t last_actuals{0};                                 // walking happens once per run,
                                                                 // so it's okay to make it static
- auto &r = *(wi.front());
- auto label_present = [&r](void){ return not r.is_root() and r[-1].is_object(); };
+ auto &sr = *(wi.front());                                      // sr is a super node (super record)
+ auto label_present = [&sr](void){ return not sr.is_root() and sr[-1].is_object(); };
  auto start_new_object = [actuals](void){ return actuals >= last_actuals; };
 
- if(opt[CHR(OPT_JSN)]) {                                        // -j given
-  if(opt[CHR(OPT_LBL)]){                                        // -l given
-   if(label_present()) {                                        // label is present
-    if(start_new_object() or not jout.has_children()) jout.push_back( OBJ{} );
+ if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
+  if(opt[CHR(OPT_LBL)]){                                        // -l given (combine relevant nodes)
+   if(label_present()) {                                        // parent is an obect
+    if(start_new_object() or jout.empty()) jout.push_back( OBJ{} );
     if(not jout.back().is_object()) jout.push_back( OBJ{} );
-    if(jout.back().find(r.label()) == jout.back().end())        // no label recorded yet
-     jout.back()[r.label()] = r;
+    if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
+     jout.back()[sr.label()] = sr;
     else {                                                      // label exist
-     if(not jout.back()[r.label()].is_array())                  // and it's not an array
-      jout.back()[r.label()] = ARY{ move(jout.back()[r.label()]) }; // convert to array
-     jout.back()[r.label()].push_back( r );
+     if(not jout.back()[sr.label()].is_array()) {               // and it's not an array
+      Json tmp{ ARY{} };                                        // convert to array then
+      tmp.push_back( move(jout.back()[sr.label()]) );
+      jout.back()[sr.label()] = move(tmp);
+     }
+     jout.back()[sr.label()].push_back( sr );                   // & push back into converted array
     }
    }
-   else                                                         // no label present
-    jout.push_back(r);
+   else jout.push_back(sr);                                     // parent is root or not object 
   }
   else                                                          // no -l, just -j,
-   jout.push_back(r);                                           // make a simple an array
+   jout.push_back(sr);                                          // make a simple an array
  }
  else {                                                         // no -j option
   if(opt[CHR(OPT_LBL)] and label_present())                     // -l given
-   cout << '"' << r.label() << "\": ";
-  cout << r << endl;
+   cout << '"' << sr.label() << "\": ";
+  cout << sr << endl;
  }
 
  wi.pop_front();

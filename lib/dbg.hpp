@@ -292,7 +292,7 @@
 // 2nd form is used only for in-class declarations and let enumerate all DEBUGGABLE
 // members. Enumerated debuggable members then conform declared class object debug
 // policy
-#define DEBUGGABLE(args...) __DEBUGGABLE_ARG__( IF_ARGS(args), args)
+#define DEBUGGABLE(args...) __DEBUGGABLE_ARG__(IF_ARGS(args), args)
 #define __DEBUGGABLE_ARG__(X, args...) __DEBUGGABLE_IF__(X, args)
 #define __DEBUGGABLE_IF__(X, args...) __DEBUGGABLE_##X##__(args)
 #define __DEBUGGABLE_PROPAGATE__(X) X.__dbg__.severity(sev + 1, X);
@@ -315,13 +315,15 @@
 //
 // macros 2. and 3. are entirely covered by Debug's mutex
 
-#define __DBG_0_ARG__() __dbg__                                    // DBG(): access to debug object
+#define __DBG_0_ARG__() __dbg__                                 // DBG(): access to debug object
 #define __DBG_1_ARG__(X) \
-    for(std::unique_lock<std::mutex> mgard(__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
-     if( __dbg__(X, __func__) )                                 // DBG(N) {...}: conditional debug
+    if( __dbg__(X) ) \
+     for(std::unique_lock<std::mutex> mgard(__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
+      if( __dbg__(X, __func__) )                                // now print the prompt
 #define __DBG_2_ARG__(O, X) \
-    for(std::unique_lock<std::mutex> mgard(O.__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
-     if( O.__dbg__(X, __func__) )                               // DBG(C,N) {...}: cond. debug of C
+    if( O.__dbg__(X) ) \
+     for(std::unique_lock<std::mutex> mgard(O.__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
+      if( O.__dbg__(X, __func__) )                              // now print the prompt
 #define __DBG_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
 #define __DBG_CHOOSER__(args...) \
     __DBG_4TH_ARG__(dummy, ##args, __DBG_2_ARG__, __DBG_1_ARG__, __DBG_0_ARG__)
@@ -505,7 +507,7 @@ bool Debug::operator()(short d, const char * fn) const {
 
  if(d + ds_ >= level()) return false;                           // severity lower than set by user
  if(fn == nullptr) return true;                                 // user does not want printed prompt
- if(not match_(fn)) return false;
+ if(not match_(fn)) return false;                               // filter does not match
 
  dout() << Debug::indent_ << prompt(fn, d);
  return true;
