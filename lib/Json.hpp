@@ -268,7 +268,7 @@
  *  walk() is a class stateful feature, which let search entire Json and iterate
  *  over immediate children as well as over matches for provided search criteria
  *
- *  a) Search path:
+ *  a) Walk path:
  *   walk() method accepts a string, which represents a walk path; path is made
  *   of lexemes, which instruct how to traverse Json tree:
  *
@@ -458,6 +458,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <functional>           // function objects
 #include <sstream>              // std::stringstream
 #include <utility>              // std::forward, std::move, std::make_pair, ...
 #include <algorithm>            // std::min
@@ -1247,6 +1248,9 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
 class Json{
   friend std::ostream & operator<<(std::ostream & os, const Json & my)
                          { return os << my.root(); }
+    typedef std::map<std::string,
+                     std::function<void(const Jnode &)>> lbl_callback;
+
  public:
     #define JS_ENUM \
                 regular_match, \
@@ -1338,6 +1342,8 @@ class Json{
     Jnode::iterator     find(size_t i) { return root().find(i); }
   Jnode::const_iterator find(size_t i) const { return root().find(i); };
 
+    lbl_callback &      callbacks(void) { return cf_; }         // expose callback map to the user
+
     bool                is_pretty(void) const { return root().is_pretty(); }
     Json &              pretty(bool x=true) { root().pretty(x); return *this; }
     bool                is_raw(void) const { return root().is_raw(); }
@@ -1354,6 +1360,7 @@ class Json{
     DEBUGGABLE()
 
  protected:
+    // protected data structures
     Jnode               root_;
     std::string::const_iterator
                         ep_;                                    // exception pointer
@@ -1390,7 +1397,7 @@ class Json{
 
 
     // Properties and structures used by walk iterator:
-    //
+
     // WalkStep:
     // - is used by walk iterator and search cache key
     struct WalkStep {
@@ -1405,7 +1412,7 @@ class Json{
                             // init -1: init is not used. offset can be positive or negative
                             // init -2: offset is used as absolute selector from root, like in [^n]
                             // init >0: offset is used as an iterable, init keeps original offset
-   std::vector<std::string> stripped;
+        v_str               stripped;
                             // stripped[0] -> a stripped lexeme (required)
                             // stripped[1] -> attached label match (optional)
         std::regex          re;
@@ -1421,8 +1428,9 @@ class Json{
                                      jsearch < r.jsearch:
                                      stripped.front() < r.stripped.front());
                             }
-                            COUTABLE(WalkStep, offset, init, search_type(), label(), lexeme)
+        COUTABLE(WalkStep, offset, init, search_type(), label(), lexeme)
     };
+
     // Itl (iterator-label pair):
     // - is used by walk iterator and search cache key
     struct Itl {
@@ -1433,6 +1441,7 @@ class Json{
         std::string         lbl;                                // preserved label for validation
         size_t              wsi;                                // walk step index
     };
+
     // Search Cache Key:
     // - made of jnode pointer and walk step
     struct SearchCacheKey {
@@ -1442,17 +1451,22 @@ class Json{
         const Jnode *       jnp;
         WalkStep            ws;
         const Jnode *       json_node(void) const { return jnp; }
-                            COUTABLE(SearchCacheKey, json_node(), ws)
+
+        COUTABLE(SearchCacheKey, json_node(), ws)
 
         static bool 	    cmp(const SearchCacheKey &l, const SearchCacheKey &r)
                              { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
     };
+
+    // protected data structures
     typedef std::vector<Itl> path_vector;
-    std::map<SearchCacheKey, std::vector<path_vector>, decltype(&SearchCacheKey::cmp)>
+    std::map<SearchCacheKey, 
+             std::vector<path_vector>, 
+             decltype(&SearchCacheKey::cmp)>
                             sc_{SearchCacheKey::cmp};           // search cache itself
+    lbl_callback            cf_;                                // callback functions 
 
     void                parseOffsetType_(WalkStep & state) const;
-
     EXCEPTIONS(Jnode::ThrowReason)
 };
 
@@ -1802,7 +1816,7 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
     //
                         iterator(void) = default;               // DC
                         iterator(const iterator &it):           // CC
-                         ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {//, sc_(it.sc_) {
+                         ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {
                          sn_.type_ = it.sn_.type_;
                         }
                         iterator(iterator &&it) {               // MC
@@ -1914,6 +1928,8 @@ class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
     void                searchAll_(Jnode *, const char *, const
                                     WalkStep &w, std::vector<path_vector> &);
     bool                searchFwd_(Jnode *, const char *lbl, const WalkStep &, long &);
+    void                callBack_(const std::string &, const Jnode *,
+                                  const std::vector<path_vector> * = nullptr);
     bool                searchChild_(Jnode *, const char *lbl, const WalkStep &, long &);
     bool                labelMatch_(const std::string &, const WalkStep &, long &) const;
     bool                match_(const Jnode *, const char *lbl, const WalkStep &) const;
@@ -1962,7 +1978,7 @@ void Json::compileWalk_(const std::string & wstr, iterator & it) const {
 void Json::parseLexemes_(const std::string & wstr, iterator & it) const {
  // parse full lexemes: offsets/search lexemes + possible suffixes in search lexemes
  auto & ws = it.walkPath_();
- std::vector<std::string> req_label;                            // would hold stripped [label]:
+ v_str req_label;                                               // would hold stripped [label]:
 
  for(auto si{ wstr.begin() }; si != wstr.end();) {              // si: input string iterator
   DBG(1) {
@@ -2274,10 +2290,12 @@ void Json::iterator::searchAll_(Jnode *jn, const char *lbl,
  if(jn->is_iterable()) {
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    vpv.back().emplace_back(it, it->KEY);
-   if(jn->is_object() and (ws.jsearch == label_match or ws.jsearch == Label_RE_search)) {
-    long i{0};
-    if(labelMatch_(it->KEY, ws, i))
-     vpv.push_back(vpv.back());
+   if(jn->is_object()) {
+    if(not json_().callbacks().empty()) callBack_(it->KEY, jn, &vpv);
+    if(ws.jsearch == label_match or ws.jsearch == Label_RE_search) {
+     long i{0};
+     if(labelMatch_(it->KEY, ws, i)) vpv.push_back(vpv.back());
+    }
    }
    searchAll_(&it->VALUE, jn->is_object()? it->KEY.c_str(): nullptr, ws, vpv);
    vpv.back().pop_back();
@@ -2290,14 +2308,18 @@ void Json::iterator::searchAll_(Jnode *jn, const char *lbl,
 }
 
 
+
 bool Json::iterator::searchFwd_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
  // search current Jnode tree forward, return true/false if found,
  // if found pv_.back() must contain an iterator to the found node
  if(jn->is_iterable()) {
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    pv_.emplace_back(it, it->KEY);
-   if(jn->is_object() and (ws.jsearch == label_match or ws.jsearch == Label_RE_search))
-    if(labelMatch_(it->KEY, ws, i)) return true;
+   if(jn->is_object()) {
+    if(not json_().callbacks().empty()) callBack_(it->KEY, jn);
+    if(ws.jsearch == label_match or ws.jsearch == Label_RE_search)
+     if(labelMatch_(it->KEY, ws, i)) return true;
+   }
    if(searchFwd_(&it->VALUE, jn->is_object()? it->KEY.c_str(): nullptr, ws, i)) return true;
    pv_.pop_back();
   }
@@ -2307,6 +2329,22 @@ bool Json::iterator::searchFwd_(Jnode *jn, const char *lbl, const WalkStep &ws, 
  if(not match_(jn, lbl, ws)) return false;
  return --i < 0? true: false;
 }
+
+
+
+void Json::iterator::callBack_(const std::string &label, const Jnode *jn, 
+                               const std::vector<path_vector> *vpv) {
+ if(json_().callbacks().count(label) == 1) {                    // label registered?
+  if(vpv != nullptr)
+   for(auto &path: vpv->back())
+    pv_.push_back(path);                                        // augment path
+  cType_() = Jnode::Object;                                     // ensure supernode's correct type
+  json_().cf_[label]( operator*() );                            // call back passing super node 
+  if(vpv != nullptr)
+   pv_.resize(pv_.size() - vpv->back().size());                 // reinstate path
+ }
+}
+
 
 
 bool Json::iterator::searchChild_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {

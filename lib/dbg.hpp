@@ -265,6 +265,15 @@
  *  3 - very large debugs dumps of repetitive debugs in a loop
  *  4 - etc
  *
+ * to recap up all the user-facing macros:
+ *  DEBUGGABLE()        // make debuggable a function or a class w/o subordinates
+ *  DEBUGGABLE(x, ...)  // make a debuggable class with subordinate debuggables
+ *  DBG()               // refer to the debug object
+ *  DBG(n) { ... }      // in-code debug placement using severity n
+ *  DBG(c, n) { ... }   // in-code debug placement using debug object from c
+ *  DOUT()              // refers to ostream used by debug class
+ *  DOUT(c)             // refers to ostream used by debug class c
+ *  DBG_PROMPT(n)       // print debug prompt with indent n (+object severity)
  */
 
 #pragma once

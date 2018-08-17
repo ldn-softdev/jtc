@@ -3,19 +3,21 @@
 #include <sstream>
 #include <deque>
 #include <climits>      // LONG_MAX
-#include "lib/Json.hpp"
 #include "lib/getoptions.hpp"
+#include "lib/Json.hpp"
+#include "lib/shell.hpp"
 #include "lib/dbg.hpp"
 
 
 using namespace std;
 
-#define VERSION "1.25"
+#define VERSION "1.26"
 
 
 // option definitions
 #define OPT_RDT -
 #define OPT_DBG d
+#define OPT_EXE e
 #define OPT_FRC f
 #define OPT_GDE g
 #define OPT_INS i
@@ -47,6 +49,8 @@ using namespace std;
         RC_WP_TWO, \
         RC_SP_NST, \
         RC_SP_INV, \
+        RC_SC_MISS, \
+        RC_SH_ERR, \
         RC_END
 ENUM(ReturnCodes, RETURN_CODES)
 
@@ -76,11 +80,15 @@ struct CommonResources {
 typedef vector<Json::iterator> walk_vec;
 typedef deque<Json::iterator> walk_deq;
 
-int demux_opt(CommonResources &);
+void parse_opt(int argc, char *argv[], CommonResources &);
+void reparse_opt(int argc, char *argv[], CommonResources &r);
+void recompile_argv(int argc, char *argv[], vector<string> &sargv, CommonResources &r);
 void read_json(CommonResources &);
+int demux_opt(CommonResources &);
 int insert_json(CommonResources &);
 int purge_json(CommonResources &);
 int update_json(CommonResources &);
+void execute_cli(Json &update, const Jnode &updated, CommonResources &r);
 int swap_json(CommonResources &);
 void collect_walks(vector<walk_vec> & swap_points, CommonResources &);
 int walk_json(CommonResources &);
@@ -101,10 +109,10 @@ int main(int argc, char *argv[]){
 
  CommonResources r;
  REVEAL(r, opt, json, jout, DBG())
-
- opt.prolog("\nJSON test console. Version " VERSION \
+ opt.prolog("\nJSON test console\nVersion " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
+ opt[CHR(OPT_EXE)].desc("treat a parameter for -" STR(OPT_UPD) " as a shell cli");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax");
  opt[CHR(OPT_SZE)].desc("print json size (total number of nodes in json)");
  opt[CHR(OPT_RAW)].desc("force printing json in a raw format");
@@ -145,17 +153,19 @@ Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
    " will be\n    prepended by parameter from -" STR(OPT_CMN) \
    ", tother they will form an equivalent of -" STR(OPT_WLK) "\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
- - when -j is given w/o -l, then walked elements will be collected into a JSON\n\
+ - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL) ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array; those walked elements which do not have\n\
-   labels will be enumerated within the parent array\n");
+   labels will be enumerated within the parent array\n\n\
+Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
+ - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD) " when used together; every occurrence of {}\n\
+   is interpolated with walked JSON entry using raw format; interpolated entry\n\
+   is completely escaped, thus does not require quoting; all shell-specific\n\
+   chars (e.g.: `|', `;', `\"', etc) have to be quoted or escaped; terminate\n\
+   the cli with trailing semicolon (which needs to be escapted): \\;\n");
 
  // parse options
- try { opt.parse(argc,argv); }
- catch (stdException & e) { opt.usage(); return e.code() + OFF_GETOPT; }
- if(opt[CHR(OPT_GDE)]) return wp_guide();
- for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
-  opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
+ parse_opt(argc, argv, r);
 
  // prepare debugs
  json.tab(abs(opt[CHR(OPT_IND)]))
@@ -184,6 +194,94 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
 
 
 
+void parse_opt(int argc, char *argv[], CommonResources &r) {
+ REVEAL(r, opt)
+ bool reparse{false};
+
+ try { opt.parse(argc,argv); }
+ catch (stdException & e) {
+  if(e.code() == Getopt::too_many_arguments and
+     opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0)
+   reparse = true;
+  else
+   { opt.usage(); exit(e.code() + OFF_GETOPT); }
+ }
+ if(reparse or (opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0))
+  reparse_opt(argc, argv, r);
+
+ if(opt[CHR(OPT_GDE)]) exit( wp_guide() );
+
+ for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
+  opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
+}
+
+
+
+void reparse_opt(int argc, char *argv[], CommonResources &r) {
+ REVEAL(r, opt)
+
+ try { opt.reset().variadic().parse(argc,argv); }
+ catch (stdException & e)
+  { opt.variadic(false).usage(); exit(e.code() + OFF_GETOPT); }
+
+ vector<string> sargv;                                          // make opt -u adsorb all due args
+ recompile_argv(argc, argv, sargv, r);
+
+ char *nargv[sargv.size()];                                     // here, rebuild new argv
+ for(int i=0; i<sargv.size(); ++i) {
+  nargv[i] = new char[sargv[i].size()+1];
+  stpcpy(nargv[i], sargv[i].c_str());
+ }
+
+ try { opt.reset().variadic(false).parse(sargv.size(), nargv); } // reparse
+ catch (stdException & e)
+  { opt.usage(); exit(e.code() + OFF_GETOPT); }
+
+ for(int i=0; i<sargv.size(); ++i)                              // clean up nargv
+  delete [] nargv[i];
+}
+
+
+
+void recompile_argv(int argc, char *argv[], vector<string> &sargv, CommonResources &r) {
+ // recompile argv minding -u option variable length
+ REVEAL(r, opt)
+
+ sargv.push_back(argv[0]);
+ bool semicolon{false};
+ int uopt_found{0};
+
+ for(int i=1; i<argc; ++i) {                                    // go through all args
+  if(semicolon == true)
+   { sargv.push_back(argv[i]); continue; }
+  if(uopt_found > 0) {                                          // ';' not found yet, -u found
+   if(argv[i][strlen(argv[i])-1] == ';') {                      // ';' found
+    semicolon = true;
+    string sc(argv[i], strlen(argv[i])-1);                      // trim trailing ';'
+    if(not sc.empty()) sargv.back() += " " + sc;
+    continue;    
+   }
+   sargv.back() += string{(++uopt_found > 2? " ":"")} + argv[i]; // first arg append w/o spacer
+   continue;
+  }
+
+  if(argv[i][0] == '-')                                         // option, see if opt u is present
+   for(int c=1; argv[i][c] != '\0'; ++c) {
+    if(not opt.defined(argv[i][c])) break;                      // opt -u not found, record arg
+    if(argv[i][c] == CHR(OPT_UPD))                              // opt -u found, indicate & record
+     { uopt_found = 1; break; }
+   }
+  sargv.push_back(argv[i]);
+ }
+
+ if(semicolon == false) {
+  cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option: \\;" << endl;
+  exit(RC_SC_MISS);
+ }
+}
+
+
+
 void read_json(CommonResources &r) {
  // read and parse json
  REVEAL(r, opt, json, DBG())
@@ -200,8 +298,6 @@ void read_json(CommonResources &r) {
  if(opt[CHR(OPT_SZE)])
   cout << "read json size: " << json.size() << endl;
 }
-
-
 
 
 
@@ -334,7 +430,8 @@ int update_json(CommonResources &r) {
 
  Json update;
  DBG().severity(update);
- update.parse(opt[CHR(OPT_UPD)].str());
+ if(opt[CHR(OPT_EXE)].hits() == 0)
+  update.parse(opt[CHR(OPT_UPD)].str());
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all update points
@@ -344,6 +441,7 @@ int update_json(CommonResources &r) {
   for(size_t i{0}; i < ji.size(); ++i) {
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
+   if(opt[CHR(OPT_EXE)].hits() > 0) execute_cli(update, rec, r);
    rec = update;
   }
  }
@@ -352,6 +450,42 @@ int update_json(CommonResources &r) {
  return RC_OK;
 }
 
+
+
+void execute_cli(Json &update, const Jnode &updated, CommonResources &r) {
+ REVEAL(r, opt, DBG())
+
+ string upd_opt{ opt[CHR(OPT_UPD)].str() };
+ size_t interpolate(upd_opt.find("{}"));
+
+ if(interpolate != string::npos) {                              // interpolation of {} required
+  string updated_raw;                                           // updated json goes in here
+  auto pp = update.is_pretty(); update.raw();
+  stringstream is;
+  is << updated;
+  update.pretty(pp);
+  for(auto &chr: is.str())                                      // add completely quoted
+   { if(not isalnum(chr)) updated_raw += '\\'; updated_raw += chr; }
+
+  is.str(string());
+  while(interpolate != string::npos) {                          // interpolate all occurrences of {}
+   is << upd_opt.substr(0, interpolate) << updated_raw;
+   upd_opt.erase(0, interpolate+2);
+   interpolate = upd_opt.find("{}");
+  }
+  is << upd_opt;
+  upd_opt = is.str();
+  DBG(1) DOUT() << "interpolated update string: '" << upd_opt << "'" << endl;
+ }
+ 
+ Shell sh;
+ DBG().increment(+1, sh, -1);
+ sh.system(upd_opt);
+ if(sh.rc() != 0)
+  { cerr << "shell error: " << sh.stdout() << endl; return; /*exit(RC_SH_ERR);*/ }
+ 
+ update.parse(sh.stdout());
+}
 
 
 
@@ -586,14 +720,13 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
      jout.back()[sr.label()] = sr;
     else {                                                      // label exist
      if(not jout.back()[sr.label()].is_array()) {               // and it's not an array
-      Json tmp{ ARY{} };                                        // convert to array then
-      tmp.push_back( move(jout.back()[sr.label()]) );
-      jout.back()[sr.label()] = move(tmp);
+      Json tmp{ move(jout.back()[sr.label()]) };                // convert to array then
+      (jout.back()[sr.label()] = ARY{}).push_back( move(tmp) );
      }
      jout.back()[sr.label()].push_back( sr );                   // & push back into converted array
     }
    }
-   else jout.push_back(sr);                                     // parent is root or not object 
+   else jout.push_back(sr);                                     // parent is root or not object
   }
   else                                                          // no -l, just -j,
    jout.push_back(sr);                                          // make a simple an array
@@ -835,6 +968,35 @@ STR(OPT_INS) R"( '{"Y-chromosome": true}' example.json
       }
    ]
 }
+
+
+- finally, an update option -u could be subjected for a shell cli evaluation,
+  say we want to capitalize all parents names:
+jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD) R"( echo {} \| tr "'[:lower:]'" "'[:upper:]'" \; example.json
+{
+   "Relation": [
+      {
+         "Y-chromosome": true,
+         "age": 31,
+         "children": [
+            "Sophia",
+            "Olivia",
+            "James"
+         ],
+         "city": "New York",
+         "parent": "JANE SMITH"
+      },
+      {
+         "age": 28,
+         "children": [
+            "John"
+         ],
+         "city": "Chicago",
+         "parent": "ANNA JOHNSON"
+      }
+   ]
+}
+
 )";
  return RC_OK;
 }
