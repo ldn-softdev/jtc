@@ -24,10 +24,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.26)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.26)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.26)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.26)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.27)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.27)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.27)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.27)
 
 
 #### Compile and install instructions:
@@ -393,7 +393,7 @@ Once options `-e` and `-u` used together following rules must be observed:
  - all special characters subjected to shell interpretation (like `|`, `;`, `"`, `'`, etc)
  must be either escapted or quoted
  - returned result of shell evaluation still must be a valid JSON
- - failed shell evaluations are ignored (JSON entry wont be updated)
+ - failed or empty result of shell evaluations are ignored (JSON entry wont be updated)
 
 
 
