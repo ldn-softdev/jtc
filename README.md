@@ -124,7 +124,7 @@ bash $ jtc -w "<url>l+0" Bookmarks
   * `L`: same as `l`, but lexeme is a search RE
   * `d`: fully matches *JSON number*
   * `D`: same as `d`, but lexeme is an RE
-  * `b`: matches JSON boolean value, lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b` 
+  * `b`: matches JSON boolean value, lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches JSON null value, lexeme value is ignored, could be like `<null>n`, or `<>n`
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifier (preceded with `+`) makes the path *iterable*
@@ -138,12 +138,12 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-a. `<Work>`: first find within JSON a location where a string is matching "Work"  
-b. `[-1]`: step up one tier in JSON tree hierarchy  
-c. `[children]`: select a node with the label "children" (it'll be a JSON array)  
+a. `<Work>`: first find within JSON a location where a string is matching "Work"
+b. `[-1]`: step up one tier in JSON tree hierarchy
+c. `[children]`: select a node with the label "children" (it'll be a JSON array)
 d. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
-based)  
-e. `[name]`: select a node whose label is "name"  
+based)
+e. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
 node - a.k.a. numerical subscripts
@@ -325,11 +325,11 @@ the resulting JSON is only printed
 
 
 
-Update operation (`-u`) optionally may undergo shell evaluation (predicated by `-e`). 
+Update operation (`-u`) optionally may undergo shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
 ```
-bash $ jtc -w'[stamp]:<.*>R+0' -eu date -jf "'\"%F, %H:%M:%S\"'" {} "'+%s'" \;  Bookmarks 
+bash $ jtc -w'<stamp>l+0' -eu date -jf "'\"%F, %H:%M:%S\"'" {} "'+%s'" \; Bookmarks
 {
    "Bookmarks": [
       {
@@ -390,10 +390,12 @@ Once options `-e` and `-u` used together following rules must be observed:
  - option `-e` must precede `-u`
  - char sequence following option `-u` must be terminated with escaped `;` char
  - any occurrence of `{}` will be interpolated with JSON entry being updated
- - all special characters subjected to shell interpretations (like `|`, `;`, '"', `'`, etc)
+ - all special characters subjected to shell interpretation (like `|`, `;`, `"`, `'`, etc)
  must be either escapted or quoted
  - returned result of shell evaluation still must be a valid JSON
- - failed shell evaluations are ignored (JSON entry wont be updated) 
+ - failed shell evaluations are ignored (JSON entry wont be updated)
+
+
 
 
 
