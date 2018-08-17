@@ -237,7 +237,7 @@ void reparse_opt(int argc, char *argv[], CommonResources &r) {
  catch (stdException & e)
   { opt.usage(); exit(e.code() + OFF_GETOPT); }
 
- for(int i=0; i<sargv.size(); ++i)                              // clean up nargv
+ for(size_t i=0; i<sargv.size(); ++i)                              // clean up nargv
   delete [] nargv[i];
 }
 
