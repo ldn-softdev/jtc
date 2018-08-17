@@ -228,7 +228,7 @@ void reparse_opt(int argc, char *argv[], CommonResources &r) {
  recompile_argv(argc, argv, sargv, r);
 
  char *nargv[sargv.size()];                                     // here, rebuild new argv
- for(int i=0; i<sargv.size(); ++i) {
+ for(size_t i{0}; i < sargv.size(); ++i) {
   nargv[i] = new char[sargv[i].size()+1];
   stpcpy(nargv[i], sargv[i].c_str());
  }
