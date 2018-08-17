@@ -259,7 +259,7 @@ void recompile_argv(int argc, char *argv[], vector<string> &sargv, CommonResourc
     semicolon = true;
     string sc(argv[i], strlen(argv[i])-1);                      // trim trailing ';'
     if(not sc.empty()) sargv.back() += " " + sc;
-    continue;    
+    continue;
    }
    sargv.back() += string{(++uopt_found > 2? " ":"")} + argv[i]; // first arg append w/o spacer
    continue;
@@ -477,13 +477,13 @@ void execute_cli(Json &update, const Jnode &updated, CommonResources &r) {
   upd_opt = is.str();
   DBG(1) DOUT() << "interpolated update string: '" << upd_opt << "'" << endl;
  }
- 
+
  Shell sh;
  DBG().increment(+1, sh, -1);
  sh.system(upd_opt);
  if(sh.rc() != 0)
   { cerr << "shell error: " << sh.stdout() << endl; return; /*exit(RC_SH_ERR);*/ }
- 
+
  update.parse(sh.stdout());
 }
 
