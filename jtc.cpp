@@ -441,8 +441,14 @@ int update_json(CommonResources &r) {
   for(size_t i{0}; i < ji.size(); ++i) {
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
-   if(opt[CHR(OPT_EXE)].hits() > 0) execute_cli(update, rec, r);
-   rec = update;
+   if(opt[CHR(OPT_EXE)].hits() > 0) {                           // -e was given
+    update = OBJ{};
+    execute_cli(update, rec, r);
+    if(not update.empty())
+     rec = update;
+   }
+   else                                                         // no -e, just update json
+    rec = update;
   }
  }
 
@@ -481,8 +487,11 @@ void execute_cli(Json &update, const Jnode &updated, CommonResources &r) {
  Shell sh;
  DBG().increment(+1, sh, -1);
  sh.system(upd_opt);
+
  if(sh.rc() != 0)
-  { cerr << "shell error: " << sh.stdout() << endl; return; /*exit(RC_SH_ERR);*/ }
+  { DBG(1) DOUT() << "shell returned error: " << sh.rc() << endl; return; }
+ if(sh.stdout() == "")
+  { DBG(1) DOUT() << "shell returned empty result, not updating" << endl; return; }
 
  update.parse(sh.stdout());
 }
