@@ -2,12 +2,13 @@
 
 #### Simple offline cli tool to manipulate JSON data format
 
-jtc features following:
+jtc features following qualities:
   - simple user interface allowing applying bulk changes in one command
   - featured walk interface let extracting any combination of data from source JSON
   - extracted data is representable either as it found, or as a complete JSON format
   - support Regular Expressions when searching source JSON
-  - fast and efficient processing very large JSON files
+  - fast and efficient processing very large JSON files (built-in search cache)
+  - updates operations optionally undergo shell cli evaluation
   - written entirely in C++, no dependencies
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
@@ -23,10 +24,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.25)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.25)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.25)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.25)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.26)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.26)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.26)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.26)
 
 
 #### Compile and install instructions:
@@ -320,6 +321,81 @@ bash $ jtc -w"<stamp>l+0" -p Bookmarks
 - option `-f` would force such modification into the source JSON file, otherwise
 the resulting JSON is only printed
 - options `-i` and `-u` require an argument in a fully qualified JSON notation
+
+
+
+
+Update operation (`-u`) optionally may undergo shell evaluation (predicated by `-e`). 
+E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
+seconds since epoch:
+```
+bash $ jtc -w'[stamp]:<.*>R+0' -eu date -jf "'\"%F, %H:%M:%S\"'" {} "'+%s'" \;  Bookmarks 
+{
+   "Bookmarks": [
+      {
+         "children": [
+            {
+               "children": [
+                  {
+                     "name": "The New York Times",
+                     "stamp": 1507025119,
+                     "url": "https://www.nytimes.com/"
+                  },
+                  {
+                     "name": "HuffPost UK",
+                     "stamp": 1511435119,
+                     "url": "https://www.huffingtonpost.co.uk/"
+                  }
+               ],
+               "name": "News",
+               "stamp": 1506938719
+            },
+            {
+               "children": [
+                  {
+                     "name": "Digital Photography Review",
+                     "stamp": 1488193519,
+                     "url": "https://www.dpreview.com/"
+                  }
+               ],
+               "name": "Photography",
+               "stamp": 1488193519
+            }
+         ],
+         "name": "Personal",
+         "stamp": 1485083119
+      },
+      {
+         "children": [
+            {
+               "name": "Stack Overflow",
+               "stamp": 1525169119,
+               "url": "https://stackoverflow.com/"
+            },
+            {
+               "name": "C++ reference",
+               "stamp": 1529575519,
+               "url": "https://en.cppreference.com/"
+            }
+         ],
+         "name": "Work",
+         "stamp": 1520334449
+      }
+   ]
+}
+bash $
+```
+
+Once options `-e` and `-u` used together following rules must be observed:
+ - option `-e` must precede `-u`
+ - char sequence following option `-u` must be terminated with escaped `;` char
+ - any occurrence of `{}` will be interpolated with JSON entry being updated
+ - all special characters subjected to shell interpretations (like `|`, `;`, '"', `'`, etc)
+ must be either escapted or quoted
+ - returned result of shell evaluation still must be a valid JSON
+ - failed shell evaluations are ignored (JSON entry wont be updated) 
+
+
 
 
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
