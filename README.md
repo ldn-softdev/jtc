@@ -142,9 +142,9 @@ a. `<Work>`: first find within JSON a location where a string is matching "Work"
 
 b. `[-1]`: step up one tier in JSON tree hierarchy
 
-c. `[children]`: select a node with the label "children" (it'll be a JSON array)
+c. `[children]`: select a node with the label "children" (it'll be a JSON array, at the same tier with `Work`)
 
-d. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
+d. `[+0]`: select each node in the array (stating from the first one, indexes are always zero
 based)
 
 e. `[name]`: select a node whose label is "name"
