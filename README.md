@@ -426,7 +426,7 @@ int main(int argc, char *argv[]) {
  Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );
  
  // get all the names:
- vector<string> names{jin.walk("[AddressBook][+0][Name]"), jin.walk().end()};
+ vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());
 
  // sort the names:
  sort(names.begin(), names.end());
