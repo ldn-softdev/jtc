@@ -263,7 +263,7 @@ class Getopt{
                 undefined_option, \
                 non_ordinal_idex, \
                 inconsistent_format_string, \
-                end_of_trhow
+                end_of_throw
     ENUMSTR(ThrowReason, THROWREASON)
 
 

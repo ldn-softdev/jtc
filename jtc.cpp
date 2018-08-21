@@ -56,8 +56,8 @@ ENUM(ReturnCodes, RETURN_CODES)
 
 // return code exception offsets
 #define OFF_GETOPT RC_END                                       // offset for Getopt exceptions
-#define OFF_JSON (OFF_GETOPT + Getopt::end_of_trhow)            // offset for Json exceptions
-#define OFF_REGEX (OFF_JSON + Jnode::end_of_trhow)              // offset for Regex exceptions
+#define OFF_JSON (OFF_GETOPT + Getopt::end_of_throw)            // offset for Json exceptions
+#define OFF_REGEX (OFF_JSON + Jnode::end_of_throw)              // offset for Regex exceptions
 
 
 

@@ -388,12 +388,13 @@ bash $
 
 Once options `-e` and `-u` used together following rules must be observed:
  - option `-e` must precede `-u`
- - char sequence following option `-u` must be terminated with escaped `;` char
+ - char sequence following option `-u` must be terminated with escaped `;`
  - any occurrence of `{}` will be interpolated with JSON entry being updated
  - all special characters subjected to shell interpretation (like `|`, `;`, `"`, `'`, etc)
  must be either escapted or quoted
  - returned result of shell evaluation still must be a valid JSON
- - failed or empty result of shell evaluations are ignored (JSON entry wont be updated)
+ - failed or empty result of shell evaluations are ignored (JSON entry wont be updated, rather
+proceed to the next walked entry)
 
 
 
