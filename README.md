@@ -403,10 +403,43 @@ proceed to the next walked entry)
 
 
 
-
-
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
+
+#### A tiny class usage example:
+Say, we want to accomplish a following task:
+1. read Address Book JSON from <stdin>
+2. sort all records by `Name` (for simplicity, assume all records have that label)
+3. output resulting Address Book JSON
+
+Below is the code sample how that could be achieved using Json.hpp class:
+```
+#include <iostream>
+#include <fstream>
+#include "lib/Json.hpp"
+
+using namespace std;
+
+
+int main(int argc, char *argv[]) { 
+ // read and parse json from cin:
+ Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );
+ 
+ // get all the names:
+ vector<string> names{jin.walk("[AddressBook][+0][Name]"), jin.walk().end()};
+
+ // sort the names:
+ sort(names.begin(), names.end());
+
+ // rebuild AB with sorted records:
+ Json srt = ARY{};
+ for(const auto &name: names)
+  srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
+  
+ // reinstate back into the original json container and print:
+ cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;
+}
+```
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
