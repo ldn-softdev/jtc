@@ -139,10 +139,14 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
 "C++ reference"
 ```
 a. `<Work>`: first find within JSON a location where a string is matching "Work"
+
 b. `[-1]`: step up one tier in JSON tree hierarchy
-c. `[children]`: select a node with the label "children" (it'll be a JSON array)
-d. `[+0]`: select all nodes in the array (stating from the first one, indexes are always zero
+
+c. `[children]`: select a node with the label "children" (it'll be a JSON array, at the same tier with `Work`)
+
+d. `[+0]`: select each node in the array (stating from the first one, indexes are always zero
 based)
+
 e. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
