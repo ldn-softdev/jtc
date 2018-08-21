@@ -408,7 +408,7 @@ for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 #### A tiny class usage example:
 Say, we want to accomplish a following task:
-1. read Address Book JSON from <stdin>
+1. read Address Book JSON from `<stdin>`
 2. sort all records by `Name` (for simplicity, assume all records have that label)
 3. output resulting Address Book JSON
 
