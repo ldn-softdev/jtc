@@ -412,7 +412,7 @@ Say, we want to accomplish a following task:
 2. sort all records by `Name` (for simplicity, assume all records have that label)
 3. output resulting Address Book JSON
 
-Below is the code sample how that could be achieved using Json.hpp class:
+Below is the code sample how that could be achieved using `Json.hpp` class:
 ```
 #include <iostream>
 #include <fstream>
