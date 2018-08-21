@@ -639,7 +639,6 @@ class Jnode {
                         }
 
 
-
                         // atomic values constructor adapters:
                         Jnode(double x): type_{Number} {
                          std::stringstream ss;
@@ -661,6 +660,7 @@ class Jnode {
                                     std::is_null_pointer<T>::value
                                    >::type * = nullptr):
                          type_{Null} {}
+
 
                         // JSON atomic type adapters:
                         operator const std::string & (void) const {
