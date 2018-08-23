@@ -668,12 +668,16 @@ class Jnode {
                          return str();
                         }
 
-                        operator double (void) const {
+                        template<typename T>
+                        operator typename std::enable_if<std::is_floating_point<T>::value,
+                                                         double>::type (void) const {
                          if(not is_number()) throw EXP(expected_number_type);
                          return num();
                         }
 
-                        operator bool (void) const {
+                        template<typename T>
+                        operator typename std::enable_if<std::is_same<T, bool>::value,
+                                                         bool>::type (void) const {
                          if(not is_bool()) throw EXP(expected_boolean_type);
                          return bul();
                         }
@@ -736,7 +740,12 @@ class Jnode {
                          return children_().begin()->second;
                         }
 
-    const std::string & front_label(void) {
+    const Jnode &       front(void) const {
+                         if(not is_iterable()) throw EXP(type_non_iterable);
+                         return children_().begin()->second;
+                        }
+
+    const std::string & front_label(void) const {
                          if(not is_object()) throw EXP(expected_object_type);
                          return children_().begin()->first;
                         }
@@ -746,9 +755,14 @@ class Jnode {
                          return children_().rbegin()->second;
                         }
 
-    const std::string & back_label(void) {
+    const Jnode &       back(void) const {
+                         if(not is_iterable()) throw EXP(type_non_iterable);
+                         return children_().rbegin()->second;
+                        }
+
+    const std::string & back_label(void) const {
                          if(not is_object()) throw EXP(expected_object_type);
-                         return children_().begin()->first;
+                         return children_().rbegin()->first;
                         }
 
     bool                operator==(const Jnode &jn) const {
@@ -866,8 +880,12 @@ class Jnode {
     bool                is_pretty(void) const { return endl_ == PRINT_PRT; }
     Jnode &             pretty(bool x=true)
                          { endl_ = x? PRINT_PRT: PRINT_RAW; return *this; }
+    const Jnode &       pretty(bool x=true) const
+                         { endl_ = x? PRINT_PRT: PRINT_RAW; return *this; }
     bool                is_raw(void) const { return endl_ == PRINT_RAW; }
     Jnode &             raw(bool x=true)
+                         { endl_ = x? PRINT_RAW: PRINT_PRT; return *this; }
+    const Jnode &       raw(bool x=true) const
                          { endl_ = x? PRINT_RAW: PRINT_PRT; return *this; }
     uint8_t             tab(void) const { return tab_; }
     Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
@@ -1332,9 +1350,11 @@ class Json{
     Jnode &             operator[](const std::string & l) { return root()[l]; }
     const Jnode &       operator[](const std::string & l) const { return root()[l]; }
     Jnode &             front(void) { return root().front(); }
-    const std::string & front_label(void) { return root().front_label(); }
+    const Jnode &       front(void) const { return root().front(); }
+    const std::string & front_label(void) const { return root().front_label(); }
     Jnode &             back(void) { return root().back(); }
-    const std::string & back_label(void) { return root().back_label(); }
+    const Jnode &       back(void) const { return root().back(); }
+    const std::string & back_label(void) const { return root().back_label(); }
     bool                operator==(const Json &j) const { return root() == j.root(); }
     bool                operator!=(const Json &j) const { return root() != j.root(); }
     bool                operator==(const Jnode &j) const { return root() == j; }
@@ -1376,8 +1396,10 @@ class Json{
 
     bool                is_pretty(void) const { return root().is_pretty(); }
     Json &              pretty(bool x=true) { root().pretty(x); return *this; }
+    const Json &        pretty(bool x=true) const { root().pretty(x); return *this; }
     bool                is_raw(void) const { return root().is_raw(); }
     Json &              raw(bool x=true) { root().raw(x); return *this; }
+    const Json &        raw(bool x=true) const { root().raw(x); return *this; }
     uint8_t             tab(void) const { return root().tab(); }
     Json &              tab(uint8_t n) { root().tab(n); return *this; }
     Json &              quoted_solidus(bool x) {
