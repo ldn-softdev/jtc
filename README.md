@@ -505,7 +505,7 @@ bash $
 
 Output result:
 ```
-bash$ cat addressbook-sampe.txt | sort_ab
+bash$ cat addressbook-sampe.json | sort_ab
 [
    [
       {
