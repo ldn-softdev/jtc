@@ -406,39 +406,169 @@ proceed to the next walked entry)
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 
-#### A tiny class usage example:
+#### A tiny example of class usage (c++):
 Say, we want to accomplish a following task:
 1. read Address Book JSON from `<stdin>`
 2. sort all records by `Name` (for simplicity, assume all records have that label)
 3. output resulting Address Book JSON
 
-Below is the code sample how that could be achieved using `Json.hpp` class:
+Below is the code sample how that could be achieved using `Json.hpp` class and the srouce JSON - Address Book:
 ```
 #include <iostream>
 #include <fstream>
 #include "lib/Json.hpp"
 
+// compile with: c++ -o sort_ab -Wall -std=c++14 sorting_ab.cpp
 using namespace std;
 
 
 int main(int argc, char *argv[]) { 
- // read and parse json from cin:
- Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );
- 
- // get all the names:
- vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());
+ Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );  // read and parse json from cin:
+ vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());    // get all the names:
+ sort(names.begin(), names.end());                                               // sort the names:
 
- // sort the names:
- sort(names.begin(), names.end());
-
- // rebuild AB with sorted records:
- Json srt = ARY{};
+ Json srt = ARY{};                                                               // rebuild AB with sorted records
  for(const auto &name: names)
   srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
   
- // reinstate back into the original json container and print:
- cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;
+ cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;              // put back into the original container and print
 }
+```
+
+Address Book JSON:
+```
+bash $ cat addressbook-sampe.json
+{
+  "AddressBook": [
+    {
+       "Name": "John",
+       "age": 25,
+       "address": {
+          "city": "New York",
+          "street address": "599 Lafayette St",
+          "state": "NY",
+          "postal code": "10012"
+       },
+       "phoneNumbers": [
+          {
+             "type": "mobile",
+             "number": "212 555-1234"
+          }
+       ],
+       "children": [],
+       "spouse": null
+    },
+    {
+       "Name": "Ivan",
+       "age": 31,
+       "address": {
+          "city": "Seattle",
+          "street address": "5423 Madison St",
+          "state": "WA",
+          "postal code": "98104"
+       },
+       "phoneNumbers": [
+          {
+             "type": "home",
+             "number": "3 23 12334"
+          },
+          {
+             "type": "mobile",
+             "number": "6 54 12345"
+          }
+       ],
+       "children": [],
+       "spouse": null
+    },
+    {
+       "Name": "Jane",
+       "age": 25,
+       "address": {
+          "city": "Denver",
+          "street address": "6213 E Colfax Ave",
+          "state": "CO",
+          "postal code": "80206"
+       },
+       "phoneNumbers": [
+          {
+             "type": "office",
+             "number": "+1 543 422-1231"
+          }
+       ],
+       "children": [],
+       "spouse": null
+    }
+  ]
+}
+bash $ 
+```
+
+Output result:
+```
+bash$ cat addressbook-sampe.txt | sort_ab
+[
+   [
+      {
+         "Name": "Ivan",
+         "address": {
+            "city": "Seattle",
+            "postal code": "98104",
+            "state": "WA",
+            "street address": "5423 Madison St"
+         },
+         "age": 31,
+         "children": [],
+         "phoneNumbers": [
+            {
+               "number": "3 23 12334",
+               "type": "home"
+            },
+            {
+               "number": "6 54 12345",
+               "type": "mobile"
+            }
+         ],
+         "spouse": null
+      },
+      {
+         "Name": "Jane",
+         "address": {
+            "city": "Denver",
+            "postal code": "80206",
+            "state": "CO",
+            "street address": "6213 E Colfax Ave"
+         },
+         "age": 25,
+         "children": [],
+         "phoneNumbers": [
+            {
+               "number": "+1 543 422-1231",
+               "type": "office"
+            }
+         ],
+         "spouse": null
+      },
+      {
+         "Name": "John",
+         "address": {
+            "city": "New York",
+            "postal code": "10012",
+            "state": "NY",
+            "street address": "599 Lafayette St"
+         },
+         "age": 25,
+         "children": [],
+         "phoneNumbers": [
+            {
+               "number": "212 555-1234",
+               "type": "mobile"
+            }
+         ],
+         "spouse": null
+      }
+   ]
+]
+bash $ 
 ```
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
