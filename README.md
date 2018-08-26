@@ -423,9 +423,9 @@ using namespace std;
 
 
 int main(int argc, char *argv[]) { 
- Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );  // read and parse json from cin:
- vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());    // get all the names:
- sort(names.begin(), names.end());                                               // sort the names:
+ Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );  // read and parse json from cin
+ vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());    // get all the names
+ sort(names.begin(), names.end());                                               // sort the names
 
  Json srt = ARY{};                                                               // rebuild AB with sorted records
  for(const auto &name: names)
