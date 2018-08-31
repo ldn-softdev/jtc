@@ -333,7 +333,7 @@ Update operation (`-u`) optionally may undergo shell evaluation (predicated by `
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
 ```
-bash $ jtc -w'<stamp>l+0' -eu date -jf "'\"%F, %H:%M:%S\"'" {} "'+%s'" \; Bookmarks
+bash $ jtc -w'<stamp>l+0' -eu date -jf "'\"%F, %H:%M:%S\"' {} '+%s'" \; Bookmarks
 {
    "Bookmarks": [
       {
