@@ -64,7 +64,7 @@ ENUM(ReturnCodes, RETURN_CODES)
 // holding common resources, and declaration helper macro
 struct CommonResources {
     Getopt              opt;
-    Json                json,;                                  // source
+    Json                json;                                   // source
     Json                jout;                                   // output
 
     DEBUGGABLE()
