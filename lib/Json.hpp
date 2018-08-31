@@ -770,8 +770,8 @@ class Jnode {
                          if(is_iterable()) return children_() == jn.children_();
                          else return val() == jn.val();
                         }
-    bool                operator!=(const Jnode &jn) const { return not operator==(jn); }
 
+    bool                operator!=(const Jnode &jn) const { return not operator==(jn); }
 
                         // access json types (type checked)
     const std::string & str(void) const {
@@ -822,7 +822,8 @@ class Jnode {
 
     Jnode &             pop_back(void) {
                          if(not is_iterable()) throw EXP(type_non_iterable);
-                         children_().erase(std::prev(children_().end()));
+                         if(not children_().empty())
+                          children_().erase(std::prev(children_().end()));
                          return *this;
                         }
 
@@ -840,7 +841,8 @@ class Jnode {
 
     Jnode &             pop_front(void) {
                          if(not is_iterable()) throw EXP(type_non_iterable);
-                         children_().erase(children_().begin());
+                         if(not children_().empty())
+                          children_().erase(children_().begin());
                          return *this;
                         }
 
@@ -1268,7 +1270,7 @@ std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, int & rl)
 
 std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int & rl) {
  // process children in iterables (array or node)
- if(endl_ == PRINT_PRT) ++rl;                                   // if pretty print adjust level
+ if(endl_ == PRINT_PRT) ++rl;                                   // if pretty print - adjust level
 
  for(auto & child: my.children_()) {                            // print all children:
   os << std::string(rl * tab_, ' ');                            // output current indent
@@ -1282,7 +1284,7 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
  if(rl > 1) os << std::string((rl-1)*tab_, ' ');                // it would also signify pretty mode
  if(my.is_array()) os << JSN_ARY_CLS;                           // close array, or
  if(my.is_object()) os << JSN_OBJ_CLS;                          // close node (object)
- if(endl_ == PRINT_PRT) --rl;                                   // if pretty print adjust level
+ if(endl_ == PRINT_PRT) --rl;                                   // if pretty print - adjust level
 
  return os;
 }
@@ -1332,6 +1334,7 @@ class Json{
 
     // relayed Jnode interface
     Jnode::Jtype        type(void) const { return root().type(); }
+    Jnode::Jtype &      type(void) { return root().type(); }
     bool                is_object(void) const { return root().is_object(); }
     bool                is_array(void) const { return root().is_array(); }
     bool                is_string(void) const { return root().is_string(); }
@@ -1402,8 +1405,9 @@ class Json{
     const Json &        raw(bool x=true) const { root().raw(x); return *this; }
     uint8_t             tab(void) const { return root().tab(); }
     Json &              tab(uint8_t n) { root().tab(n); return *this; }
-    Json &              quoted_solidus(bool x) {
-                         if(x) { jsn_fbdn_=JSN_FBDN"/"; jsn_qtd_ = JSN_QTD"/"; }
+    bool                is_solidus_quoted(void) const { return jsn_qtd_[0] == '/'; }
+    Json &              quote_solidus(bool quote) {
+                         if(quote) { jsn_fbdn_="/" JSN_FBDN; jsn_qtd_ = "/" JSN_QTD; }
                          else { jsn_fbdn_=JSN_FBDN; jsn_qtd_ = JSN_QTD; }
                          return *this;
                         }
@@ -1469,7 +1473,7 @@ class Json{
                             // stripped[1] -> attached label match (optional)
         std::regex          re;
 
-        const char *        search_type() const { return Jsearch_str[jsearch]; }
+        const char *        search_type() const { return ENUMS(Jsearch, jsearch); }
         const std::string   label() const { return stripped.size()==2? stripped.back(): "-"; }
         bool                operator<(const WalkStep &r) const {
                             // provided only for SearchCacheKey, which would require to
@@ -1512,11 +1516,11 @@ class Json{
 
     // protected data structures
     typedef std::vector<Itl> path_vector;
-    std::map<SearchCacheKey, 
-             std::vector<path_vector>, 
+    std::map<SearchCacheKey,
+             std::vector<path_vector>,
              decltype(&SearchCacheKey::cmp)>
                             sc_{SearchCacheKey::cmp};           // search cache itself
-    lbl_callback            cf_;                                // callback functions 
+    lbl_callback            cf_;                                // callback functions
 
     void                parseOffsetType_(WalkStep & state) const;
     EXCEPTIONS(Jnode::ThrowReason)
@@ -1565,7 +1569,7 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
  }
 
  if(node.type_ == Jnode::Neither) return;
- DBG(4) DOUT() << "classified as: " << Jnode::Jtype_str[node.type()] << std::endl;
+ DBG(4) DOUT() << "classified as: " << ENUMS(Jnode::Jtype, node.type()) << std::endl;
 
  switch(node.type()) {
   case Jnode::Object: parseObject_(node, ++jsp); break;         // skip '{' with ++jsp
@@ -1664,13 +1668,13 @@ void Json::parseObject_(Jnode & node, std::string::const_iterator &jsp) {
 
 std::string::const_iterator & Json::findDelimiter_(char c, std::string::const_iterator & jsp) {
  while(*jsp != c) {
-  if(*jsp == CHR_NULL or *jsp == CHR_RTRN)
-   { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
-  if(strchr(jsn_fbdn_, *jsp) != nullptr)                              // i.e. found illegal JSON control
+  if(*jsp == CHR_NULL or *jsp == CHR_RTRN)                      // JSON string does not support
+   { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }     // multiline, hence throwing
+  if(strchr(jsn_fbdn_, *jsp) != nullptr)                        // i.e. found illegal JSON control
    { ep_ = jsp; throw EXP(Jnode::unquoted_character); }
   if(*jsp == '\\') {
    ++jsp;                                                       // skip presumably quoted char
-   if(*jsp == CHR_NULL)
+   if(*jsp == CHR_NULL)                                         // found end of string after '\'
     { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
    if(strchr(jsn_qtd_, *jsp) == nullptr)                        // it's not JSON char quotation
     { ep_ = jsp; throw EXP(Jnode::unexpected_character_escape); }
@@ -2112,7 +2116,7 @@ void Json::parseSuffix_(std::string::const_iterator &si, iterator & it, v_str &r
   lastStep.jsearch = sfx;
   if(sfx == Regex_search or sfx == Label_RE_search or sfx == Ditital_regex)
    lastStep.re = lastStep.stripped.front();
-  DBG(1) DOUT() << "search type sfx: " << Jsearch_str[sfx] << std::endl;
+  DBG(1) DOUT() << "search type sfx: " << ENUMS(Jsearch, sfx) << std::endl;
 
   if(lastStep.stripped.front().empty())                         // i.e. search is "<>Sfx"
    if(lastStep.jsearch != regular_match and
@@ -2126,7 +2130,7 @@ void Json::parseSuffix_(std::string::const_iterator &si, iterator & it, v_str &r
 Json::Jsearch Json::searchSuffix_(char sfx) const {
  // Jsearch is defined so that its first letter corresponds to the suffix
  for(int i=regular_match; i<end_of_match; ++i)
-  if(sfx == Jsearch_str[i][0])
+  if(sfx == ENUMS(Jsearch, i)[0])
    return static_cast<Jsearch>(i);
  return end_of_match;                                           // when no match found
 }
@@ -2384,14 +2388,14 @@ bool Json::iterator::searchFwd_(Jnode *jn, const char *lbl, const WalkStep &ws, 
 
 
 
-void Json::iterator::callBack_(const std::string &label, const Jnode *jn, 
+void Json::iterator::callBack_(const std::string &label, const Jnode *jn,
                                const std::vector<path_vector> *vpv) {
  if(json_().callbacks().count(label) == 1) {                    // label registered?
   if(vpv != nullptr)
    for(auto &path: vpv->back())
     pv_.push_back(path);                                        // augment path
   cType_() = Jnode::Object;                                     // ensure supernode's correct type
-  json_().cf_[label]( operator*() );                            // call back passing super node 
+  json_().cf_[label]( operator*() );                            // call back passing super node
   if(vpv != nullptr)
    pv_.resize(pv_.size() - vpv->back().size());                 // reinstate path
  }

@@ -141,6 +141,7 @@ class Option{
  //  - access to the option's value(s), including default, hit count, argument size
     typedef std::vector<std::string> vec_opt;
     typedef vec_opt::iterator iter_opt;
+    typedef vec_opt::const_iterator citer_opt;
  public:
     friend Getopt;
 
@@ -179,7 +180,9 @@ class Option{
                         operator double(void) const { return type()==boolean? hv_: atof(c_str()); }
     Option &            operator=(const std::string &s);
     iter_opt            begin(void) { return ++val_.begin(); }
+    citer_opt           begin(void) const { return ++val_.cbegin(); }
     iter_opt            end(void) { return val_.end(); }
+    citer_opt           end(void) const { return val_.cend(); }
     Option &            reset(void) { hv_ = 0; val_.resize(1); return *this; }
 
 

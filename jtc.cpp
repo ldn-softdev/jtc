@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.27"
+#define VERSION "1.28"
 
 
 // option definitions
@@ -64,7 +64,9 @@ ENUM(ReturnCodes, RETURN_CODES)
 // holding common resources, and declaration helper macro
 struct CommonResources {
     Getopt              opt;
-    Json                json, jout;                             // source, output
+    Json                json,;                                  // source
+    Json                jout;                                   // output
+
     DEBUGGABLE()
 };
 
@@ -79,10 +81,11 @@ struct CommonResources {
 // forward declarations
 typedef vector<Json::iterator> walk_vec;
 typedef deque<Json::iterator> walk_deq;
+typedef vector<string> v_string;
 
 void parse_opt(int argc, char *argv[], CommonResources &);
 void reparse_opt(int argc, char *argv[], CommonResources &r);
-void recompile_argv(int argc, char *argv[], vector<string> &sargv, CommonResources &r);
+void recompile_args(v_string &args, v_string &sargv, CommonResources &r);
 void read_json(CommonResources &);
 int demux_opt(CommonResources &);
 int insert_json(CommonResources &);
@@ -149,14 +152,15 @@ Note on a multiple -" STR(OPT_WLK) " usage:\n\
    complex walk)\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
  - these options must be given together: one -" STR(OPT_CMN) " (in case multiple given, only\n\
-   the last one is considered) and multiple -" STR(OPT_PRT) "; each parameter -" STR(OPT_PRT) \
-   " will be\n    prepended by parameter from -" STR(OPT_CMN) \
+   the last one is considered) and multiple -" STR(OPT_PRT) "; each parameter -" STR(OPT_PRT) " will be\n\
+   prepended by parameter from -" STR(OPT_CMN) \
    ", tother they will form an equivalent of -" STR(OPT_WLK) "\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL) ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array; those walked elements which do not have\n\
-   labels will be enumerated within the parent array\n\n\
+   labels will be enumerated within the parent array; if -" STR(OPT_LBL) " given twice, then\n\
+   loose relevant groupping applied, otherwise strict\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD) " when used together; every occurrence of {}\n\
    is interpolated with walked JSON entry using raw format; interpolated entry\n\
@@ -170,7 +174,7 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  // prepare debugs
  json.tab(abs(opt[CHR(OPT_IND)]))
      .raw(opt[CHR(OPT_RAW)])
-     .quoted_solidus(opt[CHR(OPT_SLD)]);
+     .quote_solidus(opt[CHR(OPT_SLD)]);
  DBG().level(opt[CHR(OPT_DBG)])
       .use_ostream(cerr)
       .severity(json, jout);
@@ -180,11 +184,12 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
   read_json(r);
   return demux_opt(r);
  }
- catch( stdException & e ) {
+ catch(stdException & e) {
+  DBG(0) DOUT() << "exception raised by: " << e.where() << endl;
   cerr << opt.prog_name() << " exception: " << e.what() << endl;
   return e.code() + OFF_JSON;
  }
- catch (std::regex_error & e) {
+ catch(std::regex_error & e) {
   cerr << "regexp exception: " << e.what() << endl;
   return e.code() + OFF_REGEX;
  }
@@ -195,21 +200,23 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
 
 
 void parse_opt(int argc, char *argv[], CommonResources &r) {
+ // parse options, if option -e detected, rebuild -u arguments and re-parse 
  REVEAL(r, opt)
- bool reparse{false};
+ bool reparse{false};                                           // re-parsing required?
 
  try { opt.parse(argc,argv); }
- catch (stdException & e) {
-  if(e.code() == Getopt::too_many_arguments and
-     opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0)
-   reparse = true;
+ catch(stdException & e) {
+  if(e.code() == Getopt::too_many_arguments and                 // on that exception
+     opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0) // both -e and -u present
+   reparse = true;                                              // then re-parsing is required
   else
    { opt.usage(); exit(e.code() + OFF_GETOPT); }
  }
- if(reparse or (opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0))
-  reparse_opt(argc, argv, r);
 
  if(opt[CHR(OPT_GDE)]) exit( wp_guide() );
+
+ if(reparse or (opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0))
+  reparse_opt(argc, argv, r);
 
  for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
   opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
@@ -218,66 +225,68 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
 
 
 void reparse_opt(int argc, char *argv[], CommonResources &r) {
+ // rebuild arguments (argv minding new semantic of -u) and re-parse it again
  REVEAL(r, opt)
 
- try { opt.reset().variadic().parse(argc,argv); }
- catch (stdException & e)
+ try { opt.reset().variadic().parse(argc,argv); }               // see if it's no other option fail
+ catch(stdException & e)
   { opt.variadic(false).usage(); exit(e.code() + OFF_GETOPT); }
 
- vector<string> sargv;                                          // make opt -u adsorb all due args
- recompile_argv(argc, argv, sargv, r);
+ v_string sargv;                                                // make opt -u adsorb all due args
+ v_string args{argv, argv + argc};
+ recompile_args(args, sargv, r);                                // rebuild -u's arguments 
 
- char *nargv[sargv.size()];                                     // here, rebuild new argv
+ char *nargv[sargv.size()];                                     // here, build a new argv
  for(size_t i{0}; i < sargv.size(); ++i) {
   nargv[i] = new char[sargv[i].size()+1];
   stpcpy(nargv[i], sargv[i].c_str());
  }
 
- try { opt.reset().variadic(false).parse(sargv.size(), nargv); } // reparse
- catch (stdException & e)
+ try { opt.reset().variadic(false).parse(sargv.size(), nargv); }// re-parse newly rebuilt args
+ catch(stdException & e)
   { opt.usage(); exit(e.code() + OFF_GETOPT); }
 
- for(size_t i=0; i<sargv.size(); ++i)                              // clean up nargv
+ for(size_t i=0; i<sargv.size(); ++i)                           // clean up nargv now
   delete [] nargv[i];
 }
 
 
 
-void recompile_argv(int argc, char *argv[], vector<string> &sargv, CommonResources &r) {
- // recompile argv minding -u option variable length
+void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
+ // recompile argv minding -u's arguments new semantic into sargv
  REVEAL(r, opt)
 
- sargv.push_back(argv[0]);
- bool semicolon{false};
- int uopt_found{0};
+ bool semicolon_found{false};
+ int u_opt_found{0};
 
- for(int i=1; i<argc; ++i) {                                    // go through all args
-  if(semicolon == true)
-   { sargv.push_back(argv[i]); continue; }
-  if(uopt_found > 0) {                                          // ';' not found yet, -u found
-   if(argv[i][strlen(argv[i])-1] == ';') {                      // ';' found
-    semicolon = true;
-    string sc(argv[i], strlen(argv[i])-1);                      // trim trailing ';'
-    if(not sc.empty()) sargv.back() += " " + sc;
+ for(auto &arg: args) {                                         // go through all args
+  if(semicolon_found)                                           // -u already found and processed
+   { sargv.push_back(arg); continue; }
+  if(u_opt_found > 0) {                                         // ';' not found yet, -u found
+   if(arg.back() == ';') {                                      // ';' found
+    semicolon_found = true;
+    arg.pop_back();                                             // trim trailing ';'
+    if(not arg.empty()) sargv.back() += " " + arg;
     continue;
    }
-   sargv.back() += string{(++uopt_found > 2? " ":"")} + argv[i]; // first arg append w/o spacer
+   sargv.back() += string{(++u_opt_found > 2? " ":"")} + arg;   // first arg append w/o spacer
    continue;
   }
 
-  if(argv[i][0] == '-')                                         // option, see if opt u is present
-   for(int c=1; argv[i][c] != '\0'; ++c) {
-    if(not opt.defined(argv[i][c])) break;                      // opt -u not found, record arg
-    if(argv[i][c] == CHR(OPT_UPD))                              // opt -u found, indicate & record
-     { uopt_found = 1; break; }
+  if(arg.front() == '-')                                        // option, see if opt u is present
+   for(char chr: arg) {
+    if(not opt.defined(chr)) break;                             // opt -u not found, record arg
+    if(chr == CHR(OPT_UPD))                                     // opt -u found, indicate & record
+     { u_opt_found = 1; break; }
    }
-  sargv.push_back(argv[i]);
+  sargv.push_back(arg);
  }
 
- if(semicolon == false) {
+ if(not semicolon_found) {
   cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option: \\;" << endl;
   exit(RC_SC_MISS);
  }
+ for(auto &arg: sargv) cout << "arg: " << arg << endl;
 }
 
 
@@ -718,8 +727,9 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
                                                                 // so it's okay to make it static
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
  auto label_present = [&sr](void){ return not sr.is_root() and sr[-1].is_object(); };
- auto start_new_object = [actuals](void){ return actuals >= last_actuals; };
-
+ auto start_new_object = [actuals, &opt](void){ return (opt[CHR(OPT_LBL)].hits() > 1)? 
+                                                        actuals > last_actuals: 
+                                                        actuals >= last_actuals; };
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
   if(opt[CHR(OPT_LBL)]){                                        // -l given (combine relevant nodes)
    if(label_present()) {                                        // parent is an obect
@@ -979,7 +989,43 @@ STR(OPT_INS) R"( '{"Y-chromosome": true}' example.json
 }
 
 
-- finally, an update option -u could be subjected for a shell cli evaluation,
+- it's possible to wrap walked results back into JSON, with help of -)" STR(OPT_JSN) R"( option:
+jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) R"( example.json
+[
+   "John Smith",
+   "Anna Johnson"
+]
+
+if we throw in an option -)" STR(OPT_LBL) R"(, then output JSON format ensures that entries with
+labels will be displayed accordingly:
+jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) R"( example.json
+[
+   {
+      "parent": "John Smith"
+   },
+   {
+      "parent": "Anna Johnson"
+   }
+]
+
+Now, here's a little trick: the tool will try grouping together all relevant
+walks, however, it's quite subjective to consider if walks are relevant or not.
+By default a strict groupping applied, resulting in the output above, if option
+-)" STR(OPT_LBL) R"( is given more than once, then more loose grouping applied, resulting in the
+output:
+jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) STR(OPT_LBL) \
+R"( example.json
+[
+   {
+      "parent": [
+         "John Smith",
+         "Anna Johnson"
+      ]
+   }
+]
+
+
+- finally, an update option -)" STR(OPT_UPD) R"( could be subjected for a shell cli evaluation,
   say we want to capitalize all parents names:
 jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD) R"( echo {} \| tr "'[:lower:]'" "'[:upper:]'" \; example.json
 {

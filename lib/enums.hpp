@@ -29,7 +29,8 @@
  *  Now, enum trafficLightColors is defined, as well as its c-string representation:
  *          cout << "All traffic-light colors:";
  *          for(int i=0; i<COUNT_ARGS(MY_COLORS); ++i)
- *           cout << ' ' << SomeClass::trafficLightColors_[i];
+ *           cout << ' ' << SomeClass::trafficLightColors_str[i]; 
+ *           // or equally:  cout << ' ' << STREN(trafficLightColors, i);
  *          cout << endl;
  *
  * Obvious caveat: enums declared that way do not allow value re-definition
@@ -59,6 +60,7 @@
 #define STRINGIFY(enum_class, enums...) \
   const char * enum_class ## _str[] { MACRO_TO_ARGS(__STR_COMMA_SEPARATED__, enums) };
 
+#define ENUMS(enum_class, enum_idx) enum_class ## _str[enum_idx]
 
 
 
@@ -106,22 +108,25 @@
 class stdException: public std::exception {
  public:
     const char *        what(void) const noexcept { return msg_; }
+    const char *        where(void) const noexcept { return func_; }
     int                 code(void) const noexcept { return ec_; }
-    stdException &      operator()(int r, const char *msg)
-                         { ec_ = r; msg_ = msg; return *this; }
+    stdException &      operator()(int r, const char *msg, const char *fnc)
+                         { ec_ = r; msg_ = msg; func_ = fnc; return *this; }
  private:
     const char *        msg_{nullptr};
+    const char *        func_{nullptr};
     int                 ec_{-1};
-} __Expeption__;
+} __Exception__;
 
 
 // for in-class declaration
 #define EXCEPTIONS(THROW_ENUM) \
-    stdException & __exp__(THROW_ENUM reason) const \
-        { return __Expeption__(reason, THROW_ENUM ## _str[reason]); }
+    stdException & __exp__(THROW_ENUM reason, const char *where) const \
+        { return __Exception__(reason, THROW_ENUM ## _str[reason], where); }
 
 
-#define EXP(TROW_REASON) __exp__(TROW_REASON)
+// for in-place throw parameter
+#define EXP(TROW_REASON) __exp__(TROW_REASON, __PRETTY_FUNCTION__)
 
 
 
