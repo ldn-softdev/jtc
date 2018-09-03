@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.29"
+#define VERSION "1.30"
 
 
 // option definitions
@@ -286,7 +286,6 @@ void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
   cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option: \\;" << endl;
   exit(RC_SC_MISS);
  }
- for(auto &arg: sargv) cout << "arg: " << arg << endl;
 }
 
 
