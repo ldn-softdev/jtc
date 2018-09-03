@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.28"
+#define VERSION "1.29"
 
 
 // option definitions
@@ -117,26 +117,26 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
  opt[CHR(OPT_EXE)].desc("treat a parameter for -" STR(OPT_UPD) " as a shell cli");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax");
- opt[CHR(OPT_SZE)].desc("print json size (total number of nodes in json)");
- opt[CHR(OPT_RAW)].desc("force printing json in a raw format");
- opt[CHR(OPT_PRG)].desc("purge json elements (one or more -" STR(OPT_WLK) " must be given)");
+ opt[CHR(OPT_SZE)].desc("print JSON size (total number of nodes in JSON)");
+ opt[CHR(OPT_RAW)].desc("force printing JSON in a raw format");
+ opt[CHR(OPT_PRG)].desc("purge JSON elements (one or more -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SLD)].desc("enforce quoted solidus parsing");
- opt[CHR(OPT_SWP)].desc("swap around two json elements (two -" STR(OPT_WLK) " must be given)");
+ opt[CHR(OPT_SWP)].desc("swap around two JSON elements (two -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SEQ)].desc("do not print walks interleaved (i.e. print sequentually)");
- opt[CHR(OPT_LBL)].desc("print labels too (if any) for walked json");
- opt[CHR(OPT_JSN)].desc("list walked elements as json (see footnote on usage with -"
+ opt[CHR(OPT_LBL)].desc("print labels too (if any) for walked JSON");
+ opt[CHR(OPT_JSN)].desc("list walked elements as JSON (see footnote on usage with -"
                         STR(OPT_LBL) ")");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
- opt[CHR(OPT_INS)].desc("insert json element (one or more -" STR(OPT_WLK) " must be given)")
+ opt[CHR(OPT_INS)].desc("insert JSON element (one or more -" STR(OPT_WLK) " must be given)")
                   .name("json");
- opt[CHR(OPT_UPD)].desc("update/replace json element (one or more -" STR(OPT_WLK) \
+ opt[CHR(OPT_UPD)].desc("update/replace JSON element (one or more -" STR(OPT_WLK) \
                         " must be given)").name("json");
  opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given)").name("walkpath");
  opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every specified -" STR(OPT_PRT))
                   .bind("").name("common");
  opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by specified -" STR(OPT_CMN))
                   .name("partial");
- opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting json)");
+ opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON)");
  opt[0].desc("file to read json from").name("json_file").bind("<stdin>");
  opt.epilog("\nthis tool provides ability to:\n\
  - display JSON (in a raw and pretty formats)\n\
@@ -370,6 +370,7 @@ int insert_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process each walk
   walk_vec ji;                                                  // collect all insertion points
+  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it)
    ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
@@ -408,6 +409,7 @@ int purge_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all purging points
+  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
@@ -444,6 +446,7 @@ int update_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all update points
+  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 

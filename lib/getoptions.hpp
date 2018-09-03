@@ -149,7 +149,7 @@ class Option{
     // standalone arguments. A bare '-' argument is set as a boolean option
     // options can be either boolean (w/o parameter) or parametric
     // standalone arguments are always parametric type
-    enum OptKind { opt, arg };
+    enum ArgKind { opt, arg };
     enum OptType { boolean, parametric };
 
                         Option(void) = delete;
@@ -163,7 +163,7 @@ class Option{
     const std::string & desc(void) const { return desc_; }
     Option &            description(const char *d) { return desc(d); }
     const std::string & description(void) const { return desc(); }
-    OptKind             kind(void) const { return id_<OPT_ARG_OFFSET? opt: arg; }
+    ArgKind             kind(void) const { return id_<OPT_ARG_OFFSET? opt: arg; }
     OptType             type(void) const { return ot_; }
     size_t              size(void) const { return val_.size(); }
     short int           id(void) const { return id_; }
@@ -172,18 +172,21 @@ class Option{
                         // for a default value)
     unsigned short      hits(void) const { return hv_; }
                         // hits: the number of times given option was parsed
-    const char *        c_str(int i=-1) const { return val_[mod_(i)].c_str(); }
-    const std::string & str(int i=-1) const{ return val_[mod_(i)]; }
+    const char *        c_str(int i=-1) const { return val_[mod_(val_.size(), i)].c_str(); }
+    const std::string & str(int i=-1) const{ return val_[mod_(val_.size(), i)]; }
                         // str() and c_str() let inspect any recorded option parameters/arguments,
                         // including a default value (if set). by default, str() and c_str()
                         // return the last set value (including default)
+    char                prior(int i=-1) const{ return prev_[mod_(prev_.size(), i)]; }
+    Option &            push_prior(char c)
+                         { prev_.push_back(c); return *this; }
                         operator double(void) const { return type()==boolean? hv_: atof(c_str()); }
     Option &            operator=(const std::string &s);
     iter_opt            begin(void) { return ++val_.begin(); }
     citer_opt           begin(void) const { return ++val_.cbegin(); }
     iter_opt            end(void) { return val_.end(); }
     citer_opt           end(void) const { return val_.cend(); }
-    Option &            reset(void) { hv_ = 0; val_.resize(1); return *this; }
+    Option &            reset(void) { hv_ = 0; val_.resize(1); prev_.resize(1);  return *this; }
 
 
  protected:
@@ -195,6 +198,7 @@ class Option{
     vec_opt             val_{1};                                // values set by user
                         // place for the default value is always reserved, it might be unset
                         // - if val_.front() is empty, then the default value was never bound
+    std::vector<char>   prev_{'\0'};                            // record previous options here
     std::string         name_;                                  // name of the opt's parameter
     std::string         desc_;                                  // opt/arg description
 
@@ -202,9 +206,9 @@ class Option{
     const std::string & deflt_(void) const { return val_.front(); }
 
  private:
-    int                 mod_(int i) const
-                         { return i - val_.size() * (int)floor(i/(double)val_.size()); }
-                        // that mod function, provides similar to size() % x operation, however
+    int                 mod_(int x, int i) const
+                         { return i - x * (int)floor(i/(double)x); }
+                        // that mod function, provides similar to x % i operation, however
                         // for negative value -1, returns size()-1, like Excel's mod() does
 };
 
@@ -360,7 +364,7 @@ void Getopt::parseInputArgs_(int argc, char *argv[], const std::string &fmt) {
  // parse all provided arguments with getopt():
  // extract option one by one, create Option containers out of extracted values
 
- char option;
+ char option, prior_option{'\0'};
  while((option=getopt(argc, argv, fmt.c_str())) != -1) {         // read next option character
   if(option == ':')
    throw EXP(opt_argument_missing);                             // missing argument, forced ':'
@@ -379,6 +383,8 @@ void Getopt::parseInputArgs_(int argc, char *argv[], const std::string &fmt) {
     { usage().help(); exit(0); }                                // process auto-help
    om_.emplace(option, option).first->second.hit_();            // increment hit for boolean
   }
+  om_.find(option)->second.push_prior(prior_option);
+  prior_option = option;
  } // while(...
 
  om_.emplace('-', '-');

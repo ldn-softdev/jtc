@@ -1412,6 +1412,9 @@ class Json{
                          return *this;
                         }
 
+    Json &              clear_cache(void) { sc_.clear(); return *this; }
+    // calling clear_cache is required once JSON was modified anyhow!!!
+
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
     static Jnode::Jtype json_number_definition(std::string::const_iterator & jsp);
