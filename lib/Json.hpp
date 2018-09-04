@@ -1317,7 +1317,7 @@ class Json{
 
     #define CACHE_ACTION \
                 invalidate, \
-                keep
+                keep_cache
     ENUM(CacheAction, CACHE_ACTION)
 
                         Json(void) = default;
@@ -1418,7 +1418,9 @@ class Json{
                         }
 
     Json &              clear_cache(void) { sc_.clear(); return *this; }
-    // calling clear_cache is required once JSON was modified anyhow
+    // calling clear_cache is required once JSON was modified anyhow; it's called
+    // anyway every time new walk is build, thus the end-user must call it only
+    // when continue walking iterators (with search iterators) past JSON modification    
 
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
@@ -2021,7 +2023,7 @@ Json::iterator Json::walk(const std::string & wstr, CacheAction action) {
  }
 
  if(action == invalidate) {                                     // talking a conservative approach:
-  sc_.clear();                                                  // user must specify "keep" himself
+  clear_cache();                                                // user must specify "keep" himself
   DBG(0) DOUT() << "invalidated search cache" << std::endl;
  }
  it.walk_();
