@@ -369,7 +369,6 @@ int insert_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process each walk
   walk_vec ji;                                                  // collect all insertion points
-  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it)
    ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
@@ -408,7 +407,6 @@ int purge_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all purging points
-  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
@@ -445,7 +443,6 @@ int update_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all update points
-  json.clear_cache();
   for(auto it{ json.walk(wp) }; it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
@@ -543,7 +540,7 @@ void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
 
  long i{0};
  for(auto &wp: opt[CHR(OPT_WLK)]) {
-  for(auto it{ json.walk(wp) }; it != json.end(); ++it)
+  for(auto it{ json.walk(wp, Json::keep) }; it != json.end(); ++it)
    sp[i].push_back(it);
   ++i;
  }
@@ -585,7 +582,7 @@ void walk_sequentual(CommonResources &r) {
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // -n given, walk paths sequentially
   DBG(0) DOUT() << "walking path: " << wp << endl;
 
-  for(auto jit{ json.walk(wp) }; jit != jit.end(); ++jit) {
+  for(auto jit{ json.walk(wp, Json::keep) }; jit != jit.end(); ++jit) {
    auto &rec = *jit;
     if( opt[CHR(OPT_JSN)] ) {                                   // -j option given
      walk_deq deq(1, jit);                                      // required by output_by_iterator
@@ -623,8 +620,8 @@ void walk_interleaved(CommonResources &r) {
  vector<walk_deq> wpi;
 
  for(const auto &walk_str: opt[CHR(OPT_WLK)]) {                 // process all -w arguments
-  if(walk_str.empty()) wpi.push_back( {json.walk("[^0]")} );
-  else wpi.push_back( {json.walk(walk_str)} );                  // push initial walk iterator
+  if(walk_str.empty()) wpi.push_back( {json.walk("[^0]", Json::keep)} );
+  else wpi.push_back( {json.walk(walk_str, Json::keep)} );      // push initial walk iterator
   auto & wi = wpi.back();                                       // wi: deque<Json::iterators>
   while(wi.back() != wi.back().end() )                          // extend all iterators
    { wi.push_back(wi.back()); ++wi.back(); }

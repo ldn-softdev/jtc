@@ -1315,6 +1315,11 @@ class Json{
     ENUMSTR(Jsearch, JS_ENUM)
     // Jsearch is defined so that its first letter corresponds to the suffix
 
+    #define CACHE_ACTION \
+                invalidate, \
+                keep
+    ENUM(CacheAction, CACHE_ACTION)
+
                         Json(void) = default;
                         Json(const Jnode &jn): root_{jn.value()} { }
                         Json(std::string &&str) { parse(str); }
@@ -1330,7 +1335,7 @@ class Json{
                         exception_point(void) { return ep_; }
     Json &              parse(const std::string & jstr);
     class iterator;
-    iterator            walk(const std::string & wstr = "");
+    iterator            walk(const std::string & = "", CacheAction = invalidate);
 
     // relayed Jnode interface
     Jnode::Jtype        type(void) const { return root().type(); }
@@ -1413,7 +1418,7 @@ class Json{
                         }
 
     Json &              clear_cache(void) { sc_.clear(); return *this; }
-    // calling clear_cache is required once JSON was modified anyhow!!!
+    // calling clear_cache is required once JSON was modified anyhow
 
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
@@ -1519,9 +1524,7 @@ class Json{
 
     // protected data structures
     typedef std::vector<Itl> path_vector;
-    std::map<SearchCacheKey,
-             std::vector<path_vector>,
-             decltype(&SearchCacheKey::cmp)>
+    std::map<SearchCacheKey, std::vector<path_vector>, decltype(&SearchCacheKey::cmp)>
                             sc_{SearchCacheKey::cmp};           // search cache itself
     lbl_callback            cf_;                                // callback functions
 
@@ -2003,7 +2006,7 @@ std::string Json::iterator::empty_;
 
 
 
-Json::iterator Json::walk(const std::string & wstr) {
+Json::iterator Json::walk(const std::string & wstr, CacheAction action) {
  // return Json::iterator to the first element pointed by the walk string.
  // otherwise end-iterator returned
  DBG(0) DOUT() << "walk string: '" << wstr << "'" << std::endl;
@@ -2017,6 +2020,10 @@ Json::iterator Json::walk(const std::string & wstr) {
   for(auto &v: it.walkPath_()) DOUT() << DBG_PROMPT(0) << v << std::endl;
  }
 
+ if(action == invalidate) {                                     // talking a conservative approach:
+  sc_.clear();                                                  // user must specify "keep" himself
+  DBG(0) DOUT() << "invalidated search cache" << std::endl;
+ }
  it.walk_();
  if(it.pv_.empty()) return itr;                                 // must resolve reference
  if(it.pv_.back().jit != root().children_().end()) return itr;  // must resolve reference
