@@ -2,7 +2,7 @@
 
 #### Simple offline cli tool to manipulate JSON data format
 
-jtc features following qualities:
+jtc offers following features:
   - simple user interface allowing applying bulk changes in one command
   - featured walk interface let extracting any combination of data from source JSON
   - extracted data is representable either as it found, or as a complete JSON format
