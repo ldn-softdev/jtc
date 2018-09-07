@@ -121,7 +121,7 @@
 #include <math.h>       // floor()
 #include <unistd.h>     // getopt
 #include <type_traits>
-#include "enums.hpp"
+#include "extensions.hpp"
 #include "dbg.hpp"
 
 

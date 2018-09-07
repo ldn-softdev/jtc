@@ -289,7 +289,7 @@
 #include <exception>
 #include <sys/time.h>
 #include "macrolib.h"
-#include "enums.hpp"
+#include "extensions.hpp"
 
 
 // below macros define user declaration forms of the debuggable class object:

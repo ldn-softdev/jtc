@@ -64,6 +64,35 @@
 
 
 
+
+
+/*
+ * Following trivial extension adds capability to check if value is in enumeration
+ * or not
+ *
+ * Synopsis:
+ *
+ * x = 5;
+ * if(x AMONG(1,2,3,4,5,6))
+ *  std::cout << "x is in!" << std::endl;
+ * else
+ *  std::cout << "x is not in!" << std::endl;
+ *
+ */
+template<class T>
+bool operator==(const T &a, const std::vector<T> &v) {
+ for(auto &x: v)
+  if(x == a) return true;
+ return false;
+}
+
+#define AMONG(first, rest...) \
+        ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
+
+
+
+
+
 /*
  * A trivial wrapper around std::exception
  * - to be used with enum stringification in classes
@@ -127,8 +156,6 @@ class stdException: public std::exception {
 
 // for in-place throw parameter
 #define EXP(TROW_REASON) __exp__(TROW_REASON, __PRETTY_FUNCTION__)
-
-
 
 
 
