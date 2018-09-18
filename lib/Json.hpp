@@ -1785,7 +1785,7 @@ class Json{
     // 1. callback hooked onto the JSON labels (lbl_callback_map)
     // 2. callback hooked onto Json::iterators (itr_callback_vec)
     struct ItrCallback {
-     // this class facilitates itr_callback_vec type storage, binding Json::iterator 
+     // this class facilitates itr_callback_vec type storage, binding Json::iterator
      // and callback itself together
                             ItrCallback(iterator &&itr, std::function<void(const Jnode &)> &&cb):
                              iter{std::move(itr)}, callback(std::move(cb))
