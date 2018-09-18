@@ -39,6 +39,7 @@
  */
 
 #pragma once
+#include <string>
 #include "macrolib.h"
 
 
@@ -78,11 +79,25 @@
  * else
  *  std::cout << "x is not in!" << std::endl;
  *
+ *
+ * CAVEAT on usage with c-strings:
+ * - first parameter in AMONG macros to be type-casted as:
+ *
+ * if(x AMONG((const char *)"abc", "def", "xyz")) ...
  */
+
+
+
 template<class T>
 bool operator==(const T &a, const std::vector<T> &v) {
  for(auto &x: v)
   if(x == a) return true;
+ return false;
+}
+
+bool operator==(const char *a, const std::vector<const char *> &v) {
+ for(auto x: v)
+  if(std::string(x) == a) return true;
  return false;
 }
 

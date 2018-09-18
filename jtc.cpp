@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.30"
+#define VERSION "1.31"
 
 
 // option definitions
@@ -112,15 +112,17 @@ int main(int argc, char *argv[]){
 
  CommonResources r;
  REVEAL(r, opt, json, jout, DBG())
+
  opt.prolog("\nJSON test console\nVersion " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
- opt[CHR(OPT_EXE)].desc("treat a parameter for -" STR(OPT_UPD) " as a shell cli");
+ opt[CHR(OPT_EXE)].desc("treat a parameter for -" STR(OPT_UPD) " as a shell cli (must precede -"
+                        STR(OPT_UPD) ")");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax");
  opt[CHR(OPT_SZE)].desc("print JSON size (total number of nodes in JSON)");
- opt[CHR(OPT_RAW)].desc("force printing JSON in a raw format");
+ opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact) format");
  opt[CHR(OPT_PRG)].desc("purge JSON elements (one or more -" STR(OPT_WLK) " must be given)");
- opt[CHR(OPT_SLD)].desc("enforce quoted solidus parsing");
+ opt[CHR(OPT_SLD)].desc("enforce strict quoted solidus parsing");
  opt[CHR(OPT_SWP)].desc("swap around two JSON elements (two -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SEQ)].desc("do not print walks interleaved (i.e. print sequentually)");
  opt[CHR(OPT_LBL)].desc("print labels too (if any) for walked JSON");
@@ -140,7 +142,7 @@ int main(int argc, char *argv[]){
  opt[0].desc("file to read json from").name("json_file").bind("<stdin>");
  opt.epilog("\nthis tool provides ability to:\n\
  - display JSON (in a raw and pretty formats)\n\
- - walk JSON using various addressing/search criteria (see -" STR(OPT_GDE) ")\n\
+ - walk JSON using various subscripting/search criteria (see -" STR(OPT_GDE) ")\n\
  - manipulate JSON via purge/insert/update/swap operations\n\
  for examples run with -" STR(OPT_GDE) " option\n\
 \n\
@@ -152,17 +154,20 @@ Note on a multiple -" STR(OPT_WLK) " usage:\n\
    complex walk)\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
  - these options must be given together: one -" STR(OPT_CMN) " (in case multiple given, only\n\
-   the last one is considered) and multiple -" STR(OPT_PRT) "; each parameter -" STR(OPT_PRT) " will be\n\
+   the last one is considered) and multiple -" STR(OPT_PRT)
+   "; each parameter -" STR(OPT_PRT) " will be\n\
    prepended by parameter from -" STR(OPT_CMN) \
    ", tother they will form an equivalent of -" STR(OPT_WLK) "\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
- - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL) ", then walked elements will be collected into a JSON\n\
+ - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL)
+   ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array; those walked elements which do not have\n\
    labels will be enumerated within the parent array; if -" STR(OPT_LBL) " given twice, then\n\
-   loose relevant groupping applied, otherwise strict\n\n\
+   loose relevant groupping applied (otherwise strict, see examples with -" STR(OPT_GDE) ")\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
- - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD) " when used together; every occurrence of {}\n\
+ - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
+   " when used together; every occurrence of {}\n\
    is interpolated with walked JSON entry using raw format; interpolated entry\n\
    is completely escaped, thus does not require quoting; all shell-specific\n\
    chars (e.g.: `|', `;', `\"', etc) have to be quoted or escaped; terminate\n\
@@ -197,10 +202,8 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
 
 
 
-
-
 void parse_opt(int argc, char *argv[], CommonResources &r) {
- // parse options, if option -e detected, rebuild -u arguments and re-parse 
+ // parse options, if option -e detected, rebuild -u arguments and re-parse
  REVEAL(r, opt)
  bool reparse = false;                                          // re-parsing required?
 
@@ -234,7 +237,7 @@ void reparse_opt(int argc, char *argv[], CommonResources &r) {
 
  v_string sargv;                                                // make opt -u adsorb all due args
  v_string args{argv, argv + argc};
- recompile_args(args, sargv, r);                                // rebuild -u's arguments 
+ recompile_args(args, sargv, r);                                // rebuild -u's arguments
 
  char *nargv[sargv.size()];                                     // here, build a new argv
  for(size_t i = 0; i < sargv.size(); ++i) {
@@ -325,13 +328,12 @@ void write_json(CommonResources &r) {
 
 
 
-
-
 int demux_opt(CommonResources &r) {
  // demultiplex functional options, execute only once
- REVEAL(r, opt, json)
+ REVEAL(r, opt, json, DBG())
 
- for(auto &op: opt)
+ for(auto &op: opt) {
+  DBG(1) DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
   switch(op.second.hits() > 0? op.first: 0) {
    case CHR(OPT_INS):
          return insert_json(r);
@@ -344,12 +346,11 @@ int demux_opt(CommonResources &r) {
    case CHR(OPT_WLK):
          return walk_json(r);
   }
+ }
 
  cout << json << endl;                                          // in case no exec options given
  return RC_OK;
 }
-
-
 
 
 
@@ -394,8 +395,6 @@ int insert_json(CommonResources &r) {
 
 
 
-
-
 int purge_json(CommonResources &r) {
  // remove all json nodes pointed by iterator(s)
  REVEAL(r, opt, json, DBG())
@@ -422,8 +421,6 @@ int purge_json(CommonResources &r) {
  write_json(r);
  return RC_OK;
 }
-
-
 
 
 
@@ -506,7 +503,6 @@ void execute_cli(Json &update, const Jnode &updated, CommonResources &r) {
 
 
 
-
 int swap_json(CommonResources &r) {
  // swap around nodes pointed by 2 walk paths
  REVEAL(r, opt)
@@ -545,8 +541,6 @@ void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
   ++i;
  }
 }
-
-
 
 
 
@@ -590,7 +584,7 @@ void walk_sequentual(CommonResources &r) {
      continue;
    }                                                            // else, no -j given
    if( opt[CHR(OPT_LBL)] )                                      // -l given
-    if(not rec.is_root() and rec[-1].is_object())               // if label exists
+    if(rec.has_label())               // if label exists
      cout << '"' << rec.label() << "\": ";
    cout << rec << endl;
   }
@@ -598,6 +592,7 @@ void walk_sequentual(CommonResources &r) {
 
  if( opt[CHR(OPT_JSN)] ) cout << jout << endl;                  // print if -j option
 }
+
 
 
 // interleaved walks engaged with option -j and multiple walk paths are given
@@ -725,13 +720,12 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
  static size_t last_actuals = 0;                                // walking happens once per run,
                                                                 // so it's okay to make it static
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
- auto label_present = [&sr](void){ return not sr.is_root() and sr[-1].is_object(); };
- auto start_new_object = [actuals, &opt](void){ return (opt[CHR(OPT_LBL)].hits() > 1)? 
-                                                        actuals > last_actuals: 
+ auto start_new_object = [actuals, &opt](void){ return (opt[CHR(OPT_LBL)].hits() > 1)?
+                                                        actuals > last_actuals:
                                                         actuals >= last_actuals; };
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
   if(opt[CHR(OPT_LBL)]) {                                       // -l given (combine relevant nodes)
-   if(label_present()) {                                        // parent is an obect
+   if(sr.has_label()) {                                         // parent is an obect
     if(start_new_object() or jout.empty()) jout.push_back( OBJ{} );
     if(not jout.back().is_object()) jout.push_back( OBJ{} );
     if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
@@ -743,14 +737,15 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
      }
      jout.back()[sr.label()].push_back( sr );                   // & push back into converted array
     }
-   }
-   else jout.push_back(sr);                                     // parent is root or not object
+   } // if(sr.has_label()) {...
+   else
+    jout.push_back(sr);                                         // parent is root or not object
   }
-  else                                                          // no -l, just -j,
+  else //if(opt[CHR(OPT_LBL)]) {                                // no -l, just -j,
    jout.push_back(sr);                                          // make a simple an array
- }
+ } // if(opt[CHR(OPT_JSN)]) {
  else {                                                         // no -j option
-  if(opt[CHR(OPT_LBL)] and label_present())                     // -l given
+  if(opt[CHR(OPT_LBL)] and sr.has_label())                      // -l given
    cout << '"' << sr.label() << "\": ";
   cout << sr << endl;
  }
@@ -1026,7 +1021,8 @@ R"( example.json
 
 - finally, an update option -)" STR(OPT_UPD) R"( could be subjected for a shell cli evaluation,
   say we want to capitalize all parents names:
-jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD) R"( echo {} \| tr "'[:lower:]'" "'[:upper:]'" \; example.json
+jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD)
+R"( echo {} \| tr "'[:lower:]'" "'[:upper:]'" \; example.json
 {
    "Relation": [
       {

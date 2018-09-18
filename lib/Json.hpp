@@ -491,7 +491,7 @@
 //      be auto-generated)
 
 
-#define DBG_WIDTH 80                                            // max print len upon parser's debug
+#define DBG_WIDTH 80                                            // max print len upon parser's dbg
 #define ARRAY_LMT 4                                             // #bytes per array's index
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
@@ -500,7 +500,7 @@
 #define PRINT_PRT '\n'                                          // pretty print separator
 #define PRINT_RAW ' '                                           // raw print separator
 #define CHR_TRUE 'T'                                            // designator for Json 'true' value
-#define CHR_FALSE 'F'                                           // designator for Json 'false' value
+#define CHR_FALSE 'F'                                           // designator for Json 'false' val.
 #define CHR_NULL '\0'                                           // end of string
 #define CHR_RTRN '\n'                                           // end of line
 #define STR_TRUE "true"                                         // Json true sting value
@@ -521,11 +521,9 @@
 #define PFX_WFL '-'                                             // walk from end-leaf offset
 
 #define JSN_FBDN "\b\f\n\r\t"                                   // forbidden JSON chars
-#define JSN_QTD "\"\\bfnrtu"                                    // chars following quotation in JSON
-// NOTE: strict JSON behavior requires quoting solidus char '/', however it seems a common
-//       behavior is to ignore it. A user will have an option to switch between behaviors,
-//       defaulting to *ignore* option
-
+#define JSN_QTD "/\"\\bfnrtu"                                   // chrs following quotation in JSON
+// NOTE: solidus quotation is optional per JSON spec, a user will have an option
+//       to chose between desired quotation behavior
 
 // template meta to calculate number of bits required to represent an integer
 template<uint64_t I>
@@ -583,6 +581,7 @@ class Jnode {
                 expected_valid_label, \
                 missing_label_separator, \
                 expected_json_value, \
+                expected_enumeration, \
                 invalid_number, \
                 walk_offset_missing_closure, \
                 walk_search_label_with_attached_label, \
@@ -611,9 +610,9 @@ class Jnode {
 
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
-                         auto * volatile jnv = &jn.value();     // when walk iterator is copied, its
-                         if(jnv == nullptr)                     // supernode is empty, hence check'n
-                          { type_ = jn.type_; return; }         // supernode's type is parent's type
+                         auto * volatile jnv = &jn.value();     // when walk iterator is copied its
+                         if(jnv == nullptr)                     // supernode is empty, hence chck'n
+                          { type_ = jn.type_; return; }         // supernode's type is parent type
                          // why volatile? compiler (mistakenly) believes that address of a returned
                          // reference can never be null, hence optimizes out above 2 lines, which
                          // leads to the crash eventually. "volatile" disables such optimization
@@ -864,8 +863,10 @@ class Jnode {
     const_iterator      find(size_t i) const;                   // for both arrays and objects
 
                         // facilitating super node powers
+    virtual bool        has_label(void) const { throw EXP(label_accessed_not_via_iterator); }
     virtual const std::string &
                         label(void) const { throw EXP(label_accessed_not_via_iterator); }
+    virtual bool        has_index(void) const { throw EXP(index_accessed_not_via_iterator); }
     virtual int64_t     index(void) const { throw EXP(index_accessed_not_via_iterator); }
     virtual bool        is_root(void) const { throw EXP(method_accessed_not_via_iterator); }
                         // label() / index() / is_root() supposed to be used by a super
@@ -908,10 +909,10 @@ class Jnode {
   static std::ostream & print_json_(std::ostream & os, const Jnode & me, int & rl);
   static std::ostream & print_iterables_(std::ostream & os, const Jnode & me, int & rl);
 
-    static char         endl_;                                  // either for raw or pretty printing
+    static char         endl_;                                  // either for raw or pretty print
     static uint8_t      tab_;                                   // tab size (for indention)
 
-    EXCEPTIONS(ThrowReason)                                     // see "enums.hpp"
+    EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
 };
 
 // class static definitions
@@ -993,8 +994,8 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
     friend void         swap(Jnode::Iterator<T> &l, Jnode::Iterator<T> &r) {
                          using std::swap;                           // enable ADL
                          swap(l.ji_, r.ji_);
-                         swap(l.sn_.type_ref_(), r.sn_.type_ref_());// supernode swapping requires
-                        }                                           // swapping of type_ values only
+                         swap(l.sn_.parent_type(), r.sn_.parent_type());// supernode requires
+                        }                                           // swapping of type_ only
 
     // Super node definition
     //
@@ -1003,10 +1004,14 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
         friend Jnode::Iterator<T>;
 
      public:
+        bool                has_label(void) const
+                             { return lbp_ != nullptr and parent_type() == Object; }
         const std::string & label(void) const {
                              if(type_ != Object) throw EXP(label_request_for_non_object_enclosed);
                              return *lbp_;
                             }
+        bool                has_index(void) const
+                             { return lbp_ != nullptr and parent_type() == Array; }
         int64_t             index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
                              return std::stoul(lbp_->c_str(), nullptr, 16);
@@ -1014,7 +1019,8 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
         Jnode &             value(void) { return *jnp_; }       // do not template
         const Jnode &       value(void) const { return *jnp_; } // these methods
 
-        Jtype &             type_ref_(void) { return type_; }   // this is a work around GNU's
+        Jtype               parent_type(void) const { return type_; }
+        Jtype &             parent_type(void) { return type_; } // this is a work around GNU's
                             // compiler bug/limitation, which does not extend scoping visibility
                             // onto subclasses: i.e. swap(l.sn_.type_, r.sn_.type_) fails.
      private:
@@ -1212,7 +1218,7 @@ Jnode::const_iter_jn Jnode::iterator_by_idx_(size_t idx) const {
  if(idx >= children_().size())
   throw EXP(index_out_of_range);
 
- if(is_array()) {                                               // array could be addressed directly
+ if(is_array()) {                                               // array may be addressed directly
   size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
   if(key < children_().size()) {                                // if so, indices are non-tampered
    std::stringstream ss;
@@ -1279,7 +1285,7 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
    << endl_;
  }
 
- if(rl > 1) os << std::string((rl-1)*tab_, ' ');                // it would also signify pretty mode
+ if(rl > 1) os << std::string((rl-1)*tab_, ' ');                // would also signify pretty print
  if(my.is_array()) os << JSN_ARY_CLS;                           // close array, or
  if(my.is_object()) os << JSN_OBJ_CLS;                          // close node (object)
  if(endl_ == PRINT_PRT) --rl;                                   // if pretty print - adjust level
@@ -1294,8 +1300,6 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
 class Json{
   friend std::ostream & operator<<(std::ostream & os, const Json & my)
                          { return os << my.root(); }
-    typedef std::map<std::string,
-                     std::function<void(const Jnode &)>> lbl_callback;
 
     #define PARSE_THROW \
                 may_throw, \
@@ -1338,7 +1342,6 @@ class Json{
     Json &              parse(const std::string & jstr);
     std::string::const_iterator
                         exception_point(void) { return ep_; }
-
     class iterator;
     iterator            walk(const std::string & walk_string = "", CacheAction = invalidate);
 
@@ -1407,15 +1410,14 @@ class Json{
     const Json &        raw(bool x = true) const { root().raw(x); return *this; }
     uint8_t             tab(void) const { return root().tab(); }
     Json &              tab(uint8_t n) { root().tab(n); return *this; }
-    bool                is_solidus_quoted(void) const { return jsn_qtd_[0] == '/'; }
+    bool                is_solidus_quoted(void) const { return jsn_fbdn_[0] == '/'; }
     Json &              quote_solidus(bool quote) {
-                         if(quote) { jsn_fbdn_ = "/" JSN_FBDN; jsn_qtd_ = "/" JSN_QTD; }
-                         else { jsn_fbdn_ = JSN_FBDN; jsn_qtd_ = JSN_QTD; }
+                         if(quote) { jsn_fbdn_ = "/" JSN_FBDN; }
+                         else { jsn_fbdn_ = JSN_FBDN; }
                          return *this;
                         }
-
-    lbl_callback &      callbacks(void) { return cf_; }         // expose callback map to the user
     Json &              clear_cache(void) { sc_.clear(); return *this; }
+
     // calling clear_cache is required once JSON was modified anyhow; it's called
     // anyway every time new walk is build, thus the end-user must call it only
     // when continue walking iterators (with search iterators) past JSON modification
@@ -1454,10 +1456,10 @@ class Json{
     void                compile_walk_(const std::string & wstr, iterator & it) const;
     void                parse_lexemes_(const std::string & wstr, iterator & it) const;
     std::string         parse_offset_(std::string::const_iterator &si, char closec_chr) const;
-    void                parse_suffix_(std::string::const_iterator &si, iterator & it, v_str&) const;
+    void                parse_suffix_(std::string::const_iterator &si, iterator &it, v_str&) const;
     Jsearch             search_suffix_(char sfx) const;
     void                parse_quantifier_(std::string::const_iterator &si, iterator & it) const ;
-    long                parse_index_(std::string::const_iterator &si, ParseThrow = may_throw) const;
+    long                parse_index_(std::string::const_iterator &si, ParseThrow=may_throw) const;
 
 
     // Properties and structures used by walk iterator:
@@ -1514,7 +1516,7 @@ class Json{
                             Itr(const iter_jn &it, const std::string &l, size_t i = 0):
                              jit(it), lbl(l), wsi(i) {}         // enable emplacement
 
-        iter_jn             jit;                                // iterator pointing to JSON element
+        iter_jn             jit;                                // iterator pointing to JSON
         std::string         lbl;                                // preserved label for validation
         size_t              wsi;                                // walk step index
     };
@@ -1541,17 +1543,292 @@ class Json{
                              { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
     };
 
-    // data structures
-    typedef std::vector<Itr> path_vector;
-    std::map<SearchCacheKey, std::vector<path_vector>, decltype(&SearchCacheKey::cmp)>
-                            sc_{SearchCacheKey::cmp};           // search cache itself
-                            // search cache is the array of all path_vector's for given
-                            // search key (combination of jnode and walk step)
-    lbl_callback            cf_;                                // callback functions storage
+    typedef std::vector<Itr> path_vector;                       // used by iterator
 
     // parse_offset_type_() is dependent on WalkStep definition, hence moved down here
     void                parse_offset_type_(WalkStep & state) const;
     EXCEPTIONS(Jnode::ThrowReason)
+
+ public:
+    // Json::iterator: needs to be defined in-class to facilitate container storage
+    // with the iterator (e.g. iterator-based callback)
+    //
+    class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
+     // this forward iterator let iterate over *iterable* walk paths
+     // once iterator is dereferenced it returns a reference to a Jnode's super-node,
+     // super-node adds following powers to regular Jnode's:
+     // - label() allows accessing node's label if node is nested by object
+     // - index() allows accessing node's ordinal index if nested by array
+     // - value() provides access to the Jnode itself (but this methods is quite
+     //   redundant)
+     // - is_root() let checking if the node is root() or not
+     // - operator[] receives new capability: on a negative index it will address
+     //              indexed levels up in the JSON's tree hierarchy (e.g." [-1] will
+     //              address a parent of the dereferenced node, and so on)
+        typedef signed long s_long;
+        friend Json;
+        friend void         swap(Json::iterator &l, Json::iterator &r) {
+                             using std::swap;                   // enable ADL
+                             swap(l.ws_, r.ws_);
+                             swap(l.jp_, r.jp_);
+                             swap(l.pv_, r.pv_);
+                             swap(l.sn_.parent_type(), r.sn_.parent_type());// supernode requires
+                            }                                   // swapping of type_ values only
+        // Super node definition
+        //
+        class SuperJnode: public Jnode {
+            friend Json::iterator;
+
+         public:
+            bool                has_label(void) const {
+                                 return lbl_ != &Json::iterator::empty_ and
+                                        parent_type() == Object;
+                                }
+            const std::string & label(void) const {
+                                 if(type_ != Object)
+                                  throw EXP(label_request_for_non_object_enclosed);
+                                 return *lbl_;
+                                }
+            bool                has_index(void) const {
+                                 return lbl_ != &Json::iterator::empty_ and
+                                        parent_type() == Array;
+                                }
+            int64_t             index(void) const {
+                                 if(type_ != Array)
+                                  throw EXP(index_request_for_non_array_enclosed);
+                                 return std::stoul(lbl_->c_str(), nullptr, 16);
+                                }
+            Jnode &             value(void) { return *jnp_; }
+            const Jnode &       value(void) const { return *jnp_; }
+            bool                is_root(void) const { return &jit_->jp_->root() == jnp_; }
+            Jnode &             operator[](long i) {
+                                 // in addition to Json::iterator's, this one adds capability
+                                 // to address supernode with negative index, e.g: [-1],
+                                 // like in the walk-string to reference a parent
+                                 if(i >= 0) return Jnode::operator[](i);
+                                 if(-i >= static_cast<s_long>(jit_->pv_.size()))
+                                  return jit_->json_().root();
+                                 return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
+                                }
+            const Jnode &       operator[](long i) const {
+                                 if(i >= 0) return Jnode::operator[](i);
+                                 if(-i >= static_cast<s_long>(jit_->pv_.size()))
+                                  return jit_->json_().root();
+                                 return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
+                                }
+            Jtype               parent_type(void) const { return type_; }
+            Jtype &             parent_type(void) { return type_; }
+                                // this is a work around GNU's compiler bug-limitation, which
+                                // does not extend scoping onto subclasses, i.e.:
+                                // swap(l.sn_.type_, r.sn_.type_) fails.
+
+         private:
+                                SuperJnode(Jnode::Jtype t = Jnode::Neither): Jnode{t} {}
+
+            SuperJnode &        operator()(const std::string &l, Jnode &jn, Json::iterator * jit)
+                                 { lbl_ = &l; jnp_ = &jn; jit_ = jit; return *this; }
+            SuperJnode &        operator()(Jnode &jn, Json::iterator * jit)
+                                 { jnp_ = &jn; jit_ = jit; return *this; }
+
+            const std::string * lbl_{&Json::iterator::empty_};  // lbl_ should never be nullptr
+            Jnode *             jnp_{nullptr};                  // iterator's Jnode pointer
+            Json::iterator *    jit_{nullptr};                  // back to iterator, for [-n]
+        };
+        //
+        // end of Super node definition
+
+     public:
+                            iterator(void) = default;           // DC
+                            iterator(const iterator &it):       // CC
+                             ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {
+                             sn_.type_ = it.sn_.type_;
+                            }
+                            iterator(iterator &&it) {           // MC
+                             swap(*this, it);
+                            }
+        iterator &          operator=(const iterator &it) {     // CA
+                             iterator copy = it;
+                             swap(*this, copy);
+                             return *this;
+                            }
+        iterator &          operator=(iterator &&it) {          // MA
+                             swap(*this, it);
+                             return *this;
+                            }
+
+                            // adapters to Jnode::iterator
+                            operator Jnode::iterator (void) const {
+                             auto it = pv_.empty()?
+                                       jp_->root().children_().begin(): pv_.back().jit;
+                             return Jnode::iterator{std::move(it), sn_.type_};
+                            }
+                            operator Jnode::const_iterator(void) const {
+                             auto it = pv_.empty()?
+                                       jp_->root().children_().begin(): pv_.back().jit;
+                             return Jnode::const_iterator{std::move(it), sn_.type_};
+                            }
+
+        bool                operator==(const iterator & rhs) const {
+                             if(pv_.empty()) return rhs.pv_.empty()? jp_ == rhs.jp_: false;
+                             if(rhs.pv_.empty()) return false;
+                             return pv_.back().jit == rhs.pv_.back().jit;
+                            }
+        bool                operator!=(const iterator & rhs) const
+                             { return not operator==(rhs); }
+        template<typename T>
+        bool                operator==(const T & rhs) const {   // Jnode::iterator comparator
+                             if(pv_.empty()) return false;
+                             // i.e. Jonde::iterator can never point to a root, hence always false
+                             return pv_.back().jit == rhs.underlying_();
+                            }
+        template<typename T>
+        bool                operator!=(const T & rhs) const
+                             { return not operator==(rhs); }
+
+        Jnode &             operator*(void) {
+                             return pv_.empty()?
+                              sn_(jp_->root(), this):
+                              sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
+                            }
+        Jnode *             operator->(void) {
+                             return pv_.empty()?
+                              &sn_(jp_->root(), this):
+                              &sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
+                            }
+        iterator &          operator++(void) { incremented(); return *this; }
+        iterator &          begin(void) { return *this; }
+        iterator            end(void) const {
+                             if(not jp_->root().is_iterable())
+                              throw jp_->EXP(Jnode::walk_root_non_iterable);
+                             return iterator(jp_->root().children_().end());
+                            }
+        bool                is_valid(void) const {
+                             // end iterator is considered invalid path
+                             if(pv_.empty()) return true;
+                             if(pv_.back().jit == jp_->root().children_().end()) return false;
+                             return is_valid_(jp_->root(), 0);
+                            }
+        bool                is_nested(iterator & it) const;
+        bool                incremented(void);
+        size_t              walk_size(void) const { return ws_.size(); }
+        long                counter(size_t position) const {
+                             if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
+                             return ws_[position].init >= 0? ws_[position].offset: -1;
+                            }
+        long                instance(size_t position) const {
+                             if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
+                             return ws_[position].init == -1? ws_[position].offset: -1;
+                            }
+        long                offset(size_t position) const {
+                             if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
+                             return ws_[position].offset;
+                            }
+        const std::string & lexeme(size_t position) const {
+                             if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
+                             return ws_[position].lexeme;
+                            }
+        Jsearch             type(size_t position) const {
+                             if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
+                             return ws_[position].jsearch;
+                            }
+
+     protected:
+                            iterator(Json *ptr): jp_{ptr} {};
+                            iterator(const iter_jn & it) { pv_.emplace_back(it, ""); }
+
+      std::vector<WalkStep> ws_;                                // walk state vector (walk path)
+        Json *              jp_;                                // json pointer (for json().end())
+        path_vector         pv_;                                // path_vector (result of walking)
+        SuperJnode          sn_{Jnode::Neither};                // super node's type_ holds parent's
+
+     private:
+        bool                is_valid_(Jnode & jnp, size_t idx) const;
+        auto &              walk_path_(void) { return ws_; }
+        const auto &        walk_path_(void) const { return ws_; }
+        Json &              json_(void) const { return *jp_; }
+        auto &              cache_(void) const { return json_().sc_; }
+        auto &              cnt_type_(void) { return sn_.type_; }   // original container type
+
+        Json::iterator &    walk_(void);
+        void                walk_step_(size_t wsi, Jnode *);
+        void                show_built_pv_(std::ostream &out) const;
+        void                walk_numeric_offset_(size_t wsi, Jnode *);
+        void                walk_text_offset_(size_t wsi, Jnode *);
+        void                walk_search_(size_t wsi, Jnode *);
+        void                search_all_(Jnode *, const char *, const
+                                        WalkStep &w, std::vector<path_vector> &);
+        bool                search_successful_(Jnode *, const char *lbl, const WalkStep &, long &);
+        void                lbl_callback_(const std::string &lbl, const Jnode *,
+                                          const std::vector<path_vector> * = nullptr);
+        void                itr_callback_(const Jnode *);
+        bool                child_found_(Jnode *, const WalkStep &, long &);
+        bool                label_matched_(const std::string &, const WalkStep &, long &) const;
+        bool                atomic_matched_(const Jnode *, const char *l, const WalkStep &) const;
+        bool                string_match_(const Jnode *, const char *lbl, const WalkStep &) const;
+        bool                bull_matched_(const Jnode *, const char *lbl, const WalkStep &) const;
+        bool                increment_(long l);
+        long                next_iterable_ws(long idx) const;
+
+        static std::string  empty_;
+    };
+
+ private:
+
+    // data structures (cache storage and callbacks)
+    // cache:
+    std::map<SearchCacheKey, std::vector<path_vector>, decltype(&SearchCacheKey::cmp)>
+                        sc_{SearchCacheKey::cmp};           // search cache itself
+                        // search cache is the array of all path_vector's for given
+                        // search key (combination of jnode and walk step)
+
+    // There are 2 types of callbacks:
+    // 1. callback hooked onto the JSON labels (lbl_callback_map)
+    // 2. callback hooked onto Json::iterators (itr_callback_vec)
+    struct ItrCallback {
+     // this class facilitates itr_callback_vec type storage, binding Json::iterator 
+     // and callback itself together
+                            ItrCallback(iterator &&itr, std::function<void(const Jnode &)> &&cb):
+                             iter{std::move(itr)}, callback(std::move(cb))
+                              {}                            // facilitate emplacement for vector
+        iterator            iter;
+        std::function<void(const Jnode &)>
+                            callback;
+    };
+    typedef std::map<std::string, std::function<void(const Jnode &)>> lbl_callback_map;
+    typedef std::vector<ItrCallback> itr_callback_vec;
+
+    lbl_callback_map    lcb_;                               // label callbacks storage
+    itr_callback_vec    icb_;                               // iterator-based callback storage
+    bool                ce_{false};                         // callbacks engaged? flag
+
+ public:
+
+    #define CALLBACK_TYPE \
+                label_based, \
+                iterator_based, \
+                status
+    ENUM(CallbackType, CALLBACK_TYPE)
+
+    // user callbacks interface:
+    bool                callbacks_engaged(CallbackType ct = status) const {
+                         if(ct == label_based) return ce_ and not lcb_.empty();
+                         if(ct == iterator_based) return ce_ and not icb_.empty();
+                         return ce_;
+                        }
+    Json &              engage_callbacks(bool x=true)
+                         { ce_ = x; return *this; };
+    Json &              callback(const std::string &lbl, std::function<void(const Jnode &)> &&cb) {
+                         lcb_.emplace(std::move(lbl), std::move(cb));
+                         return *this;
+                        }
+    Json &              callback(iterator &&itr, std::function<void(const Jnode &)> &&cb) {
+                         icb_.emplace_back(std::move(itr), std::move(cb));
+                         return *this;
+                        }
+    Json &              clear_callbacks(void)
+                         { lcb_.clear(); icb_.clear(); return *this; }
+    lbl_callback_map &  lbl_callbacks(void) { return lcb_; }
+    itr_callback_vec &  itr_callbacks(void) { return icb_; }
 };
 
 // class static definitions
@@ -1559,6 +1836,7 @@ STRINGIFY(Json::Jsearch, JS_ENUM)
 
 #undef JS_ENUM
 #undef CACHE_ACTION
+#undef CALLBACK_TYPE
 #undef PARSE_THROW
 
 
@@ -1653,10 +1931,12 @@ void Json::parse_array_(Jnode & node, std::string::const_iterator &jsp) {
    }
    if(*jsp == ',')
     if(not comma_read and node.has_children())
-     { ++jsp; comma_read = true; continue; }                    // interleaving comma: ... 2, 3, ...
+     { ++jsp; comma_read = true; continue; }                    // interleaving comma: .. 2, 3, ..
    // here: either a double comma: " ... ,,", or leading comma: "[ , ...
    ep_ = jsp; throw EXP(Jnode::expected_json_value);            // e.g.: "[ , ...", or "[ 123,, ]"
   }
+  if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
+   { ep_ = jsp; throw EXP(Jnode::expected_enumeration); }
 
   node.children_().emplace(node.next_key_(), std::move(child));
   comma_read = false;
@@ -1690,8 +1970,11 @@ void Json::parse_object_(Jnode & node, std::string::const_iterator &jsp) {
 
   Jnode child;
   parse_(child, ++jsp);
-  if(child.type() == Jnode::Neither)                            // after 'lablel:' there must follow
+  if(child.type() == Jnode::Neither)                            // after 'label:' there must follow
    { ep_ = jsp; throw EXP(Jnode::expected_json_value); }        // a valid JSON value
+
+  if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
+   { ep_ = jsp; throw EXP(Jnode::expected_enumeration); }
 
   node.children_().emplace(std::move(label.str()), std::move(child));
   comma_read = false;
@@ -1841,213 +2124,7 @@ const char & Json::skip_blanks_(std::string::const_iterator & jsp) {
 //       root.children().end())
 
 
-
-
-
-class Json::iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
- // this forward iterator let iterate over *iterable* walk paths
- // once iterator is dereferenced it returns a reference to a Jnode's super-node,
- // super-node adds following powers to regular Jnode's:
- // - label() allows accessing node's label if node is nested by object
- // - index() allows accessing node's ordinal index if nested by array
- // - value() provides access to the Jnode itself (but this methods is quite redundant)
- // - is_root() let checking if the node is root() or not
- // - operator[] receives new capability: on a negative index it will address indexed
- //              levels up in the JSON's tree hierarchy (e.g." [-1] will address
- //              a parent of the dereferenced node, and so on)
-    typedef signed long s_long;
-    friend Json;
-    friend void         swap(Json::iterator &l, Json::iterator &r) {
-                         using std::swap;                       // enable ADL
-                         swap(l.ws_, r.ws_);
-                         swap(l.jp_, r.jp_);
-                         swap(l.pv_, r.pv_);
-                         swap(l.sn_.type_ref_(), r.sn_.type_ref_());// supernode swapping requires
-                        }                                           // swapping of type_ values only
-    // Super node definition
-    //
-    class SuperJnode: public Jnode {
-        friend Json::iterator;
-
-     public:
-        const std::string & label(void) const {
-                             if(type_ != Object) throw EXP(label_request_for_non_object_enclosed);
-                             return *lbl_;
-                            }
-        int64_t             index(void) const {
-                             if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
-                             return std::stoul(lbl_->c_str(), nullptr, 16);
-                            }
-        Jnode &             value(void) { return *jnp_; }
-        const Jnode &       value(void) const { return *jnp_; }
-        bool                is_root(void) const { return &jit_->jp_->root() == jnp_; }
-        Jnode &             operator[](long i) {
-                             // in addition to Json::iterator's, this one adds capability
-                             // to address supernode with negative index, e.g: [-1],
-                             // like in the walk-string to reference a parent
-                             if(i >= 0) return Jnode::operator[](i);
-                             if(-i >= static_cast<s_long>(jit_->pv_.size()))
-                              return jit_->json_().root();
-                             return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
-                            }
-        const Jnode &       operator[](long i) const {
-                             if(i >= 0) return Jnode::operator[](i);
-                             if(-i >= static_cast<s_long>(jit_->pv_.size()))
-                              return jit_->json_().root();
-                             return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
-                            }
-        Jtype &             type_ref_(void) { return type_; }   // this is a work around GNU's
-                            // compiler bug-limitation, which does not extend scoping visibility
-                            // onto subclasses: i.e. swap(l.sn_.type_, r.sn_.type_) fails.
-
-     private:
-                            SuperJnode(Jnode::Jtype t = Jnode::Neither): Jnode{t} {}
-
-        SuperJnode &        operator()(const std::string &l, Jnode &jn, Json::iterator * jit)
-                             { lbl_ = &l; jnp_ = &jn; jit_ = jit; return *this; }
-        SuperJnode &        operator()(Jnode &jn, Json::iterator * jit)
-                             { jnp_ = &jn; jit_ = jit; return *this; }
-
-        const std::string * lbl_{&Json::iterator::empty_};      // lbl_ should never be nullptr
-        Jnode *             jnp_{nullptr};                      // iterator's Jnode pointer
-        Json::iterator *    jit_{nullptr};                      // back to iterator, for [-n]
-    };
-    //
-    // end of Super node definition
-
- public:
-                        iterator(void) = default;               // DC
-                        iterator(const iterator &it):           // CC
-                         ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {
-                         sn_.type_ = it.sn_.type_;
-                        }
-                        iterator(iterator &&it) {               // MC
-                         swap(*this, it);
-                        }
-    iterator &          operator=(const iterator &it) {         // CA
-                         iterator copy = it;
-                         swap(*this, copy);
-                         return *this;
-                        }
-    iterator &          operator=(iterator &&it) {              // MA
-                         swap(*this, it);
-                         return *this;
-                        }
-
-                        // adapters to Jnode::iterator
-                        operator Jnode::iterator (void) const {
-                         auto it = pv_.empty()? jp_->root().children_().begin(): pv_.back().jit;
-                         return Jnode::iterator{std::move(it), sn_.type_};
-                        }
-                        operator Jnode::const_iterator(void) const {
-                         auto it = pv_.empty()? jp_->root().children_().begin(): pv_.back().jit;
-                         return Jnode::const_iterator{std::move(it), sn_.type_};
-                        }
-
-    bool                operator==(const iterator & rhs) const {
-                         if(pv_.empty()) return rhs.pv_.empty()? jp_ == rhs.jp_: false;
-                         if(rhs.pv_.empty()) return false;
-                         return pv_.back().jit == rhs.pv_.back().jit;
-                        }
-    bool                operator!=(const iterator & rhs) const
-                         { return not operator==(rhs); }
-    template<typename T>
-    bool                operator==(const T & rhs) const {
-                         if(pv_.empty()) return false;
-                         return pv_.back().jit == rhs.underlying_();
-                        }
-    template<typename T>
-    bool                operator!=(const T & rhs) const
-                         { return not operator==(rhs); }
-
-    Jnode &             operator*(void) {
-                         return pv_.empty()?
-                          sn_(jp_->root(), this):
-                          sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
-                        }
-    Jnode *             operator->(void) {
-                         return pv_.empty()?
-                          &sn_(jp_->root(), this):
-                          &sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
-                        }
-    iterator &          operator++(void) { incremented(); return *this; }
-    iterator &          begin(void) { return *this; }
-    iterator            end(void) const {
-                         if(not jp_->root().is_iterable())
-                          throw jp_->EXP(Jnode::walk_root_non_iterable);
-                         return iterator(jp_->root().children_().end());
-                        }
-    bool                is_valid(void) const {
-                         // end iterator is considered invalid path
-                         if(pv_.empty()) return true;
-                         if(pv_.back().jit == jp_->root().children_().end()) return false;
-                         return is_valid_(jp_->root(), 0);
-                        }
-    bool                is_nested(iterator & it) const;
-    bool                incremented(void);
-    size_t              walk_size(void) const { return ws_.size(); }
-    long                counter(size_t position) const {
-                         if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                         return ws_[position].init >= 0? ws_[position].offset: -1;
-                        }
-    long                instance(size_t position) const {
-                         if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                         return ws_[position].init == -1? ws_[position].offset: -1;
-                        }
-    long                offset(size_t position) const {
-                         if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                         return ws_[position].offset;
-                        }
-    const std::string & lexeme(size_t position) const {
-                         if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                         return ws_[position].lexeme;
-                        }
-    Jsearch             type(size_t position) const {
-                         if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                         return ws_[position].jsearch;
-                        }
-
- protected:
-                        iterator(Json *ptr): jp_{ptr} {};
-                        iterator(const iter_jn & it) { pv_.emplace_back(it, ""); }  // used in end()
-
-  std::vector<WalkStep> ws_;                                    // walk state vector (walk path)
-    Json *              jp_;                                    // json pointer (for json().end())
-    path_vector         pv_;                                    // path_vector (result of walking)
-    SuperJnode          sn_{Jnode::Neither};                    // super node
-
- private:
-    bool                is_valid_(Jnode & jnp, size_t idx) const;
-    auto &              walk_path_(void) { return ws_; }
-    const auto &        walk_path_(void) const { return ws_; }
-    Json &              json_(void) const { return *jp_; }
-    auto &              cache_(void) const { return json_().sc_; }
-    auto &              cnt_type_(void) { return sn_.type_; }   // original container type
-
-    Json::iterator &    walk_(void);
-    void                walk_step_(size_t wsi, Jnode *);
-    void                show_built_pv_(std::ostream &out) const;
-    void                walk_numeric_offset_(size_t wsi, Jnode *);
-    void                walk_text_offset_(size_t wsi, Jnode *);
-    void                walk_search_(size_t wsi, Jnode *);
-    void                search_all_(Jnode *, const char *, const
-                                    WalkStep &w, std::vector<path_vector> &);
-    bool                search_successful_(Jnode *, const char *lbl, const WalkStep &, long &);
-    void                callback_(const std::string &, const Jnode *,
-                                  const std::vector<path_vector> * = nullptr);
-    bool                child_found_(Jnode *, const WalkStep &, long &);
-    bool                label_matched_(const std::string &, const WalkStep &, long &) const;
-    bool                atomic_matched_(const Jnode *, const char *lbl, const WalkStep &) const;
-    bool                string_match_(const Jnode *, const char *lbl, const WalkStep &) const;
-    bool                bull_matched_(const Jnode *, const char *lbl, const WalkStep &) const;
-    bool                increment_(long l);
-    long                next_iterable_ws(long idx) const;
-
-    static std::string  empty_;
-};
-
 std::string Json::iterator::empty_;
-
 
 
 Json::iterator Json::walk(const std::string & wstr, CacheAction action) {
@@ -2074,8 +2151,8 @@ Json::iterator Json::walk(const std::string & wstr, CacheAction action) {
  if(it.pv_.back().jit != root().children_().end()) return itr;  // must resolve reference
  // here walk_() returned end(), but it might not be a true end, an increment step is required
  // in order to confirm that it's either a true end; return then incremented reference
- it.pv_.clear();                                                // here walk_() returned end(), thus
- return ++it;                                                   // advance to next point or true end
+ it.pv_.clear();                                                // here walk_() returned end(), so
+ return ++it;                                                   // advance to next, or true end
 }
 
 
@@ -2111,7 +2188,7 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
         ws.emplace_back(parse_offset_(si, LXM_SCH_OPN), regular_match);
         break;
    default:
-        parse_suffix_(si, it, req_label);                       // outside of offsets there could be
+        parse_suffix_(si, it, req_label);                       // outside of offset there could be
         if(req_label.empty()) parse_quantifier_(si, it);        // only suffixes and quantifiers
         continue;
   }
@@ -2164,7 +2241,7 @@ void Json::parse_suffix_(std::string::const_iterator &si, iterator & it, v_str &
 
  auto & last_step = it.walk_path_().back();
  if(last_step.lexeme.front() == LXM_OFS_OPN)                    // i.e. it's '['
-  throw EXP(Jnode::walk_unexpexted_suffix);                     // suffix may only follow the search
+  throw EXP(Jnode::walk_unexpexted_suffix);                     // suffix may only follow search
 
  Jsearch sfx = search_suffix_(*si);                             // see if a search suffix valid
  if(sfx < end_of_match) {
@@ -2384,11 +2461,11 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
   return;
  }
 
- auto & cache = cache_();                                       // search is iterable: build a cache
+ auto & cache = cache_();                                       // search is iterable: build cache
  SearchCacheKey skey{jn, ws};
  if(cache.count(skey) == 0) {                                   // cache does not exits
   DBG(json_(), 1) DOUT(json_()) << skey << std::endl;
-  cache[skey].resize(1);                                        // prepare place for 1st path-vector
+  cache[skey].resize(1);                                        // prepare place for 1st pathvector
   search_all_(jn, nullptr, ws, cache[skey]);                    // build cache
   cache[skey].pop_back();                                       // last entry is redundant
   DBG(json_(), 1) DOUT(json_()) << "cached " << cache[skey].size() << " searches" << std::endl;
@@ -2409,8 +2486,11 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
  if(jn->is_iterable()) {
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    vpv.back().emplace_back(it, it->KEY);
+   if(json_().callbacks_engaged(iterator_based))
+    itr_callback_(jn);
    if(jn->is_object()) {
-    if(not json_().callbacks().empty()) callback_(it->KEY, jn, &vpv);   // facilitate label callback
+    if(json_().callbacks_engaged(label_based))
+     lbl_callback_(it->KEY, jn, &vpv);
     if(ws.jsearch AMONG(label_match, Label_RE_search)) {
      long i = 0;
      if(label_matched_(it->KEY, ws, i)) vpv.push_back(vpv.back());  // if found, preserve path
@@ -2422,6 +2502,8 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
   return;
  }
  // it's atomic then
+ if(json_().callbacks_engaged(iterator_based))
+  itr_callback_(jn);
  if(atomic_matched_(jn, lbl, ws))                               // if mathed
   vpv.push_back(vpv.back());                                    // preserve the path then
 }
@@ -2434,8 +2516,11 @@ bool Json::iterator::search_successful_(Jnode *jn, const char *lbl, const WalkSt
  if(jn->is_iterable()) {
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    pv_.emplace_back(it, it->KEY);
+   if(json_().callbacks_engaged(iterator_based))
+    itr_callback_(jn);
    if(jn->is_object()) {
-    if(not json_().callbacks().empty()) callback_(it->KEY, jn); // facilitate user's label callbacks
+    if(json_().callbacks_engaged(label_based))
+     lbl_callback_(it->KEY, jn);
     if(ws.jsearch AMONG(label_match, Label_RE_search))
      if(label_matched_(it->KEY, ws, i)) return true;
    }
@@ -2446,25 +2531,43 @@ bool Json::iterator::search_successful_(Jnode *jn, const char *lbl, const WalkSt
   return false;
  }
  // it's not iterable
+ if(json_().callbacks_engaged(iterator_based))
+  itr_callback_(jn);
  if(not atomic_matched_(jn, lbl, ws)) return false;
  return --i < 0? true: false;
 }
 
 
 
-void Json::iterator::callback_(const std::string &label, const Jnode *jn,
+void Json::iterator::lbl_callback_(const std::string &label, const Jnode *jn,
                                const std::vector<path_vector> *vpv) {
- if(json_().callbacks().count(label) == 0) return;              // label not registered?
+ // invoke callback attached to the label (if there's one)
+ if(json_().lbl_callbacks().count(label) == 0) return;          // label not registered?
 
  if(vpv != nullptr)                                             // callback from search_all_()
   for(auto &path: vpv->back())                                  // then need to augment path-vector
    pv_.push_back(path);                                         // from last vpv path
 
  cnt_type_() = Jnode::Object;                                   // ensure supernode's correct type
- json_().cf_[label]( operator*() );                             // call back passing super node
+ json_().lbl_callbacks()[label]( operator*() );                 // call back passing super node
 
  if(vpv != nullptr)
-  pv_.resize(pv_.size() - vpv->back().size());                  // reinstate path
+  pv_.resize(pv_.size() - vpv->back().size());                  // restore path
+}
+
+
+
+void Json::iterator::itr_callback_(const Jnode *jn) {
+ // invoke callbacks matching given iterator
+ for(auto &ic: json_().itr_callbacks()) {
+  if(ic.iter == ic.iter.end()) continue;                        // iterations are over
+  if(&ic.iter->value() != jn) continue;                         // it's a different node
+
+  ic.callback( *ic.iter );                                      // call back passing super node
+  json_().engage_callbacks(false);
+  ++ic.iter;
+  json_().engage_callbacks(true);
+ }
 }
 
 
