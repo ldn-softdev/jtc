@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.31"
+#define VERSION "1.32"
 
 
 // option definitions
@@ -215,7 +215,6 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
   else
    { opt.usage(); exit(e.code() + OFF_GETOPT); }
  }
-
  if(opt[CHR(OPT_GDE)]) exit( wp_guide() );
 
  if(reparse or (opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0))
@@ -276,7 +275,7 @@ void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
    continue;
   }
 
-  if(arg.front() == '-')                                        // option, see if opt u is present
+  if(arg.front() == '-')                                        // option, see if opt -u is present
    for(char chr: arg) {
     if(not opt.defined(chr)) break;                             // opt -u not found, record arg
     if(chr == CHR(OPT_UPD))                                     // opt -u found, indicate & record

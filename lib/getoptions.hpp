@@ -422,10 +422,8 @@ void Getopt::parse(int argc, char *argv[], const char *f) {
  // 3. process input 'argv' array (via getopt call), then post process standalone arguments
  #ifndef __linux__
  optreset = 1;                                                  // this is done in order to allow
- optind = 1;                                                    // multiple invocation of parse
- #else
- optind = 0;                                                    // - linux way to use optreset
  #endif
+ optind = 1;                                                    // - linux way to use optreset
  std::string fmt = recoverFormat_(f);                           // recovered format
 
  if(autohelp_) {
