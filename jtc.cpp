@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.32"
+#define VERSION "1.33"
 
 
 // option definitions
@@ -84,7 +84,8 @@ typedef deque<Json::iterator> walk_deq;
 typedef vector<string> v_string;
 
 void parse_opt(int argc, char *argv[], CommonResources &);
-void reparse_opt(int argc, char *argv[], CommonResources &r);
+bool is_recompile_required(v_string & args, CommonResources &);
+void parse_rebuilt(v_string & sargv, CommonResources &r);
 void recompile_args(v_string &args, v_string &sargv, CommonResources &r);
 void read_json(CommonResources &);
 int demux_opt(CommonResources &);
@@ -173,16 +174,19 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
    chars (e.g.: `|', `;', `\"', etc) have to be quoted or escaped; terminate\n\
    the cli with trailing semicolon (which needs to be escapted): \\;\n");
 
+
+ // prepare debugs
+ DBG().use_ostream(cerr);
+
  // parse options
  parse_opt(argc, argv, r);
 
- // prepare debugs
+ DBG().level(opt[CHR(OPT_DBG)])
+      .severity(json, jout);
+
  json.tab(abs(opt[CHR(OPT_IND)]))
      .raw(opt[CHR(OPT_RAW)])
      .quote_solidus(opt[CHR(OPT_SLD)]);
- DBG().level(opt[CHR(OPT_DBG)])
-      .use_ostream(cerr)
-      .severity(json, jout);
 
  // read json and execute as per options
  try {
@@ -203,22 +207,20 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
 
 
 void parse_opt(int argc, char *argv[], CommonResources &r) {
- // parse options, if option -e detected, rebuild -u arguments and re-parse
+ // parse options, if option -e detected, rebuild -u's arguments and parse with rebuilt args
  REVEAL(r, opt)
- bool reparse = false;                                          // re-parsing required?
 
- try { opt.parse(argc,argv); }
- catch(stdException & e) {
-  if(e.code() == Getopt::too_many_arguments and                 // on that exception
-     opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0) // both -e and -u present
-   reparse = true;                                              // then re-parsing is required
-  else
+ v_string args{argv, argv + argc};
+ if(is_recompile_required(args, r)) {                           // re-compiling required?
+  v_string sargv;                                               // newly rebuilt args go here
+  recompile_args(args, sargv, r);                               // rebuild -u's arguments as one
+  parse_rebuilt(sargv, r);
+ }
+ else {                                                         // re recompiling, parse normally
+  try { opt.parse(argc,argv); }
+  catch(stdException & e)
    { opt.usage(); exit(e.code() + OFF_GETOPT); }
  }
- if(opt[CHR(OPT_GDE)]) exit( wp_guide() );
-
- if(reparse or (opt[CHR(OPT_EXE)].hits() > 0 and opt[CHR(OPT_UPD)].hits() > 0))
-  reparse_opt(argc, argv, r);
 
  for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
   opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
@@ -226,17 +228,30 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
 
 
 
-void reparse_opt(int argc, char *argv[], CommonResources &r) {
- // rebuild arguments (argv minding new semantic of -u) and re-parse it again
+bool is_recompile_required(v_string & args, CommonResources &r) {
+ // check if option -e is present in the arguments (then re-parsing is required)
  REVEAL(r, opt)
 
- try { opt.reset().variadic().parse(argc,argv); }               // see if it's no other option fail
- catch(stdException & e)
-  { opt.variadic(false).usage(); exit(e.code() + OFF_GETOPT); }
+ for(auto &arg: args) {                                         // go through all args
+  if(arg.front() != '-') continue;                              // not an option, don't parse
+  bool undefined_opt_found = false;
+  bool opt_e_found = false;
+  for(const char &chr: arg) {                                   // check all options
+   if(&chr == &arg[0]) continue;                                // skip first char '-'
+   if(not opt.defined(chr)) undefined_opt_found = true;         // unknown option
+   if(chr == CHR(OPT_EXE)) opt_e_found = true;                  // opt -e found
+  }
+  if(not undefined_opt_found and opt_e_found) return true;
+ }
 
- v_string sargv;                                                // make opt -u adsorb all due args
- v_string args{argv, argv + argc};
- recompile_args(args, sargv, r);                                // rebuild -u's arguments
+ return false;
+}
+
+
+
+void parse_rebuilt(v_string & sargv, CommonResources &r) {
+ // parse rebuilt arguments 
+ REVEAL(r, opt)
 
  char *nargv[sargv.size()];                                     // here, build a new argv
  for(size_t i = 0; i < sargv.size(); ++i) {
@@ -244,48 +259,50 @@ void reparse_opt(int argc, char *argv[], CommonResources &r) {
   stpcpy(nargv[i], sargv[i].c_str());
  }
 
- try { opt.reset().variadic(false).parse(sargv.size(), nargv); }// re-parse newly rebuilt args
+ try { opt.reset().parse(sargv.size(), nargv); }                // re-parse newly rebuilt args
  catch(stdException & e)
   { opt.usage(); exit(e.code() + OFF_GETOPT); }
 
- for(size_t i = 0; i < sargv.size(); ++i)                           // clean up nargv now
+ for(size_t i = 0; i < sargv.size(); ++i)                       // clean up nargv now
   delete [] nargv[i];
 }
 
 
 
 void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
- // recompile argv minding -u's arguments new semantic into sargv
+ // recompile argv minding -u's arguments, put re-parsed args into sargv
  REVEAL(r, opt)
 
  bool semicolon_found = false;
- int u_opt_found = 0;
+ int opt_u_found = 0;
 
  for(auto &arg: args) {                                         // go through all args
   if(semicolon_found)                                           // -u already found and processed
-   { sargv.push_back(arg); continue; }
-  if(u_opt_found > 0) {                                         // ';' not found yet, -u found
+   { sargv.push_back(arg); continue; }                          // push arg w/o any processing
+
+  if(opt_u_found > 0) {                                         // ';' not found yet, -u facing
    if(arg.back() == ';') {                                      // ';' found
     semicolon_found = true;
     arg.pop_back();                                             // trim trailing ';'
     if(not arg.empty()) sargv.back() += " " + arg;
     continue;
    }
-   sargv.back() += string{(++u_opt_found > 2? " ":"")} + arg;   // first arg append w/o spacer
+   sargv.back() += string{(++opt_u_found > 2? " ":"")} + arg;   // first arg append w/o spacer
    continue;
   }
 
   if(arg.front() == '-')                                        // option, see if opt -u is present
-   for(char chr: arg) {
+   for(const char &chr: arg) {
+   if(&chr == &arg[0]) continue;                                // skip first char '-'
     if(not opt.defined(chr)) break;                             // opt -u not found, record arg
     if(chr == CHR(OPT_UPD))                                     // opt -u found, indicate & record
-     { u_opt_found = 1; break; }
+     { opt_u_found = 1; break; }
    }
   sargv.push_back(arg);
  }
 
  if(not semicolon_found) {
-  cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option: \\;" << endl;
+  cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option - `;'" << endl;
   exit(RC_SC_MISS);
  }
 }
@@ -332,7 +349,7 @@ int demux_opt(CommonResources &r) {
  REVEAL(r, opt, json, DBG())
 
  for(auto &op: opt) {
-  DBG(1) DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
+  DBG(2) DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
   switch(op.second.hits() > 0? op.first: 0) {
    case CHR(OPT_INS):
          return insert_json(r);
