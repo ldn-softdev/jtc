@@ -41,6 +41,7 @@ using namespace std;
 #define CHR(X) XCHR(X)
 #define XCHR(X) *#X
 
+#define INTRP_STR "{}"
 
 // various return codes
 #define RETURN_CODES \
@@ -51,6 +52,7 @@ using namespace std;
         RC_SP_INV, \
         RC_SC_MISS, \
         RC_SH_ERR, \
+        RC_OU_MLT, \
         RC_END
 ENUM(ReturnCodes, RETURN_CODES)
 
@@ -66,7 +68,7 @@ struct CommonResources {
     Getopt              opt;
     Json                json;                                   // source
     Json                jout;                                   // output
-
+    short               opt_u_found{0};                         // #times -u args found in user cli
     DEBUGGABLE()
 };
 
@@ -92,7 +94,7 @@ int demux_opt(CommonResources &);
 int insert_json(CommonResources &);
 int purge_json(CommonResources &);
 int update_json(CommonResources &);
-void execute_cli(Json &update, const Jnode &updated, CommonResources &r);
+void execute_cli(Json &update, const Jnode &src_jnode, CommonResources &r);
 int swap_json(CommonResources &);
 void collect_walks(vector<walk_vec> & swap_points, CommonResources &);
 int walk_json(CommonResources &);
@@ -168,7 +170,7 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
    loose relevant groupping applied (otherwise strict, see examples with -" STR(OPT_GDE) ")\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
-   " when used together; every occurrence of {}\n\
+   " when used together; every occurrence of " INTRP_STR "\n\
    is interpolated with walked JSON entry using raw format; interpolated entry\n\
    is completely escaped, thus does not require quoting; all shell-specific\n\
    chars (e.g.: `|', `;', `\"', etc) have to be quoted or escaped; terminate\n\
@@ -222,6 +224,8 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
    { opt.usage(); exit(e.code() + OFF_GETOPT); }
  }
 
+ if(opt[CHR(OPT_GDE)].hits() > 0) exit(wp_guide());
+
  for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
   opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
 }
@@ -251,7 +255,7 @@ bool is_recompile_required(v_string & args, CommonResources &r) {
 
 void parse_rebuilt(v_string & sargv, CommonResources &r) {
  // parse rebuilt arguments 
- REVEAL(r, opt)
+ REVEAL(r, opt, opt_u_found )
 
  char *nargv[sargv.size()];                                     // here, build a new argv
  for(size_t i = 0; i < sargv.size(); ++i) {
@@ -265,36 +269,40 @@ void parse_rebuilt(v_string & sargv, CommonResources &r) {
 
  for(size_t i = 0; i < sargv.size(); ++i)                       // clean up nargv now
   delete [] nargv[i];
+
+ if(opt[CHR(OPT_UPD)].hits() >= opt_u_found) {
+  cerr << "error: option -" STR(OPT_UPD) " must be given only once" << endl;
+  exit(RC_OU_MLT);
+ }
 }
 
 
 
 void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
  // recompile argv minding -u's arguments, put re-parsed args into sargv
- REVEAL(r, opt)
-
+ REVEAL(r, opt, opt_u_found)
  bool semicolon_found = false;
- int opt_u_found = 0;
 
  for(auto &arg: args) {                                         // go through all args
   if(semicolon_found)                                           // -u already found and processed
    { sargv.push_back(arg); continue; }                          // push arg w/o any processing
 
-  if(opt_u_found > 0) {                                         // ';' not found yet, -u facing
+  if(opt_u_found > 0) {                                         //  facing -u; ';' not found yet,
    if(arg.back() == ';') {                                      // ';' found
     semicolon_found = true;
     arg.pop_back();                                             // trim trailing ';'
     if(not arg.empty()) sargv.back() += " " + arg;
     continue;
-   }
-   sargv.back() += string{(++opt_u_found > 2? " ":"")} + arg;   // first arg append w/o spacer
+   }                                                            // ';' not found while processing -u
+   if(++opt_u_found > 2) sargv.push_back("-u" + arg);
+   else sargv.back() += arg;
    continue;
   }
 
   if(arg.front() == '-')                                        // option, see if opt -u is present
    for(const char &chr: arg) {
    if(&chr == &arg[0]) continue;                                // skip first char '-'
-    if(not opt.defined(chr)) break;                             // opt -u not found, record arg
+    if(not opt.defined(chr)) break;                             // undefined option, record arg
     if(chr == CHR(OPT_UPD))                                     // opt -u found, indicate & record
      { opt_u_found = 1; break; }
    }
@@ -459,7 +467,7 @@ int update_json(CommonResources &r) {
   for(auto it = json.walk(wp); it != json.end(); ++it) ji.push_back(it);
   DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
 
-  for(size_t i = 0; i < ji.size(); ++i) {
+  for(size_t i = 0; i < ji.size(); ++i) {                       // go over all update (walk) points
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
    if(opt[CHR(OPT_EXE)].hits() > 0) {                           // -e was given
@@ -479,42 +487,51 @@ int update_json(CommonResources &r) {
 
 
 
-void execute_cli(Json &update, const Jnode &updated, CommonResources &r) {
+string quote_str(const string &src) {
+ string quoted;
+ if(src == "|") return src; 
+ for(auto chr: src) { 
+  if(not isalnum(chr)) quoted += '\\'; 
+  quoted += chr;
+ }
+ return quoted;
+}
+
+
+
+void execute_cli(Json &json, const Jnode &src_jnode, CommonResources &r) {
+ // execute cli in -u option (interpolating src_jnode if required) and parse the result into json 
  REVEAL(r, opt, DBG())
 
- string upd_opt{ opt[CHR(OPT_UPD)].str() };
- size_t interpolate = upd_opt.find("{}");
+ stringstream is;
+  bool pp = json.is_pretty();                                   // build a raw string of src_jnode
+  json.raw();
+  is << src_jnode;
+  json.pretty(pp);
+ string src_jnode_raw = is.str();
 
- if(interpolate != string::npos) {                              // interpolation of {} required
-  string updated_raw;                                           // updated json goes in here
-  auto pp = update.is_pretty(); update.raw();
-  stringstream is;
-  is << updated;
-  update.pretty(pp);
-  for(auto &chr: is.str())                                      // add completely quoted
-   { if(not isalnum(chr)) updated_raw += '\\'; updated_raw += chr; }
-
-  is.str(string());
-  while(interpolate != string::npos) {                          // interpolate all occurrences of {}
-   is << upd_opt.substr(0, interpolate) << updated_raw;
-   upd_opt.erase(0, interpolate+2);
-   interpolate = upd_opt.find("{}");
+ is.str(string());                                              // clear input stream is
+ for(auto opt_u_str: opt[CHR(OPT_UPD)]) {
+  size_t interpolate = opt_u_str.find(INTRP_STR);               // see if interpolation required
+  while(interpolate != string::npos) {                          // replace every occurrence of {}
+   opt_u_str.replace(interpolate, sizeof(INTRP_STR), src_jnode_raw);
+   interpolate = opt_u_str.find(INTRP_STR); 
   }
-  is << upd_opt;
-  upd_opt = is.str();
-  DBG(1) DOUT() << "interpolated update string: '" << upd_opt << "'" << endl;
+  is << quote_str(opt_u_str) << " ";                            // quote argument
  }
+ is.seekp(-1, ios_base::cur) << '\0';
+ DBG(1) DOUT() << "interpolated & quoted update string: '" << is.str() << "'" << endl;
 
  Shell sh;
- DBG().increment(+1, sh, -1);
- sh.system(upd_opt);
+ DBG().increment(+1, sh, -1);                                   // pop last space from input stream
+ sh.system(is.str());
 
  if(sh.rc() != 0)
   { DBG(1) DOUT() << "shell returned error: " << sh.rc() << endl; return; }
  if(sh.stdout() == "")
   { DBG(1) DOUT() << "shell returned empty result, not updating" << endl; return; }
 
- update.parse(sh.stdout());
+ json.parse(sh.stdout());
 }
 
 
@@ -1038,7 +1055,7 @@ R"( example.json
 - finally, an update option -)" STR(OPT_UPD) R"( could be subjected for a shell cli evaluation,
   say we want to capitalize all parents names:
 jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD)
-R"( echo {} \| tr "'[:lower:]'" "'[:upper:]'" \; example.json
+R"( echo {} \| tr "[:lower:]" "[:upper:]" \;  example.json
 {
    "Relation": [
       {
