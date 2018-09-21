@@ -394,8 +394,8 @@ Once options `-e` and `-u` used together following rules must be observed:
  - option `-e` must precede `-u`
  - char sequence following option `-u` must be terminated with escaped `;`
  - any occurrence of `{}` will be interpolated with JSON entry being updated
- - the cli in argument does not require any additional escaping (except those which would norally be required by shell), except pipe
- - if piping is required then pipe simbol itself needs to be quoted: `\|`
+ - the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
+ - if piping in cli is required then pipe simbol itself needs to be quoted: `\|`
  - returned result of shell evaluation still must be a valid JSON
  - failed or empty result of shell evaluations are ignored (JSON entry wont be updated, rather
 proceed to the next walked entry)
