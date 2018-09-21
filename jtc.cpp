@@ -68,7 +68,8 @@ struct CommonResources {
     Getopt              opt;
     Json                json;                                   // source
     Json                jout;                                   // output
-    short               opt_u_found{0};                         // #times -u args found in user cli
+    unsigned            opt_u_found{0};                         // #times -u args found in user cli
+
     DEBUGGABLE()
 };
 
