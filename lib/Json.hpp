@@ -610,6 +610,9 @@ class Jnode {
 
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
+                         #ifdef BG_CC
+                          std::cerr << __func__ << "(): CC called..." << std::endl;
+                         #endif
                          auto * volatile jnv = &jn.value();     // when walk iterator is copied its
                          if(jnv == nullptr)                     // supernode is empty, hence chck'n
                           { type_ = jn.type_; return; }         // supernode's type is parent type
@@ -806,15 +809,9 @@ class Jnode {
                          return *this;
                         }
 
-    Jnode &             push_back(const Jnode & jn) {
+    Jnode &             push_back(Jnode jn) {
                          if(not is_array()) throw EXP(expected_array_type);
-                         children_().emplace(next_key_(), jn);
-                         return *this;
-                        }
-
-    Jnode &             push_back(Jnode && jn) {
-                         if(not is_array()) throw EXP(expected_array_type);
-                         children_().emplace(next_key_(), std::forward<Jnode>(jn));
+                         children_().emplace(next_key_(), std::move(jn));
                          return *this;
                         }
 
@@ -1320,6 +1317,7 @@ class Json{
                         // perfect type conversion Json -> Jnode:
                         // that will help facilitating copy elision in Jnode CA
                         operator Jnode && (void) { return std::forward<Jnode>(root_); }
+                        operator const Jnode & (void) const { return root_; }
 
     // class interface:
     Jnode &             root(void) { return root_; }
@@ -1366,10 +1364,8 @@ class Json{
     const std::string & val(void) const { return root().val(); }
     Json &              erase(const std::string & l) { root().erase(l); return *this; }
     Json &              erase(size_t i) { root().erase(i); return *this; }
-    Json &              push_back(Jnode && jn)
-                         { root().push_back(std::forward<Jnode>(jn)); return *this; }
-    Json &              push_back(const Jnode & jn)
-                         { root().push_back(jn); return *this; }
+    Json &              push_back(Jnode jn)
+                         { root().push_back(std::move(jn)); return *this; }
     Json &              pop_back(void)
                          { root().pop_back(); return *this; }
 
