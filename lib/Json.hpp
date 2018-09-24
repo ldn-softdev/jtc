@@ -610,7 +610,6 @@ class Jnode {
 
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
-                         std::cerr << "== CC ==" << std::endl;
                          auto * volatile jnv = &jn.value();     // when walk iterator is copied its
                          if(jnv == nullptr)                     // supernode is empty, hence chck'n
                           { type_ = jn.type_; return; }         // supernode's type is parent type
