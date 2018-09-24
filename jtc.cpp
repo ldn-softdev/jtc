@@ -475,10 +475,10 @@ int update_json(CommonResources &r) {
     update = OBJ{};
     execute_cli(update, rec, r);
     if(not update.empty())
-     rec = update;
+     rec = move(update);                                        // update can be moved!
    }
    else                                                         // no -e, just update json
-    rec = update;
+    rec = update;                                               // here we need to copy
   }
  }
 
@@ -763,7 +763,7 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
     if(start_new_object() or jout.empty()) jout.push_back( OBJ{} );
     if(not jout.back().is_object()) jout.push_back( OBJ{} );
     if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
-     jout.back()[sr.label()] = sr;
+     jout.back()[sr.label()] = sr;                              // copy supernode
     else {                                                      // label exist
      if(not jout.back()[sr.label()].is_array()) {               // and it's not an array
       Json tmp{ move(jout.back()[sr.label()]) };                // convert to array then

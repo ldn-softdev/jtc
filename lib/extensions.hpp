@@ -83,7 +83,7 @@
  * CAVEAT on usage with c-strings:
  * - first parameter in AMONG macros to be type-casted as:
  *
- * if(x AMONG((const char *)"abc", "def", "xyz")) ...
+ * if(x AMONG(static_cast<const char*>("abc"), "def", "xyz")) ...
  */
 
 
@@ -95,9 +95,9 @@ bool operator==(const T &a, const std::vector<T> &v) {
  return false;
 }
 
-bool operator==(const char *a, const std::vector<const char *> &v) {
- for(auto x: v)
-  if(std::string(x) == a) return true;
+bool operator==(const std::string &a, const std::vector<const char *> &b) {
+ for(auto x: b)
+  if(a == x) return true;
  return false;
 }
 
