@@ -358,6 +358,8 @@ class Getopt {
                         order(void) { return ov_; }
     OptionOrder &       order(size_t idx) { return ov_[idx]; }
 
+    EXCEPTIONS(ThrowReason)
+
  protected:
     char                exception_;                             // option that generated exception
     bool                throwException_{true};                  // let throw is a default behavior
@@ -389,8 +391,6 @@ class Getopt {
     unsigned            countArgs_(void);                       // counts defined standalone args
     void                optionHelpLine_(const Option & opt);
     void                outputOpt_(std::stringstream &ss, int indent, const std::string &);
-
-    EXCEPTIONS(ThrowReason)
 };
 
 STRINGIFY(Getopt::ThrowReason, THROWREASON)

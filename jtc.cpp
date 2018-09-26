@@ -196,9 +196,14 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
   read_json(r);
   return demux_opt(r);
  }
- catch(stdException & e) {
+ catch(Jnode::stdException & e) {
   DBG(0) DOUT() << "exception raised by: " << e.where() << endl;
-  cerr << opt.prog_name() << " exception: " << e.what() << endl;
+  cerr << opt.prog_name() << " Jnode exception: " << e.what() << endl;
+  return e.code() + OFF_JSON;
+ }
+ catch(Json::stdException & e) {
+  DBG(0) DOUT() << "exception raised by: " << e.where() << endl;
+  cerr << opt.prog_name() << " Json exception: " << e.what() << endl;
   return e.code() + OFF_JSON;
  }
  catch(std::regex_error & e) {
@@ -221,7 +226,7 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
  }
  else {                                                         // re recompiling, parse normally
   try { opt.parse(argc,argv); }
-  catch(stdException & e)
+  catch(Getopt::stdException &e)
    { opt.usage(); exit(e.code() + OFF_GETOPT); }
  }
 
@@ -265,7 +270,7 @@ void parse_rebuilt(v_string & sargv, CommonResources &r) {
  }
 
  try { opt.reset().parse(sargv.size(), nargv); }                // re-parse newly rebuilt args
- catch(stdException & e)
+ catch(Getopt::stdException & e)
   { opt.usage(); exit(e.code() + OFF_GETOPT); }
 
  for(size_t i = 0; i < sargv.size(); ++i)                       // clean up nargv now

@@ -873,6 +873,7 @@ class Jnode {
 
     //SERDES(type_, value_, descendants_)                       // not really needed
     //DEBUGGABLE()                                              // there are no debugs in Jnode
+    EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
 
  protected:
                         Jnode(Jtype t):type_{t} {}              // for internal use
@@ -894,8 +895,6 @@ class Jnode {
 
     static char         endl_;                                  // either for raw or pretty print
     static uint8_t      tab_;                                   // tab size (for indention)
-
-    EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
 };
 
 // class static definitions
@@ -1402,6 +1401,7 @@ class Json{
 
     //SERDES(root_)                                             // not really needed (so far)
     DEBUGGABLE()
+    EXCEPTIONS(Jnode::ThrowReason)
 
     static Jnode::Jtype json_number_definition(std::string::const_iterator & jsp);
 
@@ -1526,7 +1526,6 @@ class Json{
 
     // parse_offset_type_() is dependent on WalkStep definition, hence moved down here
     void                parse_offset_type_(WalkStep & state) const;
-    EXCEPTIONS(Jnode::ThrowReason)
 
  public:
     // Json::iterator: needs to be defined in-class to facilitate container storage
