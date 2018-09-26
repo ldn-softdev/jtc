@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified August 2, 2018
+ * Created by Dmitry Lyssenko
  *
  * yet another JSON implementation featuring:
  *  - easy c++ API
