@@ -198,12 +198,12 @@ Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  }
  catch(Jnode::stdException & e) {
   DBG(0) DOUT() << "exception raised by: " << e.where() << endl;
-  cerr << opt.prog_name() << " Jnode exception: " << e.what() << endl;
+  cerr << opt.prog_name() << " jnode exception: " << e.what() << endl;
   return e.code() + OFF_JSON;
  }
  catch(Json::stdException & e) {
   DBG(0) DOUT() << "exception raised by: " << e.where() << endl;
-  cerr << opt.prog_name() << " Json exception: " << e.what() << endl;
+  cerr << opt.prog_name() << " json exception: " << e.what() << endl;
   return e.code() + OFF_JSON;
  }
  catch(std::regex_error & e) {
@@ -293,7 +293,7 @@ void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
   if(semicolon_found)                                           // -u already found and processed
    { sargv.push_back(arg); continue; }                          // push arg w/o any processing
 
-  if(opt_u_found > 0) {                                         //  facing -u; ';' not found yet,
+  if(opt_u_found > 0) {                                         // facing -u; ';' not found yet,
    if(arg.back() == ';') {                                      // ';' found
     semicolon_found = true;
     arg.pop_back();                                             // trim trailing ';'
@@ -838,7 +838,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform
      applied (from current JSON node),
      otherwise (i.e. ">...<" encasement given) - a non-recursive search is
      performed among immediate JSON node's children only
-   - "<text>": performs search  of "text" under a JSON tree off the given node
+   - "<text>": performs search of "text" under a JSON tree off the given node
    among JSON strings only (default behavior).
    - optionally a one letter suffix could be used, either of these: [rRlLdDbn],
      each one affecting the search in a following way:
@@ -1061,7 +1061,7 @@ R"( example.json
 - finally, an update option -)" STR(OPT_UPD) R"( could be subjected for a shell cli evaluation,
   say we want to capitalize all parents names:
 jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD)
-R"( echo {} \| tr "[:lower:]" "[:upper:]" \;  example.json
+R"( echo {} \| tr "[:lower:]" "[:upper:]" \; example.json
 {
    "Relation": [
       {

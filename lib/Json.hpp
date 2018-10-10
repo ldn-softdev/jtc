@@ -287,7 +287,7 @@
  *
  *   2) search lexemes: enclosed into angular braces <>, or ><, instructs to perform
  *      a textual match everywhere under the given json's tree. Following notations
- *      are  possible:
+ *      are possible:
  *      <txt>, <txt>n, <txt>+n, <txt>S, <txt>Sn, <txt>S+n, and reverse notations:
  *      >txt<, >txt<n, >txt<+n, >txt<S, >txt<Sn, >txt<S+n,
  *      where: txt - is any text to search for,
@@ -407,7 +407,7 @@
  *
  *
  *  Let's print a full address of a person whose first name is "Doc". This is a
- *  sloppy way of doing  it:
+ *  sloppy way of doing it:
  *      for(const auto &rec: json.walk("[Address Book] <^Doc>R [-1] [Address]"))
  *          std::cout << "address: " << rec << std::endl;
  *
@@ -1313,9 +1313,8 @@ class Json{
                         Json(Jnode &&jn): root_{std::move(jn.value())} { }
                         Json(const std::string &str) { parse(str); }
 
-                        // perfect type conversion Json -> Jnode:
-                        // that will help facilitating copy elision in Jnode CA
-                        operator Jnode && (void) { return std::forward<Jnode>(root_); }
+                        // type conversion Json -> Jnode:
+                        operator Jnode (void) { return root_; }
                         operator const Jnode & (void) const { return root_; }
 
     // class interface:
@@ -1803,8 +1802,8 @@ class Json{
                         }
     Json &              clear_callbacks(void)
                          { lcb_.clear(); icb_.clear(); return *this; }
-    lbl_callback_map &  lbl_callbacks(void) { return lcb_; }
-    itr_callback_vec &  itr_callbacks(void) { return icb_; }
+    lbl_callback_map &  lbl_callbacks(void) { return lcb_; }    // access to labeled callbacks
+    itr_callback_vec &  itr_callbacks(void) { return icb_; }    // access to iterator callbacks
 };
 
 // class static definitions
@@ -2457,7 +2456,7 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
 
 void Json::iterator::search_all_(Jnode *jn, const char *lbl,
                        const WalkStep &ws, std::vector<path_vector> & vpv) {
- // find all matches from  given json node, cache them into current vector of paths:
+ // find all matches from given json node, cache them into current vector of paths:
  // cache is the vector of all found path-vectors
  if(jn->is_iterable()) {
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
@@ -2670,7 +2669,7 @@ bool Json::iterator::increment_(long l) {
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
-  // That logic is required  to handle irregular JSON
+  // That logic is required to handle irregular JSON
   long n = next_iterable_ws(walk_path_().size());
   return n < 0? false: increment_( n );
  }

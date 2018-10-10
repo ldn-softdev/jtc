@@ -320,7 +320,7 @@
 //      DBG(2) std::cout << ...
 // 3. DBG(C, N) {...} defines a debug block with severity N, based on the debug
 //    of object C, e.g.:
-//      DBG(x, 1) std::cout << ... // x's debug severity is used
+//      DBG(x, 1) std::cout << ...  // x's debug severity is used
 //
 // macros 2. and 3. are entirely covered by Debug's mutex
 
@@ -385,7 +385,7 @@ class Debug {
     bool                indented(void) const { return indented_; }
     Debug &             indented(bool x) { indented_ = x; return *this; }
     Debug &             prefix(const char *i) { indent_ = i; return *this; }
-    Debug &             alt_prefix(const char *i) { altIndent_ = i; return *this; }
+    Debug &             alt_prefix(const char *i) { alt_indent_ = i; return *this; }
     Debug &             suffix(const char *s) { suffix_ = s; return *this; }
     bool                stamped(void) const { return ts_; }
     Debug &             stamped(bool x) { ts_ = x; return *this; }
@@ -395,7 +395,7 @@ class Debug {
     Debug &             filter(const char *s) { filter_.push_back(s); return *this; }
     Debug &             reset_filter(void) { filter_.clear(); filter_out(false); return *this; }
     std::mutex &        mutex(void) const { return Debug::mtx_; }
-    Debug &             use_mutex(std::mutex & mtx) { mp_ = &mtx; return *this; }
+    Debug &             mutex(std::mutex & mtx) { mp_ = &mtx; return *this; }
     Debug &             reset_mutex(void) { mp_ = &mtx_; return *this; }
     std::ostream &      dout(void) const { return *op_; }
     Debug &             use_ostream(std::ostream & os) { op_ = &os; return *this; }
@@ -456,7 +456,7 @@ class Debug {
     const short &       value(void) const { return ds_; }
 
  protected:
-    short               ds_{0};                                 // my debug severity
+    short               ds_{0};                                 // my debug severity offset
 
  private:
     #define MONTH Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
@@ -465,7 +465,7 @@ class Debug {
     static short        udl_;                                   // user debug level - set by user
     static bool         indented_;                              // is prompt indented?
     static std::string  indent_;                                // chars used for indenting (prefix)
-    static std::string  altIndent_;                             // chars used for indenting (prefix)
+    static std::string  alt_indent_;                            // chars used for indenting (prefix)
     static std::string  suffix_;                                // suffix (last of debug's promp)
     static bool         ts_;                                    // build time-stamp into prompt?
     static bool         ms_;                                    // use ms in time-stamp
@@ -478,9 +478,9 @@ class Debug {
                         filter_;                                // facility filter
 
     static const std::string
-                        timeStamp_(void);
+                        timestamp_(void);
     static const std::string
-                        stampStr_(time_t t_stamp);
+                        stamp_str_(time_t t_stamp);
     static bool         match_(const char *f);
 };
 
@@ -490,7 +490,7 @@ STRINGIFY( Debug::Month, MONTH)
 short                   Debug::udl_{0};                         // 0: debugs disabled
 bool                    Debug::indented_{true};                 // by default prompt is indented
 std::string             Debug::indent_{DBG_INDENT};
-std::string             Debug::altIndent_{DBG_ALT_INDENT};
+std::string             Debug::alt_indent_{DBG_ALT_INDENT};
 std::string             Debug::suffix_{DBG_SUFFIX};
 bool                    Debug::ts_{false};
 bool                    Debug::ms_{false};
@@ -504,11 +504,11 @@ std::vector<std::string>Debug::filter_;
 
 
 bool Debug::operator()(short d, const char * fn) const {
- // check if combined severity (d: debug block severity + ds_: this debug severity)
+ // check if combined severity (d: debug block severity + ds_: this debug severity offset)
  // is higher than debug level set by user:
  // 0 - highest severity, 1 - lower, etc. User debug level must be set to value
  // higher then debug's severity. e.g.: level set to 2, will enable all debugs with
- // severities 0 and 1. debug level 0 disables all debugs (assuming no negative
+ // combined severities 0 and 1. debug level 0 disables all debugs (assuming no negative
  // debug severities used)
  #ifdef NDEBUG                                                  // compiled with -DNDEBUG option
  return false;
@@ -532,17 +532,17 @@ std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx
 
  if(indented())
   for(int i=severity()+msgSev; i>0; --i)
-   so << (useAltPfx? Debug::altIndent_: Debug::indent_);
+   so << (useAltPfx? Debug::alt_indent_: Debug::indent_);
  so << fn << "()";
  if(stamped())
-  so << " [" << timeStamp_() << "]";
+  so << " [" << timestamp_() << "]";
  so << Debug::suffix_;
  return so.str();
 }
 
 
 
-const std::string Debug::timeStamp_(void) {
+const std::string Debug::timestamp_(void) {
  // build a time-stamp of the local TZ, possibly including ms and us
  static struct timeval t;
  static std::stringstream so;
@@ -550,7 +550,7 @@ const std::string Debug::timeStamp_(void) {
  so.str("");
  gettimeofday(&t, nullptr);
 
- so << stampStr_(t.tv_sec);
+ so << stamp_str_(t.tv_sec);
  if(ms_) {
   so << '.' << std::setfill('0') << std::setw(3) << t.tv_usec/1000;
   if(us_)
@@ -562,7 +562,7 @@ const std::string Debug::timeStamp_(void) {
 
 
 
-const std::string Debug::stampStr_(time_t t_stamp) {
+const std::string Debug::stamp_str_(time_t t_stamp) {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
  static std::stringstream so;
  static tm * tmp;

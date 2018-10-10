@@ -261,7 +261,7 @@ __out_arg__(std:: ostream & os, int idl, const char *class_name,
  for(auto &v: var)
   __out_arg__(os, idl, class_name, (vn + '[' + std::to_string(idx++) + ']').c_str(), v);
  if(var.empty())
-  { __out_arg__(os, idl, class_name, var_name, '['); os << ']';  }
+  { __out_arg__(os, idl, class_name, var_name, '['); os << ']'; }
 }
 // cout-able format
 template<template<typename, typename> class Container, typename T, typename Alloc>
@@ -297,7 +297,7 @@ void __out_arg__(std::ostream & os, int idl, const char *class_name,
   __out_arg__(os, idl, class_name, ss.str().c_str(), i.second);
  }
  if(var.empty())
-  { __out_arg__(os, idl, class_name, var_name, '['); os << ']';  }
+  { __out_arg__(os, idl, class_name, var_name, '['); os << ']'; }
 }
 // cout-able format
 template<template<typename, typename, typename, typename>

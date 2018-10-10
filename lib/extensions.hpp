@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified July 22, 2018
+ * Created by Dmitry Lyssenko
  *
  * Macro definitions for ENUM stringification for in-class enum declarations:
  *
@@ -30,7 +30,7 @@
  *          cout << "All traffic-light colors:";
  *          for(int i=0; i<COUNT_ARGS(MY_COLORS); ++i)
  *           cout << ' ' << SomeClass::trafficLightColors_str[i];
- *           // or equally:  cout << ' ' << STREN(trafficLightColors, i);
+ *           // or equally: cout << ' ' << STREN(trafficLightColors, i);
  *          cout << endl;
  *
  * Obvious caveat: enums declared that way do not allow value re-definition
@@ -69,7 +69,7 @@
 
 
 /*
- * Following trivial extension facilitate ability to check if value is in enumeration
+ * Following trivial extension facilitates ability to check if value is in enumeration
  * or not (similar to python's "x in [....]" construct)
  *
  * Synopsis:
@@ -112,7 +112,7 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 
 /*
  * A trivial wrapper around std::exception
- * - to be used with enum stringification in classes
+ * - to be used with enum stringification in classes (ENUMSTR, STRINGIFY)
  *
  * Synopsis:
  * // 1. define ENUMSTR within the class, enumerating exception reasons
@@ -120,7 +120,10 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
  * class myClass {
  *   public:
  *   ...
- *  define THROWREASON InvalidInput, IncorrectUsage, WrongType
+ *  define THROWREASON
+ *          InvalidInput, \
+ *          IncorrectUsage, \
+ *          WrongType
  *  ENUMSTR(ThrowReason, THROWREASON)
  *
  *   ...
@@ -141,9 +144,10 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
  * // 4. define catching exception:
  *  try { ... }     // something producing ThrowReason exception
  *  catch(myClass::stdException & e) {  // or std::exception & e, but then to access code()
- *                                      // and where(), down casting is required
+ *                                      // and where() down-casting is required
  *   std::cout << "exception string: " << e.what() << std::endl;
  *   std::cout << "exception code: " << e.code() << std::endl;
+ *   std::cout << "exception in: " << e.where() << std::endl;
  *  }
  *
  */
@@ -152,20 +156,21 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 // return std::exception from classes;
 // upon throwing a copy of the object is made (throwing is by value). In our case
 // a shallow copy will suffice despite the pointer: the class is meant to be used
-//with ENUMSTR / STRINGIFY, which are static data.
-// for in-class declaration
+// with ENUMSTR / STRINGIFY, which are static data.
+// for in-class declaration:
 #define EXCEPTIONS(THROW_ENUM) \
     class stdException: public std::exception { \
      public: \
+                            stdException(void) = delete; \
                             stdException(int reason, const char *what, const char *where): \
                              ec_{reason}, msg_{what}, func_{where} {} \
         const char *        what(void) const noexcept { return msg_; } \
         const char *        where(void) const noexcept { return func_; } \
         int                 code(void) const noexcept { return ec_; } \
      private: \
-        int                 ec_{-1}; \
-        const char *        msg_{nullptr}; \
-        const char *        func_{nullptr}; \
+        int                 ec_; \
+        const char *        msg_; \
+        const char *        func_; \
     }; \
     stdException __exp__(THROW_ENUM reason, const char *where) const \
         { return stdException{reason, THROW_ENUM ## _str[reason], where}; }
