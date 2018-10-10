@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.33"
+#define VERSION "1.34"
 
 
 // option definitions
@@ -480,7 +480,7 @@ int update_json(CommonResources &r) {
     update = OBJ{};
     execute_cli(update, rec, r);
     if(not update.empty())
-     rec = move(update);                                        // update can be moved!
+     rec = move(update.root());                                 // update can be moved!
    }
    else                                                         // no -e, just update json
     rec = update;                                               // here we need to copy

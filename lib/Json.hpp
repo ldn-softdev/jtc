@@ -611,7 +611,9 @@ class Jnode {
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
                          #ifdef BG_CC
-                          std::cerr << __func__ << "(): CC called..." << std::endl;
+                          auto preserved = jn.is_pretty();
+                          if(DBG()(0)) DOUT() << DBG_PROMPT(0) << "CC copying: " << jn.raw() << std::endl;
+                          jn.pretty(preserved);
                          #endif
                          auto * volatile jnv = &jn.value();     // when walk iterator is copied its
                          if(jnv == nullptr)                     // supernode is empty, hence chck'n
@@ -872,7 +874,9 @@ class Jnode {
     Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
 
     //SERDES(type_, value_, descendants_)                       // not really needed
-    //DEBUGGABLE()                                              // there are no debugs in Jnode
+    #ifdef BG_CC
+     DEBUGGABLE()                                               // no debugs in Jnode (typically)
+    #endif
     EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
 
  protected:
