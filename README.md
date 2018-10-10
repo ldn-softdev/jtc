@@ -431,7 +431,9 @@ int main(int argc, char *argv[]) {
  for(const auto &name: names)
   srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
   
- cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;              // put back into the original container and print
+ cout << jin["AddressBook"].clear().push_back( move(srt.root()) ) << endl;       // put back into the original container and print
+ // NOTE: passing `srt.root()' to push_back() is required, otherwise (i.e. `srt' passed), move semantic
+ //       would be lost due to type conversion (Json to Jnode) and copy would apply (instead of move) 
 }
 ```
 
