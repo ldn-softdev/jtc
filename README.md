@@ -430,7 +430,7 @@ int main(int argc, char *argv[]) {
  Json srt = ARY{};                                                               // rebuild AB with sorted records
  for(const auto &name: names)
   srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
-  
+
  cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;              // put back into the original container and print
 }
 ```
