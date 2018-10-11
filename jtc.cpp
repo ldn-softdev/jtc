@@ -260,7 +260,7 @@ bool is_recompile_required(v_string & args, CommonResources &r) {
 
 
 void parse_rebuilt(v_string & sargv, CommonResources &r) {
- // parse rebuilt arguments 
+ // parse rebuilt arguments
  REVEAL(r, opt, opt_u_found )
 
  char *nargv[sargv.size()];                                     // here, build a new argv
@@ -363,7 +363,9 @@ int demux_opt(CommonResources &r) {
  REVEAL(r, opt, json, DBG())
 
  for(auto &op: opt) {
-  DBG(2) DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
+  DBG(2)
+   if(op.second.hits() > 0)
+    DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
   switch(op.second.hits() > 0? op.first: 0) {
    case CHR(OPT_INS):
          return insert_json(r);
@@ -465,8 +467,8 @@ int update_json(CommonResources &r) {
 
  Json update;
  DBG().severity(update);
- if(opt[CHR(OPT_EXE)].hits() == 0)
-  update.parse(opt[CHR(OPT_UPD)].str());
+ if(opt[CHR(OPT_EXE)].hits() == 0)                              // this means, that -u is Json, then
+  update.parse(opt[CHR(OPT_UPD)].str());                        // parse it
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
   walk_vec ji;                                                  // collect all update points
@@ -476,14 +478,14 @@ int update_json(CommonResources &r) {
   for(size_t i = 0; i < ji.size(); ++i) {                       // go over all update (walk) points
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
-   if(opt[CHR(OPT_EXE)].hits() > 0) {                           // -e was given
+   if(opt[CHR(OPT_EXE)].hits() == 0)                            // no -e was given
+    rec = update;                                               // here we need to copy from source
+   else {                                                       // -e was given, execute it
     update = OBJ{};
     execute_cli(update, rec, r);
     if(not update.empty())
      rec = move(update);                                        // update can be moved!
    }
-   else                                                         // no -e, just update json
-    rec = update;                                               // here we need to copy
   }
  }
 
@@ -495,9 +497,9 @@ int update_json(CommonResources &r) {
 
 string quote_str(const string &src) {
  string quoted;
- if(src == "|") return src; 
- for(auto chr: src) { 
-  if(not isalnum(chr)) quoted += '\\'; 
+ if(src == "|") return src;
+ for(auto chr: src) {
+  if(not isalnum(chr)) quoted += '\\';
   quoted += chr;
  }
  return quoted;
@@ -506,7 +508,7 @@ string quote_str(const string &src) {
 
 
 void execute_cli(Json &json, const Jnode &src_jnode, CommonResources &r) {
- // execute cli in -u option (interpolating src_jnode if required) and parse the result into json 
+ // execute cli in -u option (interpolating src_jnode if required) and parse the result into json
  REVEAL(r, opt, DBG())
 
  stringstream is;
@@ -521,7 +523,7 @@ void execute_cli(Json &json, const Jnode &src_jnode, CommonResources &r) {
   size_t interpolate = opt_u_str.find(INTRP_STR);               // see if interpolation required
   while(interpolate != string::npos) {                          // replace every occurrence of {}
    opt_u_str.replace(interpolate, sizeof(INTRP_STR), src_jnode_raw);
-   interpolate = opt_u_str.find(INTRP_STR); 
+   interpolate = opt_u_str.find(INTRP_STR);
   }
   is << quote_str(opt_u_str) << " ";                            // quote argument
  }
