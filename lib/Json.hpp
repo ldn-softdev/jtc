@@ -638,6 +638,9 @@ class Jnode {
                          return *this;
                         }
 
+                        // type conversions from Json:
+                        Jnode(Json j);
+
                         // atomic values constructor adapters:
                         Jnode(double x): type_{Number} {
                          std::stringstream ss;
@@ -680,7 +683,6 @@ class Jnode {
                          return bul();
                         }
                         // concept ensures in-lieu application (avoid clashing with string type)
-
 
                         // class interface:
     Jtype               type(void) const { return value().type_; }
@@ -816,6 +818,7 @@ class Jnode {
                          children_().emplace(next_key_(), std::move(jn));
                          return *this;
                         }
+
 
     Jnode &             pop_back(void) {
                          if(not is_iterable()) throw EXP(type_non_iterable);
@@ -1317,10 +1320,6 @@ class Json{
                         Json(Jnode &&jn): root_{std::move(jn.value())} { }
                         Json(const std::string &str) { parse(str); }
 
-                        // type conversion Json -> Jnode:
-                        operator Jnode (void) { return root_; }
-                        operator const Jnode & (void) const { return root_; }
-
     // class interface:
     Jnode &             root(void) { return root_; }
     const Jnode &       root(void) const { return root_; }
@@ -1820,6 +1819,13 @@ STRINGIFY(Json::Jsearch, JS_ENUM)
 
 
 
+// Jnode methods requiring Json definition:
+Jnode::Jnode(Json j)                                            // type conversions Json -> Jnode
+ { swap(*this, j.root()); }
+
+
+
+// Json definitions:
 Json operator ""_json(const char *c_str, std::size_t len) {
  // raw string parsing
  Json x;

@@ -348,9 +348,6 @@
 
 
 
-
-
-
 // DOUT() macros and init Debug's global macros
 #define __DOUT_0_ARG__() (DBG().dout())
 #define __DOUT_1_ARG__(X) (X.DBG().dout())
@@ -373,6 +370,9 @@ constexpr auto __is_dbg_propagatable__(int)
                 { return true; }
 template<typename T>
 constexpr bool __is_dbg_propagatable__(...) { return false; }
+
+
+
 
 
 class Debug {
@@ -502,7 +502,6 @@ bool                    Debug::ft_{false};                      // filter-in by 
 std::vector<std::string>Debug::filter_;
 
 
-
 bool Debug::operator()(short d, const char * fn) const {
  // check if combined severity (d: debug block severity + ds_: this debug severity offset)
  // is higher than debug level set by user:
@@ -523,7 +522,6 @@ bool Debug::operator()(short d, const char * fn) const {
 }
 
 
-
 std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx) const {
  // useAltPfx: use alternative prefix (indent)?
  // useTs: use Debug::ts to drive time-stamp update?
@@ -539,7 +537,6 @@ std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx
  so << Debug::suffix_;
  return so.str();
 }
-
 
 
 const std::string Debug::timestamp_(void) {
@@ -561,7 +558,6 @@ const std::string Debug::timestamp_(void) {
 };
 
 
-
 const std::string Debug::stamp_str_(time_t t_stamp) {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
  static std::stringstream so;
@@ -579,7 +575,6 @@ const std::string Debug::stamp_str_(time_t t_stamp) {
 
  return so.str();
 }
-
 
 
 bool Debug::match_(const char *fn) {
