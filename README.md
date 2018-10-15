@@ -16,9 +16,9 @@ jtc offers following features:
 
 Walk path is the feature which is easy to understand - in only make of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and upwards
-  - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search
- both types of lexemes are iterable - subscrips let iterating over nodes at the same tier,
- while iterable search lexemes let iterating over all matches for given search criteria.
+  - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search.
+Both types of lexemes are iterable - subscrips let iterating over nodes at the same tier,
+while iterable search lexemes let iterating over all matches for given search criteria.
 A walk path is made of an arbitrary number of lexemes, while the tool accepts unlimited number of walk
 paths. See below more detailed explanation with examples
 
