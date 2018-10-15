@@ -1,6 +1,6 @@
 # jtc - JSON test console
 
-#### Simple offline cli tool to manipulate JSON data format
+#### Simple but efficient cli tool to manipulate JSON data
 
 jtc offers following features:
   - simple user interface allowing applying bulk changes in one command
@@ -12,6 +12,16 @@ jtc offers following features:
   - written entirely in C++, no dependencies
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
+
+
+Walk path is the feature which is easy to understand - in only make of 2 types of lexemes:
+  - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and upwards
+  - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search
+ both types of lexemes are iterable - subscrips let iterating over nodes at the same tier,
+ while iterable search lexemes let iterating over all matches for given search criteria.
+A walk path is made of an arbitrary number of lexemes, while the tool accepts unlimited number of walk
+paths. See below more detailed explanation with examples
+
 
 
 #### Linux and MacOS precompiled binaries are available for download
