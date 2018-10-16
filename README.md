@@ -14,7 +14,7 @@ jtc offers following features:
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
 
-Walk path is the feature which is easy to understand - in only make of 2 types of lexemes:
+Walk path is the feature easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and upwards
   - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search.
 Both types of lexemes are iterable - subscrips let iterating over nodes at the same tier,
