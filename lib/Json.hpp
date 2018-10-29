@@ -502,15 +502,22 @@
 #define CHR_TRUE 'T'                                            // designator for Json 'true' value
 #define CHR_FALSE 'F'                                           // designator for Json 'false' val.
 #define CHR_NULL '\0'                                           // end of string
-#define CHR_RTRN '\n'                                           // end of line
+#define CHR_EOL '\n'                                            // end of line
+#define CHR_RTRN '\r'                                           // return char
+#define CHR_QUOT '\\'                                           // json quotation char
 #define STR_TRUE "true"                                         // Json true sting value
 #define STR_FALSE "false"                                       // Json false sting value
 #define STR_ANY "any"                                           // to match any boolean
 #define STR_NULL "null"                                         // Json null sting value
-#define JSN_OBJ_OPN '{'                                         // Json open object
-#define JSN_OBJ_CLS '}'                                         // Json close object
-#define JSN_ARY_OPN '['                                         // Json open array
-#define JSN_ARY_CLS ']'                                         // Json close array
+#define JSN_OBJ_OPN '{'                                         // Json syntax char: open object
+#define JSN_OBJ_CLS '}'                                         // Json syntax char: close object
+#define JSN_ARY_OPN '['                                         // Json syntax char: open array
+#define JSN_ARY_CLS ']'                                         // Json syntax char: close array
+#define JSN_STRQ '"'                                            // Json syntax char: string open chr
+#define JSN_ASPR ','                                            // Json syntax char: array separator
+#define JSN_DGTM '-'                                            // Json syntax char: minus sign
+#define JSN_DGTP '+'                                            // Json syntax char: plus sign
+#define JSN_DGTD '.'                                            // Json syntax char: dot sign
 #define LXM_OFS_OPN '['                                         // Walk lexeme open offset
 #define LXM_OFS_CLS ']'                                         // Walk lexeme close offset
 #define LXM_SCH_OPN '<'                                         // Walk lexeme open search
@@ -519,6 +526,8 @@
 #define PFX_ITR '+'                                             // prefix of iterable offset
 #define PFX_WFR '^'                                             // walk from root offset
 #define PFX_WFL '-'                                             // walk from end-leaf offset
+#define IDX_FIL '0'                                             // fill char for the node index
+
 
 #define JSN_FBDN "\b\f\n\r\t"                                   // forbidden JSON chars
 #define JSN_QTD "/\"\\bfnrtu"                                   // chrs following quotation in JSON
@@ -617,10 +626,10 @@ class Jnode {
                          #endif
                          auto * volatile jnv = &jn.value();     // when walk iterator is copied its
                          if(jnv == nullptr)                     // supernode is empty, hence chck'n
-                          { type_ = jn.type_; return; }         // supernode's type is parent type
-                         // why volatile? compiler (mistakenly) believes that address of a returned
-                         // reference can never be null, hence optimizes out above 2 lines, which
-                         // leads to the crash eventually. "volatile" disables such optimization
+                          { type_ = jn.type_; return; }         // supernode's type is parent's type
+                         // why volatile? compilers (mistakenly) believe that address of a returned
+                         // reference can never be a null, hence optimize out above 2 lines, which
+                         // leads to the crash inevitably. "volatile" disables such optimization
                          type_ = jnv->type_;
                          value_ = jnv->value_;
                          descendants_ = jnv->descendants_;
@@ -633,8 +642,8 @@ class Jnode {
                          swap(*this, jn);                       // swap will resolve supernode
                         }
 
-    Jnode &             operator=(Jnode jn) {                   // CA
-                         swap(*this, jn);                       // CC takes care of an empty jn
+    Jnode &             operator=(Jnode jn) {                   // CA, MA
+                         swap(*this, jn);
                          return *this;
                         }
 
@@ -1034,7 +1043,7 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                           { sn_.type_ = it.sn_.type_; }
                         Iterator(Iterator &&it)                 // MC
                          { swap(*this, it); }
-    Iterator &          operator=(Iterator it)                  // CA
+    Iterator &          operator=(Iterator it)                  // CA, MA
                          { swap(*this, it); return *this; }
 
                         // convert to const_iterator (from iterator)
@@ -1191,7 +1200,7 @@ Jnode::iter_jn Jnode::iterator_by_idx_(size_t idx) {
   size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
   if(key < children_().size()) {                                // if so, indices are non-tampered
    std::stringstream ss;
-   ss << std::hex << std::setfill('0') << std::setw(ARRAY_LMT * 2) << idx;
+   ss << std::hex << std::setfill(IDX_FIL) << std::setw(ARRAY_LMT * 2) << idx;
    return children_().find( ss.str() );
   }
  }                                                              // else: traverse map
@@ -1210,7 +1219,7 @@ Jnode::const_iter_jn Jnode::iterator_by_idx_(size_t idx) const {
   size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
   if(key < children_().size()) {                                // if so, indices are non-tampered
    std::stringstream ss;
-   ss << std::hex << std::setfill('0') << std::setw(ARRAY_LMT * 2) << idx;
+   ss << std::hex << std::setfill(IDX_FIL) << std::setw(ARRAY_LMT * 2) << idx;
    return children_().find(std::move(ss.str()));
   }
  }                                                              // else: traverse map
@@ -1225,7 +1234,7 @@ std::string Jnode::next_key_(void) const {
  if(not children_().empty())
   key = stoul(children_().rbegin()->KEY, nullptr, 16) + 1;
  std::stringstream ss;
- ss << std::hex << std::setfill('0') << std::setw(ARRAY_LMT * 2) << key;
+ ss << std::hex << std::setfill(IDX_FIL) << std::setw(ARRAY_LMT * 2) << key;
 
  return ss.str();
 }
@@ -1251,7 +1260,7 @@ std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, int & rl)
   case Number:
         return os << my.val();
   case String:
-        return os << '"' << my.str() << '"';
+        return os << JSN_STRQ << my.str() << JSN_STRQ;
   default:
         return os;                                              // ignore unknown type
  }
@@ -1266,7 +1275,7 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
  for(auto & child: my.children_()) {                            // print all children:
   os << std::string(rl * tab_, ' ');                            // output current indent
   if(not my.is_array())                                         // if parent (me) is not Array
-   os << '"' << child.KEY << "\": ";                            // print label
+   os << JSN_STRQ << child.KEY << JSN_STRQ << ": ";             //  print label
   print_json_(os, child.VALUE, rl)                              // then print child itself and the
    << (child.KEY != my.children_().rbegin()->KEY? ",": "")      // trailing comma if not the last
    << endl_;
@@ -1626,7 +1635,7 @@ class Json{
                             iterator(iterator &&it) {           // MC
                              swap(*this, it);
                             }
-        iterator &          operator=(iterator it) {            // CA
+        iterator &          operator=(iterator it) {            // CA, MA
                              swap(*this, it);
                              return *this;
                             }
@@ -1857,12 +1866,12 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
    bool truncate = std::strlen(&*jsp) > (DBG_WIDTH-sizeof(pfx));
    std::string str {jsp, jsp + (truncate? DBG_WIDTH - sizeof(pfx) - 3: strlen(&*jsp))};
    for(auto &c: str)
-    if(c == CHR_RTRN) c = '|';
+    if(c AMONG(CHR_EOL, CHR_RTRN)) c = '|';                     // replace \r \n with |
    DOUT() << pfx << str << (truncate? "...":"") << std::endl;
  }
 
  if(node.type_ == Jnode::Neither) return;
- DBG(4) DOUT() << "classified as: " << ENUMS(Jnode::Jtype, node.type()) << std::endl;
+ DBG(5) DOUT() << "classified as: " << ENUMS(Jnode::Jtype, node.type()) << std::endl;
 
  switch(node.type()) {
   case Jnode::Object: parse_object_(node, ++jsp); break;        // skip '{' with ++jsp
@@ -1887,7 +1896,7 @@ void Json::parse_bool_(Jnode & node, std::string::const_iterator &jsp) {
 void Json::parse_string_(Jnode & node, std::string::const_iterator &jsp) {
  // parse string value - from `"` till `"'
  auto sp = jsp;                                                 // copy, for work-around
- auto ep = find_delimiter_('"', jsp);
+ auto ep = find_delimiter_(JSN_STRQ, jsp);
  node.value_ = std::string{sp, ep};                             // work around gnu's compiler bug
  //node.value_ = std::string{jsp, find_delimiter_('"', jsp)};   // this is broken in linux gnu c++
  ++jsp;
@@ -1914,7 +1923,7 @@ void Json::parse_array_(Jnode & node, std::string::const_iterator &jsp) {
     if(node.empty()) { ++jsp; return; }                         // empty array: [ ]
     if(not comma_read) { ++jsp; return; }                       // end of array: ..., "last" ]
    }
-   if(*jsp == ',')
+   if(*jsp == JSN_ASPR)                                         // == ','
     if(not comma_read and node.has_children())
      { ++jsp; comma_read = true; continue; }                    // interleaving comma: .. 2, 3, ..
    // here: either a double comma: " ... ,,", or leading comma: "[ , ...
@@ -1943,14 +1952,14 @@ void Json::parse_object_(Jnode & node, std::string::const_iterator &jsp) {
      if(node.empty()) { ++jsp; return; }                        // empty object: { }
      if(not comma_read) { ++jsp; return; }                      // end of object: ..."last" }
     }
-    if(*jsp == ',')
+    if(*jsp == JSN_ASPR)                                        // == ','
      if(not comma_read and node.has_children())
       { ++jsp; comma_read = true; continue; }                   // interleaving comma
    }
    ep_ = lsp; throw EXP(Jnode::expected_valid_label);
   }
 
-  if(skip_blanks_(jsp) != ':')                                  // label was read, expecting ':'
+  if(skip_blanks_(jsp) != LBL_SPR)                              // label was read, expecting ':'
    { ep_ = jsp; throw EXP(Jnode::missing_label_separator); }
 
   Jnode child;
@@ -1970,12 +1979,12 @@ void Json::parse_object_(Jnode & node, std::string::const_iterator &jsp) {
 std::string::const_iterator & Json::find_delimiter_(char c, std::string::const_iterator & jsp) {
  // find next occurrence of character (actually it's used only to find `"')
  while(*jsp != c) {
-  if(*jsp AMONG(CHR_NULL, CHR_RTRN))                            // JSON string does not support
+  if(*jsp AMONG(CHR_NULL, CHR_EOL))                             // JSON string does not support
    { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }     // multiline, hence throwing
   if(strchr(jsn_fbdn_, *jsp) != nullptr)                        // i.e. found illegal JSON control
    { ep_ = jsp; throw EXP(Jnode::unquoted_character); }
 
-  if(*jsp == '\\') {
+  if(*jsp == CHR_QUOT) {
    ++jsp;                                                       // skip presumably quoted char
    if(*jsp == CHR_NULL)                                         // found end of string after '\'
     { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }
@@ -1998,21 +2007,21 @@ std::string::const_iterator & Json::validate_number_(std::string::const_iterator
 
 Jnode::Jtype Json::json_number_definition(std::string::const_iterator & jsp) {
  // conform JSON's definition of a number
- if(*jsp == '-') ++jsp;
- if(not isdigit(*jsp)) return Jnode::Neither;                   // digit must follow '-'
+ if(*jsp == JSN_DGTM) ++jsp;                                    // == '-'
+ if(not isdigit(*jsp)) return Jnode::Neither;                   // digit must follow '-' sign
  if(*jsp > '0')
   while(isdigit(*jsp)) ++jsp;
  else                                                           // next could be only [.eE] or end
   ++jsp;                                                        // skip leading 0
  // here it could be either of [.eE] or end
- if(*jsp == '.') {
+ if(*jsp == JSN_DGTD) {                                         // == '.'
   if(not isdigit(*++jsp)) return Jnode::Neither;                // digit must follow '.'
   while(isdigit(*jsp)) ++jsp;
  }
  // here could be [eE] or end
  if(*jsp AMONG('e', 'E')) {
   ++jsp;                                                        // skip [eE]
-  if(*jsp AMONG('+', '-')) ++jsp;                               // skip [+-]
+  if(*jsp AMONG(JSN_DGTP, JSN_DGTM)) ++jsp;                     // skip [+-]
   if(not isdigit(*jsp)) return Jnode::Neither;                  // digit must follow [eE][+/]
   while(isdigit(*jsp)) ++jsp;
  }
@@ -2025,8 +2034,8 @@ Jnode::Jtype Json::classify_jnode_(std::string::const_iterator & jsp) {
  // it does not move the pointer
  if(*jsp == JSN_OBJ_OPN) return Jnode::Object;
  if(*jsp == JSN_ARY_OPN) return Jnode::Array;
- if(*jsp == '"') return Jnode::String;
- if(isdigit(*jsp) or (*jsp == '-' and isdigit(*(jsp+1)))) return Jnode::Number;
+ if(*jsp == JSN_STRQ) return Jnode::String;
+ if(isdigit(*jsp) or (*jsp == JSN_DGTM and isdigit(*(jsp+1)))) return Jnode::Number;
 
  const char * str = &*jsp;
  if(std::strncmp(str, STR_TRUE, sizeof(STR_TRUE)-1) == 0) return Jnode::Bool;
@@ -2194,7 +2203,7 @@ std::string Json::parse_offset_(std::string::const_iterator &si, char close_chr)
  while(*si != close_chr) {                                      // advance till closing bracket
   if(*si == CHR_NULL)
    throw EXP(Jnode::walk_offset_missing_closure);
-  if(*si == '\\')
+  if(*si == CHR_QUOT)
    if(*++si != close_chr) --si;
   ++si;
  }
@@ -2254,10 +2263,10 @@ Json::Jsearch Json::search_suffix_(char sfx) const {
 
 void Json::parse_quantifier_(std::string::const_iterator &si, iterator & it) const {
  auto & lastStep = it.walk_path_().back();
- if(*si == '+' or isdigit(*si)) {                               // must be a quantifier
+ if(*si == PFX_ITR or isdigit(*si)) {                           // must be a quantifier
   auto front = *si;
   lastStep.offset = parse_index_(si);
-  if(front == '+')
+  if(front == PFX_ITR)
    lastStep.init = lastStep.offset;
   DBG(1) DOUT() << "quantifier: " << lastStep.offset << std::endl;
  }
@@ -2294,9 +2303,9 @@ void Json::parse_offset_type_(WalkStep & ws) const {
   return;
  }
 
+ char pfx = CHR_NULL;                                           // collect prefix '-','+', or '^'
  auto si = ++ws.lexeme.cbegin();
- char pfx = '\0';                                               // collect prefix '-','+', or '^'
- if(*si AMONG(PFX_ITR, PFX_WFR, PFX_WFL))
+ if(*si AMONG(PFX_ITR, PFX_WFR, PFX_WFL))                       // i.e. *si is either {'+','^','-'}
   pfx = *(si++);
  if(not isdigit(*si))
   { ws.jsearch = text_offset; return; };                        // it's a text lexeme
@@ -2304,6 +2313,7 @@ void Json::parse_offset_type_(WalkStep & ws) const {
  long idx = parse_index_(si, dont_throw);                       // parse number, but don't throw
  if(*si != LXM_OFS_CLS)
   { ws.jsearch = text_offset; return; }                         // parsing failed - it's a text
+
  // PFX behavior explained:
  // PFX_ITR: init = offset; // offset >= 0
  // PFX_WFL: init = -1; // offset < 0
@@ -2714,7 +2724,9 @@ long Json::iterator::next_iterable_ws(long idx) const {
 #undef CHR_TRUE
 #undef CHR_FALSE
 #undef CHR_NULL
+#undef CHR_EOL
 #undef CHR_RTRN
+#undef CHR_QUOT
 #undef STR_TRUE
 #undef STR_FALSE
 #undef STR_ANY
@@ -2723,15 +2735,21 @@ long Json::iterator::next_iterable_ws(long idx) const {
 #undef JSN_OBJ_CLS
 #undef JSN_ARY_OPN
 #undef JSN_ARY_CLS
+#undef JSN_STRQ
+#undef JSN_ASPR
+#undef JSN_DGTM
+#undef JSN_DGTP
+#undef JSN_DGTD
 #undef LXM_OFS_OPN
-#undef LXM_OFS_CLS
 #undef LXM_SCH_OPN
+#undef LXM_OFS_CLS
 #undef LXM_SCH_CLS
 
 #undef LBL_SPR
 #undef PFX_ITR
 #undef PFX_WFR
 #undef PFX_WFL
+#undef IDX_FIL
 
 #undef JSN_FBDN
 #undef JSN_QTD

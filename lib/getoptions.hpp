@@ -17,10 +17,10 @@
  *     { std::cout << "exception: " << e.what() << std::endl; exit(e.code()); }
  *
  * Method parse() takes 3 arguments: main's standard (argc, argv) and optional format
- * "format" is the optional c-like std::string that follows the same syntax as in 
+ * "format" is the optional c-like std::string that follows the same syntax as in
  * system getopt()
  *
- * Getopt object will throw if getopt ever returns ':' - it means that format has 
+ * Getopt object will throw if getopt ever returns ':' - it means that format has
  * a syntax error
  *
  * By default, Getopt also will throw an exception if getopt returns '?'. If 'opterr'
@@ -107,7 +107,7 @@
  *       i.e. variadic behavior will apply to the last defined standalone argument
  *
  * Once options are parsed, following methods exist to access options:
- *  - str(); - returns selected option's parsed std::string (option must be parametrical, 
+ *  - str(); - returns selected option's parsed std::string (option must be parametrical,
  *           or arg)
  *  - c_str() - same as str, but return c-string instead
  * Note: user may specify the same option multiple times, str() and c_str() by default

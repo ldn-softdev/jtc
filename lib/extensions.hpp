@@ -75,7 +75,7 @@
  * Synopsis:
  *
  * x = 5;
- * if(x AMONG(1,2,3,4,5,6))
+ * if(x AMONG(1,2,3,5,6))
  *  std::cout << "x is in!" << std::endl;
  * else
  *  std::cout << "x is not in!" << std::endl;
@@ -162,22 +162,32 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
     class stdException: public std::exception { \
      public: \
                             stdException(void) = delete; \
-                            stdException(int reason, const char *what, const char *where): \
-                             ec_{reason}, msg_{what}, func_{where} {} \
+                            stdException(int reason, const char *what, \
+                                         const char *func, const char *file, int line): \
+                             ec_{reason}, msg_{what}, func_{func}, file_{file}, line_{line} {} \
         const char *        what(void) const noexcept { return msg_; } \
-        const char *        where(void) const noexcept { return func_; } \
+        std::string         where(void) const noexcept { \
+                             return std::string{"file: '"} + file_ + \
+                                    "', func: '" + func_ + \
+                                    "()', line: " + std::to_string(line_); \
+                            } \
+        const char *        func(void) const noexcept { return func_; } \
+        const char *        file(void) const noexcept { return file_; } \
+        int                 line(void) const noexcept { return line_; } \
         int                 code(void) const noexcept { return ec_; } \
      private: \
         int                 ec_; \
         const char *        msg_; \
         const char *        func_; \
+        const char *        file_; \
+        int                 line_; \
     }; \
-    stdException __exp__(THROW_ENUM reason, const char *where) const \
-        { return stdException{reason, THROW_ENUM ## _str[reason], where}; }
+    stdException __exp__(THROW_ENUM reason, const char *func, const char *file, int line) const \
+        { return stdException{reason, ENUMS(THROW_ENUM, reason), func, file, line}; }
 
 
 // for in-place throw parameter
-#define EXP(TROW_REASON) __exp__(TROW_REASON, __PRETTY_FUNCTION__)
+#define EXP(TROW_REASON) __exp__(TROW_REASON, __func__, __FILE__, __LINE__)
 
 
 

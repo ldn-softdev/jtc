@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.34"
+#define VERSION "1.35"
 
 
 // option definitions
@@ -363,9 +363,10 @@ int demux_opt(CommonResources &r) {
  REVEAL(r, opt, json, DBG())
 
  for(auto &op: opt) {
-  DBG(2)
+  if(DBG()(2))
    if(op.second.hits() > 0)
-    DOUT() << "option: " << (char)op.first << ", hits: " << op.second.hits() << endl;
+    DOUT() << DBG_PROMPT(2) << "option: " << (char)op.first
+                            << ", hits: " << op.second.hits() << endl;
   switch(op.second.hits() > 0? op.first: 0) {
    case CHR(OPT_INS):
          return insert_json(r);
