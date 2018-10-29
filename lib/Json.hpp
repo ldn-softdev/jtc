@@ -388,7 +388,7 @@
  *                          // children
  *
  *
- *  c) an optional second parameter for walk() is CacheAction, which defaults to
+ *  c) an optional second parameter for walk() is CacheState, which defaults to
  *   'invalidate' - i.e. upon every new walk the entire search cache will be
  *   invalidated (cleared). If a user wants to keep the cache, he need to specify
  *   'keep_cache' keyword explicitly (at least the decision is conscious)
@@ -1318,10 +1318,10 @@ class Json{
     ENUMSTR(Jsearch, JS_ENUM)
     // Jsearch is defined so that its first letter corresponds to the suffix
 
-    #define CACHE_ACTION \
+    #define CACHE_STATE \
                 invalidate, \
                 keep_cache
-    ENUM(CacheAction, CACHE_ACTION)
+    ENUM(CacheState, CACHE_STATE)
 
 
                         Json(void) = default;
@@ -1336,7 +1336,7 @@ class Json{
     std::string::const_iterator
                         exception_point(void) { return ep_; }
     class iterator;
-    iterator            walk(const std::string & walk_string = "", CacheAction = invalidate);
+    iterator            walk(const std::string & walk_string = "", CacheState = invalidate);
 
     // relayed Jnode interface
     Jnode::Jtype        type(void) const { return root().type(); }
@@ -1539,8 +1539,8 @@ class Json{
     void                parse_offset_type_(WalkStep & state) const;
 
  public:
-    // Json::iterator: needs to be defined in-class to facilitate container storage
-    // with the iterator (e.g. iterator-based callback)
+    // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
+    // container storage with the iterator (e.g. iterator-based callback)
     //
     class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
      // this forward iterator let iterate over *iterable* walk paths
@@ -1571,8 +1571,7 @@ class Json{
          public:
             bool                has_label(void) const {
                                  return lbl_ != &Json::iterator::empty_ and
-                                        parent_type() == Object and
-                                        not is_root();
+                                        parent_type() == Object;
                                 }
             const std::string & label(void) const {
                                  if(type_ != Object)
@@ -1617,8 +1616,11 @@ class Json{
 
             SuperJnode &        operator()(const std::string &l, Jnode &jn, Json::iterator * jit)
                                  { lbl_ = &l; jnp_ = &jn; jit_ = jit; return *this; }
-            SuperJnode &        operator()(Jnode &jn, Json::iterator * jit)
-                                 { jnp_ = &jn; jit_ = jit; return *this; }
+            SuperJnode &        operator()(Jnode &jn, Json::iterator * jit) {
+                                 lbl_ = &Json::iterator::empty_;
+                                 jnp_ = &jn; jit_ = jit;
+                                 return *this;
+                                }
 
             const std::string * lbl_{&Json::iterator::empty_};  // lbl_ should never be nullptr
             Jnode *             jnp_{nullptr};                  // iterator's Jnode pointer
@@ -1823,7 +1825,7 @@ class Json{
 STRINGIFY(Json::Jsearch, JS_ENUM)
 
 #undef JS_ENUM
-#undef CACHE_ACTION
+#undef CACHE_STATE
 #undef CALLBACK_TYPE
 #undef PARSE_THROW
 
@@ -2122,7 +2124,7 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 std::string Json::iterator::empty_;
 
 
-Json::iterator Json::walk(const std::string & wstr, CacheAction action) {
+Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  // return Json::iterator to the first element pointed by the walk string.
  // otherwise end-iterator returned
  DBG(0) DOUT() << "walk string: '" << wstr << "'" << std::endl;
