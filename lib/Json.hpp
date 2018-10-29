@@ -1571,7 +1571,8 @@ class Json{
          public:
             bool                has_label(void) const {
                                  return lbl_ != &Json::iterator::empty_ and
-                                        parent_type() == Object;
+                                        parent_type() == Object and
+                                        not is_root();
                                 }
             const std::string & label(void) const {
                                  if(type_ != Object)

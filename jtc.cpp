@@ -626,7 +626,7 @@ void walk_sequentual(CommonResources &r) {
      continue;
    }                                                            // else, no -j given
    if( opt[CHR(OPT_LBL)] )                                      // -l given
-    if(rec.has_label())               // if label exists
+    if(rec.has_label())                                         // if label exists
      cout << '"' << rec.label() << "\": ";
    cout << rec << endl;
   }
