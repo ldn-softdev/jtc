@@ -167,7 +167,7 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
    ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array; those walked elements which do not have\n\
-   labels will be enumerated within the parent array\n\
+   labels will be enumerated within the parent array\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
    " when used together; every occurrence of " INTRP_STR "\n\
