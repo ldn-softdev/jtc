@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define VERSION "1.35"
+#define VERSION "1.36"
 
 
 // option definitions
@@ -167,8 +167,7 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
    ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array; those walked elements which do not have\n\
-   labels will be enumerated within the parent array; if -" STR(OPT_LBL) " given twice, then\n\
-   loose relevant groupping applied (otherwise strict, see examples with -" STR(OPT_GDE) ")\n\n\
+   labels will be enumerated within the parent array\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
    " when used together; every occurrence of " INTRP_STR "\n\
@@ -639,7 +638,7 @@ void walk_sequentual(CommonResources &r) {
 
 // interleaved walks engaged with option -j and multiple walk paths are given
 // processing of interleaved walks is somewhat complex:
-// 1. collect all iterators produced by all walk paths (wpi)
+// 1. collect all iterators produced by each walk path (wpi)
 // 2. for all instances build a matrix from front iterators offsets (fom) only, for
 //    entire walk state:
 //    - iterator offset for a built walk state returns -1 if walk step is non-iterable,
@@ -695,36 +694,43 @@ void print_walk(vector<walk_deq> &wpi, CommonResources &r) {
 
 
 void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t longest_walk,
-                     vector<size_t> &actual_instances, CommonResources &r) {
+                     vector<size_t> &actuals, CommonResources &r) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
  REVEAL(r, DBG())
+
+ int grouping = 0;                                              // group size (negative locks value)
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
-  vector<size_t> new_ai;
-  long lowest_offset = LONG_MAX;
+  vector<size_t> new_ai;                                        // build new actuals in here
+  long lowest_offset = LONG_MAX;                                // helper to build new actuals
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
-  for(auto ai: actual_instances) {                              // a.inst. are with lowest offset
+
+  for(auto ai: actuals) {                                       // a.inst. are with lowest offset
    if(offset >= fom[ai].size()) {                               // more generic path, print first
     if(DBG()(2)) DOUT() << endl;
-    DBG(2) DOUT() << "output instance: " << ai
-                  << ", actuals: " << actual_instances.size() << endl;
-    output_by_iterator(wpi[ai], actual_instances.size(), r);
-    return;
+    DBG(2) DOUT() << "output instance: " << ai << ", group size: " << grouping << endl;
+    return output_by_iterator(wpi[ai], abs(grouping), r);
    }
    if(DBG()(2)) DOUT() << ' ' << ai;
-   if(fom[ai][offset] < lowest_offset)
-    { lowest_offset = fom[ai][offset]; new_ai.clear(); }
-   if(fom[ai][offset] == lowest_offset)
+
+   if(fom[ai][offset] == -1 and grouping > 0)                   // i.e. a non-counter offset
+    grouping = -grouping;                                       // lock grouping counter
+
+   if(fom[ai][offset] < lowest_offset)                          // found a lower counter
+    { lowest_offset = fom[ai][offset]; new_ai.clear(); }        // clear prior found actuals
+   if(fom[ai][offset] == lowest_offset)                         // update new actuals
     new_ai.push_back(ai);
   }
-  actual_instances = move(new_ai);
-  if(actual_instances.size() == 1) break;
+
+  actuals = move(new_ai);                                       // update list of current actuals
+  if(grouping >= 0) grouping = actuals.size();                  // update groping if not locked
+  if(abs(grouping) == 1) break;                                 // only 1 walk (instance) left
  }
+
  if(DBG()(2)) DOUT() << endl;                                   // close debug line
- if(not actual_instances.empty()) {
-  DBG(2) DOUT() << "output instance: " << actual_instances.front()
-                << ", actuals: " << actual_instances.size() << endl;
-  output_by_iterator(wpi[actual_instances.front()], actual_instances.size(), r);
+ if(not actuals.empty()) {
+  DBG(2) DOUT() << "output instance: " << actuals.front() << ", group size: " << grouping <<endl;
+  output_by_iterator(wpi[actuals.front()], abs(grouping), r);
  }
  else                                                           // normally should never be the case
   wpi.clear();                                                  // in case, avoiding endless loop
@@ -735,41 +741,46 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
 size_t build_front_matrix(vector<vector<long>> &fom,
                           const vector<walk_deq> &wpi, CommonResources &r) {
  // build matrix from front iterator of each walk: using iterator's counter() method
+ // that way it'll be possible to group relevant walk-paths during output
  REVEAL(r, DBG())
 
  size_t longest = 0;
- for(size_t idx = 0; idx < wpi.size(); ++idx) {
+ for(size_t idx = 0; idx < wpi.size(); ++idx) {                 // go over all given walk paths
   auto & wi = wpi[idx];
-  if(wi.empty()) continue;                                        // no more iterators in this walk
+  if(wi.empty()) continue;                                      // no more iterators in this walk
 
   DBG(2) DOUT() << "instance " << idx;
   for(size_t position = 0; position < wi.front().walk_size(); ++position) {
    fom[idx].push_back( wi.front().counter(position) );
    if(DBG()(2)) DOUT() << (position == 0? " front offsets matrix: ": ", ") << fom[idx].back();
   }
+
   if(DBG()(2)) DOUT() << endl;
   longest = max(longest, fom[idx].size());
  }
+
  return longest;
 }
 
 
 
-void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
+void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
  REVEAL(cr, opt, jout)
- static size_t last_actuals = 0;                                // walking happens once per run,
+ static size_t last_group = 0;                                  // walking happens once per run,
                                                                 // so it's okay to make it static
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
- auto start_new_object = [actuals, &opt](void){ return (opt[CHR(OPT_LBL)].hits() > 1)?
-                                                        actuals > last_actuals:
-                                                        actuals >= last_actuals; };
+
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
-  if(opt[CHR(OPT_LBL)]) {                                       // -l given (combine relevant nodes)
-   if(sr.has_label()) {                                         // parent is an obect
-    if(start_new_object() or jout.empty()) jout.push_back( OBJ{} );
-    if(not jout.back().is_object()) jout.push_back( OBJ{} );
+  if(not opt[CHR(OPT_LBL)]) jout.push_back(sr);                 // -l not given, make simple array
+  else                                                          // -l given (combine relevant group)
+   if(not sr.has_label()) jout.push_back(sr);                   // parent is root or not object
+   else {                                                       // parent is an obect
+    if(group > last_group or jout.empty())                      // time to create a new object
+     jout.push_back( OBJ{} );
+    if(not jout.back().is_object())
+     jout.push_back( OBJ{} );
     if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
      jout.back()[sr.label()] = sr;                              // copy supernode
     else {                                                      // label exist
@@ -779,21 +790,16 @@ void output_by_iterator(walk_deq &wi, size_t actuals, CommonResources &cr) {
      }
      jout.back()[sr.label()].push_back( sr );                   // & push back into converted array
     }
-   } // if(sr.has_label()) {...
-   else
-    jout.push_back(sr);                                         // parent is root or not object
-  }
-  else //if(opt[CHR(OPT_LBL)]) {                                // no -l, just -j,
-   jout.push_back(sr);                                          // make a simple an array
- } // if(opt[CHR(OPT_JSN)]) {
+   }
+ }
  else {                                                         // no -j option
   if(opt[CHR(OPT_LBL)] and sr.has_label())                      // -l given
-   cout << '"' << sr.label() << "\": ";
+   cout << '"' << sr.label() << "\": ";                         // then print label (if present)
   cout << sr << endl;
  }
 
  wi.pop_front();
- last_actuals = actuals;
+ last_group = group;
 }
 
 
@@ -1035,22 +1041,6 @@ jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) R"( example.j
 if we throw in an option -)" STR(OPT_LBL) R"(, then output JSON format ensures that entries with
 labels will be displayed accordingly:
 jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) R"( example.json
-[
-   {
-      "parent": "John Smith"
-   },
-   {
-      "parent": "Anna Johnson"
-   }
-]
-
-Now, here's a little trick: the tool will try grouping together all relevant
-walks, however, it's quite subjective to consider if walks are relevant or not.
-By default a strict groupping applied, resulting in the output above, if option
--)" STR(OPT_LBL) R"( is given more than once, then more loose grouping applied, resulting in the
-output:
-jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) STR(OPT_LBL) \
-R"( example.json
 [
    {
       "parent": [
