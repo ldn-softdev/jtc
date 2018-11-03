@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <deque>
+#include <set>
 #include <climits>      // LONG_MAX
 #include "lib/getoptions.hpp"
 #include "lib/Json.hpp"
@@ -11,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.36"
+#define VERSION "1.37"
 
 
 // option definitions
@@ -97,7 +98,7 @@ int purge_json(CommonResources &);
 int update_json(CommonResources &);
 void execute_cli(Json &update, const Jnode &src_jnode, CommonResources &r);
 int swap_json(CommonResources &);
-void collect_walks(vector<walk_vec> & swap_points, CommonResources &);
+void crop_out(CommonResources &r);
 int walk_json(CommonResources &);
 void walk_sequentual (CommonResources &);
 void walk_interleaved(CommonResources &);
@@ -125,12 +126,13 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_GDE)].desc("explain walk path syntax");
  opt[CHR(OPT_SZE)].desc("print JSON size (total number of nodes in JSON)");
  opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact) format");
- opt[CHR(OPT_PRG)].desc("purge JSON elements (one or more -" STR(OPT_WLK) " must be given)");
+ opt[CHR(OPT_PRG)].desc("purge all walked elements (-" STR(OPT_PRG) STR(OPT_PRG)
+                        ": purge all except walked)");
  opt[CHR(OPT_SLD)].desc("enforce strict quoted solidus parsing");
  opt[CHR(OPT_SWP)].desc("swap around two JSON elements (two -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SEQ)].desc("do not print walks interleaved (i.e. print sequentually)");
- opt[CHR(OPT_LBL)].desc("print labels too (if any) for walked JSON");
- opt[CHR(OPT_JSN)].desc("list walked elements as JSON (see footnote on usage with -"
+ opt[CHR(OPT_LBL)].desc("print labels too (if exist) for walked JSON");
+ opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON (see footnote on usage with -"
                         STR(OPT_LBL) ")");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
  opt[CHR(OPT_INS)].desc("insert JSON element (one or more -" STR(OPT_WLK) " must be given)")
@@ -145,17 +147,14 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON)");
  opt[0].desc("file to read json from").name("json_file").bind("<stdin>");
  opt.epilog("\nthis tool provides ability to:\n\
- - display JSON (in a raw and pretty formats)\n\
+ - parse, validate and display JSON (in a raw and pretty formats)\n\
  - walk JSON using various subscripting/search criteria (see -" STR(OPT_GDE) ")\n\
  - manipulate JSON via purge/insert/update/swap operations\n\
  for examples run with -" STR(OPT_GDE) " option\n\
 \n\
 Note on a multiple -" STR(OPT_WLK) " usage:\n\
  - if switch -" STR(OPT_SEQ) " is given, then all walk paths will be processed sequentually,\n\
-   otherwise, paths would be grouped by relevance and walks are interleaved\n\
- - the walk path order is honored within the relevant groups only; the groups\n\
-   are processed from most generic (least complex walk) to more specific (most\n\
-   complex walk)\n\n\
+   otherwise, paths would be grouped by relevance and walks are interleaved\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
  - these options must be given together: one -" STR(OPT_CMN) " (in case multiple given, only\n\
    the last one is considered) and multiple -" STR(OPT_PRT)
@@ -166,8 +165,7 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL)
    ", then walked elements will be collected into a JSON\n\
    array; when used together, all walked elements will be grouped into relevant\n\
-   objects within a parent array; those walked elements which do not have\n\
-   labels will be enumerated within the parent array\n\n\
+   objects within a parent array\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
  - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
    " when used together; every occurrence of " INTRP_STR "\n\
@@ -336,13 +334,13 @@ void read_json(CommonResources &r) {
                     istream_iterator<char>{}} );
 
  if(opt[CHR(OPT_SZE)])
-  cout << "read json size: " << json.size() << endl;
+  { cout << "json size: " << json.size() << endl; exit(RC_OK); }
 }
 
 
 
 void write_json(CommonResources &r) {
- // write updated JSON (i.e. resulting from -i/-u/-s/-p options into:
+ // write updated JSON (i.e. resulting from -i/-u/-s/-p/-v options into:
  // a) input json file (if -f given and if the input is not <stdin> ('-' option)
  // b) stdout
  REVEAL(r, opt, json, DBG())
@@ -385,39 +383,53 @@ int demux_opt(CommonResources &r) {
 }
 
 
+walk_vec collect_walks(const string &walk_path, CommonResources &r) {
+ // collect all walk iterations from given walk path
+ REVEAL(r, json, DBG())
+
+ walk_vec walk_itr;
+ for(auto it = json.walk(walk_path); it != json.end(); ++it)
+  walk_itr.push_back(it);
+ DBG(0) DOUT() << "walk path: '" << walk_path << "', # instances: " << walk_itr.size() << endl;
+
+ return walk_itr;
+}
+
+
 
 int insert_json(CommonResources &r) {
  // if wp points to an array - insert json as it is.
  // if wp is an object - then json must be object type itself and inserted by labels
- REVEAL(r, opt, DBG(), json)
+ REVEAL(r, opt, DBG())
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when inserting" << endl;
   return RC_WLK_MISS;
  }
 
- Json inserting;
- DBG().severity(inserting);
- inserting.parse(opt[CHR(OPT_INS)].str());
+ vector<Json> inserting(opt[CHR(OPT_INS)].hits());              // all -i go here
+ for(size_t i = 0; i < inserting.size(); ++i) {
+  DBG().severity(inserting[i]);
+  inserting[i].parse(opt[CHR(OPT_INS)].str(i+1));               // +1 adjust for default opt value
+ }
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process each walk
-  walk_vec ji;                                                  // collect all insertion points
-  for(auto it = json.walk(wp); it != json.end(); ++it)
-   ji.push_back(it);
-  DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
+  walk_vec jip = collect_walks(wp, r);                          // collect all insertion points
 
-  for(size_t i = 0; i < ji.size(); ++i) {                       // insert json into walked instances
-  auto & rec = *ji[i];
+  for(size_t i = 0; i < jip.size(); ++i) {                      // insert json into walked instances
+   auto & rec = *jip[i];
    DBG(1) DOUT() << "trying to insert into instance " << i << endl;
-   if(rec.is_array())
-    { rec.push_back(inserting); continue; }                     // insert into array
-   if(not rec.is_object())
-    { cerr << "fail: walk path must point to an iterable (" << i << ")" << endl; continue; }
-   if(inserting.is_object()) {
-    for(auto &ins: inserting) rec[ins.label()] = ins;         // insert into object
-    continue;
-   }
-   cerr << "fail: only object could be inserted into an object" << endl;
+   if(rec.is_array())                                           // insert into array
+    { for(auto &j: inserting) rec.push_back(j);  continue; }    
+
+   if(not rec.is_object())                                      // not an array and not object
+    { cerr << "fail: walk path must point to an iterable (walk: " << i << ")" << endl; continue; }
+
+   for(auto &j: inserting)                                      // try all insertions (-i)
+    if(j.is_object()) 
+     for(auto &ins: j) rec[ins.label()] = ins;                  // merged by labels
+    else
+     cerr << "fail: only object could be merged with an object" << endl;
   }
  }
 
@@ -429,23 +441,26 @@ int insert_json(CommonResources &r) {
 
 int purge_json(CommonResources &r) {
  // remove all json nodes pointed by iterator(s)
- REVEAL(r, opt, json, DBG())
+ REVEAL(r, opt, DBG())
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when purging" << endl;
   return RC_WLK_MISS;
  }
 
- for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
-  walk_vec ji;                                                  // collect all purging points
-  for(auto it = json.walk(wp); it != json.end(); ++it) ji.push_back(it);
-  DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
+ if(opt[CHR(OPT_PRG)].hits() > 1)
+  crop_out(r);
+ else {
+  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
+   walk_vec ji = collect_walks(wp, r);                           // collect all purging points
 
-  for(size_t i = 0; i < ji.size(); ++i) {                       // purge all walked instances
-   auto & rec = *ji[i];
-   if(ji[i].is_valid()) {                                       // i.e. hasn't been deleted already
-    DBG(1) DOUT() << "purging walk instance " << i << endl;
-    rec[-1].erase(ji[i]);
+   for(size_t i = 0; i < ji.size(); ++i) {                       // purge all walked instances
+    auto & rec = *ji[i];
+    if(ji[i].is_valid()) {                                       // i.e. hasn't been deleted already
+     DBG(1) DOUT() << "purging walk instance " << i << endl;
+     if(rec.is_root()) rec.clear();                              // erase everything
+     else rec[-1].erase(ji[i]);
+    }
    }
   }
  }
@@ -456,9 +471,51 @@ int purge_json(CommonResources &r) {
 
 
 
+bool remove_others(set<Jnode*> &ws, Jnode &jn) {
+ // return true if node has to be removed
+ bool remove = true;
+
+ for(auto it = jn.begin(); it != jn.end();) {
+  if(it->is_atomic()) {
+   if(ws.count(&it->value()) == 0)                              // atomic entry is not among walked 
+    { jn.erase(it); continue; }                                 // erase the entry then
+   else remove = false;                                         // don't erase this iterable
+  }
+  else {                                                        // it's nested iterable
+   if(ws.count(&it->value()) == 1)                              // if itself a walked entry
+    remove = false;                                             // then preserve it entirely
+   else {                                                       // otherwise figure if to be removed
+    if(remove_others(ws, *it) == true)                          // no walked entries inside
+     { jn.erase(it); continue; }
+    else remove = false;
+   }
+  }
+  ++it;
+ }
+ return remove;
+}
+
+
+
+void crop_out(CommonResources &r) {
+ // output walked elements preserving source json structure
+ REVEAL(r, opt, json, DBG())
+
+ // typedef vector<Json::iterator> walk_vec;
+ set<Jnode*> walk_set;
+ for(auto &wp: opt[CHR(OPT_WLK)])                               // process all walks
+  for(auto it = json.walk(wp); it != json.end(); ++it)
+   walk_set.insert(&it->value());
+ DBG(0) DOUT() << "preserved instances: " << walk_set.size() << endl;
+ 
+ remove_others(walk_set, json.root());
+}
+
+
+
 int update_json(CommonResources &r) {
  // update json in -u into all iterator(s) points
- REVEAL(r, opt, json, DBG())
+ REVEAL(r, opt, DBG())
 
  if(opt[CHR(OPT_WLK)].hits() < 1) {
   cerr << "error: at least one -" STR(OPT_WLK) " must be given when updating" << endl;
@@ -471,9 +528,7 @@ int update_json(CommonResources &r) {
   update.parse(opt[CHR(OPT_UPD)].str());                        // parse it
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process all walks
-  walk_vec ji;                                                  // collect all update points
-  for(auto it = json.walk(wp); it != json.end(); ++it) ji.push_back(it);
-  DBG(0) DOUT() << "path: '" << wp << "', #instances: " << ji.size() << endl;
+  walk_vec ji = collect_walks(wp, r);                           // collect all update points
 
   for(size_t i = 0; i < ji.size(); ++i) {                       // go over all update (walk) points
    auto & rec = *ji[i];
@@ -554,7 +609,8 @@ int swap_json(CommonResources &r) {
  }
 
  vector<walk_vec> swaps{2};                                     // collect all walks in here
- collect_walks(swaps, r);
+ swaps[0] = collect_walks(opt[CHR(OPT_WLK)].str(1), r);
+ swaps[1] = collect_walks(opt[CHR(OPT_WLK)].str(2), r);
 
  size_t max_i = min(swaps[0].size(), swaps[1].size());
  for(size_t i = 0; i < max_i; ++i) {                            // swap only paired walks
@@ -568,21 +624,6 @@ int swap_json(CommonResources &r) {
  write_json(r);
  return RC_OK;
 }
-
-
-
-void collect_walks(vector<walk_vec> & sp, CommonResources &r) {
- // load up all swap iterators (swap points), check walk restrictions
- REVEAL(r, opt, json)
-
- long i = 0;
- for(auto &wp: opt[CHR(OPT_WLK)]) {
-  for(auto it = json.walk(wp, Json::keep_cache); it != json.end(); ++it)
-   sp[i].push_back(it);
-  ++i;
- }
-}
-
 
 
 int walk_json(CommonResources &r) {
@@ -768,8 +809,8 @@ void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
  REVEAL(cr, opt, jout)
+
  static size_t last_group = 0;                                  // walking happens once per run,
-                                                                // so it's okay to make it static
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
 
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)

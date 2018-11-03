@@ -1539,6 +1539,8 @@ class Json{
     void                parse_offset_type_(WalkStep & state) const;
 
  public:
+    //                  walk iterator
+    //
     // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
     // container storage with the iterator (e.g. iterator-based callback)
     //
@@ -1563,7 +1565,8 @@ class Json{
                              swap(l.pv_, r.pv_);
                              swap(l.sn_.parent_type(), r.sn_.parent_type());// supernode requires
                             }                                   // swapping of type_ values only
-        // Super node definition
+
+        // Super node class definition
         //
         class SuperJnode: public Jnode {
             friend Json::iterator;
@@ -1591,7 +1594,7 @@ class Json{
             const Jnode &       value(void) const { return *jnp_; }
             bool                is_root(void) const { return &jit_->jp_->root() == jnp_; }
             Jnode &             operator[](long i) {
-                                 // in addition to Json::iterator's, this one adds capability
+                                 // in addition to Jnode::iterator's, this one adds capability
                                  // to address supernode with negative index, e.g: [-1],
                                  // like in the walk-string to reference a parent
                                  if(i >= 0) return Jnode::operator[](i);
@@ -1632,7 +1635,7 @@ class Json{
      public:
                             iterator(void) = default;           // DC
                             iterator(const iterator &it):       // CC
-                             ws_(it.ws_), jp_(it.jp_), pv_(it.pv_) {
+                             ws_(it.ws_), pv_(it.pv_), jp_(it.jp_) {
                              sn_.type_ = it.sn_.type_;
                             }
                             iterator(iterator &&it) {           // MC
@@ -1683,6 +1686,7 @@ class Json{
                               &sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
                             }
         iterator &          operator++(void) { incremented(); return *this; }
+        bool                incremented(void);
         iterator &          begin(void) { return *this; }
         iterator            end(void) const {
                              if(not jp_->root().is_iterable())
@@ -1696,8 +1700,8 @@ class Json{
                              return is_valid_(jp_->root(), 0);
                             }
         bool                is_nested(iterator & it) const;
-        bool                incremented(void);
         size_t              walk_size(void) const { return ws_.size(); }
+        long                depth(void) const { return -pv_.size(); }
         long                counter(size_t position) const {
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
                              return ws_[position].init >= 0? ws_[position].offset: -1;
@@ -1724,8 +1728,8 @@ class Json{
                             iterator(const iter_jn & it) { pv_.emplace_back(it, ""); }
 
       std::vector<WalkStep> ws_;                                // walk state vector (walk path)
-        Json *              jp_;                                // json pointer (for json().end())
         path_vector         pv_;                                // path_vector (result of walking)
+        Json *              jp_;                                // json pointer (for json().end())
         SuperJnode          sn_{Jnode::Neither};                // super node's type_ holds parent's
 
      private:
@@ -1756,7 +1760,7 @@ class Json{
         bool                increment_(long l);
         long                next_iterable_ws(long idx) const;
 
-        static std::string  empty_;
+        static std::string  empty_;                             // empty (default) label
     };
 
  private:
