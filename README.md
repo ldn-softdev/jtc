@@ -17,6 +17,7 @@ jtc offers following features:
 Walk path is the feature easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and upwards
   - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search.
+
 Both types of lexemes are iterable - subscrips let iterating over children of currently addressed node,
 while iterable search lexemes let iterating over all matches for given search criteria.
 A walk path is made of an arbitrary number of lexemes, while the tool accepts unlimited number of walk
@@ -34,10 +35,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.36)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.36)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.36)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.36)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.37)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.37)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.37)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.37)
 
 
 #### Compile and install instructions:
@@ -277,10 +278,10 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0[-1][name]" -jl Bookmarks
 
 
 5. There are 4 operations to modify source JSON:
-- insert  entry `-i`
-- update existing entry `-u`
-- swap around 2 entries `-s`
-- remove (purge) entry `-p`
+- insert JSON entry `-i`
+- update existing entries `-u` (if `-e` preceeds, update is subjected to shell interpolation)
+- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires 2 walk paths) 
+- remove (purge) walked entry `-p` (if mulitple `-p` given (e.g. `-pp`) then purge all entries except walked)
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
