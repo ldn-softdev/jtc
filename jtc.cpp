@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.37"
+#define VERSION "1.38"
 
 
 // option definitions
@@ -43,6 +43,7 @@ using namespace std;
 #define XCHR(X) *#X
 
 #define INTRP_STR "{}"
+#define SIZE_PFX "size: "
 
 // various return codes
 #define RETURN_CODES \
@@ -124,7 +125,7 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_EXE)].desc("treat a parameter for -" STR(OPT_UPD) " as a shell cli (must precede -"
                         STR(OPT_UPD) ")");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax");
- opt[CHR(OPT_SZE)].desc("print JSON size (total number of nodes in JSON)");
+ opt[CHR(OPT_SZE)].desc("print JSON size (number of nodes in JSON)");
  opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact) format");
  opt[CHR(OPT_PRG)].desc("purge all walked elements (-" STR(OPT_PRG) STR(OPT_PRG)
                         ": purge all except walked)");
@@ -332,9 +333,6 @@ void read_json(CommonResources &r) {
                                            cin >> noskipws:
                                            ifstream{opt[0].c_str(), ifstream::in} >> noskipws),
                     istream_iterator<char>{}} );
-
- if(opt[CHR(OPT_SZE)])
-  { cout << "json size: " << json.size() << endl; exit(RC_OK); }
 }
 
 
@@ -347,10 +345,13 @@ void write_json(CommonResources &r) {
 
  bool redirect{ opt[CHR(OPT_RDT)].hits() != 0 or opt[0].hits() == 0 };
  if(not opt[CHR(OPT_FRC)] or redirect)                          // stdout if no -f given,
-  { cout << json << endl; return; }                             // or redirect '-' is present
-
- DBG(0) DOUT() << "updating changes into json file: " << opt[0].c_str() << endl;
- ofstream{opt[0].c_str(), ofstream::out} << json << endl;
+  cout << json << endl;                                         // or redirect '-' is present
+ else {
+  DBG(0) DOUT() << "updating changes into json file: " << opt[0].c_str() << endl;
+  ofstream{opt[0].c_str(), ofstream::out} << json << endl;
+ }
+ if(opt[CHR(OPT_SZE)])
+  cout << SIZE_PFX << json.size() << endl;
 }
 
 
@@ -379,6 +380,8 @@ int demux_opt(CommonResources &r) {
  }
 
  cout << json << endl;                                          // in case no exec options given
+ if(opt[CHR(OPT_SZE)])
+  cout << SIZE_PFX << json.size() << endl;
  return RC_OK;
 }
 
@@ -458,7 +461,7 @@ int purge_json(CommonResources &r) {
     auto & rec = *ji[i];
     if(ji[i].is_valid()) {                                       // i.e. hasn't been deleted already
      DBG(1) DOUT() << "purging walk instance " << i << endl;
-     if(rec.is_root()) rec.clear();                              // erase everything
+     if(rec.is_root()) rec.clear();                              // if root, erase everything
      else rec[-1].erase(ji[i]);
     }
    }
@@ -505,7 +508,7 @@ void crop_out(CommonResources &r) {
  set<Jnode*> walk_set;
  for(auto &wp: opt[CHR(OPT_WLK)])                               // process all walks
   for(auto it = json.walk(wp); it != json.end(); ++it)
-   walk_set.insert(&it->value());
+   walk_set.insert(&it->value());                               // collect all walked elements
  DBG(0) DOUT() << "preserved instances: " << walk_set.size() << endl;
  
  remove_others(walk_set, json.root());
@@ -669,10 +672,16 @@ void walk_sequentual(CommonResources &r) {
     if(rec.has_label())                                         // if label exists
      cout << '"' << rec.label() << "\": ";
    cout << rec << endl;
+   if(opt[CHR(OPT_SZE)])
+    cout << SIZE_PFX << rec.size() << endl;
   }
  }
 
- if( opt[CHR(OPT_JSN)] ) cout << jout << endl;                  // print if -j option
+ if( opt[CHR(OPT_JSN)] ) {
+  cout << jout << endl;                                         // print if -j option
+  if(opt[CHR(OPT_SZE)])
+   cout << SIZE_PFX << jout.size() << endl;
+ }
 }
 
 
@@ -714,7 +723,11 @@ void walk_interleaved(CommonResources &r) {
  while( any_of(wpi.begin(), wpi.end(), [](walk_deq &wi){ return not wi.empty(); }) )
   print_walk(wpi, r);
 
- if( opt[CHR(OPT_JSN)] ) cout << jout << endl;
+ if( opt[CHR(OPT_JSN)] ) {
+  cout << jout << endl;
+  if(opt[CHR(OPT_SZE)])
+   cout << SIZE_PFX << jout.size() << endl;
+ }
 }
 
 
@@ -837,6 +850,8 @@ void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
   if(opt[CHR(OPT_LBL)] and sr.has_label())                      // -l given
    cout << '"' << sr.label() << "\": ";                         // then print label (if present)
   cout << sr << endl;
+  if(opt[CHR(OPT_SZE)])
+   cout << SIZE_PFX << sr.size() << endl;
  }
 
  wi.pop_front();
