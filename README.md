@@ -341,13 +341,58 @@ the resulting JSON is only printed
 - options `-i` and `-u` require an argument in a fully qualified JSON notation
 
 
+let's do a reverse thing - delete everyting but time stamps from the JSON (i.e. display only walked JSON elements):
+```
+bash $ jtc -w"<stamp>l+0" -pp Bookmarks
+{
+   "Bookmarks": [
+      {
+         "children": [
+            {
+               "children": [
+                  {
+                     "stamp": "2017-10-03, 12:05:19"
+                  },
+                  {
+                     "stamp": "2017-11-23, 12:05:19"
+                  }
+               ],
+               "stamp": "2017-10-02, 12:05:19"
+            },
+            {
+               "children": [
+                  {
+                     "stamp": "2017-02-27, 12:05:19"
+                  }
+               ],
+               "stamp": "2017-02-27, 12:05:19"
+            }
+         ],
+         "stamp": "2017-01-22, 12:05:19"
+      },
+      {
+         "children": [
+            {
+               "stamp": "2018-05-01, 12:05:19"
+            },
+            {
+               "stamp": "2018-06-21, 12:05:19"
+            }
+         ],
+         "stamp": "2018-03-06, 12:07:29"
+      }
+   ]
+}
+bash $ 
+```
+
 
 
 Update operation (`-u`) optionally may undergo shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
 ```
-bash $ jtc -w'<stamp>l+0' -eu date -jf \"%F,\ %H:%M:%S\" {} +%s \; Bookmarks
+bash $ jtc -w'<stamp>l+0' -eu date -jf '"%F, %H:%M:%S"' {} +%s \; Bookmarks
 {
    "Bookmarks": [
       {
