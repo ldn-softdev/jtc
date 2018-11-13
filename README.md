@@ -254,9 +254,13 @@ bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-this walk path `<url>l+0 [-1] [name]` finds (`<url>`) all (`+0`) JSON elements with label (`l`) matching `"url"`, then for each
-found JSON element its parent (`[-1]`) is addressed, then JSON element with label `"name":` is addressed (`[name]`) within immediate
-children
+this walk path `<url>l+0 [-1] [name]`: 
+
+ - finds (`<url>`) all (`+0`) JSON elements with label (`l`) matching `"url"`
+ 
+ - then for each found JSON element its parent (`[-1]`) is selected
+
+ - then JSON element with label `"name"` is selected (`[name]`) within parent's immediate children
 
 
 
