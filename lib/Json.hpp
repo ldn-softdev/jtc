@@ -487,8 +487,8 @@
 //    - std::map caters random point remove/insert operations efficiently,
 //    - label search is O(log(n)) complexity; iteration is not much worse than
 //      vector's
-//    - for Array storage (whose values do not require JSON labels, map keys will
-//      be auto-generated)
+//    - for Array storage values (which do not require JSON labels), map keys will
+//      be auto-sequenced
 
 
 #define DBG_WIDTH 80                                            // max print len upon parser's dbg
@@ -619,7 +619,7 @@ class Jnode {
 
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
-                         #ifdef BG_CC
+                         #ifdef BG_CC                           // -DBG_CC to turn on this debug
                           auto preserved = jn.is_pretty();
                           if(DBG()(0)) DOUT() << DBG_PROMPT(0) << "CC copying: " << jn.raw() << std::endl;
                           jn.pretty(preserved);
@@ -886,7 +886,7 @@ class Jnode {
     Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
 
     //SERDES(type_, value_, descendants_)                       // not really needed
-    #ifdef BG_CC
+    #ifdef BG_CC                                                // if -DBG_CC flag is given
      DEBUGGABLE()                                               // no debugs in Jnode (typically)
     #endif
     EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
@@ -1281,7 +1281,7 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int 
    << endl_;
  }
 
- if(rl > 1) os << std::string((rl-1)*tab_, ' ');                // would also signify pretty print
+ if(rl > 1) os << std::string((rl - 1) * tab_, ' ');            // would also signify pretty print
  if(my.is_array()) os << JSN_ARY_CLS;                           // close array, or
  if(my.is_object()) os << JSN_OBJ_CLS;                          // close node (object)
  if(endl_ == PRINT_PRT) --rl;                                   // if pretty print - adjust level
@@ -1524,7 +1524,7 @@ class Json{
                              jnp(jp), ws(w) {}
 
         const Jnode *       json_node(void) const { return jnp; }   // only for COUTABLE
-        static bool 	    cmp(const SearchCacheKey &l, const SearchCacheKey &r)
+        static bool         cmp(const SearchCacheKey &l, const SearchCacheKey &r)
                              { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
 
         const Jnode *       jnp;
@@ -1836,7 +1836,7 @@ STRINGIFY(Json::Jsearch, JS_ENUM)
 
 
 // Jnode methods requiring Json definition:
-Jnode::Jnode(Json j)                                            // type conversions Json -> Jnode
+Jnode::Jnode(Json j)                                            // type conversion Json -> Jnode
  { swap(*this, j.root()); }
 
 

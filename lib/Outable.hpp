@@ -51,10 +51,13 @@
 
 
 
-#define OUTABLE_TAB 3
-#define OUTABLE_IND(X) std::string(OUTABLE_TAB * (X>0? X: 0), ' ')
-#define COUTABLE_SFX ", "
-constexpr int size_of_coutable_sfx(void) { return sizeof(COUTABLE_SFX) - 1; }
+#define __OUTABLE_TAB__ 3
+#define __OUTABLE_IND__(X) std::string(__OUTABLE_TAB__ * (X>0? X: 0), ' ')
+#define __COUTABLE_SFX__ ", "
+#define __COUTABLE_TRL__ ".. "
+#define __OUTABLE_TRL__ "'..."
+
+constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; }
 
 // compact out-able form (single-line) output
 #define __COUT_ARG__(VAR) __cout_arg__(__coutable_ss__, #VAR, VAR);
@@ -62,14 +65,14 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(COUTABLE_SFX) - 1; }
     friend std::ostream & operator<<(std::ostream & os, const CLASS &x) \
         { return x.__coutme__(os); } \
     std::ostream & __coutme__(std::ostream & os) const { \
-        std::ostringstream __coutable_ss__(#CLASS ".. "); \
+        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return os << result.erase(result.size()-2); \
+        return os << (result.back() != ' '? result: result.erase(result.size()-2)); \
     } \
     std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
                              const char * __outable_class_name__=#CLASS) const { \
-        std::ostringstream __coutable_ss__(#CLASS ".. "); \
+        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
         return __outable_os__ << result.erase(result.size()-2); \
@@ -84,15 +87,15 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(COUTABLE_SFX) - 1; }
         { return x.__outme__(os, 0, #CLASS); } \
     std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
                              const char * __outable_class_name__ = #CLASS) const { \
-        __outable_os__ << OUTABLE_IND(__outable_ind__) << "class '" #CLASS "'..."; \
+        __outable_os__ << __OUTABLE_IND__(__outable_ind__) << "class '" #CLASS __OUTABLE_TRL__; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         return __outable_os__; \
     } \
     std::ostream & __coutme__(std::ostream & os) const { \
-        std::ostringstream __coutable_ss__(#CLASS ".. "); \
+        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return os << result.erase(result.size()-2); \
+        return os << (result.back() != ' '? result: result.erase(result.size()-2)); \
     }
 
 
@@ -107,13 +110,13 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(COUTABLE_SFX) - 1; }
     friend std::ostream & operator<<(std::ostream & os, const CLASS &x) \
         { return x.__routme__(os, 0, #CLASS); } \
     std::ostream & __routme__(std::ostream & os, int ind, const char * class_name=#CLASS) const { \
-        os << OUTABLE_IND(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
+        os << __OUTABLE_IND__(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         MACRO_TO_ARGS(__ROUT_ARG__, PTR) \
         return os; \
     } \
     std::ostream & __outme__(std::ostream & os, int ind, const char * class_name=#CLASS) const { \
-        os << OUTABLE_IND(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
+        os << __OUTABLE_IND__(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         MACRO_TO_ARGS(__ROUT_ARG__, PTR) \
         return os; \
@@ -129,14 +132,14 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(COUTABLE_SFX) - 1; }
 template<typename T>
 typename std::enable_if<std::is_fundamental<T>::value, void>::type
 __out_arg__(std::ostream & os, int ind, const char *class_name, const char *var_name, T var) {
- os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": " << var;
+ os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": " << var;
 }
 
 // cout-able format
 template<typename T>
 typename std::enable_if<std::is_fundamental<T>::value, void>::type
 __cout_arg__(std::ostream & os, const char *var_name, T var) {
- os << (var_name? std::string(var_name) + ":": "") << var << COUTABLE_SFX;
+ os << (var_name? std::string(var_name) + ":": "") << var << __COUTABLE_SFX__;
 }
 
 
@@ -145,14 +148,14 @@ __cout_arg__(std::ostream & os, const char *var_name, T var) {
 template<typename T>
 typename std::enable_if<std::is_enum<T>::value, void>::type
 __out_arg__(std::ostream & os, int ind, const char *class_name, const char *var_name, T var) {
- os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": " << var;
+ os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": " << var;
 }
 
 // cout-able format
 template<typename T>
 typename std::enable_if<std::is_enum<T>::value, void>::type
 __cout_arg__(std::ostream & os, const char *var_name, T var) {
- os << (var_name? std::string(var_name) + ":": "") << var << COUTABLE_SFX;
+ os << (var_name? std::string(var_name) + ":": "") << var << __COUTABLE_SFX__;
 }
 
 
@@ -161,17 +164,17 @@ __cout_arg__(std::ostream & os, const char *var_name, T var) {
 void __out_arg__(std::ostream & os, int ind,
                  const char *class_name, const char *var_name, const char *var) {
  if(var)
-  os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": \"" << var << '"';
+  os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": \"" << var << '"';
  else
-  os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": nullptr";
+  os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": nullptr";
 }
 
 // cout-able format
 void __cout_arg__(std::ostream & os, const char *var_name, const char *var) {
  if(var)
-  os << (var_name? std::string(var_name) + ":\"": "\"") << var << "\"" << COUTABLE_SFX;
+  os << (var_name? std::string(var_name) + ":\"": "\"") << var << "\"" << __COUTABLE_SFX__;
  else
- os << (var_name? std::string(var_name) + ":": "") << "nullptr" << COUTABLE_SFX;
+ os << (var_name? std::string(var_name) + ":": "") << "nullptr" << __COUTABLE_SFX__;
 }
 
 
@@ -182,9 +185,9 @@ typename std::enable_if<std::is_pointer<T>::value, void>::type
 __out_arg__(std::ostream & os, int ind,
             const char *class_name, const char *var_name, const T & var) {
  if(var)
-  os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": " << (void *)var;
+  os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": " << (void *)var;
  else
-  os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": nullptr";
+  os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": nullptr";
 }
 
 // cout-able format
@@ -192,7 +195,7 @@ template<typename T>
 typename std::enable_if<std::is_pointer<T>::value, void>::type
 __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
  if(var)
-  os << (var_name? std::string(var_name) + ":": "") << (void *)var << COUTABLE_SFX;
+  os << (var_name? std::string(var_name) + ":": "") << (void *)var << __COUTABLE_SFX__;
  else
   os << (var_name? std::string(var_name) + ":": "") << "nullptr, ";
 }
@@ -208,7 +211,7 @@ typename std::enable_if<std::is_member_function_pointer<decltype(& T::__outme__)
                         void>::type
 __out_arg__(std::ostream & os, int ind,
             const char *class_name, const char *var_name, const T & var) {
- os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": ";
+ os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": ";
  var.__outme__(os, -ind);
 }
 
@@ -226,12 +229,12 @@ __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
 // 2a. basic string output: out-able format
 void __out_arg__(std::ostream & os, int ind, const char *class_name,
                  const char *var_name, const std::basic_string<char> &var) {
- os << std::endl << OUTABLE_IND(ind) << class_name << "::" << var_name << ": \"" << var << '"';
+ os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": \"" << var << '"';
 }
 
 // cout-able format
 void __cout_arg__(std::ostream & os, const char *var_name, const std::basic_string<char> &var) {
- os << (var_name? std::string(var_name) + ":\"": "\"") << var << "\"" << COUTABLE_SFX;
+ os << (var_name? std::string(var_name) + ":\"": "\"") << var << "\"" << __COUTABLE_SFX__;
 }
 
 
@@ -334,11 +337,6 @@ void __cout_arg__(std::ostream & os, const char *var_name, const Map<K, V, C, A>
 
 
 // add other types as needed ....
-
-
-
-
-
 
 
 

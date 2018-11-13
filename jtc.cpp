@@ -542,7 +542,7 @@ int update_json(CommonResources &r) {
     update = OBJ{};
     execute_cli(update, rec, r);
     if(not update.empty())
-     rec = move(update);                                        // update can be moved!
+     rec = move(update);                                        // update can be moved here
    }
   }
  }
@@ -589,7 +589,7 @@ void execute_cli(Json &json, const Jnode &src_jnode, CommonResources &r) {
  DBG(1) DOUT() << "interpolated & quoted update string: '" << is.str() << "'" << endl;
 
  Shell sh;
- DBG().increment(+1, sh, -1);                                   // pop last space from input stream
+ DBG().increment(+1, sh, -1);
  sh.system(is.str());
 
  if(sh.rc() != 0)
@@ -762,7 +762,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
    if(offset >= fom[ai].size()) {                               // more generic path, print first
     if(DBG()(2)) DOUT() << endl;
-    DBG(2) DOUT() << "output instance: " << ai << ", group size: " << grouping << endl;
+    DBG(2) DOUT() << "output instance: " << ai << ", grouping: " << grouping << endl;
     return output_by_iterator(wpi[ai], abs(grouping), r);
    }
    if(DBG()(2)) DOUT() << ' ' << ai;

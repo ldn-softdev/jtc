@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified September 21, 2016
+ * Created by Dmitry Lyssenko
  *
  * a trivial micro class executing shell command and returning entire stdout
  *
