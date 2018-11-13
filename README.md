@@ -130,6 +130,7 @@ bash $ jtc -w "<url>l+0" Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
+let's take a look at the walk-path `<url>l+0`:
 - search lexemes are enclosed in angular brackets `<`, `>`
 - suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
   * `r`: default (could be omitted), fully matches *JSON string* value
@@ -148,22 +149,23 @@ such quantifier (preceded with `+`) makes the path *iterable*
 
 2. dump all bookmark names from the `Work` folder:
 ```
-bash $ jtc -w "<Work>[-1][children][+0][name]" Bookmarks
+bash $ jtc -w "<Work> [-1] [children] [+0] [name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-a. `<Work>`: first find within JSON a location where a string is matching "Work"
+here the walk path `<Work>[-1][children][+0][name]` is made of following lexemes (spaces separating lexems are optional):
 
-b. `[-1]`: step up one tier in JSON tree hierarchy
+a. `<Work>`: first, find within a JSON tree a location where a string value is matching "Work" exactly
 
-c. `[children]`: select a node with the label "children" (it'll be a JSON array, at the same tier with `Work`)
+b. `[-1]`: step up one tier in JSON tree hierarchy (i.e. address an immediate parent of the found JSON element)
 
-d. `[+0]`: select each node in the array (stating from the first one, indexes are always zero
-based)
+c. `[children]`: select a node whose label is "children" (it'll be a JSON array, at the same tier with `Work`)
+
+d. `[+0]`: select each node in the array (starting from the first one - indexes are always zero based)
 
 e. `[name]`: select a node whose label is "name"
 - offsets enclosed into square brackets `[`, `]` and may have different meaning:
-  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON child in the addressed
+  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
   * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
 given index will be selected
@@ -172,13 +174,15 @@ selected/found node, parent of a parent, etc
   * text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
 
-in order to understand better how walk path works, run the series of cli gradually adding lexemes
+in order to understand better how walk path works, let's run the series of cli, gradually adding lexemes
 to the path (perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```
 bash $ jtc -w "<Work>" -l Bookmarks
 "name": "Work"
-bash $ jtc -w "<Work>[-1]" -l Bookmarks
+```
+```
+bash $ jtc -w "<Work> [-1]" -l Bookmarks
 {
    "children": [
       {
@@ -195,7 +199,9 @@ bash $ jtc -w "<Work>[-1]" -l Bookmarks
    "name": "Work",
    "stamp": "2018-03-06, 12:07:29"
 }
-bash $ jtc -w "<Work>[-1][children]" -l Bookmarks
+```
+```
+bash $ jtc -w "<Work> [-1] [children]" -l Bookmarks
 "children": [
    {
       "name": "Stack Overflow",
@@ -208,12 +214,16 @@ bash $ jtc -w "<Work>[-1][children]" -l Bookmarks
       "url": "https://en.cppreference.com/"
    }
 ]
-bash $ jtc -w "<Work>[-1][children][0]" -l Bookmarks
+```
+```
+bash $ jtc -w "<Work> [-1] [children] [0]" -l Bookmarks
 {
    "name": "Stack Overflow",
    "stamp": "2018-05-01, 12:05:19",
    "url": "https://stackoverflow.com/"
 }
+```
+```
 bash $ jtc -w "<Work>[-1][children][+0]" -l Bookmarks
 {
    "name": "Stack Overflow",
@@ -225,7 +235,9 @@ bash $ jtc -w "<Work>[-1][children][+0]" -l Bookmarks
    "stamp": "2018-06-21, 12:05:19",
    "url": "https://en.cppreference.com/"
 }
-bash $ jtc -w "<Work>[-1][children][+0][name]" -l Bookmarks
+```
+```
+bash $ jtc -w "<Work> [-1] [children] [+0] [name]" -l Bookmarks
 "name": "Stack Overflow"
 "name": "C++ reference"
 ```
@@ -235,20 +247,22 @@ bash $ jtc -w "<Work>[-1][children][+0][name]" -l Bookmarks
 
 3. dump all URL's names:
 ```
-bash $ jtc -w "<url>l+0[-1][name]" Bookmarks
+bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 "The New York Times"
 "HuffPost UK"
 "Digital Photography Review"
 "Stack Overflow"
 "C++ reference"
 ```
-
+this walk path `<url>l+0 [-1] [name]` finds (`<url>`) all (`+0`) JSON elements with label (`l`) matching `"url"`, then for each
+found JSON element its parent (`[-1]`) is addressed, then JSON element with label `"name":` is addressed (`[name]`) within immediate
+children
 
 
 
 4. dump all URLs and their corresponding names, preferably wrap found pairs in JSON:
 ```
-bash $ jtc -w"<url>l+0" -w "<url>l+0[-1][name]" -jl Bookmarks
+bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 [
    {
       "name": "The New York Times",
