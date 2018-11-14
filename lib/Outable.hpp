@@ -62,17 +62,21 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
 // compact out-able form (single-line) output
 #define __COUT_ARG__(VAR) __cout_arg__(__coutable_ss__, #VAR, VAR);
 #define COUTABLE(CLASS, VARS...) \
-    friend std::ostream & operator<<(std::ostream & os, const CLASS &x) \
-        { return x.__coutme__(os); } \
-    std::ostream & __coutme__(std::ostream & os) const { \
-        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
+    friend std::ostream & operator<<(std::ostream & __outable_os__, const CLASS &x) \
+        { return x.__coutme__(__outable_os__); } \
+    std::ostream & __coutme__(std::ostream & __outable_os__) const { \
+        std::ostringstream __coutable_ss__; \
+        __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return os << (result.back() != ' '? result: result.erase(result.size()-2)); \
+        return __outable_os__ << (result[result.size()-2] != ','? \
+                                  result: \
+                                  result.erase(result.size()-2)); \
     } \
     std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
                              const char * __outable_class_name__=#CLASS) const { \
-        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
+        std::ostringstream __coutable_ss__; \
+        __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
         return __outable_os__ << result.erase(result.size()-2); \
@@ -83,19 +87,20 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
 #define __OUT_ARG__(VAR) __out_arg__(__outable_os__, abs(__outable_ind__)+1, \
                                      __outable_class_name__, #VAR, VAR);
 #define OUTABLE(CLASS, VARS...) \
-    friend std::ostream & operator<<(std::ostream & os, const CLASS &x) \
-        { return x.__outme__(os, 0, #CLASS); } \
+    friend std::ostream & operator<<(std::ostream & __outable_os__, const CLASS &x) \
+        { return x.__outme__(__outable_os__, 0, #CLASS); } \
     std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
                              const char * __outable_class_name__ = #CLASS) const { \
         __outable_os__ << __OUTABLE_IND__(__outable_ind__) << "class '" #CLASS __OUTABLE_TRL__; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         return __outable_os__; \
     } \
-    std::ostream & __coutme__(std::ostream & os) const { \
-        std::ostringstream __coutable_ss__(#CLASS __COUTABLE_TRL__); \
+    std::ostream & __coutme__(std::ostream & __outable_os__) const { \
+        std::ostringstream __coutable_ss__; \
+        __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return os << (result.back() != ' '? result: result.erase(result.size()-2)); \
+        return __outable_os__ << result; \
     }
 
 
