@@ -451,7 +451,7 @@
  *  and thus the supernode's lifetime is the same as iterator's from which it was
  *  dereferenced.
  *
- * Json class is DEBUGGABLE - see dbg.hpp
+ * Json class is DEBUGGABLE - see "dbg.hpp"
  */
 
 #pragma once
@@ -471,7 +471,7 @@
 #include "extensions.hpp"
 #include "dbg.hpp"
 #include "Outable.hpp"
-//#include "Blob.hpp"             // SERDES interface
+//#include "Blob.hpp"             // SERDES interface (not needed so far)
 
 
 
@@ -886,7 +886,7 @@ class Jnode {
     Jnode &             tab(uint8_t n) { tab_ = n; return *this; }
 
     //SERDES(type_, value_, descendants_)                       // not really needed
-    #ifdef BG_CC                                                // if -DBG_CC flag is given
+    #ifdef BG_CC                                                // if -DBG_CC is given, otherwise
      DEBUGGABLE()                                               // no debugs in Jnode (typically)
     #endif
     EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"

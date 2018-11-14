@@ -37,7 +37,7 @@
  *     myClass::vi[1]: 23
  *
  * Output if myClass was definined with COUTABLE macro:
- * uc: myClass.. i:123, s:"3.14", vi[0]:1, vi[1]:23,
+ * uc: myClass.. i:123, s:"3.14", vi[0]:1, vi[1]:23
  */
 
 #pragma once
@@ -101,25 +101,32 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
 
 // ROUTABLE is an extension to OUTABLE() interface for recursive data pointers, e.g.:
 // ROUTABLE(myClass, PTR(ptr1, ptr2), x, y, ...);
-// CAUTION: if you find yourself using ROUTABLE interface, quite likely your class
+// CAUTION: if you find yourself using ROUTABLE interface quite likely your class
 //          design is bad. Modern C++ let getting away w/o using pointers as resource
-//          holders in most cases
+//          holders in most cases (e.g. [C]OUTABLE interface handles just fine STL
+//          containers with recurrent data)
 #define PTR(RPTRS...) RPTRS
-#define __ROUT_ARG__(X) if(X) { os << endl; X->__routme__(os, abs(ind)+2, class_name); }
+#define __ROUT_ARG__(X) if(X) { __outable_os__ << std::endl; \
+                               X->__routme__(__outable_os__, abs(__outable_ind__)+2, \
+                                             __outable_class_name__); }
 #define ROUTABLE(CLASS, PTR, VARS...) \
-    friend std::ostream & operator<<(std::ostream & os, const CLASS &x) \
-        { return x.__routme__(os, 0, #CLASS); } \
-    std::ostream & __routme__(std::ostream & os, int ind, const char * class_name=#CLASS) const { \
-        os << __OUTABLE_IND__(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
+    friend std::ostream & operator<<(std::ostream & __outable_os__, const CLASS &x) \
+        { return x.__routme__(__outable_os__, 0, #CLASS); } \
+    std::ostream & __routme__(std::ostream & __outable_os__, int __outable_ind__, \
+                              const char * __outable_class_name__ = #CLASS) const { \
+        __outable_os__ << __OUTABLE_IND__(__outable_ind__) \
+                       << "class '" #CLASS "' (" << (void*)this << ")..."; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         MACRO_TO_ARGS(__ROUT_ARG__, PTR) \
-        return os; \
+        return __outable_os__; \
     } \
-    std::ostream & __outme__(std::ostream & os, int ind, const char * class_name=#CLASS) const { \
-        os << __OUTABLE_IND__(ind) << "class '" #CLASS "' (" << (void*)this << ")..."; \
+    std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
+                             const char * __outable_class_name__ = #CLASS) const { \
+        __outable_os__ << __OUTABLE_IND__(__outable_ind__) \
+                       << "class '" #CLASS "' (" << (void*)this << ")..."; \
         MACRO_TO_ARGS(__OUT_ARG__, VARS) \
         MACRO_TO_ARGS(__ROUT_ARG__, PTR) \
-        return os; \
+        return __outable_os__; \
     }
 
 
