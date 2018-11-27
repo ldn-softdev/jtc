@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.38"
+#define VERSION "1.39"
 
 
 // option definitions
@@ -755,36 +755,36 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
  int grouping = 0;                                              // group size (negative locks value)
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
-  vector<size_t> new_ai;                                        // build new actuals in here
-  long lowest_offset = LONG_MAX;                                // helper to build new actuals
+  vector<size_t> pos_ai, neg_ai;                                // build new actuals in here
+  size_t lowest_offset = -1;                                    // helper to build new actuals
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
 
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
    if(offset >= fom[ai].size()) {                               // more generic path, print first
     if(DBG()(2)) DOUT() << endl;
-    DBG(2) DOUT() << "output instance: " << ai << ", grouping: " << grouping << endl;
-    return output_by_iterator(wpi[ai], abs(grouping), r);
+    DBG(2) DOUT() << "short output instance: " << ai << ", group size: " << grouping << endl;
+    return output_by_iterator(wpi[ai], grouping, r);
    }
    if(DBG()(2)) DOUT() << ' ' << ai;
 
-   if(fom[ai][offset] == -1 and grouping > 0)                   // i.e. a non-counter offset
-    grouping = -grouping;                                       // lock grouping counter
-
+   if(fom[ai][offset] < 0)                                      // actuals with negative offset
+    { neg_ai.push_back(ai); continue; }                         // collected separately
    if(fom[ai][offset] < lowest_offset)                          // found a lower counter
-    { lowest_offset = fom[ai][offset]; new_ai.clear(); }        // clear prior found actuals
+    { lowest_offset = fom[ai][offset]; pos_ai.clear(); }        // clear prior found actuals
    if(fom[ai][offset] == lowest_offset)                         // update new actuals
-    new_ai.push_back(ai);
+    pos_ai.push_back(ai);
   }
 
-  actuals = move(new_ai);                                       // update list of current actuals
-  if(grouping >= 0) grouping = actuals.size();                  // update groping if not locked
-  if(abs(grouping) == 1) break;                                 // only 1 walk (instance) left
+  actuals = move(pos_ai);                                       // update list of current actuals
+  actuals.insert(actuals.end(), neg_ai.begin(), neg_ai.end());  // append all collected negatives
+  grouping = actuals.size();                                    // update groping if not locked
+  if(grouping == 1) break;                                      // performance optimization
  }
 
  if(DBG()(2)) DOUT() << endl;                                   // close debug line
  if(not actuals.empty()) {
   DBG(2) DOUT() << "output instance: " << actuals.front() << ", group size: " << grouping <<endl;
-  output_by_iterator(wpi[actuals.front()], abs(grouping), r);
+  output_by_iterator(wpi[actuals.front()], grouping, r);
  }
  else                                                           // normally should never be the case
   wpi.clear();                                                  // in case, avoiding endless loop
