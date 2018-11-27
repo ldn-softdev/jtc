@@ -38,10 +38,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.38)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.38)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.38)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.38)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.39)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.39)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.39)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.39)
 
 
 #### Compile and install instructions:
@@ -175,7 +175,7 @@ selected/found node, parent of a parent, etc
 immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, let's run the series of cli, gradually adding lexemes
-to the path (perhaps with the option `-l` to see also the labels (if any) of the selected elements:
+to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```
 bash $ jtc -w "<Work>" -l Bookmarks
