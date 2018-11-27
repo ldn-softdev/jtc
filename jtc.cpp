@@ -756,7 +756,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
  DBG(2) DOUT() << "walking offsets";
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
   vector<size_t> pos_ai, neg_ai;                                // build new actuals in here
-  size_t lowest_offset = -1;                                    // helper to build new actuals
+  long lowest_offset = LONG_MAX;                                // helper to build new actuals
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
 
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
