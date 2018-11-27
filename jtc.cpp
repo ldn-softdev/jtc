@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.39"
+#define VERSION "1.40"
 
 
 // option definitions
@@ -71,6 +71,8 @@ struct CommonResources {
     Json                json;                                   // source
     Json                jout;                                   // output
     unsigned            opt_u_found{0};                         // #times -u args found in user cli
+    bool                converted{false};                       // used in output_by_iterator
+    size_t              last_group{0};                          // used in output_by_iterator
 
     DEBUGGABLE()
 };
@@ -821,26 +823,25 @@ size_t build_front_matrix(vector<vector<long>> &fom,
 void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
- REVEAL(cr, opt, jout)
+ REVEAL(cr, opt, jout, converted, last_group)
 
- static size_t last_group = 0;                                  // walking happens once per run,
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
-
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
   if(not opt[CHR(OPT_LBL)]) jout.push_back(sr);                 // -l not given, make simple array
   else                                                          // -l given (combine relevant group)
    if(not sr.has_label()) jout.push_back(sr);                   // parent is root or not object
    else {                                                       // parent is an obect
     if(group > last_group or jout.empty())                      // time to create a new object
-     jout.push_back( OBJ{} );
+     { jout.push_back( OBJ{} ); converted = false; }            // new obj might require new conv. 
     if(not jout.back().is_object())
      jout.push_back( OBJ{} );
     if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
      jout.back()[sr.label()] = sr;                              // copy supernode
     else {                                                      // label exist
-     if(not jout.back()[sr.label()].is_array()) {               // and it's not an array
+     if(not converted) {
       Json tmp{ move(jout.back()[sr.label()]) };                // convert to array then
       (jout.back()[sr.label()] = ARY{}).push_back( move(tmp) );
+      converted = true;                                         // ensure conversion happens once
      }
      jout.back()[sr.label()].push_back( sr );                   // & push back into converted array
     }
