@@ -359,7 +359,7 @@ the resulting JSON is only printed
 - options `-i` and `-u` require an argument in a fully qualified JSON notation
 
 
-let's do a reverse thing - delete everyting but time stamps from the JSON (i.e. display only walked JSON elements):
+let's do a reverse thing - delete everyting but the time stamps from the JSON (i.e. display only walked JSON elements):
 ```
 bash $ jtc -w"<stamp>l+0" -pp Bookmarks
 {
