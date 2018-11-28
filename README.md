@@ -1,7 +1,7 @@
 # jtc - cli tool to extract, manipulate and transform source JSON
 
 jtc stand for: JSON test console, but it's a legacy name, don't get misleaded. jtc offers a powerful way to select one
-or multiple elements from source JSON and apply various actions on selected elements at once (wrap selected elment into a new JSON, filter in/out, update elements, insert new elemetns or remove them or swap around). 
+or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected elments into a new JSON, filter in/out, update elements, insert new elemetns or remove them or swap around). 
 
 #### Simple but efficient cli tool to manipulate JSON data
 
@@ -12,18 +12,18 @@ jtc offers following features:
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
   - updates operations optionally undergo shell cli evaluation
-  - written entirely in C++, no dependencies
+  - written entirely in C++, no dependencies (STL only)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
 
-Walk path is the feature easy to understand - it's only made of 2 types of lexemes:
-  - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and upwards
+Walk path is a feature easy to understand - it's only made of 2 types of lexemes:
+  - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards **and upwards**
   - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search.
 
 Both types of lexemes are iterable - subscrips let iterating over children of currently addressed node,
-while iterable search lexemes let iterating over all matches for given search criteria.
-A walk path is made of an arbitrary number of lexemes, while the tool accepts unlimited number of walk
+while iterable search lexemes let iterating over all matches for a given search criteria.
+A walk path is made of an arbitrary number of lexemes, while the tool accepts an unlimited number of walk
 paths. See below more detailed explanation with examples
 
 
@@ -37,7 +37,7 @@ For compiling c++14 (or later) is required:
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
 there's no performance gain from doing so*
 
-or download latest precompiled binary:
+or download the latest precompiled binary:
 - [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.40)
 - [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.40)
 - [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.40)
@@ -49,7 +49,7 @@ or download latest precompiled binary:
 download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using
 an appropriate command, move compiled file into an install location.
 
-here's the example steps:
+here're the example steps (for MacOS):
   - say, `jtc-master.zip` has been downloaded to a folder and the terminal app is open in that
 folder:
   - `unzip jtc-master.zip`
@@ -130,19 +130,19 @@ bash $ jtc -w "<url>l+0" Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
-let's take a look at the walk-path `<url>l+0`:
+let's have a look at the walk-path `<url>l+0`:
 - search lexemes are enclosed in angular brackets `<`, `>`
-- suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`)
+- suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`):
   * `r`: default (could be omitted), fully matches *JSON string* value
-  * `R`: same as `r`, but lexeme is a search RE
+  * `R`: same as `r`, but the lexeme is a search RE
   * `l`: fully matches *JSON label*
-  * `L`: same as `l`, but lexeme is a search RE
+  * `L`: same as `l`, but the lexeme is a search RE
   * `d`: fully matches *JSON number*
-  * `D`: same as `d`, but lexeme is an RE
-  * `b`: matches JSON boolean value, lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
-  * `n`: matches JSON null value, lexeme value is ignored, could be like `<null>n`, or `<>n`
+  * `D`: same as `d`, but the lexeme is an RE
+  * `b`: matches JSON boolean value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
+  * `n`: matches JSON null value, the lexeme value is ignored, could be something like `<null>n`, or `<>n`, etc
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
-such quantifier (preceded with `+`) makes the path *iterable*
+such quantifiers (preceded with `+`) makes a path *iterable*
 
 
 
@@ -164,14 +164,14 @@ c. `[children]`: select a node whose label is "children" (it'll be a JSON array,
 d. `[+0]`: select each node in the array (starting from the first one - indexes are always zero based)
 
 e. `[name]`: select a node whose label is "name"
-- offsets enclosed into square brackets `[`, `]` and may have different meaning:
+- offsets are enclosed into square brackets `[`, `]` and may have different meaning:
   * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
-  * numerical offsets proceeded with `+` make the path *iterable* - all children starting with the
+  * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
 given index will be selected
   * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
 selected/found node, parent of a parent, etc
-  * text offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
+  * textual offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, let's run the series of cli, gradually adding lexemes
@@ -264,7 +264,7 @@ this walk path `<url>l+0 [-1] [name]`:
 
 
 
-4. dump all URLs and their corresponding names, preferably wrap found pairs in JSON:
+4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
 ```
 bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 [
@@ -292,7 +292,7 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 ```
 
 - yes, multiple walks (`-w`) are allowed
-- option `-j` will wrap the walked outputs into a JSON, but not just
+- option `-j` will wrap the walked outputs back into a JSON, but not just,
 - option `-l` together with `-j` will ensure relevant walks are grouped together (try without `-l`)
 
 
@@ -406,7 +406,7 @@ bash $
 
 
 
-Update operation (`-u`) optionally may undergo shell evaluation (predicated by `-e`).
+Update operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
 ```
@@ -472,10 +472,10 @@ Once options `-e` and `-u` used together following rules must be observed:
  - char sequence following option `-u` must be terminated with escaped `;`
  - any occurrence of `{}` will be interpolated with JSON entry being updated
  - the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
- - if piping in cli is required then pipe simbol itself needs to be escaped: `\|`
- - returned result of shell evaluation still must be a valid JSON
- - failed or empty result of shell evaluations are ignored (JSON entry wont be updated, rather
-proceed to the next walked entry)
+ - if piping in the cli is required then pipe simbol itself needs to be escaped: `\|`
+ - returned result of a shell evaluation still must be a valid JSON
+ - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather
+proceed to the next walked entry for another update attempt)
 
 
 
@@ -483,7 +483,7 @@ proceed to the next walked entry)
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 
-#### A tiny example of class usage (c++):
+#### A tiny example of class usage and its interface (c++14):
 Say, we want to accomplish a following task:
 1. read Address Book JSON from `<stdin>`
 2. sort all records by `Name` (for simplicity, assume all records have that label)
@@ -647,6 +647,10 @@ bash$ cat addressbook-sampe.json | sort_ab
 ]
 bash $ 
 ```
+for the complete description of Json class interace, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp) 
+
+
+
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
