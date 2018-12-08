@@ -780,7 +780,7 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
  int grouping = 0;                                              // group size (negative locks value)
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
   map<size_t, size_t> pos_ai, neg_ai;                           // build new actuals in here
-  size_t lowest_offset = LONG_MAX, cnt = 0;                     // helpers to build new actuals
+  long lowest_offset = LONG_MAX, cnt = 0;                       // helpers to build new actuals
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
 
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
