@@ -205,7 +205,7 @@ class Option {
                         // hits: the number of times given option was given (boolean/parametric)
     size_t              order(long i = -1) const
                          { return order_[mod_(order_.size(), i)]; }
-                        // order() provides options to back trace their original position
+                        // order() let options to back trace their original position
                         // in the user cli (i.e. recover the order of options)
                         // argument i == 0 refers to the default value and is unused
     const char *        c_str(int i = -1) const
@@ -292,11 +292,11 @@ class Getopt {
     typedef std::map<short, Option> map_opt;
     typedef map_opt::iterator iter_opt;
 
-    class OptionOrder {
+    class OptionOrdered {
      // facilitates back-tracing every option to it's original position in user cli
      public:
-                            OptionOrder(void) = delete;
-                            OptionOrder(short opt, size_t cnt, Getopt *go):
+                            OptionOrdered(void) = delete;
+                            OptionOrdered(short opt, size_t cnt, Getopt *go):
                              opt_{opt}, cnt_{cnt}, go_(go)
                               {}
 
@@ -319,7 +319,7 @@ class Getopt {
         Getopt *            go_{nullptr};
     };
 
-    friend OptionOrder;
+    friend OptionOrdered;
     friend Option;
  public:
 
@@ -354,9 +354,9 @@ class Getopt {
     iter_opt            end(void) { return om_.end(); }
     Getopt &            reset(void) { for(auto &om: om_) om.second.reset(); return *this; }
     bool                defined(char opt) const { return om_.count(opt) == 1; }
-    std::vector<OptionOrder> &
+    std::vector<OptionOrdered> &
                         order(void) { return ov_; }
-    OptionOrder &       order(size_t idx) { return ov_[idx]; }
+    OptionOrdered &     order(size_t idx) { return ov_[idx]; }
 
     EXCEPTIONS(ThrowReason)
 
@@ -378,7 +378,7 @@ class Getopt {
     std::string         prgname_;                               // program name, after parsing
 
     map_opt             om_;                                    // opt. map: { 'c' -> Option('c') }
-    std::vector<OptionOrder>                                    // keeps record of options
+    std::vector<OptionOrdered>                                  // keeps record of options
                         ov_;                                    // in the order they come
 
  private:

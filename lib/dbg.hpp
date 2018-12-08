@@ -118,9 +118,11 @@
  *
  * // That macro let access all the methods of Debug class, e.g.:
  *
- * DBG().level(4);          // set global debug level to 4
- * DBG().severity(3);       // set my Debug's severity to 3
- * DBG().increment(-1)      // increment my Debug's severity by -1, (to 2)
+ * DBG().level(4);          // set global debug depth to 4: this will cause DBG(0),
+ *                          // DBG(1), DBG(2) and DBG(3) output (given severity was 0)
+ * DBG().severity(3);       // set my Debug's severity to 3: acts as an offset for
+ *                          // debugging: my DBG(0) becomes like DBG(3)
+ * DBG().increment(-1)      // increment my Debug's severity by -1, (i.e. becomes 2)
  * DBG().indented(false);   // print only prefix (don't print debug prompt indented
  *                          // proportionally to its severity)
  * DBG().prefix(">")        // use ">" as debug's prompt prefix (default is ".")
@@ -525,8 +527,7 @@ bool Debug::operator()(short d, const char * fn) const {
 std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx) const {
  // useAltPfx: use alternative prefix (indent)?
  // useTs: use Debug::ts to drive time-stamp update?
- static std::stringstream so;
- so.str("");
+ std::stringstream so;
 
  if(indented())
   for(int i=severity()+msgSev; i>0; --i)
@@ -541,10 +542,9 @@ std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx
 
 const std::string Debug::timestamp_(void) {
  // build a time-stamp of the local TZ, possibly including ms and us
- static struct timeval t;
- static std::stringstream so;
+ std::stringstream so;
 
- so.str("");
+ struct timeval t;
  gettimeofday(&t, nullptr);
 
  so << stamp_str_(t.tv_sec);
@@ -560,11 +560,9 @@ const std::string Debug::timestamp_(void) {
 
 const std::string Debug::stamp_str_(time_t t_stamp) {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
- static std::stringstream so;
- static tm * tmp;
+ std::stringstream so;
 
- so.str("");
- tmp = localtime(&t_stamp);
+ tm * tmp = localtime(&t_stamp);
 
  so << tmp->tm_year+1900 << '-'
     << Debug::Month_str[tmp->tm_mon] << '-'

@@ -230,7 +230,7 @@
  *      is_iterable()   // i.e. array or or object
  *      is_atomic()     // i.e. string/number/bull/null
  *
- *  Json threes could be compared using '==' and '!=' operators.
+ *  Json trees could be compared using '==' and '!=' operators.
  *      size() - calculates entire JSON tree size (number of nodes)
  *      has_children() - checks if given Json actually has any children (atomic
  *                       values would return false unconditionally
@@ -452,6 +452,7 @@
  *  dereferenced.
  *
  * Json class is DEBUGGABLE - see "dbg.hpp"
+ * Json class is OUTABLE - see "Outable.hpp"
  */
 
 #pragma once
@@ -480,7 +481,7 @@
 // 1. for storing atomic JSON values (null, bool, string, number) an std:string
 //    is used - internally all JSON atomic values are stored like that, type/value
 //    validation occurs only during parsing.
-// 2. JSON's Arrays and Objects are recurrent structures, which need to be stored
+// 2. JSON's Arrays and Objects are recurrent structures, which have to be stored
 //    in STL containers. Both arrays and objects could be stored using the same
 //    container type. Considering all implications, std::map it seems the most
 //    suitable container for JSON:
@@ -491,7 +492,7 @@
 //      be auto-sequenced
 
 
-#define DBG_WIDTH 80                                            // max print len upon parser's dbg
+#define DBG_WIDTH 99                                            // max print len upon parser's dbg
 #define ARRAY_LMT 4                                             // #bytes per array's index
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
@@ -620,9 +621,8 @@ class Jnode {
                         Jnode(void) = default;                  // DC
                         Jnode(const Jnode &jn): Jnode() {       // CC
                          #ifdef BG_CC                           // -DBG_CC to turn on this debug
-                          auto preserved = jn.is_pretty();
+                          GUARD(jn.is_pretty, jn.pretty)
                           if(DBG()(0)) DOUT() << DBG_PROMPT(0) << "CC copying: " << jn.raw() << std::endl;
-                          jn.pretty(preserved);
                          #endif
                          auto * volatile jnv = &jn.value();     // when walk iterator is copied its
                          if(jnv == nullptr)                     // supernode is empty, hence chck'n
@@ -635,7 +635,7 @@ class Jnode {
                          descendants_ = jnv->descendants_;
                         }
 
-                        Jnode(Jnode &&jn): Jnode() {            // MC
+                        Jnode(Jnode &&jn) {                     // MC
                          auto * volatile jnv = &jn.value();     // same here: moved jn could be an
                          if(jnv == nullptr)                     // empty supernoe, hence checking
                           { std::swap(type_, jn.type_); return; }

@@ -46,6 +46,7 @@
 #include <sstream>
 #include <type_traits>
 #include "macrolib.h"
+#include "extensions.hpp"
 
 
 
@@ -53,7 +54,10 @@
 
 #define __OUTABLE_TAB__ 3
 #define __OUTABLE_IND__(X) std::string(__OUTABLE_TAB__ * (X>0? X: 0), ' ')
+#define __COUTABLE_S__ ','                                      // separator used by COUTABLE 
+#define __COUTABLE_T__ ';'                                      // separator of COUTABLE classes
 #define __COUTABLE_SFX__ ", "
+#define __COUTABLE_TRM__ "; "
 #define __COUTABLE_TRL__ ".. "
 #define __OUTABLE_TRL__ "'..."
 
@@ -69,9 +73,9 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
         __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return __outable_os__ << (result[result.size()-2] != ','? \
-                                  result: \
-                                  result.erase(result.size()-2)); \
+        return __outable_os__ << (result[result.size()-2] AMONG(__COUTABLE_S__,__COUTABLE_T__)? \
+                                  result.erase(result.size()-2): \
+                                  result); \
     } \
     std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
                              const char * __outable_class_name__=#CLASS) const { \
@@ -100,7 +104,9 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
         __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
         std::string result(__coutable_ss__.str()); \
-        return __outable_os__ << result; \
+        return __outable_os__ << (result[result.size()-2] AMONG(__COUTABLE_S__,__COUTABLE_T__)? \
+                                  result.erase(result.size()-2): \
+                                  result); \
     }
 
 
@@ -217,7 +223,7 @@ __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
 
 
 
-// 1e. outable class output: out-able format
+// 1e. OUTABLE class output: out-able format
 template<typename T>
 typename std::enable_if<std::is_member_function_pointer<decltype(& T::__outme__)>::value,
                         void>::type
@@ -233,7 +239,7 @@ typename std::enable_if<std::is_member_function_pointer<decltype(& T::__coutme__
                         void>::type
 __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
  os << (var_name? std::string(var_name) + ":": "");
- var.__coutme__(os);
+ var.__coutme__(os) << __COUTABLE_TRM__;
 }
 
 

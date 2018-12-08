@@ -69,72 +69,30 @@
 
 
 /*
- * Following trivial extension facilitates ability to check if value is in enumeration
- * or not (similar to python's "x in [....]" construct)
- *
- * Synopsis:
- *
- * x = 5;
- * if(x AMONG(1,2,3,5,6))
- *  std::cout << "x is in!" << std::endl;
- * else
- *  std::cout << "x is not in!" << std::endl;
- *
- *
- * CAVEAT on usage with c-strings:
- * - first parameter in AMONG macros to be type-casted as:
- *
- * const char *x = "abc";
- * if(x AMONG(static_cast<const char*>("abc"), "def", "xyz")) ...
- */
-
-
-
-template<class T>
-bool operator==(const T &a, std::vector<T> v) {
- for(auto &x: v)
-  if(x == a) return true;
- return false;
-}
-
-bool operator==(const std::string &a, std::vector<const char *> b) {
- for(auto x: b)
-  if(a == x) return true;
- return false;
-}
-
-#define AMONG(first, rest...) \
-        ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
-
-
-
-
-
-/*
  * A trivial wrapper around std::exception
  * - to be used with enum stringification in classes (ENUMSTR, STRINGIFY)
  *
  * Synopsis:
  * // 1. define ENUMSTR within the class, enumerating exception reasons
  *
- * class myClass {
- *   public:
- *   ...
- *  define THROWREASON
- *          InvalidInput, \
- *          IncorrectUsage, \
- *          WrongType
- *  ENUMSTR(ThrowReason, THROWREASON)
+ *      class myClass {
+ *       public:
+ *        ...
+ *          define THROWREASON
+ *              InvalidInput, \
+ *              IncorrectUsage, \
+ *              WrongType
+ *          ENUMSTR(ThrowReason, THROWREASON)
  *
- *   ...
- *  EXCEPTION(ThrowReason)
- * };
- * STRINGIFY(myClass::ThrowReason, THROWREASON)
- * #undef THROWREASON
+ *          ...
+ *          EXCEPTION(ThrowReason)
+ *      };
+ *      STRINGIFY(myClass::ThrowReason, THROWREASON)
+ *      #undef THROWREASON
  *
  *
  * // 2. use in throwing defined exception reasons, e.g.:
- * throw EXP(InvalidInput);
+ *      throw EXP(InvalidInput);
  *
  *
  * // 3. Possible output upon non-handled exception:
@@ -142,13 +100,13 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
  *
  *
  * // 4. define catching exception:
- *  try { ... }     // something producing ThrowReason exception
- *  catch(myClass::stdException & e) {  // or std::exception & e, but then to access code()
- *                                      // and where() down-casting is required
- *   std::cout << "exception string: " << e.what() << std::endl;
- *   std::cout << "exception code: " << e.code() << std::endl;
- *   std::cout << "exception in: " << e.where() << std::endl;
- *  }
+ *      try { ... }     // something producing ThrowReason exception
+ *      catch(myClass::stdException & e) {  // or std::exception & e, but then to access code()
+ *                                          // and where() down-casting is required
+ *       std::cout << "exception string: " << e.what() << std::endl;
+ *       std::cout << "exception code: " << e.code() << std::endl;
+ *       std::cout << "exception in: " << e.where() << std::endl;
+ *      }
  *
  */
 
@@ -193,10 +151,154 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 
 
 
+/*
+ * Following trivial extension facilitates ability to check if a value is in
+ * enumeration (similar to python's "x in [....]" construct)
+ *
+ * Synopsis:
+ *
+ *      x = 5;
+ *      if(x AMONG(1,2,3,5,6))
+ *       std::cout << "x is in!" << std::endl;
+ *      else
+ *       std::cout << "x is not in!" << std::endl;
+ *
+ *
+ * CAVEAT on usage with c-strings:
+ * - first parameter in AMONG macros to be type-casted as:
+ *
+ *      const char *x = "abc";
+ *      if(x AMONG(static_cast<const char*>("abc"), "def", "xyz")) ...
+ */
+
+
+
+template<class T>
+bool operator==(const T &a, std::vector<T> v) {
+ for(auto &x: v)
+  if(x == a) return true;
+ return false;
+}
+
+bool operator==(const std::string &a, std::vector<const char *> b) {
+ for(auto x: b)
+  if(a == x) return true;
+ return false;
+}
+
+#define AMONG(first, rest...) \
+        ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
 
 
 
 
+
+/*
+ * This interface provides a guard function for an arbitrary object:
+ * it will preserve the object value upon interface declaration and will restore
+ * the object value upon exiting the scope (GUARD's destruction);
+ *
+ * Synopsis:
+ *
+ *      double x = 3.14;
+ *      cout << "x: "  << x << endl;
+ *      {
+ *       GUARD(x)
+ *       x = 2.71;
+ *       cout << "x: "  << x << endl;
+ *      }
+ *      cout << "x: "  << x << endl;
+ *
+ * Output:
+ *      x: 3.14
+ *      x: 2.71
+ *      x: 3.14
+ *
+ *
+ * However, sometimes classes cater only getter and setter methods to access
+ * their objects. For such case, the interface also provides a solution:
+ *
+ *      class MyX {
+ *       public:
+ *          int                 get(void) const { return x_; }
+ *          void                set(int x) { x_ = x; }
+ *       private:
+ *          int              x_;
+ *      };
+ *
+ *      MyX x;
+ *      x.set(123);
+ *      cout << "x: "  << x.get() << endl;
+ *      {
+ *       GUARD(x.get, x.set)     // spell here object's getter and setter
+ *       x.set(-1);
+ *       cout << "x: "  << x.get() << endl;
+ *      }
+ *      cout << "x: "  << x.get() << endl;
+ *
+ * Output:
+ *      x: 123
+ *      x: -1
+ *      x: 123
+ *
+ *
+ * in case there's multiple objects to guard, list them one by one each on the
+ * new line:
+ *      // ...
+ *      GUARD(x)
+ *      GUARD(y)
+ *      // ...
+ */
+
+
+// There are 2 forms of GUARD: for a {single object} and for {getter, setter}
+// Forms demultiplexing occurs in __GUARD_CHOOSER__ macro, which results into 
+// expanding __GUARD_1_ARG__ for the former case and into __GUARD_2_ARG__ for
+// the latter
+//
+// __GUARD_1_ARG__: declares a trivial class __Guard_X__, which stores object's
+// value and its pointer. Restoration of the object's value occurs upon __GUARD_1_ARG__'s
+// destruction
+//
+// __GUARD_2_ARG__: declares a child class of __Guard_X__, where it only captures
+// the value of the object through its getter.
+// Restoration of the object is designed through capturing object's setter via lambda
+// and calling the lambda (i.e. object's setter effectively) with preserved value
+// in the destructor of the child class
+//
+// Each form of GUARD is appended __LINE__ macro to ensure uniqueness of declarations
+// allowing  multiple invocations of the macro dodging name clashing
+#define __GUARD_TKN1__(X,Y) X ## Y
+#define __GUARD_TKN2__(X,Y) __GUARD_TKN1__(X, Y)
+#define __GUARD_1_ARG__(X) \
+    __Guard_X__<decltype(X)> __GUARD_TKN2__(__my_Guard_X__, __LINE__)(X);
+#define __GUARD_2_ARG__(X, Y) \
+    struct __GUARD_TKN2__(__Guard_GS__, __LINE__): public __Guard_X__<decltype(X())> { \
+        __GUARD_TKN2__(__Guard_GS__, __LINE__)(decltype(X()) __Guard_X_arg__, \
+                                               std::function<void(decltype(X()))> __Guard_X_l__): \
+         __Guard_X__(__Guard_X_arg__), lambda{__Guard_X_l__} {} \
+       ~__GUARD_TKN2__(__Guard_GS__, __LINE__)(void) { lambda(x_); }; \
+        std::function<void (decltype(X()))> lambda; \
+    } __GUARD_TKN2__(__my_Guard_GS__, __LINE__) \
+        {X(), [&](decltype(X()) __Guard_X_arg__){ Y(__Guard_X_arg__); } };
+#define __GUARD_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
+#define __GUARD_CHOOSER__(args...) \
+    __GUARD_4TH_ARG__(dummy, ##args, __GUARD_2_ARG__, __GUARD_1_ARG__)
+#define GUARD(args...) __GUARD_CHOOSER__(args)(args)
+
+
+
+template <typename T>
+class __Guard_X__ {
+ // Guard class itself
+ public:
+                        __Guard_X__(T &__Guard_X_arg__):
+                         x_{__Guard_X_arg__}, xptr_{&__Guard_X_arg__} {}
+                       ~__Guard_X__(void) { *xptr_ = x_; }
+ protected:
+    T                   x_;
+    T *                 xptr_;
+};
 
 
 

@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.40"
+#define VERSION "1.41"
 
 
 // option definitions
@@ -91,6 +91,7 @@ typedef deque<Json::iterator> walk_deq;
 typedef vector<string> v_string;
 
 void parse_opt(int argc, char *argv[], CommonResources &);
+void convert_xyw(CommonResources &);
 bool is_recompile_required(v_string & args, CommonResources &);
 void parse_rebuilt(v_string & sargv, CommonResources &r);
 void recompile_args(v_string &args, v_string &sargv, CommonResources &r);
@@ -156,14 +157,14 @@ int main(int argc, char *argv[]){
  for examples run with -" STR(OPT_GDE) " option\n\
 \n\
 Note on a multiple -" STR(OPT_WLK) " usage:\n\
- - if switch -" STR(OPT_SEQ) " is given, then all walk paths will be processed sequentually,\n\
-   otherwise, paths would be grouped by relevance and walks are interleaved\n\n\
+ - if switch -" STR(OPT_SEQ) " is given, then all walk paths will be processed sequentially,\n\
+   otherwise, paths would be grouped by relevance and walks are interleaved;\n\
+   the order of provided walks will be (if can be) honored\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
- - these options must be given together: one -" STR(OPT_CMN) " (in case multiple given, only\n\
-   the last one is considered) and multiple -" STR(OPT_PRT)
-   "; each parameter -" STR(OPT_PRT) " will be\n\
-   prepended by parameter from -" STR(OPT_CMN) \
-   ", tother they will form an equivalent of -" STR(OPT_WLK) "\n\n\
+ - these options must be given together: one -" STR(OPT_CMN) " and multiple -" STR(OPT_PRT) 
+  "; each parameter\n   -" STR(OPT_PRT) " will be prepended with preceeging -" STR(OPT_CMN) \
+   ", tother they will form an equivalent\n\
+   of -" STR(OPT_WLK) ", e.g.: -xA -y1 -y2 -xB -xC -y3 is convered to: -wA1 -WA2 -wB -wC3\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL)
    ", then walked elements will be collected into a JSON\n\
@@ -231,9 +232,30 @@ void parse_opt(int argc, char *argv[], CommonResources &r) {
  }
 
  if(opt[CHR(OPT_GDE)].hits() > 0) exit(wp_guide());
+ convert_xyw(r);
+}
 
- for(auto &partial: opt[CHR(OPT_PRT)])                          // concatenate -x+-y and put into -w
-  opt[CHR(OPT_WLK)] = opt[CHR(OPT_CMN)].str() + partial;
+
+
+void convert_xyw(CommonResources &r) {
+ REVEAL(r, opt)
+
+ string last_x, last_y;
+ for(auto &option: opt.order()) {                               // go by options order
+  if(option.id() == CHR(OPT_CMN)) {                             // option -x
+   if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
+    opt[CHR(OPT_WLK)] = last_x;                                 // standalone -x is converted to -w
+   last_x = option.str();
+   last_y.clear();
+   continue;
+  }
+  if(option.id() == CHR(OPT_PRT)) {                             // option -x
+   last_y = option.str();
+   opt[CHR(OPT_WLK)] = last_x + last_y;
+  }
+ }
+ if(not last_x.empty() and last_y.empty())                      // option -x... is given alone
+  opt[CHR(OPT_WLK)] = last_x;
 }
 
 
@@ -425,13 +447,13 @@ int insert_json(CommonResources &r) {
    auto & rec = *jip[i];
    DBG(1) DOUT() << "trying to insert into instance " << i << endl;
    if(rec.is_array())                                           // insert into array
-    { for(auto &j: inserting) rec.push_back(j);  continue; }    
+    { for(auto &j: inserting) rec.push_back(j);  continue; }
 
    if(not rec.is_object())                                      // not an array and not object
     { cerr << "fail: walk path must point to an iterable (walk: " << i << ")" << endl; continue; }
 
    for(auto &j: inserting)                                      // try all insertions (-i)
-    if(j.is_object()) 
+    if(j.is_object())
      for(auto &ins: j) rec[ins.label()] = ins;                  // merged by labels
     else
      cerr << "fail: only object could be merged with an object" << endl;
@@ -482,7 +504,7 @@ bool remove_others(set<Jnode*> &ws, Jnode &jn) {
 
  for(auto it = jn.begin(); it != jn.end();) {
   if(it->is_atomic()) {
-   if(ws.count(&it->value()) == 0)                              // atomic entry is not among walked 
+   if(ws.count(&it->value()) == 0)                              // atomic entry is not among walked
     { jn.erase(it); continue; }                                 // erase the entry then
    else remove = false;                                         // don't erase this iterable
   }
@@ -512,7 +534,7 @@ void crop_out(CommonResources &r) {
   for(auto it = json.walk(wp); it != json.end(); ++it)
    walk_set.insert(&it->value());                               // collect all walked elements
  DBG(0) DOUT() << "preserved instances: " << walk_set.size() << endl;
- 
+
  remove_others(walk_set, json.root());
 }
 
@@ -753,33 +775,29 @@ void process_offsets(vector<walk_deq> &wpi, vector<vector<long>> &fom, size_t lo
                      vector<size_t> &actuals, CommonResources &r) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
  REVEAL(r, DBG())
+ DBG(2) DOUT() << "walking offsets";
 
  int grouping = 0;                                              // group size (negative locks value)
- DBG(2) DOUT() << "walking offsets";
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
-  vector<size_t> pos_ai, neg_ai;                                // build new actuals in here
-  long lowest_offset = LONG_MAX;                                // helper to build new actuals
+  map<size_t, size_t> pos_ai, neg_ai;                           // build new actuals in here
+  size_t lowest_offset = LONG_MAX, cnt = 0;                     // helpers to build new actuals
   if(DBG()(2)) DOUT() << ", [" << offset << "]:";
 
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
-   if(offset >= fom[ai].size()) {                               // more generic path, print first
-    if(DBG()(2)) DOUT() << endl;
-    DBG(2) DOUT() << "short output instance: " << ai << ", group size: " << grouping << endl;
-    return output_by_iterator(wpi[ai], grouping, r);
-   }
    if(DBG()(2)) DOUT() << ' ' << ai;
-
-   if(fom[ai][offset] < 0)                                      // actuals with negative offset
-    { neg_ai.push_back(ai); continue; }                         // collected separately
+   if(offset >= fom[ai].size() or fom[ai][offset] < 0)          // negative or short actuals offset
+    { neg_ai[cnt++] = ai; continue; }                           // collected separately
    if(fom[ai][offset] < lowest_offset)                          // found a lower counter
     { lowest_offset = fom[ai][offset]; pos_ai.clear(); }        // clear prior found actuals
    if(fom[ai][offset] == lowest_offset)                         // update new actuals
-    pos_ai.push_back(ai);
+    pos_ai[cnt++] = ai;
   }
 
-  actuals = move(pos_ai);                                       // update list of current actuals
-  actuals.insert(actuals.end(), neg_ai.begin(), neg_ai.end());  // append all collected negatives
-  grouping = actuals.size();                                    // update groping if not locked
+  actuals.clear();
+  for(long idx = 0; idx < cnt; ++idx)
+   if(pos_ai.count(idx)) actuals.push_back(pos_ai[idx]);
+   else if(neg_ai.count(idx)) actuals.push_back(neg_ai[idx]);
+  grouping = actuals.size();                                    // update groping
   if(grouping == 1) break;                                      // performance optimization
  }
 
@@ -824,6 +842,7 @@ void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
  REVEAL(cr, opt, jout, converted, last_group)
+ auto create_obj = [&]{ return opt[CHR(OPT_SEQ)].hits()>0? group>=last_group: group>last_group; };
 
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
  if(opt[CHR(OPT_JSN)]) {                                        // -j given (jsonize output)
@@ -831,8 +850,8 @@ void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
   else                                                          // -l given (combine relevant group)
    if(not sr.has_label()) jout.push_back(sr);                   // parent is root or not object
    else {                                                       // parent is an obect
-    if(group > last_group or jout.empty())                      // time to create a new object
-     { jout.push_back( OBJ{} ); converted = false; }            // new obj might require new conv. 
+    if(create_obj() or jout.empty())                            // time to create a new object
+     { jout.push_back( OBJ{} ); converted = false; }            // new obj might require new conv.
     if(not jout.back().is_object())
      jout.push_back( OBJ{} );
     if(jout.back().count(sr.label()) == 0)                      // no label recorded yet
