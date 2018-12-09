@@ -241,21 +241,26 @@ void convert_xyw(CommonResources &r) {
  REVEAL(r, opt)
 
  string last_x, last_y;
+ vector<string> new_w;                                          // record new -w options here
+
  for(auto &option: opt.order()) {                               // go by options order
-  if(option.id() == CHR(OPT_CMN)) {                             // option -x
+  if(option.id() == CHR(OPT_CMN)) {                             // option -x, process it
    if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
-    opt[CHR(OPT_WLK)] = last_x;                                 // standalone -x is converted to -w
+    new_w.push_back(last_x);                                    // standalone -x is converted to -w
    last_x = option.str();
    last_y.clear();
    continue;
   }
-  if(option.id() == CHR(OPT_PRT)) {                             // option -x
+  if(option.id() == CHR(OPT_PRT)) {                             // option -y
    last_y = option.str();
-   opt[CHR(OPT_WLK)] = last_x + last_y;
+   new_w.push_back(last_x + last_y);
   }
  }
  if(not last_x.empty() and last_y.empty())                      // option -x... is given alone
-  opt[CHR(OPT_WLK)] = last_x;
+  new_w.push_back(last_x);
+
+ for(auto &opt_w: new_w)                                        // move all new '-w' to opt 
+  opt[CHR(OPT_WLK)] = opt_w;
 }
 
 
