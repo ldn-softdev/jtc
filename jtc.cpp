@@ -162,9 +162,9 @@ Note on a multiple -" STR(OPT_WLK) " usage:\n\
    the order of provided walks will be (if can be) honored\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
  - these options must be given together: one -" STR(OPT_CMN) " and multiple -" STR(OPT_PRT) 
-  "; each parameter\n   -" STR(OPT_PRT) " will be prepended with preceeging -" STR(OPT_CMN) \
+  "; each parameter\n   -" STR(OPT_PRT) " will be prepended with preceding -" STR(OPT_CMN) \
    ", tother they will form an equivalent\n\
-   of -" STR(OPT_WLK) ", e.g.: -xA -y1 -y2 -xB -xC -y3 is convered to: -wA1 -WA2 -wB -wC3\n\n\
+   of -" STR(OPT_WLK) ", e.g.: -xA -y1 -y2 -xB -xC -y3 is converted to: -wA1 -WA2 -wB -wC3\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL)
    ", then walked elements will be collected into a JSON\n\
