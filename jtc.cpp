@@ -839,7 +839,7 @@ size_t build_front_matrix(vector<vector<long>> &fom,
 void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
  // prints json element from given iterator, removes printed iterator from the dequeue
  // in case of -j option: collect into provided json container rather than print
- REVEAL(cr, opt, jout, convert_req, last_group, DBG())
+ REVEAL(cr, opt, jout, convert_req, last_group)
  auto create_obj = [&]{ return opt[CHR(OPT_SEQ)].hits()>0? group>=last_group: group>last_group; };
 
  auto &sr = *(wi.front());                                      // sr is a super node (super record)
@@ -857,7 +857,7 @@ void output_by_iterator(walk_deq &wi, size_t group, CommonResources &cr) {
     }
     else {                                                      // label already exist
      if(convert_req or not jout.back()[sr.label()].is_array()) {// convert to array then
-      Json tmp{ move(jout.back()[sr.label()]) };                
+      Json tmp{ move(jout.back()[sr.label()]) };
       (jout.back()[sr.label()] = ARY{}).push_back( move(tmp) );
       convert_req = false;
      }
