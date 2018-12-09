@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.41"
+#define VERSION "1.42"
 
 
 // option definitions
@@ -641,8 +641,6 @@ int swap_json(CommonResources &r) {
 
  size_t max_i = min(swaps[0].size(), swaps[1].size());
  for(size_t i = 0; i < max_i; ++i) {                            // swap only paired walks
-  if(swaps[0][i].is_nested(swaps[1][i]))
-   { cerr << "error: walk paths must not nest one another" << endl; return RC_SP_NST; }
   if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid())
    { cerr << "error: walk path instance " << i << " became invalid" << endl; return RC_SP_INV; }
   swap(*swaps[0][i], *swaps[1][i]);
