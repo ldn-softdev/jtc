@@ -262,7 +262,7 @@ this walk path `<url>l+0 [-1] [name]`:
  
  - then for each found JSON element its parent (`[-1]`) is selected
 
- - then JSON element with label `"name"` is selected (`[name]`) within parent's immediate children
+ - then JSON element with label `"name"` is selected (encasement `[`, `]`) within parent's immediate children
 
 
 
