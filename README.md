@@ -258,7 +258,7 @@ bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 ```
 this walk path `<url>l+0 [-1] [name]`: 
 
- - finds (`<url>`) all (`+0`) JSON elements with label (`l`) matching `"url"`
+ - finds (encasement `<`, `>`) all (`+0`) JSON elements with label (`l`) matching `"url"`
  
  - then for each found JSON element its parent (`[-1]`) is selected
 
