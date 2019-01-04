@@ -141,6 +141,8 @@ let's have a look at the walk-path `<url>l+0`:
   * `D`: same as `d`, but the lexeme is an RE
   * `b`: matches JSON boolean value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches JSON null value, the lexeme value is ignored, could be something like `<null>n`, or `<>n`, etc
+  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null
+  * `j`: matches specified JSON value, the lexeme must be a valid JSON
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifiers (preceded with `+`) makes a path *iterable*
 
