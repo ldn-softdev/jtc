@@ -42,7 +42,7 @@
 #include <string>
 #include <vector>
 #include "macrolib.h"
-
+#include <type_traits>
 
 
 
@@ -51,16 +51,16 @@
 
 
 #define ENUM(enum_class, enums...) \
-  enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) };
+    enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) };
 
 
 #define ENUMSTR(enum_class, enums...) \
-  enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) }; \
-  static const char * enum_class ## _str[];
+    enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) }; \
+    static const char * enum_class ## _str[];
 
 
 #define STRINGIFY(enum_class, enums...) \
-  const char * enum_class ## _str[] { MACRO_TO_ARGS(__STR_COMMA_SEPARATED__, enums) };
+    const char * enum_class ## _str[] { MACRO_TO_ARGS(__STR_COMMA_SEPARATED__, enums) };
 
 #define ENUMS(enum_class, enum_idx) enum_class ## _str[enum_idx]
 
@@ -153,7 +153,7 @@
 
 /*
  * Following trivial extension facilitates ability to check if a value is in
- * enumeration (similar to python's "x in [....]" construct)
+ * enumeration (similar to python's "x in [...]" construct)
  *
  * Synopsis:
  *
@@ -165,10 +165,14 @@
  *
  *
  * CAVEAT on usage with c-strings:
- * - first parameter in AMONG macros to be type-casted as:
+ * - first parameter in AMONG macros to be type-casted as <const char*>:
  *
  *      const char *x = "abc";
  *      if(x AMONG(static_cast<const char*>("abc"), "def", "xyz")) ...
+ *
+ *
+ * Preferably use AMONG construct, when number of enlisted arguments > 2, otherwise
+ * go with conditional 'or'
  */
 
 
@@ -187,14 +191,14 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 }
 
 #define AMONG(first, rest...) \
-        ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
+    ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
 
 
 
 
 
 /*
- * This interface provides a guard function for an arbitrary object:
+ * This interface provides a guard functionality for an arbitrary object:
  * it will preserve the object value upon interface declaration and will restore
  * the object value upon exiting the scope (GUARD's destruction);
  *
@@ -242,7 +246,7 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
  *      x: 123
  *
  *
- * in case there's multiple objects to guard, list them one by one each on the
+ * in case where's multiple objects to guard, list them one by one each on the
  * new line:
  *      // ...
  *      GUARD(x)
@@ -252,7 +256,7 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 
 
 // There are 2 forms of GUARD: for a {single object} and for {getter, setter}
-// Forms demultiplexing occurs in __GUARD_CHOOSER__ macro, which results into 
+// Forms demultiplexing occurs in __GUARD_CHOOSER__ macro, which results into
 // expanding __GUARD_1_ARG__ for the former case and into __GUARD_2_ARG__ for
 // the latter
 //
@@ -280,7 +284,7 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
        ~__GUARD_TKN2__(__Guard_GS__, __LINE__)(void) { lambda(x_); }; \
         std::function<void (decltype(X()))> lambda; \
     } __GUARD_TKN2__(__my_Guard_GS__, __LINE__) \
-        {X(), [&](decltype(X()) __Guard_X_arg__){ Y(__Guard_X_arg__); } };
+        {X(), [&](decltype(X()) __Guard_X_arg__) { Y(__Guard_X_arg__); } };
 #define __GUARD_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
 #define __GUARD_CHOOSER__(args...) \
     __GUARD_4TH_ARG__(dummy, ##args, __GUARD_2_ARG__, __GUARD_1_ARG__)
@@ -296,8 +300,8 @@ class __Guard_X__ {
                          x_{__Guard_X_arg__}, xptr_{&__Guard_X_arg__} {}
                        ~__Guard_X__(void) { *xptr_ = x_; }
  protected:
-    T                   x_;
-    T *                 xptr_;
+    typename std::remove_reference<T>::type     x_;
+    typename std::remove_reference<T>::type *   xptr_;
 };
 
 

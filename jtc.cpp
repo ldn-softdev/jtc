@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.42"
+#define VERSION "1.43"
 
 
 // option definitions
@@ -135,8 +135,8 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_SLD)].desc("enforce strict quoted solidus parsing");
  opt[CHR(OPT_SWP)].desc("swap around two JSON elements (two -" STR(OPT_WLK) " must be given)");
  opt[CHR(OPT_SEQ)].desc("do not print walks interleaved (i.e. print sequentually)");
- opt[CHR(OPT_LBL)].desc("print labels too (if exist) for walked JSON");
- opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON (see footnote on usage with -"
+ opt[CHR(OPT_LBL)].desc("print labels too (if present) for walked JSON");
+ opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON (see a footnote on usage with -"
                         STR(OPT_LBL) ")");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
  opt[CHR(OPT_INS)].desc("insert JSON element (one or more -" STR(OPT_WLK) " must be given)")
@@ -144,10 +144,10 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_UPD)].desc("update/replace JSON element (one or more -" STR(OPT_WLK) \
                         " must be given)").name("json");
  opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given)").name("walkpath");
- opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every specified -" STR(OPT_PRT))
-                  .bind("").name("common");
- opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by specified -" STR(OPT_CMN))
-                  .name("partial");
+ opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every followed -" STR(OPT_PRT))
+                  .bind("").name("common wp");
+ opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by preceding -" STR(OPT_CMN))
+                  .name("partial wp");
  opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON)");
  opt[0].desc("file to read json from").name("json_file").bind("<stdin>");
  opt.epilog("\nthis tool provides ability to:\n\
@@ -161,9 +161,9 @@ Note on a multiple -" STR(OPT_WLK) " usage:\n\
    otherwise, paths would be grouped by relevance and walks are interleaved;\n\
    the order of provided walks will be (if can be) honored\n\n\
 Note on options -" STR(OPT_CMN) " and -" STR(OPT_PRT) " usage:\n\
- - these options must be given together: one -" STR(OPT_CMN) " and multiple -" STR(OPT_PRT) 
+ - these options must be given together: one -" STR(OPT_CMN) " and multiple -" STR(OPT_PRT)
   "; each parameter\n   -" STR(OPT_PRT) " will be prepended with preceding -" STR(OPT_CMN) \
-   ", tother they will form an equivalent\n\
+   ", together they will form an equivalent\n\
    of -" STR(OPT_WLK) ", e.g.: -xA -y1 -y2 -xB -xC -y3 is converted to: -wA1 -WA2 -wB -wC3\n\n\
 Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
  - when -" STR(OPT_JSN) " is given w/o -" STR(OPT_LBL)
@@ -171,8 +171,8 @@ Note on options -" STR(OPT_JSN) " and -" STR(OPT_LBL) " usage:\n\
    array; when used together, all walked elements will be grouped into relevant\n\
    objects within a parent array\n\n\
 Note on options -" STR(OPT_EXE) " and -" STR(OPT_UPD) " usage:\n\
- - option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
-   " when used together; every occurrence of " INTRP_STR "\n\
+ - when used together, option -" STR(OPT_EXE) " must precede option -" STR(OPT_UPD)
+   "; every occurrence of " INTRP_STR "\n\
    is interpolated with walked JSON entry using raw format; interpolated entry\n\
    is completely escaped, thus does not require quoting; all shell-specific\n\
    chars (e.g.: `|', `;', `\"', etc) have to be quoted or escaped; terminate\n\
@@ -246,20 +246,20 @@ void convert_xyw(CommonResources &r) {
  for(auto &option: opt.order()) {                               // go by options order
   if(option.id() == CHR(OPT_CMN)) {                             // option -x, process it
    if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
-    new_w.push_back(last_x);                                    // standalone -x is converted to -w
-   last_x = option.str();
+    new_w.push_back(move(last_x));                              // standalone -x is converted to -w
+   last_x = move(option.str());
    last_y.clear();
    continue;
   }
   if(option.id() == CHR(OPT_PRT)) {                             // option -y
-   last_y = option.str();
+   last_y = move(option.str());
    new_w.push_back(last_x + last_y);
   }
  }
  if(not last_x.empty() and last_y.empty())                      // option -x... is given alone
-  new_w.push_back(last_x);
+  new_w.push_back(move(last_x));
 
- for(auto &opt_w: new_w)                                        // move all new '-w' to opt 
+ for(auto &opt_w: new_w)                                        // move all new '-w' to opt
   opt[CHR(OPT_WLK)] = opt_w;
 }
 
@@ -699,7 +699,7 @@ void walk_sequentual(CommonResources &r) {
     if(rec.has_label())                                         // if label exists
      cout << '"' << rec.label() << "\": ";
    cout << rec << endl;
-   if(opt[CHR(OPT_SZE)])
+   if(opt[CHR(OPT_SZE)])                                        // -z
     cout << SIZE_PFX << rec.size() << endl;
   }
  }
@@ -941,6 +941,11 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform
          must be fully spelled, e.g.: "<true>b", "<any>b"
      n - match null values, the content within the encasement could be empty,
          or anything - it's ignored, e.g.: <>n, >null<n, etc
+     a - match any atomic JSON value (string, numeric, boolean, null); the
+         content within the encasement is ignored
+     j - match user specific JSON value, the content within the encasement
+         should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
+         arrays
    N - an integer quantifier specifying search match instance, e.g.: "<text>2"
        will match only upon a 3rd (quantifiers are zero based) encounter of
        the word "text"
@@ -988,33 +993,33 @@ values which are attached to the label "lbl". In that notation all suffixes
     }
 
 
-- to select node "children" from John, run:
-jtc -)" STR(OPT_WLK) R"( "[Relation][0][children]" example.json
+- to select node "children" for the first record, run:
+jtc -)" STR(OPT_WLK) R"( [Relation][0][children] example.json
 [
    "Sophia",
    "Olivia"
 ]
 
 
-- to select all children records individually (from John), run:
-jtc -)" STR(OPT_WLK) R"( "[Relation] [0] [children] [+0]" example.json
+- to select all children records individually (for the first record), run:
+jtc -)" STR(OPT_WLK) R"( '[Relation] [0] [children] [+0]' example.json
 "Sophia"
 "Olivia"
 
 
-- to select all children (from all parents) and their parents as well, run:
-jtc -)" STR(OPT_WLK) R"("[Relation][+0][parent]" -)" STR(OPT_WLK) \
-R"( "[Relation][+0][children][+0]" example.json
+- to select all children (for all records) and their parents as well, run:
+jtc -)" STR(OPT_WLK) R"('[Relation][+0][parent]' -)" STR(OPT_WLK) \
+R"( '[Relation][+0][children][+0]' example.json
 "John Smith"
 "Sophia"
 "Olivia"
 "Anna Johnson"
 "John"
 
-- the same could be achieved through a bit more succint syntax:
-jtc -)" STR(OPT_CMN) R"("[Relation][+0]" -)" STR(OPT_PRT) R"("[parent]" -)" STR(OPT_PRT) \
-R"( "[children][+0]" example.json
-- Here, all concatenations of an option -)" STR(OPT_CMN) R"( with every option -)" \
+- the same could be achieved through a bit more succinct syntax:
+jtc -)" STR(OPT_CMN) R"('[Relation][+0]' -)" STR(OPT_PRT) R"([parent] -)" STR(OPT_PRT) \
+R"( '[children][+0]' example.json
+  Here, all concatenations of an option -)" STR(OPT_CMN) R"( with every option -)" \
 STR(OPT_PRT) R"( is transformed
   into -)" STR(OPT_WLK) \
 R"( then compiled and executed. That syntax is supposed to save the input
@@ -1023,14 +1028,19 @@ R"( then compiled and executed. That syntax is supposed to save the input
 
 - to select all children, from the node whose parent's name starts with "John",
   run:
-jtc -)" STR(OPT_WLK) R"( "[Relation]<^John>R[-1][children][+0]" example.json
+jtc -)" STR(OPT_WLK) R"( '<^John>R[-1][children][+0]' example.json
 "Sophia"
 "Olivia"
 
+- However, the above walk syntax is prone to false positives, as it finds any
+  string, starting with "John". To imporve it, we have to ensure that the
+  search is attached to the label, i.e., '"parent": "John..."':
+jtc -)" STR(OPT_WLK) R"( '[parent]:<^John>R[-1][children][+0]' example.json
 
-- to add (insert) a child "James" to a parent whose name starts with "John",
-  run:
-jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( "[0] [parent]:<^John>R[-1][children]" -)" \
+
+- to add (insert) a child "James" to a parent whose name starts with "John"
+  and reflect the changes into the file, run:
+jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( '[parent]:<^John>R[-1][children]' -)" \
 STR(OPT_INS) R"( '"James"' example.json
 {
    "Relation": [
@@ -1057,7 +1067,7 @@ STR(OPT_INS) R"( '"James"' example.json
 
 
 - to alter the parent's name from "John Smith" into "Jane Smith" run:
-jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( "[0] <John Smith>" -)" STR(OPT_UPD) \
+jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( '<John Smith>' -)" STR(OPT_UPD) \
 R"( '"Jane Smith"' example.json
 {
    "Relation": [
@@ -1084,7 +1094,7 @@ R"( '"Jane Smith"' example.json
 
 
 - to add a new record:
-jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( "[0] [parent]:<Jane Smith> [-1]" -)" \
+jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( '[parent]:<Jane Smith> [-1]' -)" \
 STR(OPT_INS) R"( '{"Y-chromosome": true}' example.json
 {
    "Relation": [
@@ -1114,17 +1124,18 @@ STR(OPT_INS) R"( '{"Y-chromosome": true}' example.json
 - it's possible to wrap walked results back into JSON, with help of -)" STR(OPT_JSN) R"( option:
 jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) R"( example.json
 [
-   "John Smith",
+   "Jane Smith",
    "Anna Johnson"
 ]
 
-if we throw in an option -)" STR(OPT_LBL) R"(, then output JSON format ensures that entries with
+
+- if we throw in an option -)" STR(OPT_LBL) R"(, then output JSON format ensures that entries with
 labels will be displayed accordingly:
 jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) R"( example.json
 [
    {
       "parent": [
-         "John Smith",
+         "Jane Smith",
          "Anna Johnson"
       ]
    }
@@ -1132,8 +1143,8 @@ jtc -)" STR(OPT_WLK) R"( '[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) 
 
 
 - finally, an update option -)" STR(OPT_UPD) R"( could be subjected for a shell cli evaluation,
-  say we want to capitalize all parents names:
-jtc -)" STR(OPT_WLK) R"('[parent]:<.*>R+0' -)" STR(OPT_EXE) STR(OPT_UPD)
+  say we want to capitalize all parent names:
+jtc -)" STR(OPT_WLK) R"('<parent>l+0' -)" STR(OPT_EXE) STR(OPT_UPD)
 R"( echo {} \| tr "[:lower:]" "[:upper:]" \; example.json
 {
    "Relation": [
