@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.43"
+#define VERSION "1.44"
 
 
 // option definitions
@@ -98,13 +98,14 @@ void recompile_args(v_string &args, v_string &sargv, CommonResources &r);
 void read_json(CommonResources &);
 int demux_opt(CommonResources &);
 int insert_json(CommonResources &);
+void merge_objects(Jnode &to, const Jnode &from);
 int purge_json(CommonResources &);
 int update_json(CommonResources &);
 void execute_cli(Json &update, const Jnode &src_jnode, CommonResources &r);
 int swap_json(CommonResources &);
 void crop_out(CommonResources &r);
 int walk_json(CommonResources &);
-void walk_sequentual (CommonResources &);
+void walk_sequentual(CommonResources &);
 void walk_interleaved(CommonResources &);
 void print_walk(vector<walk_deq> &walk_iterators, CommonResources &r);
 void process_offsets(vector<walk_deq> &, vector<vector<long>> &,
@@ -139,7 +140,8 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON (see a footnote on usage with -"
                         STR(OPT_LBL) ")");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
- opt[CHR(OPT_INS)].desc("insert JSON element (one or more -" STR(OPT_WLK) " must be given)")
+ opt[CHR(OPT_INS)].desc("insert/merge JSON array/object (one or more -" STR(OPT_WLK)
+                        " must be given)")
                   .name("json");
  opt[CHR(OPT_UPD)].desc("update/replace JSON element (one or more -" STR(OPT_WLK) \
                         " must be given)").name("json");
@@ -153,7 +155,7 @@ int main(int argc, char *argv[]){
  opt.epilog("\nthis tool provides ability to:\n\
  - parse, validate and display JSON (in a raw and pretty formats)\n\
  - walk JSON using various subscripting/search criteria (see -" STR(OPT_GDE) ")\n\
- - manipulate JSON via purge/insert/update/swap operations\n\
+ - manipulate JSON via purge/insert/merge/update/swap operations\n\
  for examples run with -" STR(OPT_GDE) " option\n\
 \n\
 Note on a multiple -" STR(OPT_WLK) " usage:\n\
@@ -304,7 +306,7 @@ void parse_rebuilt(v_string & sargv, CommonResources &r) {
   delete [] nargv[i];
 
  if(opt[CHR(OPT_UPD)].hits() >= opt_u_found) {
-  cerr << "error: option -" STR(OPT_UPD) " must be given only once" << endl;
+  cerr << "error: option -" STR(OPT_UPD) " must be given once" << endl;
   exit(RC_OU_MLT);
  }
 }
@@ -343,7 +345,7 @@ void recompile_args(v_string & args, v_string &sargv, CommonResources &r) {
  }
 
  if(not semicolon_found) {
-  cerr << "fail: don't see parameter termination of -" STR(OPT_UPD) " option - `;'" << endl;
+  cerr << "fail: don't see parameter termination of '-" STR(OPT_UPD) "' option - `;'" << endl;
   exit(RC_SC_MISS);
  }
 }
@@ -430,7 +432,8 @@ walk_vec collect_walks(const string &walk_path, CommonResources &r) {
 
 
 int insert_json(CommonResources &r) {
- // if wp points to an array - insert json as it is.
+ // when inserting iterative element into iterative, merging of elements occurs 
+ // if wp points to an array - insert json as it is (by pushing).
  // if wp is an object - then json must be object type itself and inserted by labels
  REVEAL(r, opt, DBG())
 
@@ -458,15 +461,29 @@ int insert_json(CommonResources &r) {
     { cerr << "fail: walk path must point to an iterable (walk: " << i << ")" << endl; continue; }
 
    for(auto &j: inserting)                                      // try all insertions (-i)
-    if(j.is_object())
-     for(auto &ins: j) rec[ins.label()] = ins;                  // merged by labels
-    else
-     cerr << "fail: only object could be merged with an object" << endl;
+    if(j.is_object()) merge_objects(rec, j);                    // merge object recursively
+    else cerr << "fail: only an object could be merged with an object" << endl;
   }
  }
 
  write_json(r);
  return RC_OK;
+}
+
+
+
+void merge_objects(Jnode &dst, const Jnode &src) {
+ // merge 2 objects recursively
+ for(auto &src_child: src) {                                    // go by every element in the src
+  auto di = dst.find(src_child.label());                        // dst iterator
+  if(di == dst.end())                                           // labels not clashing
+   { dst[src_child.label()] = src_child; continue; }
+
+  if(di->is_object() and src_child.is_object())                 // both clashing elements are OBJ
+   { merge_objects(*di, src_child); continue; }
+
+  *di = src_child;                                              // overwrite then
+ }
 }
 
 
