@@ -301,7 +301,7 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 
 
 5. There are 4 operations to modify source JSON:
-- insert JSON entry `-i`
+- insert/merge JSON array/object `-i`
 - update existing entries `-u` (if `-e` preceeds, update is subjected to shell interpolation)
 - swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires 2 walk paths) 
 - remove (purge) walked entry `-p` (if mulitple `-p` given (e.g. `-pp`) then purge all entries except walked)
