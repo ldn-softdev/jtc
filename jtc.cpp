@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.44"
+#define VERSION "1.45"
 
 
 // option definitions
@@ -611,7 +611,6 @@ int update_json(CommonResources &r) {
     if(not update.empty()) {
      if(opt[CHR(OPT_MRG)].hits() == 0) rec = move(update);      // update can be moved here
      else merge_arrays(rec, update);
-     //rec = move(update);                                        // update can be moved here
     }
    }
   }
