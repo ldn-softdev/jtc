@@ -576,8 +576,8 @@ The same idea applies to `-u` operation: option `-m` alters there a replacement 
 
 
 ##### Swap option:
-Swap option requires strictly 2 walk paths (which in turn may be iterative) and will swap around all simultaneous instances of
-walk-path (their iterations). In particular, swap operation is useful when it's required to reduce a (redundant) nestedness of
+Swap option requires strictly 2 walk paths (which in turn may be iterative) and will swap around all corresponding instances of
+walk-paths (their iterations). In particular, swap operation is useful when it's required to reduce a (redundant) nestedness of
 JSON structure:
 ```
 bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | jtc
