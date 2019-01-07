@@ -1,7 +1,7 @@
 # jtc - cli tool to extract, manipulate and transform source JSON
 
-jtc stand for: JSON test console, but it's a legacy name, don't get misleaded. jtc offers a powerful way to select one
-or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected elments into a new JSON, filter in/out, update elements, insert new elemetns or remove them or swap around). 
+jtc stand for: JSON test console, but it's a legacy name, don't get mislead. jtc offers a powerful way to select one
+or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected elements into a new JSON, filter in/out, update elements, insert new elements or remove them or swap around). 
 
 #### Simple but efficient cli tool to manipulate JSON data
 
@@ -19,9 +19,9 @@ jtc offers following features:
 
 Walk path is a feature easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards **and upwards**
-  - search lexems - encased into `<`, `>`: search lexems facilate either full match or Regex search.
+  - search lexemes - encased into `<`, `>`: search lexemes facilitate either full match or Regex search.
 
-Both types of lexemes are iterable - subscrips let iterating over children of currently addressed node,
+Both types of lexemes are iterable - subscript let iterating over children of currently addressed node,
 while iterable search lexemes let iterating over all matches for a given search criteria.
 A walk path is made of an arbitrary number of lexemes, while the tool accepts an unlimited number of walk
 paths. See below more detailed explanation with examples
@@ -58,7 +58,9 @@ folder:
   - `sudo mv ./jtc /usr/local/bin/`
 
 
-#### Quick usage guide:
+
+
+## Quick usage guide:
 *run `jtc -g` for walk path explanations and additional usage examples*
 
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
@@ -155,25 +157,25 @@ bash $ jtc -w "<Work> [-1] [children] [+0] [name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-here the walk path `<Work>[-1][children][+0][name]` is made of following lexemes (spaces separating lexems are optional):
+here the walk path `<Work>[-1][children][+0][name]` is made of following lexemes (spaces separating lexemes are optional):
 
-a. `<Work>`: first, find within a JSON tree a location where a string value is matching "Work" exactly
+a. `<Work>`: find within a JSON tree a first location where a string value is matching "Work" exactly
 
 b. `[-1]`: step up one tier in JSON tree hierarchy (i.e. address an immediate parent of the found JSON element)
 
-c. `[children]`: select a node whose label is "children" (it'll be a JSON array, at the same tier with `Work`)
+c. `[children]`: select/address a node whose label is "children" (it'll be a JSON array, at the same tier with `Work`)
 
 d. `[+0]`: select each node in the array (starting from the first one - indexes are always zero based)
 
-e. `[name]`: select a node whose label is "name"
+e. `[name]`: select/address a node whose label is "name"
 - offsets are enclosed into square brackets `[`, `]` and may have different meaning:
-  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select a respective JSON immediate child in the addressed
+  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
   * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
 given index will be selected
-  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select parent of currently
-selected/found node, parent of a parent, etc
-  * textual offsets (e.g. `[name]`, `[children]`, etc) select nodes with corresponding labels among
+  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently
+selected/found node, a parent of a parent, etc
+  * textual offsets (e.g. `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
 
 in order to understand better how walk path works, let's run the series of cli, gradually adding lexemes
@@ -294,17 +296,19 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 ```
 
 - yes, multiple walks (`-w`) are allowed
-- option `-j` will wrap the walked outputs back into a JSON, but not just,
-- option `-l` together with `-j` will ensure relevant walks are grouped together (try without `-l`)
+- option `-j` will wrap the walked outputs into a JSON array, but not just,
+- option `-l` used together with `-j` will ensure relevant walks are grouped together (try without `-l`)
+- if multiple walks (`-w`) are present, by default, walked results will be printed interleaved; option `-n` forces sequential
+walk printing rather than interleaved.
 
 
 
 
 5. There are 4 operations to modify source JSON:
 - insert/merge JSON array/object `-i`
-- update existing entries `-u` (if `-e` preceeds, update is subjected to shell interpolation)
+- update existing entries `-u` (if `-e` precedes, update is subjected to shell interpolation)
 - swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires 2 walk paths) 
-- remove (purge) walked entry `-p` (if mulitple `-p` given (e.g. `-pp`) then purge all entries except walked)
+- remove (purge) walked entry `-p` (if multiple `-p` given (e.g. `-pp`) then purge all entries except walked)
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
@@ -361,7 +365,7 @@ the resulting JSON is only printed
 - options `-i` and `-u` require an argument in a fully qualified JSON notation
 
 
-let's do a reverse thing - delete everyting but the time stamps from the JSON (i.e. display only walked JSON elements):
+let's do a reverse thing - delete everything but the time stamps from the JSON (i.e. display only walked JSON elements):
 ```
 bash $ jtc -w"<stamp>l+0" -pp Bookmarks
 {
@@ -474,7 +478,7 @@ Once options `-e` and `-u` used together following rules must be observed:
  - char sequence following option `-u` must be terminated with escaped `;`
  - any occurrence of `{}` will be interpolated with JSON entry being updated
  - the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
- - if piping in the cli is required then pipe simbol itself needs to be escaped: `\|`
+ - if piping in the cli is required then pipe symbol itself needs to be escaped: `\|`
  - returned result of a shell evaluation still must be a valid JSON
  - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather
 proceed to the next walked entry for another update attempt)
@@ -485,13 +489,13 @@ proceed to the next walked entry for another update attempt)
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 
-#### A tiny example of class usage and its interface (c++14):
+## A tiny example of class usage and its interface (c++14):
 Say, we want to accomplish a following task:
 1. read Address Book JSON from `<stdin>`
 2. sort all records by `Name` (for simplicity, assume all records have that label)
 3. output resulting Address Book JSON
 
-Below is the code sample how that could be achieved using `Json.hpp` class and the srouce JSON - Address Book:
+Below is the code sample how that could be achieved using `Json.hpp` class and the source JSON - Address Book:
 ```
 #include <iostream>
 #include <fstream>
@@ -516,7 +520,7 @@ int main(int argc, char *argv[]) {
 
 Address Book JSON:
 ```
-bash $ cat addressbook-sampe.json
+bash $ cat addressbook-sample.json
 {
   "AddressBook": [
     {
@@ -584,7 +588,7 @@ bash $
 
 Output result:
 ```
-bash$ cat addressbook-sampe.json | sort_ab
+bash$ cat addressbook-sample.json | sort_ab
 [
    [
       {
@@ -649,12 +653,13 @@ bash$ cat addressbook-sampe.json | sort_ab
 ]
 bash $ 
 ```
-for the complete description of Json class interace, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp) 
+for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp) 
 
 
 
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
+
 
 
 
