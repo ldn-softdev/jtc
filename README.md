@@ -123,7 +123,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 
-1. let's start with a simple thing: list all URLs:
+#### 1. let's start with a simple thing: list all URLs:
 ```
 bash $ jtc -w "<url>l+0" Bookmarks
 "https://www.nytimes.com/"
@@ -151,7 +151,7 @@ such quantifiers (preceded with `+`) makes a path *iterable*
 
 
 
-2. dump all bookmark names from the `Work` folder:
+#### 2. dump all bookmark names from the `Work` folder:
 ```
 bash $ jtc -w "<Work> [-1] [children] [+0] [name]" Bookmarks
 "Stack Overflow"
@@ -247,9 +247,7 @@ bash $ jtc -w "<Work> [-1] [children] [+0] [name]" -l Bookmarks
 ```
 
 
-
-
-3. dump all URL's names:
+#### 3. dump all URL's names:
 ```
 bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 "The New York Times"
@@ -268,7 +266,7 @@ this walk path `<url>l+0 [-1] [name]`:
 
 
 
-4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
+#### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
 ```
 bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 [
@@ -302,9 +300,7 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 walk printing rather than interleaved.
 
 
-
-
-5. There are 4 operations to modify source JSON:
+#### 5. There are 4 operations to modify source JSON:
 - insert/merge JSON array/object `-i`
 - update existing entries `-u` (if `-e` precedes, update is subjected to shell interpolation)
 - swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires 2 walk paths) 
@@ -312,7 +308,7 @@ walk printing rather than interleaved.
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
-Say, let's delete all the stamps from the JSON:
+Say, let's delete (`-p`) all the stamps from the JSON:
 ```
 bash $ jtc -w"<stamp>l+0" -p Bookmarks
 {
@@ -411,7 +407,7 @@ bash $
 
 
 
-Update operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
+Update/replace operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
 ```
@@ -503,10 +499,10 @@ bash $ echo '[1, 2, 3]' | jtc -w[-1] -i'["a", "b", "c"]'
 ]
 bash $ 
 ```
-(_Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
-either of the notation could be used: `-w" "`, or `-w[-1]`_)
+_(Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
+either of the notation could be used: `-w" "`, or `-w[-1]`)_
 
-But the intention of the inserting array could be _merge_ - option `-m` ensures that upon insertion (`-i`) or update ('-u') any
+But the intention of the inserting array could be _merge_ - so, option `-m` ensures that upon insertion (`-i`) or update ('-u') any
 clashing labels/elements will be merged into an array:
 ```
 bash $ echo '[1, 2, 3]' | jtc -w' ' -i'["a", "b", "c"]' -m
@@ -573,7 +569,7 @@ bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "nu
 }
 bash $ 
 ```
-The same idea applies to all `-u` operation: option `-m` alters there the replacement into merging elements into arrays. 
+The same idea applies to all `-u` operation: option `-m` alters there a replacement into a merging operation. 
 
 
 
