@@ -24,6 +24,7 @@ using namespace std;
 #define OPT_INS i
 #define OPT_JSN j
 #define OPT_LBL l
+#define OPT_MRG m
 #define OPT_SEQ n
 #define OPT_PRG p
 #define OPT_SLD q
@@ -98,7 +99,8 @@ void recompile_args(v_string &args, v_string &sargv, CommonResources &r);
 void read_json(CommonResources &);
 int demux_opt(CommonResources &);
 int insert_json(CommonResources &);
-void merge_objects(Jnode &to, const Jnode &from);
+void merge_arrays(Jnode &dst, const Jnode &src);
+void merge_objects(Jnode &dst, const Jnode &src, bool merge_non_obj);
 int purge_json(CommonResources &);
 int update_json(CommonResources &);
 void execute_cli(Json &update, const Jnode &src_jnode, CommonResources &r);
@@ -140,9 +142,9 @@ int main(int argc, char *argv[]){
  opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON (see a footnote on usage with -"
                         STR(OPT_LBL) ")");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
- opt[CHR(OPT_INS)].desc("insert/merge JSON array/object (one or more -" STR(OPT_WLK)
-                        " must be given)")
-                  .name("json");
+ opt[CHR(OPT_MRG)].desc("for -" STR(OPT_INS) ", -" STR(OPT_UPD) 
+                        ": toggle merge for clashing JSON elements");
+ opt[CHR(OPT_INS)].desc("insert into array / merge objects").name("json");
  opt[CHR(OPT_UPD)].desc("update/replace JSON element (one or more -" STR(OPT_WLK) \
                         " must be given)").name("json");
  opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given)").name("walkpath");
@@ -450,18 +452,19 @@ int insert_json(CommonResources &r) {
 
  for(auto &wp: opt[CHR(OPT_WLK)]) {                             // process each walk
   walk_vec jip = collect_walks(wp, r);                          // collect all insertion points
-
   for(size_t i = 0; i < jip.size(); ++i) {                      // insert json into walked instances
    auto & rec = *jip[i];
    DBG(1) DOUT() << "trying to insert into instance " << i << endl;
-   if(rec.is_array())                                           // insert into array
-    { for(auto &j: inserting) rec.push_back(j);  continue; }
-
+   if(rec.is_array()) {                                         // insert into array
+    for(auto &j: inserting)
+     if(opt[CHR(OPT_MRG)].hits() == 0) rec.push_back(j);
+     else merge_arrays(rec, j);
+    continue;
+   }
    if(not rec.is_object())                                      // not an array and not object
     { cerr << "fail: walk path must point to an iterable (walk: " << i << ")" << endl; continue; }
-
    for(auto &j: inserting)                                      // try all insertions (-i)
-    if(j.is_object()) merge_objects(rec, j);                    // merge object recursively
+    if(j.is_object()) merge_objects(rec, j, opt[CHR(OPT_MRG)].hits() > 0);
     else cerr << "fail: only an object could be merged with an object" << endl;
   }
  }
@@ -472,7 +475,22 @@ int insert_json(CommonResources &r) {
 
 
 
-void merge_objects(Jnode &dst, const Jnode &src) {
+void merge_arrays(Jnode &dst, const Jnode &src) {
+ // merge 2 jsons into array. convert to array any of non-array jsons
+ const Jnode *src_ptr = &src;
+ Jnode src_array;
+ 
+ if(not dst.is_array()) dst = ARY{ move(dst) };
+ if(not src.is_array())
+  { src_array = ARY{ src }; src_ptr = &src_array; }             // here source has to be copied
+
+ for(auto &src_child: *src_ptr)
+  dst.push_back(src_child);
+}
+
+
+
+void merge_objects(Jnode &dst, const Jnode &src, bool merge_non_obj) {
  // merge 2 objects recursively
  for(auto &src_child: src) {                                    // go by every element in the src
   auto di = dst.find(src_child.label());                        // dst iterator
@@ -480,9 +498,10 @@ void merge_objects(Jnode &dst, const Jnode &src) {
    { dst[src_child.label()] = src_child; continue; }
 
   if(di->is_object() and src_child.is_object())                 // both clashing elements are OBJ
-   { merge_objects(*di, src_child); continue; }
+   { merge_objects(*di, src_child, merge_non_obj); continue; }
 
-  *di = src_child;                                              // overwrite then
+  if(merge_non_obj) merge_arrays(*di, src_child);               // merge clashing non-obj into array
+  else *di = src_child;                                         // overwrite otherwise
  }
 }
 
@@ -582,13 +601,18 @@ int update_json(CommonResources &r) {
   for(size_t i = 0; i < ji.size(); ++i) {                       // go over all update (walk) points
    auto & rec = *ji[i];
    DBG(1) DOUT() << "trying to update walk instance " << i << endl;
-   if(opt[CHR(OPT_EXE)].hits() == 0)                            // no -e was given
-    rec = update;                                               // here we need to copy from source
+   if(opt[CHR(OPT_EXE)].hits() == 0) {                          // no -e was given
+    if(opt[CHR(OPT_MRG)].hits() == 0) rec = update;             // here we need to copy from source
+    else merge_arrays(rec, update);
+   }
    else {                                                       // -e was given, execute it
     update = OBJ{};
     execute_cli(update, rec, r);
-    if(not update.empty())
-     rec = move(update);                                        // update can be moved here
+    if(not update.empty()) {
+     if(opt[CHR(OPT_MRG)].hits() == 0) rec = move(update);      // update can be moved here
+     else merge_arrays(rec, update);
+     //rec = move(update);                                        // update can be moved here
+    }
    }
   }
  }
