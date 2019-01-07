@@ -483,8 +483,8 @@ proceed to the next walked entry for another update attempt)
 
 
 ##### Insert/merge option:
-Options `-i` and `-u` require an argument in a fully qualified JSON notation (it has to be a valid JSON). There are different
-modes how insert/update options work:
+Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON). There are different
+modes how insert/merge option work:
 
 Consider inserting one array (e.g.: `["a", "b", "c"]`) into another, e.g.: `[1, 2, 3]`. By default, insertion occurs like this:
 ```
@@ -571,7 +571,7 @@ bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "nu
 }
 bash $ 
 ```
-The same idea applies to all `-u` operation: option `-m` alters there a replacement into a merging operation. 
+The same idea applies to `-u` operation: option `-m` alters there a replacement into a merging operation. 
 
 
 
