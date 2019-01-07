@@ -362,7 +362,6 @@ bash $ jtc -w"<stamp>l+0" -p Bookmarks
 ```
 - option `-f` would force such modification into the source JSON file, otherwise
 the resulting JSON is only printed
-- options `-i` and `-u` require an argument in a fully qualified JSON notation
 
 
 let's do a reverse thing - delete everything but the time stamps from the JSON (i.e. display only walked JSON elements):
@@ -483,6 +482,98 @@ Once options `-e` and `-u` used together following rules must be observed:
  - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather
 proceed to the next walked entry for another update attempt)
 
+
+
+
+Options `-i` and `-u` require an argument in a fully qualified JSON notation (it has to be a valid JSON). There are different
+modes how insert/update options work:
+
+Consider inserting one array (e.g.: `["a", "b", "c"]`) into another, e.g.: `[1, 2, 3]`. By default, insertion occurs like this:
+```
+bash $ echo '[1, 2, 3]' | jtc -w[-1] -i'["a", "b", "c"]'
+[
+   1,
+   2,
+   3,
+   [
+      "a",
+      "b",
+      "c"
+   ]
+]
+bash $ 
+```
+(_Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
+either of the notation could be used: `-w" "`, or `-w[-1]`_)
+
+But the intention of the inserting array could be _merge_ - option `-m` ensures that upon insertion (`-i`) or update ('-u') any
+clashing labels/elements will be merged into an array:
+```
+bash $ echo '[1, 2, 3]' | jtc -w' ' -i'["a", "b", "c"]' -m
+[
+   1,
+   2,
+   3,
+   "a",
+   "b",
+   "c"
+]
+bash $ 
+```
+JSON objects are unordered (i.e. one cannot insert a JSON element at the back or at the front of the object, it will be inserted by
+the notion of _labels_ instead), thus the insertion operation for objects must always be _merge_ type (and jtc does it recursively).
+However, there are different modes how clashing of non-object labels are handled. Consider following example - merge an object:
+```
+bash $ echo '{ "numbers": { "integer": 123, "rational": -2.76 } }' | jtc
+{
+   "numbers": {
+      "integer": 123,
+      "rational": -2.76
+   }
+}
+bash $ 
+```
+with/into another object:
+```
+bash $ echo '{ "numbers": { "integer": -17, "irrational": "pi" } }' | jtc
+{
+   "numbers": {
+      "integer": -17,
+      "irrational": "pi"
+   }
+}
+bash $
+```
+The result of such object insertion/merging will be:
+```
+bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{"numbers":{"integer":-17,"irrational":"pi"}}'
+{
+   "numbers": {
+      "integer": -17,
+      "irrational": "pi",
+      "rational": -2.76
+   }
+}
+bash $ 
+```
+Two objects are merged now, but clashing non-object labels (i.e. `"integer"`) got overwritten (if clashing labels were object types,
+they would be merged recursively). Option `-m` (enable merging of clashing labels/element into an array) will alter the behavior into
+following:
+```
+bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "numbers":{"integer":-17,"irrational":"pi"}}' -m
+{
+   "numbers": {
+      "integer": [
+         123,
+         -17
+      ],
+      "irrational": "pi",
+      "rational": -2.76
+   }
+}
+bash $ 
+```
+The same idea applies to all `-u` operation: option `-m` alters there the replacement into merging elements into arrays. 
 
 
 
