@@ -1,3 +1,4 @@
+
 # jtc - cli tool to extract, manipulate and transform source JSON
 
 jtc stand for: JSON test console, but it's a legacy name, don't get mislead. jtc offers a powerful way to select one
@@ -308,6 +309,8 @@ walk printing rather than interleaved.
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
+
+##### Purge (delete) option:
 Say, let's delete (`-p`) all the stamps from the JSON:
 ```
 bash $ jtc -w"<stamp>l+0" -p Bookmarks
@@ -406,7 +409,7 @@ bash $
 ```
 
 
-
+##### Update/replace option:
 Update/replace operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
@@ -479,8 +482,7 @@ Once options `-e` and `-u` used together following rules must be observed:
 proceed to the next walked entry for another update attempt)
 
 
-
-
+##### Insert/merge option:
 Options `-i` and `-u` require an argument in a fully qualified JSON notation (it has to be a valid JSON). There are different
 modes how insert/update options work:
 
@@ -571,6 +573,37 @@ bash $
 ```
 The same idea applies to all `-u` operation: option `-m` alters there a replacement into a merging operation. 
 
+
+
+##### Swap option:
+Swap option requires strictly 2 walk paths (which in turn may be iterative) and will swap around all simultaneous instances of
+walk-path (their iterations). In particular, swap operation is useful when it's required to reduce a (redundant) nestedness of
+JSON structure:
+```
+bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | jtc
+[
+   {
+      "A": null
+   },
+   {
+      "A": true
+   },
+   {
+      "A": 2
+   },
+   {
+      "A": "three"
+   }
+]
+bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | jtc -w'<A>l+0' -w'<A>l+0 [-1]' -s
+[
+   null,
+   true,
+   2,
+   "three"
+]
+bash $ 
+```
 
 
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
@@ -746,7 +779,6 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
-
 
 
 
