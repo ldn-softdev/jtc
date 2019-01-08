@@ -39,10 +39,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.45)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.45)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.45)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.45)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.46)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.46)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.46)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.46)
 
 
 #### Compile and install instructions:
@@ -483,8 +483,8 @@ proceed to the next walked entry for another update attempt)
 
 
 ##### Insert/merge option:
-Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON). There are different
-modes how insert/merge option work:
+Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON), or a file 
+containing a valid JSON. There are different modes how insert/merge option work:
 
 Consider inserting one array (e.g.: `["a", "b", "c"]`) into another, e.g.: `[1, 2, 3]`. By default, insertion occurs like this:
 ```
