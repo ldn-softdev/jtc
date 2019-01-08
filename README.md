@@ -502,7 +502,7 @@ bash $ echo '[1, 2, 3]' | jtc -w[-1] -i'["a", "b", "c"]'
 bash $ 
 ```
 _(Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
-either of the notation could be used: `-w" "`, or `-w[-1]`)_
+either of the notation could be used: `-w" "`, or `-w[-1]`, or `-w[^0]`)_
 
 But the intention of the inserting array could be _merge_ - so, option `-m` ensures that upon insertion (`-i`) or update ('-u') any
 clashing labels/elements will be merged into an array:
