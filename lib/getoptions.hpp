@@ -139,6 +139,7 @@
 #include <unistd.h>     // getopt
 #include <type_traits>
 #include "extensions.hpp"
+#include <algorithm>
 
 
 #define OPT_ARG_OFFSET 256
