@@ -712,7 +712,7 @@ std::string Getopt::recoverFormat_(const char *f) {
 unsigned Getopt::countArgs_(void) {
  // counts defined standalone args (i.e. before parsing)
  return
-  count_if(om_.begin(), om_.end(),
+  std::count_if(om_.begin(), om_.end(),
            [](const auto &p) { return p.second.kind()==Option::arg; } );
 }
 
