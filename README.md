@@ -784,7 +784,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 that's way jtc is never meant to surpass or even match jq in capabilities, but there is a flip side:
 
 #### 2. learning curve:
- - `jq`: before you could come up with even a relatively simple ask, you need to become an expert in jq's language,
+ - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
  which will take some time. Coming up with the complex queries requires being an expert in jq, or spending lots of time on
  stackoverflow and similar
  - `jtc` on the other hand employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
