@@ -781,7 +781,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
   
-that's way jtc is never meant to surpass or even match jq in capabilities, but there is a flip side:
+that's way `jtc` is never meant to surpass or even match `jq` in capabilities, but there is a flip side:
 
 #### 2. learning curve:
  - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
@@ -792,7 +792,7 @@ that's way jtc is never meant to surpass or even match jq in capabilities, but t
  very quickly, thus it's much easier and quicker to drive
 
 #### 3. handling irregular JSONs:
- - `jq`: handling irregular JSONs for jq is not a challenge, building a query is! The more irregularities you need
+ - `jq`: handling irregular JSONs for `jq` is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging query becomes
  - `jtc` was incepted with the idea being capable of handling complex irregular JSONs with simplified interface - that all is fitted
  in the concept of the walk-path
@@ -805,7 +805,7 @@ that's way jtc is never meant to surpass or even match jq in capabilities, but t
  (at least one class of the issues is off the table) - STL guaranty.
 
 #### 5. performance
- - as per my benchmarking both jq and jtc have excellent performance (though jtc is a notch faster - if comparing apples to 
+ - as per my benchmarking both `jq` and `jtc` have excellent performance (though `jtc` is a notch faster - if comparing apples to 
  apples - capabilities that employ both tools)
 - the rest of judgement is up to you!
 
