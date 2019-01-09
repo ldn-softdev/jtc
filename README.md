@@ -792,7 +792,7 @@ that's way jtc is never meant to surpass or even match jq in capabilities, but t
  very quickly, thus it's much easier and quicker to drive
 
 #### 3. handling irregular JSONs:
- - `jq`: handling irregular JSONs for jq is not a challenge , building a query is! The more irregularities you need
+ - `jq`: handling irregular JSONs for jq is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging query becomes
  - `jtc` was incepted with the idea being capable of handling complex irregular JSONs with simplified interface - that all is fitted
  in the concept of the walk-path
