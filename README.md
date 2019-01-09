@@ -775,8 +775,39 @@ bash $
 ```
 for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp) 
 
+## jtc vs jq:
+#### 1. tool positioning:
+ - `jq` is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
+ - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
+ The rest is out-tasked to unix cli tooling
+  
+that's way jtc is never meant to surpass or even match jq in capabilities, but there is a flip side:
 
+#### 2. learning curve:
+ - `jq`: before you could come up with even a relatively simple ask, you need to become an expert in jq's language,
+ which will take some time. Coming up with the complex queries requires being an expert in jq, or spending lots of time on
+ stackoverflow and similar
+ - `jtc` on the other hand employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
+ each type having several variants) which is easy to grasp. Once you learn it, you could achieve most of your asks with JSON
+ very quickly, thus it's much easier and quicker to drive
 
+#### 3. handling irregular JSONs:
+ - `jq`: handling irregular JSONs for jq is not a challenge , building a query is! The more irregularities you need
+ to handle the more challenging query becomes
+ - `jtc` was incepted with the idea being capable of handling complex irregular JSONs with simplified interface - that all is fitted
+ in the concept of the walk-path
+
+#### 4. Programming model
+ - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation (from the statement one
+ could feel I'm not a huge fan of _C_)
+ - `jtc` is written in idiomatic _c++14_ using STL only. Main json engine/library does not have a single `new` operator,
+ nor it has a single naked pointer acting as a resource handler/owner, thus` jtc` is free of memory related bugs/issues
+ (at least one class of the issues is off the table) - STL guaranty.
+
+#### 5. performance
+ - as per my benchmarking both jq and jtc have excellent performance (though jtc is a notch faster - if comparing apples to 
+ apples - capabilities that employ both tools)
+- the rest of jugement is up to you!
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
