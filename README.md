@@ -807,7 +807,7 @@ that's way jtc is never meant to surpass or even match jq in capabilities, but t
 #### 5. performance
  - as per my benchmarking both jq and jtc have excellent performance (though jtc is a notch faster - if comparing apples to 
  apples - capabilities that employ both tools)
-- the rest of jugement is up to you!
+- the rest of judgement is up to you!
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
