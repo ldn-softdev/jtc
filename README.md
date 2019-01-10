@@ -798,8 +798,7 @@ that's way `jtc` is never meant to surpass or even match `jq` in capabilities, b
  in the concept of the walk-path
 
 #### 4. programming model
- - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation (from the statement one
- could feel I'm not a huge fan of _C_)
+ - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _c++14_ using STL only. Main json engine/library does not have a single `new` operator,
  nor it has a single naked pointer acting as a resource handler/owner, thus` jtc` is free of memory related bugs/issues
  (at least one class of the issues is off the table) - STL guaranty.
