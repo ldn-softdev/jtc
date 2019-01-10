@@ -781,7 +781,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
   
-that's way `jtc` is never meant to surpass or even match `jq` in capabilities, but there is a flip side:
+that way `jtc` is never meant to surpass or even match `jq` in capabilities, but there is a flip side:
 
 #### 2. learning curve:
  - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
