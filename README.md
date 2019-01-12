@@ -571,8 +571,6 @@ bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "nu
 }
 bash $ 
 ```
-The same idea applies to `-u` operation: option `-m` alters there a replacement into a merging operation. 
-
 
 
 ##### Swap option:
