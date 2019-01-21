@@ -145,6 +145,8 @@ let's have a look at the walk-path `<url>l+0`:
   * `b`: matches JSON boolean value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches JSON null value, the lexeme value is ignored, could be something like `<null>n`, or `<>n`, etc
   * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null
+  * `o`: matches any JSON object - {...}
+  * `i`: matches any JSON array (iterable) [...]
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j+0` - finds all empty arrays
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifiers (preceded with `+`) makes a path *iterable*
@@ -160,26 +162,27 @@ bash $ jtc -w "<Work> [-1] [children] [+0] [name]" Bookmarks
 ```
 here the walk path `<Work>[-1][children][+0][name]` is made of following lexemes (spaces separating lexemes are optional):
 
-a. `<Work>`: find within a JSON tree a first location where a string value is matching "Work" exactly
+a. `<Work>`: find within a JSON tree the first location where the string value is matching `"Work"` exactly
 
-b. `[-1]`: step up one tier in JSON tree hierarchy (i.e. address an immediate parent of the found JSON element)
+b. `[-1]`: step up one tier in the JSON tree hierarchy (i.e. address an immediate parent of the found JSON element)
 
-c. `[children]`: select/address a node whose label is "children" (it'll be a JSON array, at the same tier with `Work`)
+c. `[children]`: select/address a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)
 
-d. `[+0]`: select each node in the array (starting from the first one - indexes are always zero based)
+d. `[+0]`: select an each node in the array (starting from the first one - indexes are always zero based)
 
-e. `[name]`: select/address a node whose label is "name"
-- offsets are enclosed into square brackets `[`, `]` and may have different meaning:
-  * numerical offsets  (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
+e. `[name]`: select/address a node whose label is `"name"`
+- subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
+  * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
   * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
-given index will be selected
+given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) 
   * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently
 selected/found node, a parent of a parent, etc
   * textual offsets (e.g. `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
+_*** there's more on offsets and search quantifiers below_
 
-in order to understand better how walk path works, let's run the series of cli, gradually adding lexemes
+in order to understand better how a walk path works, let's run a series of cli, gradually adding lexemes
 to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```
@@ -259,9 +262,9 @@ bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 ```
 this walk path `<url>l+0 [-1] [name]`: 
 
- - finds (encasement `<`, `>`) all (`+0`) JSON elements with label (`l`) matching `"url"`
+ - finds (encasement `<`, `>`) all (`+0`) JSON elements with a label (`l`) matching `"url"`
  
- - then for each found JSON element its parent (`[-1]`) is selected
+ - then for an each found JSON element, its parent (`[-1]`) is selected
 
  - then JSON element with label `"name"` is selected (encasement `[`, `]`) within parent's immediate children
 
@@ -302,10 +305,10 @@ walk printing rather than interleaved.
 
 
 #### 5. There are 4 operations to modify source JSON:
-- insert/merge JSON array/object `-i`
-- update existing entries `-u` (if `-e` precedes, update is subjected to shell interpolation)
-- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires 2 walk paths) 
-- remove (purge) walked entry `-p` (if multiple `-p` given (e.g. `-pp`) then purge all entries except walked)
+- insert/merge JSON arrays/objects `-i`
+- update existing entries `-u`
+- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires exactly 2 walk paths) 
+- remove (purge) walked entry `-p` (if `-pp` given then purge all entries _except_ walked)
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
@@ -359,7 +362,7 @@ bash $ jtc -w"<stamp>l+0" -p Bookmarks
    ]
 }
 ```
-- option `-f` would force such modification into the source JSON file, otherwise
+- option `-f` would enforce such modification into the source JSON file (unless the input was _stdin_), otherwise
 the resulting JSON is only printed
 
 
@@ -409,7 +412,22 @@ bash $
 ```
 
 
-##### Update/replace option:
+##### Update (replace) (`-u`) and insert (`-i`) options:
+Each of those options supports 4 types of parameters:
+1. file (e.g.: `-i file.json`)
+2. string-json (e.g.: `-i '{"pi": 3.14 }'` 
+3. cli line (e.g.: `-e -i date \| xargs -I% echo \"%\" \;` )
+4. walk-path from source JSON (e.g.: `-i'<url>l+0 [-1] [name]'`)
+
+\- every of those options parameters must represent a valid JSON.
+\- the behavior for both options also could be modified by option `-m` 
+\- additionaly, together with parameter type 4 an option `-p` could be used, which turns it into _move_ operation  
+
+
+
+
+##### Update option (`-u`):
+
 Update/replace operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
 seconds since epoch:
