@@ -219,6 +219,8 @@
  *
  *
  * 5. Other methods.
+ *      to_string()     // returns Json/Jnode converted to std::string
+ *
  *  there are a few methods to validate a Json node type:
  *      type()          // return Jnode::Jtype enum
  *      is_object()
@@ -267,7 +269,7 @@
  *
  *   1) Offset lexemes: enclosed into square braces '[', ']'; provide various offset
  *      functions. Following notation are possible:
- *      [], [text], [n], [-n], [^n], [+n], where n is an integer
+ *      [], [text], [n], [-n], [^n], [+n], [+/-n:+/-n], where n is an integer
  *      - empty offset "[]" matches empty label, e.g.: { "": "empty label" }
  *      - "[text]" offset selects a child in the node with the same label
  *      - "[n]" - numerical offset selects indexed element within iterable, e.g.:
@@ -282,8 +284,13 @@
  *        "[0][1][3][^2]"
  *      - "[+n]" numerical offset with '+' sign makes the path iterable, e.g.:
  *        [+1] selects 2nd element within immediate children and indicates that
- *         upon the next iteration a next child needs to be selected (i.e. 3rd, 4fth
+ *        upon the next iteration a next child needs to be selected (i.e. 3rd, 4fth
  *        and so on)
+ *      - "[+/-n:+/-n] range offset (same notation as in Python) selects all elements
+ *        in the specified range. e.g.: [-3:] selects 3 last elements
+ *      - Some notations duplicate each other, e.g.:
+ *          [+0] and [:], or [+2] and [2:] and [+2:] have the same effect
+ *
  *
  *   2) search lexemes: enclosed into angular braces <>, or ><, instructs to perform
  *      a textual match everywhere under the given json's tree. Following notations
@@ -315,14 +322,21 @@
  *        j - match user specific JSON value, the content within the encasement
  *            should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
  *            arrays
- *      - optionally a numeric quantifiers could follow search (or suffix):
+ *      - optionally a numeric quantifier could follow search (or suffix):
  *      n - integer quantifier specifying match instance, e.g.: "<text>2"
  *          will match only upon a 3rd (i.e. zero based) encounter of the word
- *           "text"
+ *          "text"
  *      +n - makes the path iterable: produce a match upon n'th match encounter
- *           and indicates that upon the next iteration a next match instance to
- *           to be selected. e.g: "<text>+1" will match 2nd found instance of "text",
- *           then 3rd, 4fth and so on.
+ *          and indicates that upon the next iteration a next match instance to
+ *          to be selected. e.g: "<text>+1" will match 2nd found instance of "text",
+ *          then 3rd, 4fth and so on.
+ *      +n:+n - range quantifier, makes path iterable as well. '+' sign in this
+ *          notation as well as the indices are optional. Some of quantifier notations
+ *          are duplicate, e.g:
+ *          '+0' and ':' - will make select all found matches
+ *          '+1' and '1:' and '+1:' have the same effect
+ *          '2' and '2:3' both select 3rd match only
+ *      - negative quantifiers (ranges in quantifiers) are not allowed
  *      - empty lexemes <> / >< may have either r suffix - matches an empty string,
  *        l - to match empty label, or n suffix, otherwise an exception is thrown
  *
@@ -456,8 +470,23 @@
  *  and thus the supernode's lifetime is the same as iterator's from which it was
  *  dereferenced.
  *
+ * 8. Callbacks
+ *  there provided 2 types of callbacks for event-driven processing.
+ *  Once callbacks are plugged and engaged, they'll get fired only upon performing
+ *  recursive search walks e.g. from <...> types of walking.
+ *    a) label based callback (will fire upon matching the label)
+ *    b) walk based callback (will fire upon matching walk-iterator)
+ *
+ *  Following API facilitates user interface:
+ *      - is_engaged()      // checks if callbacks engaged (or any specific type is engaged)
+ *      - engage_callbacks()// arms / disarms callbacks
+ *      - callback()        // overload for 2 parameters: string (labels) and walks callback types
+ *      - clear_callbacks() // clears all all prior plugged callbacks (engage status not touched)
+ *      - lbl_callbacks()   // returns map hosting labeled callbacks { label -> callback }
+ *      - wlk_callbacks()   // returns vector<WlkCallback> hosting walk callbacks
+ *                          // WlkCallback is a struct catering iterator itself and callback
+ *
  * Json class is DEBUGGABLE - see "dbg.hpp"
- * Json class is OUTABLE - see "Outable.hpp"
  */
 
 #pragma once
@@ -471,6 +500,7 @@
 #include <utility>              // std::forward, std::move, std::make_pair, ...
 #include <algorithm>            // std::min
 #include <limits>               // numeric_limits
+#include <climits>              // LONG_MAX
 #include <iomanip>              // std::setprecision
 #include <initializer_list>
 #include <regex>
@@ -524,14 +554,15 @@
 #define JSN_NUMM '-'                                            // Json syntax char: minus sign
 #define JSN_NUMP '+'                                            // Json syntax char: plus sign
 #define JSN_NUMD '.'                                            // Json syntax char: dot sign
-#define LXM_OFS_OPN '['                                         // Walk lexeme open offset
-#define LXM_OFS_CLS ']'                                         // Walk lexeme close offset
+#define LXM_SUB_OPN '['                                         // Walk lexeme open offset
+#define LXM_SUB_CLS ']'                                         // Walk lexeme close offset
 #define LXM_SCH_OPN '<'                                         // Walk lexeme open search
 #define LXM_SCH_CLS '>'                                         // Walk lexeme close offset
 #define LBL_SPR ':'                                             // Walk lexeme label separator
 #define PFX_ITR '+'                                             // prefix of iterable offset
 #define PFX_WFR '^'                                             // walk from root offset
 #define PFX_WFL '-'                                             // walk from end-leaf offset
+#define RNG_SPR ':'                                             // quantifier range separator
 #define IDX_FIL '0'                                             // fill char for the node index
 
 
@@ -539,12 +570,6 @@
 #define JSN_QTD "/\"\\bfnrtu"                                   // chrs following quotation in JSON
 // NOTE: solidus quotation is optional per JSON spec, a user will have an option
 //       to chose between desired quotation behavior
-
-// template meta to calculate number of bits required to represent an integer
-template<uint64_t I>
-struct bits { enum { num = 1 + bits<(I>>1)>::num }; };
-template<>
-struct bits<1> { enum { num = 1 }; };
 
 
 
@@ -555,7 +580,7 @@ class Jnode {
     friend class Json;
 
   friend std::ostream & operator<<(std::ostream & os, const Jnode & jnode)
-                         { int rl{0}; return print_json_(os, jnode, rl); }
+                         { long rl{0}; return print_json_(os, jnode, rl); }
 
     friend void         swap(Jnode &l, Jnode &r) {
                          using std::swap;                       // enable ADL
@@ -598,6 +623,7 @@ class Jnode {
                 expected_json_value, \
                 expected_enumeration, \
                 invalid_number, \
+                unexpected_trailing, \
                 json_search_invalid, \
                 walk_offset_missing_closure, \
                 walk_search_label_with_attached_label, \
@@ -605,6 +631,7 @@ class Jnode {
                 walk_expect_lexeme, \
                 walk_wrong_label_seprator_usage, \
                 walk_unexpexted_suffix, \
+                walk_bad_range, \
                 walk_bad_number, \
                 walk_root_non_iterable, \
                 walk_bad_suffix, \
@@ -700,6 +727,12 @@ class Jnode {
                         // concept ensures in-lieu application (avoid clashing with string type)
 
                         // class interface:
+    std::string         to_string(void) const {
+                         std::stringstream ss;
+                         ss << *this;
+                         return ss.str();
+                        }
+
     Jtype               type(void) const { return value().type_; }
     Jtype &             type(void) { return value().type_; }
     bool                is_object(void) const { return type() == Object; }
@@ -912,8 +945,8 @@ class Jnode {
     map_jn              descendants_;                           // array/nodes (objects)
 
  private:
-  static std::ostream & print_json_(std::ostream & os, const Jnode & me, int & rl);
-  static std::ostream & print_iterables_(std::ostream & os, const Jnode & me, int & rl);
+  static std::ostream & print_json_(std::ostream & os, const Jnode & me, long & rl);
+  static std::ostream & print_iterables_(std::ostream & os, const Jnode & me, long & rl);
 
     static char         endl_;                                  // either for raw or pretty print
     static uint8_t      tab_;                                   // tab size (for indention)
@@ -1245,7 +1278,7 @@ std::string Jnode::next_key_(void) const {
 }
 
 
-std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, int & rl) {
+std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, long & rl) {
  auto & my = me.value();                                        // resolve if virtual object
  switch(my.type()) {
   case Object:
@@ -1273,7 +1306,7 @@ std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, int & rl)
 }
 
 
-std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, int & rl) {
+std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, long & rl) {
  // process children in iterables (array or node)
  if(endl_ == PRINT_PRT) ++rl;                                   // if pretty print - adjust level
 
@@ -1309,21 +1342,28 @@ class Json{
 
  public:
     #define JS_ENUM \
-                regular_match, \
-                Regex_search, \
-                digital_match, \
-                Ditital_regex, \
-                boolean_match, \
-                null_match, \
-                label_match, \
-                Label_RE_search, \
-                atomic_match, \
-                json_match, \
+                regular_match,  /* string match */ \
+                Regex_search,   /* RE match for JSON strings only */ \
+                digital_match,  /* numerical match */ \
+                Digital_regex,  /* RE match for JSON numericals only */ \
+                boolean_match,  /* searches among JSON booleans only */ \
+                null_match,     /* matches Json null only */ \
+                label_match,    /* searches among JSON object labels only */ \
+                Label_RE_search,/* RE match among JSON object labels only */ \
+                atomic_match,   /* JSON atomic, matches any of: string/number/boolean/null */ \
+                object_match,   /* JSON object, matches any object {...} */ \
+                iterable_match, /* JSON array, matches any of: [...] */ \
+                json_match,     /* matches provided JSON */ \
                 end_of_match, \
-                text_offset, \
-                generic_offset
+                text_offset,    /* in addition to search, these two used for subscript offsets */ \
+                numeric_offset  /* to disambiguate numeric subscripts [0], from textual [zero] */
     ENUMSTR(Jsearch, JS_ENUM)
     // Jsearch is defined so that its first letter corresponds to the suffix
+
+    #define PARSETRAILING \
+                relaxed_trailing,   /* allow anything past valid json */ \
+                strict_trailing     /* allow only white spaces past valid json */
+    ENUM(ParseTrailing, PARSETRAILING)
 
     #define CACHE_STATE \
                 invalidate, \
@@ -1339,13 +1379,14 @@ class Json{
     // class interface:
     Jnode &             root(void) { return root_; }
     const Jnode &       root(void) const { return root_; }
-    Json &              parse(const std::string & jstr);
+    Json &              parse(const std::string & jstr, ParseTrailing trail = relaxed_trailing);
     std::string::const_iterator
                         exception_point(void) { return ep_; }
     class iterator;
     iterator            walk(const std::string & walk_string = "", CacheState = invalidate);
 
     // relayed Jnode interface
+    std::string         to_string(void) const { return root().to_string(); }
     Jnode::Jtype        type(void) const { return root().type(); }
     Jnode::Jtype &      type(void) { return root().type(); }
     bool                is_object(void) const { return root().is_object(); }
@@ -1432,6 +1473,8 @@ class Json{
     const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
 
  private:
+    struct WalkStep;                                            // fwd decl.
+
     void                parse_(Jnode & node, std::string::const_iterator &jsp);
     void                parse_bool_(Jnode & node, std::string::const_iterator &jsp);
     void                parse_string_(Jnode & node, std::string::const_iterator &jsp);
@@ -1447,15 +1490,16 @@ class Json{
 
     typedef std::map<std::string, Jnode>::iterator iter_jn;
     typedef std::map<std::string, Jnode>::const_iterator const_iter_jn;
-    typedef std::vector<std::string> v_str;
+    typedef std::vector<std::string> vec_str;
 
     void                compile_walk_(const std::string & wstr, iterator & it) const;
     void                parse_lexemes_(const std::string & wstr, iterator & it) const;
-    std::string         parse_offset_(std::string::const_iterator &si, char closec_chr) const;
-    void                parse_suffix_(std::string::const_iterator &si, iterator &it, v_str&) const;
+    std::string         extract_lexeme_(std::string::const_iterator &si, char closing) const;
+    void                parse_suffix_(std::string::const_iterator &, iterator &, vec_str&) const;
     Jsearch             search_suffix_(char sfx) const;
     void                parse_quantifier_(std::string::const_iterator &si, iterator & it) const ;
-    long                parse_index_(std::string::const_iterator &si, ParseThrow=may_throw) const;
+    void                parse_range(std::string::const_iterator &, WalkStep &, ParseThrow) const;
+    long                parse_index_(std::string::const_iterator &si, ParseThrow) const;
 
 
     // Properties and structures used by walk iterator:
@@ -1466,6 +1510,15 @@ class Json{
         // WalkStep contains data describing one walk lexeme (subscript or search)
         // walk path is made of walk steps instructing how JSON tree to be traversed
 
+        #define WALKSTEPTYPE \
+            static_select,      /* [3], [0], quantifier: 0, 3, etc */ \
+            parent_select,      /* [-2], quantifier: NA */ \
+            root_select,        /* [^5], quantifier: NA */ \
+            range_walk          /* [+0], [1:], [4:10], [-5:-1], quantifiers: +0, 3:, 4:10 */
+                                // note: there's no negative range for iterable quantifier: no way
+                                // to know upfront the number of hits recursive search'd produce
+        ENUMSTR(WalkStepType, WALKSTEPTYPE)
+
                             WalkStep(void) = delete;
                             WalkStep(std::string && l, Jsearch js): // enable emplacement
                              lexeme(std::move(l)), jsearch(js) {}
@@ -1474,10 +1527,18 @@ class Json{
                              { return ENUMS(Jsearch, jsearch); }
         const std::string   label() const                       // only for COUTABLE
                              { return stripped.size()==2? stripped.back(): "-"; }
-        std::string         json() const {                     // only for COUTABLE
+        std::string         json() const {                      // only for COUTABLE
                              GUARD(user_json.is_pretty, user_json.pretty)
+                             return user_json.raw().to_string();
+                            }
+        const char *        ws_type(void) const                 // only for COUTABLE
+                             { return jsearch == text_offset? "N/A": ENUMS(WalkStepType, type); }
+        std::string         range() const {                     // only for COUTABLE
+                             if(jsearch == text_offset) return "N/A";
+                             if(type != range_walk) return "N/A";
                              std::stringstream ss;
-                             ss << user_json.raw();
+                             ss << '[' << (head == 0? "": std::to_string(head)) << ':'
+                                << (tail == LONG_MAX? "": std::to_string(tail)) << ']';
                              return ss.str();
                             }
         bool                operator<(const WalkStep &r) const {// only for SearchCacheKey
@@ -1491,17 +1552,16 @@ class Json{
         std::string         lexeme;                             // lexeme w/o suffix and quantifier
         Jsearch             jsearch;                            // Jsearch type
         long                offset{0};                          // current offset
-        long                init{-1};                           // initial offset value
-        // init -1: init is not used. offset can be positive or negative, e.g.: [-2], [3]
-        // init -2: offset is used as absolute selector from root, like in [^n]
-        // init >=0: offset is used as an iterable (e.g.: [+0]]), init keeps original offset
-        v_str               stripped;
+        long                head{0};                            // range walk type
+        long                tail{LONG_MAX};                     // range walk type
+        WalkStepType        type{static_select};
+        vec_str             stripped;
                             // stripped[0] -> a stripped lexeme (required)
                             // stripped[1] -> attached label match (optional)
-        std::regex          re;
-        Jnode               user_json{Jnode::Neither};
+        std::regex          re;                                 // RE for R/L/D suffixes
+        Jnode               user_json{Jnode::Neither};          // parsed Json for j suffix
 
-        COUTABLE(WalkStep, offset, init, search_type(), label(), lexeme, json())
+        COUTABLE(WalkStep, ws_type(), offset, range(), search_type(), label(), lexeme, json())
     };
 
     // Itr (iterator-label pair):
@@ -1548,14 +1608,14 @@ class Json{
 
     typedef std::vector<Itr> path_vector;                       // used by iterator
 
-    // parse_offset_type_() is dependent on WalkStep definition, hence moved down here
-    void                parse_offset_type_(WalkStep & state) const;
+    // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
+    void                parse_subscript_type_(WalkStep & state) const;
 
  public:
     //                  walk iterator
     //
     // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
-    // container storage with the iterator (e.g. iterator-based callback)
+    // container storage with the iterator (e.g. walk-based callback)
     //
     class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
      // this forward iterator let iterate over *iterable* walk paths
@@ -1569,7 +1629,6 @@ class Json{
      // - operator[] receives a new capability: on a negative index it will address
      //              indexed levels up in the JSON's tree hierarchy (e.g." [-1] will
      //              address a parent of the dereferenced node, and so on)
-        typedef signed long s_long;
         friend Json;
         friend void         swap(Json::iterator &l, Json::iterator &r) {
                              using std::swap;                   // enable ADL
@@ -1611,13 +1670,13 @@ class Json{
                                  // to address supernode with negative index, e.g: [-1],
                                  // like in the walk-string to reference a parent
                                  if(i >= 0) return Jnode::operator[](i);
-                                 if(-i >= static_cast<s_long>(jit_->pv_.size()))
+                                 if(-i >= static_cast<long>(jit_->pv_.size()))
                                   return jit_->json_().root();
                                  return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
                                 }
             const Jnode &       operator[](long i) const {
                                  if(i >= 0) return Jnode::operator[](i);
-                                 if(-i >= static_cast<s_long>(jit_->pv_.size()))
+                                 if(-i >= static_cast<long>(jit_->pv_.size()))
                                   return jit_->json_().root();
                                  return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
                                 }
@@ -1726,11 +1785,13 @@ class Json{
         size_t              walk_size(void) const { return ws_.size(); }
         long                counter(size_t position) const {
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                             return ws_[position].init >= 0? ws_[position].offset: -1;
+                             return ws_[position].type == WalkStep::range_walk?
+                                                          ws_[position].offset: -1;
                             }
         long                instance(size_t position) const {
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
-                             return ws_[position].init == -1? ws_[position].offset: -1;
+                             return ws_[position].type == WalkStep::static_select?
+                                                          ws_[position].offset: -1;
                             }
         long                offset(size_t position) const {
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
@@ -1744,6 +1805,9 @@ class Json{
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
                              return ws_[position].jsearch;
                             }
+        bool                is_walkable(void) const
+                             { return next_iterable_ws_(walk_path_().size()) >= 0;
+}
 
      protected:
                             iterator(Json *ptr): jp_{ptr} {};
@@ -1756,8 +1820,9 @@ class Json{
 
      private:
         bool                is_valid_(Jnode & jnp, size_t idx) const;
-        auto &              walk_path_(void) { return ws_; }
-        const auto &        walk_path_(void) const { return ws_; }
+    std::vector<WalkStep> & walk_path_(void) { return ws_; }
+        const std::vector<WalkStep> &
+                            walk_path_(void) const { return ws_; }
         Json &              json_(void) const { return *jp_; }
         auto &              sn_type_ref_(void) { return sn_.type_; }    // original container type
 
@@ -1772,14 +1837,14 @@ class Json{
         bool                search_one_(Jnode *, const char *lbl, const WalkStep &, long &);
         void                lbl_callback_(const std::string &lbl,
                                           const std::vector<path_vector> * = nullptr);
-        void                itr_callback_(const Jnode *);
+        void                wlk_callback_(const Jnode *);
         bool                child_found_(Jnode *, const WalkStep &, long &);
         bool                label_matched_(const std::string &, const WalkStep &, long &) const;
         bool                atomic_matched_(const Jnode *, const char *l, const WalkStep &) const;
         bool                string_match_(const Jnode *, const char *lbl, const WalkStep &) const;
         bool                bull_matched_(const Jnode *, const char *lbl, const WalkStep &) const;
         bool                increment_(long l);
-        long                next_iterable_ws(long idx) const;
+        long                next_iterable_ws_(long idx) const;
 
         static std::string  empty_lbl_;                         // empty (default) label
     };
@@ -1797,35 +1862,35 @@ class Json{
 
     // There are 2 types of callbacks:
     // 1. callback hooked onto the JSON labels (lbl_callback_map)
-    // 2. callback hooked onto Json::iterators (itr_callback_vec)
-    struct ItrCallback {
-     // this class facilitates itr_callback_vec type storage, binding Json::iterator
+    // 2. callback hooked onto Json::iterators (wlk_callback_vec)
+    struct WlkCallback {
+     // this class facilitates wlk_callback_vec type storage, binding Json::iterator
      // and callback itself together
-                            ItrCallback(iterator &&itr, std::function<void(const Jnode &)> &&cb):
-                             iter{std::move(itr)}, callback(std::move(cb)) {}
-        iterator            iter;
+                            WlkCallback(iterator &&itr, std::function<void(const Jnode &)> &&cb):
+                             itr{std::move(itr)}, callback(std::move(cb)) {}
+        iterator            itr;
         std::function<void(const Jnode &)>
                             callback;
     };
 
     typedef std::map<std::string, std::function<void(const Jnode &)>> lbl_callback_map;
-    typedef std::vector<ItrCallback> itr_callback_vec;
+    typedef std::vector<WlkCallback> wlk_callback_vec;
 
     lbl_callback_map    lcb_;                               // label callbacks storage
-    itr_callback_vec    icb_;                               // iterator-based callback storage
+    wlk_callback_vec    wcb_;                               // walk based callback storage
     bool                ce_{false};                         // callbacks engaged? flag
 
  public:
     #define CALLBACK_TYPE \
                 label_callback, \
-                iterator_callback, \
+                walk_callback, \
                 any_callback
     ENUM(CallbackType, CALLBACK_TYPE)
 
     // user callbacks interface:
-    bool                callbacks_engaged(CallbackType ct = any_callback) const {
+    bool                is_engaged(CallbackType ct = any_callback) const {
                          if(ct == label_callback) return ce_ and not lcb_.empty();
-                         if(ct == iterator_callback) return ce_ and not icb_.empty();
+                         if(ct == walk_callback) return ce_ and not wcb_.empty();
                          return ce_;
                         }
     Json &              engage_callbacks(bool x=true)           // engage/disengage all callbacks
@@ -1835,25 +1900,28 @@ class Json{
                          lcb_.emplace(std::move(lbl), std::move(cb));
                          return *this;
                         }
-    Json &              callback(iterator itr,                  // plug-in iter-callback
+    Json &              callback(iterator itr,                  // plug-in iter-callback (from walk)
                                  std::function<void(const Jnode &)> &&cb) {
                          if(itr != itr.end())                   // don't plug ended iterators
-                          icb_.emplace_back(std::move(itr), std::move(cb));
+                          wcb_.emplace_back(std::move(itr), std::move(cb));
                          return *this;
                         }
     Json &              clear_callbacks(void)
-                         { lcb_.clear(); icb_.clear(); return *this; }
+                         { lcb_.clear(); wcb_.clear(); return *this; }
     lbl_callback_map &  lbl_callbacks(void) { return lcb_; }    // access to labeled callbacks
 const lbl_callback_map& lbl_callbacks(void) const { return lcb_; }
-    itr_callback_vec &  itr_callbacks(void) { return icb_; }    // access to iterator callbacks
-const itr_callback_vec& itr_callbacks(void) const { return icb_; }
+    wlk_callback_vec &  wlk_callbacks(void) { return wcb_; }    // access to iterator callbacks
+const wlk_callback_vec& wlk_callbacks(void) const { return wcb_; }
 };
 
 // class static definitions
 STRINGIFY(Json::Jsearch, JS_ENUM)
+STRINGIFY(Json::WalkStep::WalkStepType, WALKSTEPTYPE)
+#undef WALKSTEPTYPE
 
 #undef JS_ENUM
 #undef CACHE_STATE
+#undef PARSETRAILING
 #undef CALLBACK_TYPE
 #undef PARSE_THROW
 
@@ -1872,7 +1940,7 @@ Json operator ""_json(const char *c_str, std::size_t len) {
 }
 
 
-Json & Json::parse(const std::string & jstr) {
+Json & Json::parse(const std::string & jstr, ParseTrailing trail) {
  // parse input string. this is a wrapper for parse_(), where actual parsing occurs
  root() = OBJ{};
 
@@ -1881,6 +1949,10 @@ Json & Json::parse(const std::string & jstr) {
 
  if(root_.type() == Jnode::Neither)
   { ep_ = jsp; throw EXP(Jnode::expected_json_value); }
+
+ if(trail == strict_trailing)
+  while(*jsp != CHR_NULL)
+   if(*jsp++ > ' ') throw EXP(Jnode::unexpected_trailing);
 
  return *this;
 }
@@ -2009,7 +2081,7 @@ void Json::parse_object_(Jnode & node, std::string::const_iterator &jsp) {
 std::string::const_iterator & Json::find_delimiter_(char c, std::string::const_iterator & jsp) {
  // find next occurrence of character (actually it's used only to find `"')
  while(*jsp != c) {
-  if(*jsp AMONG(CHR_NULL, CHR_EOL))                             // JSON string does not support
+  if(*jsp AMONG(CHR_NULL, CHR_EOL, CHR_RTRN))                   // JSON string does not support
    { ep_ = jsp; throw EXP(Jnode::unexpected_end_of_line); }     // multiline, hence throwing
   if(strchr(jsn_fbdn_, *jsp) != nullptr)                        // i.e. found illegal JSON control
    { ep_ = jsp; throw EXP(Jnode::unquoted_character); }
@@ -2160,8 +2232,8 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  it.pv_.reserve(it.walk_path_().size());                        // iter's performance optimization
 
  DBG(0) {
-  DOUT() << "dump parsed lexemes:" << std::endl;
-  for(auto &v: it.walk_path_()) DOUT() << DBG_PROMPT(0) << v << std::endl;
+  DOUT() << "dump completed lexemes:" << std::endl;
+  for(const auto &ws: it.walk_path_()) DOUT() << DBG_PROMPT(0) << ws << std::endl;
  }
 
  if(action == invalidate) {                                     // talking a conservative approach:
@@ -2180,16 +2252,17 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
 
 
 void Json::compile_walk_(const std::string & wstr, iterator & it) const {
- // parse walk string and compile all all parts for ws_;
+ // parse walk string and compile all parts for ws_;
  parse_lexemes_(wstr, it);
- std::for_each(it.walk_path_().begin(), it.walk_path_().end(), GLAMBDA(parse_offset_type_) );
+ for(auto & walk_step: it.walk_path_())
+  parse_subscript_type_(walk_step);                             // fix textual offset
 }
 
 
 void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
  // parse full lexemes: offsets/search lexemes + possible suffixes in search lexemes
  auto & ws = it.walk_path_();
- v_str req_label;                                               // would hold stripped [label]:
+ vec_str req_label;                                             // would hold stripped [label]:
 
  for(auto si = wstr.begin(); si != wstr.end();) {               // si: input string iterator
   DBG(1) {
@@ -2199,25 +2272,25 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
   }
   switch(*si) {
    case ' ': ++si; continue;                                    // space in between lexemes allowed
-   case LXM_OFS_OPN:                                            // offset opening: '['
+   case LXM_SUB_OPN:                                            // opening subscript: '['
         if(not req_label.empty())                               // only search <...> allowed
          throw EXP(Jnode::walk_expect_search_label);            // after [label]:
-        ws.emplace_back(parse_offset_(si, LXM_OFS_CLS), generic_offset);
+        ws.emplace_back(extract_lexeme_(si, LXM_SUB_CLS), numeric_offset);
         break;
    case LXM_SCH_OPN:                                            // opening search fwd '<'
-        ws.emplace_back(parse_offset_(si, LXM_SCH_CLS), regular_match);
+        ws.emplace_back(extract_lexeme_(si, LXM_SCH_CLS), regular_match);
         break;
    case LXM_SCH_CLS:                                            // opening immediate search '>'
-        ws.emplace_back(parse_offset_(si, LXM_SCH_OPN), regular_match);
+        ws.emplace_back(extract_lexeme_(si, LXM_SCH_OPN), regular_match);
         break;
-   default:
-        parse_suffix_(si, it, req_label);                       // outside of offset there could be
-        if(req_label.empty()) parse_quantifier_(si, it);        // only suffixes, quantifiers & ':'
+   default:                                                     // outside of offset there could be
+        parse_suffix_(si, it, req_label);                       // only suffixes, quantifiers & ':'
+        if(req_label.empty()) parse_quantifier_(si, it);        // req_label indicate ':' found
         continue;
   }
   // store a stripped offset lexeme here (after parsing one)
   ws.back().stripped.push_back(ws.back().lexeme.substr(1, ws.back().lexeme.size() - 2));
-  if(not req_label.empty()) {
+  if(not req_label.empty()) {                                   // [label] was extracted
    ws.back().stripped.push_back( std::move(req_label.front()) );
    req_label.clear();
   }
@@ -2225,45 +2298,45 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
 }
 
 
-std::string Json::parse_offset_(std::string::const_iterator &si, char close_chr) const {
- // offset lexemes: [], [n], [+n], [-n], [any text, possibly with \]]
+std::string Json::extract_lexeme_(std::string::const_iterator &si, char closing) const {
+ // offset lexemes: [], [n], [+n], [-n], [n:n] [any text, possibly with \]]
  // search lexemes w/o suffix: <>, <text<\>>
  auto begin = si;
- while(*si != close_chr) {                                      // advance till closing bracket
+ while(*si != closing) {                                        // advance till closing bracket
   if(*si == CHR_NULL)
    throw EXP(Jnode::walk_offset_missing_closure);
   if(*si == CHR_QUOT)
-   if(*++si != close_chr) --si;
+   if(*++si != closing) --si;
   ++si;
  }
 
  std::string lexeme{begin, ++si};                               // lexeme with encasement
  std::string quoted{"\\"};                                      // replace quoted closing bracket
- quoted += close_chr;
- for(size_t p = lexeme.find(quoted); p != std::string::npos; p = lexeme.find(quoted))
-  lexeme.replace(p, 2, 1, close_chr);
-
+ quoted += closing;
+ for(size_t p = lexeme.find(quoted); p != std::string::npos; p = lexeme.find(quoted, p))
+  lexeme.replace(p, 2, 1, closing);
  DBG(1) DOUT() << "parsed lexeme: " << lexeme << std::endl;
  return lexeme;
 }
 
 
-void Json::parse_suffix_(std::string::const_iterator &si, iterator & it, v_str &req_label) const {
+void Json::parse_suffix_(std::string::const_iterator &si,
+                         iterator & it, vec_str &req_label) const {
  // parse suffix following a text offset, e.g.: ...>r, ...>d, ...>L and suffix ':' in [..]:<...>
  if(it.walk_path_().empty())                                    // expect some elements already in
   throw EXP(Jnode::walk_expect_lexeme);                         // walks may start with lexeme only
 
+ auto & back_ws = it.walk_path_().back();
  if(*si == LBL_SPR) {                                           // it's separator (':')
-  if(not req_label.empty() or it.walk_path_().back().jsearch != generic_offset)
-   throw EXP(Jnode::walk_wrong_label_seprator_usage);
+  if(not req_label.empty()) throw EXP(Jnode::walk_wrong_label_seprator_usage);
+  if(back_ws.jsearch == regular_match) return;                  // it's a quantifier then
   req_label.push_back( std::move(it.walk_path_().back().stripped.back()) );
   it.walk_path_().pop_back();                                   // label belongs to the next lexeme
   ++si;
   return;
  }
 
- auto & back_ws = it.walk_path_().back();
- if(back_ws.lexeme.front() == LXM_OFS_OPN  )                    // i.e. it's '['
+ if(back_ws.lexeme.front() == LXM_SUB_OPN  )                    // i.e. it's '['
   throw EXP(Jnode::walk_unexpexted_suffix);                     // suffix may follow search only
 
  Jsearch sfx = search_suffix_(*si);                             // see if a search suffix valid
@@ -2273,15 +2346,16 @@ void Json::parse_suffix_(std::string::const_iterator &si, iterator & it, v_str &
    try { back_ws.user_json = Json{ back_ws.stripped.front() }; }
    catch(Json::stdException & e) { throw EXP(Jnode::json_search_invalid); }
   else
-   if(sfx AMONG(Regex_search, Label_RE_search, Ditital_regex))
+   if(sfx AMONG(Regex_search, Label_RE_search, Digital_regex))
     back_ws.re = back_ws.stripped.front();                      // it's a RE, book RE then
   DBG(1) DOUT() << "search type sfx: " << ENUMS(Jsearch, sfx) << std::endl;
 
-  if(back_ws.stripped.front().empty())                          // i.e. search is "<>Sfx"
-   if( not(back_ws.jsearch AMONG(regular_match, label_match, null_match, atomic_match)) )
-    throw EXP(Jnode::walk_bad_suffix);
+  if(back_ws.stripped.front().empty())                          // search lexeme is empty: <>S
+   if( not(back_ws.jsearch AMONG(regular_match, label_match, null_match,
+                                 atomic_match, object_match, iterable_match)) )
+    throw EXP(Jnode::walk_bad_suffix);                          // others must have non-empty lexeme
   ++si;
- }
+ }                                                              // else jsearch = regular_match
 }
 
 
@@ -2295,23 +2369,56 @@ Json::Jsearch Json::search_suffix_(char sfx) const {
 
 
 void Json::parse_quantifier_(std::string::const_iterator &si, iterator & it) const {
- auto & lastStep = it.walk_path_().back();
- if(*si == PFX_ITR or isdigit(*si)) {                           // must be a quantifier
-  auto front = *si;
-  lastStep.offset = parse_index_(si);
-  if(front == PFX_ITR)
-   lastStep.init = lastStep.offset;
-  DBG(1) DOUT() << "quantifier: " << lastStep.offset << std::endl;
- }
+ // quantifier could be: [+]0, :, [+]1:, , :[+]2, [+]3:[+]4
+ auto & back_ws = it.walk_path_().back();
+ parse_range(si, back_ws, may_throw);
 
  while(*si == ' ') ++si;
- if(not(*si AMONG(LXM_OFS_OPN, LXM_SCH_OPN, LXM_SCH_CLS, CHR_NULL)))
+ if(not(*si AMONG(LXM_SUB_OPN, LXM_SCH_OPN, LXM_SCH_CLS, CHR_NULL)))
   throw EXP(Jnode::walk_expect_lexeme);
 }
 
 
+void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThrow throwing) const {
+ // parse quantifier or subscript, update WalkStep's: offset, head, tail, type
+ if(*si AMONG(' ', CHR_NULL, LXM_SUB_OPN, LXM_SCH_OPN, LXM_SCH_CLS)) return;// legit end of quant.
+ bool is_quantifier = throwing == may_throw;
+
+ if(*si == PFX_WFR) {                                           // '^' - it's a roots select
+  if(is_quantifier) throw EXP(Jnode::walk_bad_number);          // '^' not allowed in quantifiers
+  ws.type = WalkStep::root_select; ++si;
+  if(*si == CHR_NULL) { --si; return; }                         // i.e. [^] - indicate failure
+ }
+ if(ws.type == WalkStep::static_select)                         // i.e. type is yet a default
+  ws.type = *si == '+'? WalkStep::range_walk: *si == '-'? WalkStep::parent_select: ws.type;
+
+ if(*si == RNG_SPR) {                                           // ':' - first or second char
+  if(ws.type == WalkStep::root_select) {                        // i.e. ^:
+   if(is_quantifier) throw EXP(Jnode::walk_bad_range);
+   else return;
+  }
+ }
+ else
+  ws.head = ws.offset = parse_index_(si, throwing);             // not a range (yet)
+
+ if(*si == RNG_SPR) {                                           // ':' - range found
+  if(ws.type == WalkStep::root_select) return;                  // i.e. [^..:..], indicate failure
+  ++si;
+  ws.type = WalkStep::range_walk;
+  if(not (*si AMONG(' ', CHR_NULL, LXM_SUB_OPN, LXM_SCH_OPN, LXM_SCH_CLS))) // legit end of quant.
+   ws.tail = parse_index_(si, throwing);
+ }
+
+ if(is_quantifier or ws.type == WalkStep::root_select)
+  if(ws.head < 0 or ws.tail < 0)                                // then cannot be negative
+   throw EXP(Jnode::walk_bad_number);
+
+ DBG(1) DOUT() << "offset / range: " << ws.offset << " / " << ws.range() << std::endl;
+}
+
+
 long Json::parse_index_(std::string::const_iterator &si, ParseThrow throwing) const {
- // validate if iterator points to a valid number
+ // validate if string iterator points to a valid number
  char *endptr;
  const char * str{&*si};
 
@@ -2325,35 +2432,22 @@ long Json::parse_index_(std::string::const_iterator &si, ParseThrow throwing) co
 }
 
 
-void Json::parse_offset_type_(WalkStep & ws) const {
- // parse offset types: separates numerical offsets (e.g. [1]) from text offsets (e.g. [ 1])
- DBG(1) DOUT() << "step: " << ws << std::endl;
+void Json::parse_subscript_type_(WalkStep & ws) const {
+ // separates numerical subscripts (e.g. [1]) from textual's (e.g. [ 1])
+ // numerical offsets are: [2], [-1], [+3], [3:], [3:1], [-5:-1], [+3:5], [:], [:-1]
+ DBG(1) DOUT() << "incomplete: " << ws << std::endl;
 
- if(ws.lexeme.front() != LXM_OFS_OPN) {                         // it's search: either '<' or '>'
+ if(ws.lexeme.front() != LXM_SUB_OPN) {                         // it's search: either '<' or '>'
   if(ws.stripped.size() == 2)                                   // there's an attached label offset
    if(ws.jsearch AMONG(label_match, Label_RE_search))           // label search type cannot have
     throw EXP(Jnode::walk_search_label_with_attached_label);    // attached label offset
-  return;
+  return;                                                       // don't process search lexeme
  }
 
- char pfx = CHR_NULL;                                           // collect prefix '-','+', or '^'
- auto si = ++ws.lexeme.cbegin();
- if(*si AMONG(PFX_ITR, PFX_WFR, PFX_WFL))                       // i.e. *si is either {'+','^','-'}
-  pfx = *(si++);
- if(not isdigit(*si))
-  { ws.jsearch = text_offset; return; };                        // it's a text lexeme
-
- long idx = parse_index_(si, dont_throw);                       // parse number, but don't throw
- if(*si != LXM_OFS_CLS)
-  { ws.jsearch = text_offset; return; }                         // parsing failed - it's a text
-
- // PFX behavior explained:
- // PFX_ITR: init = offset; // offset >= 0
- // PFX_WFL: init = -1; // offset < 0
- // PFX_WFR: init = -2 ; // offset >= 0;
- ws.offset = pfx == PFX_WFL? -idx: idx;                         // either [-n] or [n]
- if(pfx == PFX_ITR) ws.init = ws.offset;                        // [+n]
- if(pfx == PFX_WFR) ws.init = -2;                               // e.g. [^1] - walk from root
+ auto si = ws.stripped[0].cbegin();
+ parse_range(si, ws, dont_throw);
+ if(ws.stripped[0].empty() or *si != CHR_NULL)
+  ws.jsearch = text_offset;                                     // parsing failed - it's a text
 }
 
 
@@ -2428,7 +2522,7 @@ void Json::iterator::walk_step_(size_t idx, Jnode *jn) {
  DBG(json_(), 3) DOUT(json_()) << "walking step: [" << idx << "]" << std::endl;
  // walk a single lexeme
  switch(ws_[idx].jsearch) {
-  case generic_offset:
+  case numeric_offset:
         return walk_numeric_offset_(idx, jn);
   case text_offset:
         return walk_text_offset_(idx, jn);
@@ -2440,23 +2534,31 @@ void Json::iterator::walk_step_(size_t idx, Jnode *jn) {
 
 void Json::iterator::walk_numeric_offset_(size_t idx, Jnode *jn) {
  // walk a numerical offset, e.g.: [3], [+0], [-1]
+ auto normalize_offset = [](long offset, long size)
+                          { return offset >= 0? offset: -offset >= size? 0: size + offset; };
+ long node_size =  static_cast<long>(jn->children_().size());
  auto &ws = ws_[idx];
-
- if(ws.init == -2) {                                            // e.g.: [^2]
-  pv_.resize(ws.offset > static_cast<s_long>(pv_.size())? pv_.size(): ws.offset);// shrinking path
-  return;
+ if(ws.type == WalkStep::range_walk) {                          // normalize then offset/head/tail
+  if(ws.head < 0) {
+   ws.head = normalize_offset(ws.head, node_size);
+   ws.offset = normalize_offset(ws.offset, node_size);
+  }
+  if(ws.tail < 0)
+   ws.tail = normalize_offset(ws.tail, node_size);
  }
 
- if(ws.offset >= 0) {                                           // [0], [+1], etc
-  if(ws.offset >= static_cast<s_long>(jn->children_().size()))  // address beyond children's size
-   { pv_.emplace_back(json_().root().children_().end(), "", idx); return; }
-  auto it = jn->iterator_by_idx_(ws.offset);
-  pv_.emplace_back(it, it->KEY);
-  return;
- }
+ if(ws.type == WalkStep::root_select)                           // e.g.: [^2]
+  return pv_.resize(ws.offset > static_cast<long>(pv_.size())?
+         pv_.size(): ws.offset);                                // shrinking path
 
- // negative offset, ws.offset < 0, e.g.: [-2]
- pv_.resize(-ws.offset <= static_cast<s_long>(pv_.size())? pv_.size() + ws.offset: 0);
+ if(ws.type == WalkStep::parent_select)                         // negative offset, e.g.: [-2]
+  return pv_.resize(-ws.offset <= static_cast<long>(pv_.size())? pv_.size() + ws.offset: 0);
+
+ // [0], [+1], [..:..] etc
+ if(ws.offset >= node_size or ws.offset >= ws.tail)             // beyond children's size or tail
+  { pv_.emplace_back(json_().root().children_().end(), "", idx); return; }
+ auto it = jn->iterator_by_idx_(ws.offset);
+ pv_.emplace_back(it, it->KEY);
 }
 
 
@@ -2474,15 +2576,18 @@ void Json::iterator::walk_text_offset_(size_t idx, Jnode *jn) {
 void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
  // if search is iterable, build a cache (if not yet), otherwise do a one-time search
  auto &ws = ws_[idx];
- auto i = ws.offset;                                            // needed stateful, for recursion
+ if(ws.offset >= ws.tail)                                       // counted beyond tail
+  return pv_.emplace_back(json_().root().children_().end(), "", idx);
 
+ auto i = ws.offset;                                            // needed stateful, for recursion
+                                                                // quantifier is always positive
  if(ws.lexeme.front() == LXM_SCH_CLS) {                         // '>': search immediate children
   if(not child_found_(jn, ws, i))
    pv_.emplace_back(json_().root().children_().end(), "", idx);
   return;
  }
 
- if(ws.init < 0) {                                              // non-iterable, find once
+ if(ws.type == WalkStep::static_select) {                       // non-iterable, find once
   if(not search_one_(jn, nullptr, ws, i))
    pv_.emplace_back(json_().root().children_().end(), "", idx);
   return;
@@ -2498,7 +2603,7 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
   DBG(json_(), 1) DOUT(json_()) << "cached " << cache[skey].size() << " searches" << std::endl;
  }
 
- if(i >= static_cast<s_long>(cache[skey].size()))               // offset outside of cache:
+ if(i >= static_cast<long>(cache[skey].size()))                 // offset outside of cache:
   pv_.emplace_back(json_().root().children_().end(), "", idx);  // return end() iterator
  else                                                           // otherwise augment the path
   for(auto &path: cache[skey][i])
@@ -2513,14 +2618,17 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
  if(jn->is_iterable()) {
   if(ws.jsearch == json_match)
    if(ws.user_json == *jn) return vpv.push_back(vpv.back());
+  if((ws.jsearch == object_match and jn->is_object()) or
+     (ws.jsearch == iterable_match and jn->is_array()))
+   vpv.push_back(vpv.back());
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    vpv.back().emplace_back(it, it->KEY);
-   if(json_().callbacks_engaged(iterator_callback))             // engage iterator callbacks
-    itr_callback_(jn);
+   if(json_().is_engaged(walk_callback))                            // engage walk callbacks
+    wlk_callback_(jn);
    if(jn->is_object()) {
-    if(json_().callbacks_engaged(label_callback))               // engage label callbacks
+    if(json_().is_engaged(label_callback))                          // engage label callbacks
      lbl_callback_(it->KEY, &vpv);
-    if(ws.jsearch AMONG(label_match, Label_RE_search)) {        // label match
+    if(ws.jsearch AMONG(label_match, Label_RE_search)) {            // label match
      long i = 0;
      if(label_matched_(it->KEY, ws, i)) vpv.push_back(vpv.back());  // if found, preserve path
     }
@@ -2531,8 +2639,8 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
   return;
  }
  // it's atomic then
- if(json_().callbacks_engaged(iterator_callback))
-  itr_callback_(jn);
+ if(json_().is_engaged(walk_callback))
+  wlk_callback_(jn);
  if(atomic_matched_(jn, lbl, ws))                               // if mathed
   vpv.push_back(vpv.back());                                    // preserve the path then
 }
@@ -2544,12 +2652,15 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
  if(jn->is_iterable()) {
   if(ws.jsearch == json_match)
    if(ws.user_json == *jn and --i < 0) return true;
+  if((ws.jsearch == object_match and jn->is_object()) or
+     (ws.jsearch == iterable_match and jn->is_array()))
+   if(--i < 0) return true;
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    pv_.emplace_back(it, it->KEY);
-   if(json_().callbacks_engaged(iterator_callback))
-    itr_callback_(jn);
+   if(json_().is_engaged(walk_callback))
+    wlk_callback_(jn);
    if(jn->is_object()) {
-    if(json_().callbacks_engaged(label_callback))
+    if(json_().is_engaged(label_callback))
      lbl_callback_(it->KEY);
     if(ws.jsearch AMONG(label_match, Label_RE_search))
      if(label_matched_(it->KEY, ws, i)) return true;
@@ -2561,8 +2672,8 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
   return false;
  }
  // it's not iterable
- if(json_().callbacks_engaged(iterator_callback))
-  itr_callback_(jn);
+ if(json_().is_engaged(walk_callback))
+  wlk_callback_(jn);
  if(atomic_matched_(jn, lbl, ws)) return --i < 0? true: false;
  return false;
 }
@@ -2586,34 +2697,39 @@ void Json::iterator::lbl_callback_(const std::string &label,
 }
 
 
-void Json::iterator::itr_callback_(const Jnode *jn) {
+void Json::iterator::wlk_callback_(const Jnode *jn) {
  // invoke callbacks matching given iterator
- for(auto &ic: json_().itr_callbacks()) {
-  if(ic.iter == ic.iter.end()) continue;                        // iterations are over
-  if(&ic.iter->value() != jn) continue;                         // it's a different node
+ for(auto &ic: json_().wlk_callbacks()) {
+  if(ic.itr == ic.itr.end()) continue;                          // iterations are over
+  if(&ic.itr->value() != jn) continue;                          // it's a different node
 
-  ic.callback( *ic.iter );                                      // call back passing super node
+  ic.callback( *ic.itr );                                       // call back passing super node
   json_().engage_callbacks(false);
-  ++ic.iter;
+  ++ic.itr;
   json_().engage_callbacks(true);
  }
 }
 
 
 bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
- // search current iterable Jnode immediate children, return true/false if found,
- // if found pv_.back() must contain an iterator to the found node
+ // search current iterable Jnode immediate children (non-recursvely),
+ // return true/false if found, if found pv_.back() must contain an iterator to the found node
  if(not jn->is_iterable())                                      // only iterables have children
   return false;
 
  for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
-  if(ws.jsearch == json_match) {
+  if(ws.jsearch == json_match) {                                // match j suffix
    if(ws.user_json == it->VALUE and --i < 0)
     { pv_.emplace_back(jn->children_().find(it->KEY), it->KEY); return true; }
    continue;
   }
-
-  if(jn->is_object() and (ws.jsearch AMONG(label_match, Label_RE_search))) {
+  if((ws.jsearch == object_match and jn->is_object()) or
+     (ws.jsearch == iterable_match and jn->is_array())) {
+   if(--i < 0)
+    { pv_.emplace_back(jn->children_().find(it->KEY), it->KEY); return true; }
+   continue;
+  }
+  if(jn->is_object() and (ws.jsearch AMONG(label_match, Label_RE_search))) {// match l, L suffix
    if(label_matched_(it->KEY, ws, i)) {
     pv_.emplace_back(jn->children_().find(it->KEY), it->KEY);
     return true;
@@ -2642,15 +2758,28 @@ bool Json::iterator::label_matched_(const std::string &lbl, const WalkStep &ws, 
 
 bool Json::iterator::atomic_matched_(const Jnode *jn, const char *lbl, const WalkStep &ws) const {
  // see if string/number/bool/null value matches
- if(ws.jsearch == atomic_match)                                 // matches any atomic JSON value,
-  return true;
- if(ws.jsearch == json_match)                                   // matches user JSON value,
-  return ws.user_json == *jn;
- if(ws.jsearch AMONG(regular_match, Regex_search, digital_match, Ditital_regex))
-  return string_match_(jn, lbl, ws);
- if(ws.jsearch AMONG(label_match, Label_RE_search))
-  return false;
- return bull_matched_(jn, lbl, ws);
+ if(ws.stripped.size() > 1)                                     // label attached: try matching
+  if(lbl == nullptr or ws.stripped.back() != lbl) return false; // no label, or not matching
+
+ switch (ws.jsearch) {
+  case object_match:
+  case iterable_match:
+        return false;
+  case atomic_match:
+        return true;
+  case json_match:
+        return ws.user_json == *jn;
+  case regular_match:
+  case Regex_search:
+  case digital_match:
+  case Digital_regex:
+        return string_match_(jn, lbl, ws);
+  case label_match:
+  case Label_RE_search:
+        return false;
+  default:
+        return bull_matched_(jn, lbl, ws);
+ }
 }
 
 
@@ -2658,20 +2787,12 @@ bool Json::iterator::string_match_(const Jnode *jn, const char *lbl, const WalkS
  // match numbers and strings
  switch(ws.jsearch) {
   case digital_match:
-        if(ws.stripped.size() > 1)                              // label present: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_number() and jn->val() == ws.stripped.front();
-  case Ditital_regex:
-        if(ws.stripped.size() > 1)                              // label present: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
+  case Digital_regex:
         return jn->is_number() and std::regex_search(jn->val(), ws.re);
   case regular_match:
-        if(ws.stripped.size() > 1)                              // label present: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_string() and jn->val() == ws.stripped.front();
   case Regex_search:
-        if(ws.stripped.size() > 1)                              // label present: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_string() and std::regex_search(jn->val(), ws.re);
   default:                                                      // should never reach here.
         throw json_().EXP(Jnode::walk_a_bug);                   // covering compiler's warning
@@ -2683,15 +2804,11 @@ bool Json::iterator::bull_matched_(const Jnode *jn, const char *lbl, const WalkS
  // match bool and null (hence bull)
  switch(ws.jsearch) {
   case boolean_match:
-        if(ws.stripped.size() > 1)                              // label attached: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_bool() and
                (ws.stripped.front() == STR_ANY or (jn->bul()?
                                                    ws.stripped.front() == STR_TRUE:
                                                    ws.stripped.front() == STR_FALSE));
   case null_match:
-        if(ws.stripped.size() > 1)                              // label attached: try matching
-         if(lbl == nullptr or ws.stripped.back() != lbl) return false;
         return jn->is_null();
   default:                                                      // should never reach here.
         throw json_().EXP(Jnode::walk_a_bug);                   // covering compiler's warning
@@ -2705,7 +2822,7 @@ bool Json::iterator::incremented(void) {
   if(pv_.back().jit == json_().root().children_().end())        // don't attempt incrementing end()
    return false;
 
- long i = next_iterable_ws(walk_path_().size());
+ long i = next_iterable_ws_(walk_path_().size());
  if(i < 0) {
   pv_.emplace_back(json_().root().children_().end(), "");
   DBG(json_(), 2) DOUT(json_()) << "path is non-iterable" << std::endl;
@@ -2727,28 +2844,28 @@ bool Json::iterator::increment_(long l) {
  if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
  // unsuccessful walk (out of iterations)
- if(l < static_cast<s_long>(pv_.back().wsi)) {                  // it's not my position, plus
+ if(l < static_cast<long>(pv_.back().wsi)) {                    // it's not my position, plus
   DBG(json_(), 2)                                               // it's in less significant place
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required to handle irregular JSON
-  long n = next_iterable_ws(walk_path_().size());
+  long n = next_iterable_ws_(walk_path_().size());
   return n < 0? false: increment_( n );
  }
 
- l = next_iterable_ws(l);
+ l = next_iterable_ws_(l);
  if(l < 0) return false;
- ws.offset = ws.init;
+ ws.offset = ws.head;
  return increment_(l);
 }
 
 
-long Json::iterator::next_iterable_ws(long idx) const {
+long Json::iterator::next_iterable_ws_(long idx) const {
  // get next least significant position (index within walk-path) of iterable offset,
  // otherwise (whole path non-iterable) return -1
  while(--idx >= 0)
-  if(walk_path_()[idx].init >= 0) break;
+  if(walk_path_()[idx].type == WalkStep::range_walk) break;
  return idx;
 }
 
@@ -2783,15 +2900,16 @@ long Json::iterator::next_iterable_ws(long idx) const {
 #undef JSN_NUMM
 #undef JSN_NUMP
 #undef JSN_NUMD
-#undef LXM_OFS_OPN
+#undef LXM_SUB_OPN
 #undef LXM_SCH_OPN
-#undef LXM_OFS_CLS
+#undef LXM_SUB_CLS
 #undef LXM_SCH_CLS
 
 #undef LBL_SPR
 #undef PFX_ITR
 #undef PFX_WFR
 #undef PFX_WFL
+#undef RNG_SPR
 #undef IDX_FIL
 
 #undef JSN_FBDN
