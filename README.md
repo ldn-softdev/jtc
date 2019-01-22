@@ -731,11 +731,11 @@ merged, but the source will overwrite the destination:
 - adding option `-p` (again, it's only useful while `-u`'s parameter is a walk-path) has the same effect as in case with `-i` option:
 _copy_with_overwrite_ turns into _move_with_overwrite_:
   ```
-  bash $ echo '[1,2,{ "a":3, "b":4 }]' | jtc -w'[0]' -u'[-1:][-1:]' -r -p
+  bash $ echo '[ 1, 2,{ "a":3, "b":4 }]' | jtc -w'[0]' -u'[-1:][-1:]' -r -p
   [ 4, 2, { "a": 3 } ]
   ```
   \- in that example, the first value of the root array (`1`), gets overwritten by a moved last value out of the last object
-  (i.e. "b": 4), the label of course will be lost, as the array does not cater labels
+  (i.e. `"b": 4`), the label of course will be lost, as the array does not cater labels
 
 
 ##### _Swap option:_
