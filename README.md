@@ -441,14 +441,14 @@ A full syntax for searches is: `<...>SN`, where:
   ```
   if index is not recognized as a valid in quantifier, the exception will be thrown
 - optionally, a search could be combined with a label, that handles use-cases when a search is required to be performed among
-specific labels, the notation then is like this `[label]:<...>` (emphasis is on the `:` between the subscript and the search lexeme),
+specific labels, the notation then is like this `[label]:<...>` (emphasis is on the `:` between a subscript and a search lexemes),
 e.g.:
-```
-dlyssenk $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "a":"4", "b":"5", "c":"6" } }' | jtc -w'[b]:<.*>R:' -l
-"b": "2"
-"b": "5"
-dlyssenk $ 
-```
+  ```
+  dlyssenk $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "a":"4", "b":"5", "c":"6" } }' | jtc -w'[b]:<.*>R:' -l
+  "b": "2"
+  "b": "5"
+  dlyssenk $ 
+  ```
 in the above example `jtc` will search all JSON string values (with any content, as per RE), but match only those strings which
 are directly attached to the label `"b"`
 
