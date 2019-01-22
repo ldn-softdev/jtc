@@ -1,3 +1,4 @@
+
 /*
  * Created by Dmitry Lyssenko
  *
@@ -269,7 +270,7 @@
  *
  *   1) Offset lexemes: enclosed into square braces '[', ']'; provide various offset
  *      functions. Following notation are possible:
- *      [], [text], [n], [-n], [^n], [+n], [+/-n:+/-n], where n is an integer
+ *      [], [text], [n], [-n], [^n], [+n], [N:N], where n is an integer
  *      - empty offset "[]" matches empty label, e.g.: { "": "empty label" }
  *      - "[text]" offset selects a child in the node with the same label
  *      - "[n]" - numerical offset selects indexed element within iterable, e.g.:
@@ -286,7 +287,7 @@
  *        [+1] selects 2nd element within immediate children and indicates that
  *        upon the next iteration a next child needs to be selected (i.e. 3rd, 4fth
  *        and so on)
- *      - "[+/-n:+/-n] range offset (same notation as in Python) selects all elements
+ *      - "[N:N] range offset (same notation as in Python) selects all elements
  *        in the specified range. e.g.: [-3:] selects 3 last elements
  *      - Some notations duplicate each other, e.g.:
  *          [+0] and [:], or [+2] and [2:] and [+2:] have the same effect
@@ -305,7 +306,7 @@
  *        children in the given node
  *      "<text>": performs search of the string "text" within json tree under
  *                the given node
- *      - optionally a one letter suffix (either of rlRLdbn) could be used:
+ *      - optionally a one letter suffix (either of [rlRLdbnaoij]) could be used:
  *        which affect search in the following way:
  *        r - apply exact match (default) while searching string values,
  *        R - same as r, but Regex search is applied
@@ -319,6 +320,10 @@
  *            or anything - it's ignored, e.g.: "<>n", ">null<n", etc
  *        a - match any JSON atomic value (string, numeric, boolean, null), the
  *            content within the encasements ignored
+ *        o - match any object JSON value (i.e. {...}); the content within the
+ *            encasement is ignored
+ *        i - match any array (iterable) JSON value (i.e. [...]); the content
+ *            within the encasement is ignored
  *        j - match user specific JSON value, the content within the encasement
  *            should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
  *            arrays
@@ -330,7 +335,7 @@
  *          and indicates that upon the next iteration a next match instance to
  *          to be selected. e.g: "<text>+1" will match 2nd found instance of "text",
  *          then 3rd, 4fth and so on.
- *      +n:+n - range quantifier, makes path iterable as well. '+' sign in this
+ *      N:N - range quantifier, makes path iterable as well. '+' sign in this
  *          notation as well as the indices are optional. Some of quantifier notations
  *          are duplicate, e.g:
  *          '+0' and ':' - will make select all found matches
@@ -373,7 +378,7 @@
  *   root's children's Json::end() is returned.
  *   The path may contain multiple iterable lexemes
  *
- *   Unlike Jnode iterator (which is bidirectional), walk interator (or Json::iterator)
+ *   Unlike Jnode iterator (which is bidirectional), walk iterator (or Json::iterator)
  *   is a forward type and provides some extra methods:
  *      - begin()           // returns reference to itself, so that walk() method
  *                          // could be used in range for-loops
@@ -1833,8 +1838,11 @@ class Json{
         void                walk_text_offset_(size_t wsi, Jnode *);
         void                walk_search_(size_t wsi, Jnode *);
         void                search_all_(Jnode *, const char *, const
-                                        WalkStep &w, std::vector<path_vector> &);
+                                        WalkStep &, std::vector<path_vector> &);
+        bool                match_iterables_(Jnode *, const char *, const
+                                             WalkStep &, std::vector<path_vector> &);
         bool                search_one_(Jnode *, const char *lbl, const WalkStep &, long &);
+        bool                match_iterables_(Jnode *, const char *, const WalkStep &, long &);
         void                lbl_callback_(const std::string &lbl,
                                           const std::vector<path_vector> * = nullptr);
         void                wlk_callback_(const Jnode *);
@@ -2163,7 +2171,8 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 //
 // Walk path design notes:
 // 1. offset lexemes:
-//    [], [n], [text], [-n], [^n], [+n], where n is an integer
+//    [], [n], [text], [-n], [^n], [+n], [N:N] where n is an integer,
+//      N an optional integer with preceding + or - sign, e.g. +3:-3
 //    - empty offset [] matches empty label, e.g.: { "": "blah" }
 //    - [text] offset matches a child in the node with the same label; to match
 //      a text label that looks like a number, i.e { "3": ... } - use search lexeme
@@ -2174,12 +2183,13 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 //      [^n]: in a way does reverse thing: descends n nodes from the root for
 //            currently built path-vector
 //      +n: indicates that the path is iterable (from n'th child in the node)
+//      [N:N] is a python-like addressing
 // 2. search lexemes:
-//    <text>S+n
+//    <text>SN
 //    - <text>: perform search of the entire node to match the text
 //    - <...> perform forward search, >...< perform search among immediate children
 //      only
-//    - optional suffix S could be either of [rlRLdb]:
+//    - optional suffix S could be either of [rlRLdbnaoij]:
 //       r - default, performs exact match of the string,
 //       R - expression in brackets is treated as RE and RE search is applied
 //       l - performs exact match of the label
@@ -2187,10 +2197,20 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 //       d - matches digital JSONs only
 //       b - matches boolean JSONs only (value must be fully spelled, e.g.: <true>b)
 //       n - finds null values (value in brackets is ignored, could be empty).
-//    - n optional quantifier (must take the last position):
+//       a - match any JSON atomic value (string, numeric, boolean, null), the
+//           content within the encasements ignored
+//       o - match any object JSON value (i.e. {...}); the content within the
+//           encasement is ignored
+//       i - match any array (iterable) JSON value (i.e. [...]); the content
+//           within the encasement is ignored
+//       j - match user specific JSON value, the content within the encasement
+//           should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
+//           arrays
+//    - N optional quantifier (must take the last position), could be in the form of:
 //       n - search find' n'th (zero based) match instance
 //      +n - indicates that the path is iterable (starting from n'th match)
-//    - empty lexeme "<>" may have either r, l, or n suffixes (otherwise exception
+//     n:n - python like addressing, except that n cannot go negative here
+//    - empty lexeme "<>" may have either [rlnoi] suffixes (otherwise exception
 //      is thrown)
 //
 // Examples of walk path:
@@ -2616,11 +2636,7 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
  // find all matches from given json node, cache them into current vector of paths:
  // cache is the vector of all found path-vectors
  if(jn->is_iterable()) {
-  if(ws.jsearch == json_match)
-   if(ws.user_json == *jn) return vpv.push_back(vpv.back());
-  if((ws.jsearch == object_match and jn->is_object()) or
-     (ws.jsearch == iterable_match and jn->is_array()))
-   vpv.push_back(vpv.back());
+  if(match_iterables_(jn, lbl, ws, vpv)) return;
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    vpv.back().emplace_back(it, it->KEY);
    if(json_().is_engaged(walk_callback))                            // engage walk callbacks
@@ -2646,15 +2662,30 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
 }
 
 
+
+bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl,
+                            const WalkStep &ws, std::vector<path_vector> & vpv) {
+ // match suffixes [joi] and attached label (if any) - for search_all_
+ if(ws.stripped.size() > 1 and lbl and ws.stripped.back() != lbl)
+  return false;
+ if(ws.jsearch == json_match) {
+  if(ws.user_json == *jn)
+   { vpv.push_back(vpv.back()); return true; }
+  return false;
+ }
+ if((ws.jsearch == object_match and jn->is_object()) or
+    (ws.jsearch == iterable_match and jn->is_array()))
+  { vpv.push_back(vpv.back()); return true; }
+ return false;
+}
+
+
+
 bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
  // search current Jnode tree forward, return true/false if found,
  // if found pv_.back() must contain an iterator to the found node
  if(jn->is_iterable()) {
-  if(ws.jsearch == json_match)
-   if(ws.user_json == *jn and --i < 0) return true;
-  if((ws.jsearch == object_match and jn->is_object()) or
-     (ws.jsearch == iterable_match and jn->is_array()))
-   if(--i < 0) return true;
+  if(match_iterables_(jn, lbl, ws, i)) return true;
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    pv_.emplace_back(it, it->KEY);
    if(json_().is_engaged(walk_callback))
@@ -2677,6 +2708,25 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
  if(atomic_matched_(jn, lbl, ws)) return --i < 0? true: false;
  return false;
 }
+
+
+
+bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
+ // match suffixes [joi] and attached label (if any) - for search_one_
+ if(ws.stripped.size() > 1 and lbl and ws.stripped.back() != lbl)
+  return false;
+ if(ws.jsearch == json_match) {
+  if(ws.user_json == *jn and --i < 0)
+   return true;
+  return false;
+ }
+ if((ws.jsearch == object_match and jn->is_object()) or
+    (ws.jsearch == iterable_match and jn->is_array()))
+  if(--i < 0)
+   return true;
+ return false;
+}
+
 
 
 void Json::iterator::lbl_callback_(const std::string &label,
@@ -2718,27 +2768,29 @@ bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
   return false;
 
  for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
+  if(ws.stripped.size() > 1 and ws.stripped.back() != it->KEY)
+   continue;
   if(ws.jsearch == json_match) {                                // match j suffix
    if(ws.user_json == it->VALUE and --i < 0)
-    { pv_.emplace_back(jn->children_().find(it->KEY), it->KEY); return true; }
+    { pv_.emplace_back(it, it->KEY); return true; }
    continue;
   }
   if((ws.jsearch == object_match and jn->is_object()) or
      (ws.jsearch == iterable_match and jn->is_array())) {
    if(--i < 0)
-    { pv_.emplace_back(jn->children_().find(it->KEY), it->KEY); return true; }
+    { pv_.emplace_back(it, it->KEY); return true; }
    continue;
   }
   if(jn->is_object() and (ws.jsearch AMONG(label_match, Label_RE_search))) {// match l, L suffix
    if(label_matched_(it->KEY, ws, i)) {
-    pv_.emplace_back(jn->children_().find(it->KEY), it->KEY);
+    pv_.emplace_back(it, it->KEY);
     return true;
    }
    continue;
   }
   if(it->VALUE.is_atomic())                                     // try to match str/num/bool/null
    if(atomic_matched_(&it->VALUE, it->KEY.c_str(), ws) and --i < 0) {
-    pv_.emplace_back(jn->children_().find(it->KEY), it->KEY);
+    pv_.emplace_back(it, it->KEY);
     return true;
    }
  }
