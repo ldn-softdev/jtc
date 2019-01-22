@@ -355,7 +355,7 @@ bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[+3]'
 - `[N:N]` - range select, allows selecting flexibly any slice of the json elements in the iterable. The first index denotes
 beginning of the range/slice, the last one denotes the end index exclusively (i.e. not including the element denoted by
 the last index itself)
-  * `N` - positive N (could be prepended with '+') denotes an offset select _from the beginning_ of the iterable:
+  * `N` - positive `N` (could be prepended with '+') denotes an offset select _from the beginning_ of the iterable:
   ````
   bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[2:4]'
   2
