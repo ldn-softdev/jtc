@@ -2,7 +2,8 @@
 # jtc - cli tool to extract, manipulate and transform source JSON
 
 jtc stand for: JSON test console, but it's a legacy name, don't get mislead. jtc offers a powerful way to select one
-or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected elements into a new JSON, filter in/out, update elements, insert new elements or remove them or swap around). 
+or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected
+elements into a new JSON, filter in/out, update elements, insert new elements or remove them or swap around).
 
 #### Simple but efficient cli tool to manipulate JSON data
 
@@ -175,7 +176,7 @@ e. `[name]`: select/address a node whose label is `"name"`
   * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
   * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
-given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) 
+given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one)
   * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently
 selected/found node, a parent of a parent, etc
   * textual offsets (e.g. `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
@@ -260,10 +261,10 @@ bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-this walk path `<url>l+0 [-1] [name]`: 
+this walk path `<url>l+0 [-1] [name]`:
 
  - finds (encasement `<`, `>`) all (`+0`) JSON elements with a label (`l`) matching `"url"`
- 
+
  - then for an each found JSON element, its parent (`[-1]`) is selected
 
  - then JSON element with label `"name"` is selected (encasement `[`, `]`) within parent's immediate children
@@ -304,10 +305,148 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 walk printing rather than interleaved.
 
 
-#### 5. There are 4 operations to modify source JSON:
+#### 5. Subscripts (offsets) and Searches explained
+##### Subscripts
+subscripts let addressing/selecting one or more JSON elements among immediate children (off the currently selected JSON element),
+or address a parent(s). A full list of all types of subscripts supported by `jtc`:
+- `[]` - addresses/selects an empty text label:
+```
+bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[]'
+"empty lablel"
+```
+- `[text]` - addresses/selects a JSON value by label `text`:
+```
+bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[label]'
+"non-empty"
+```
+- `[n]`, where n is a plain number - addresses/selects a JSON value by a numerical offset index, the index in jtc is always zero-based
+(both JSON arrays and objects could be addressed, thought it's preferable to address objects by labels):
+```
+bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[1]'
+"non-empty"
+```
+- `[-n]` - a negative offset let addressing parent(s) of the currently selected json element. `[-1]` will address immediate parent,
+[-2] parent of a parent, etc:
+```
+bash $ echo '[ { "": "empty label", "label": "non-empty" } ]' | jtc -w'<non-empty> [-1]'
+{
+   "": "empty label",
+   "label": "non-empty"
+}
+```
+- `[^n]` - address a parent off the root (rather from the selected element). `[^0]` always select the root, `[^1]` will select
+a first nested level, `[^2]` will do second, etc, up to the level of the selected JSON element.
+Thus, the example above could be expressed then like this:
+```
+bash $ echo '[ { "": "empty label", "label": "non-empty" } ]' | jtc -w'<non-empty> [^1]'
+{
+   "": "empty label",
+   "label": "non-empty"
+}
+```
+- `[+n]` - numerical offset prepended with `+` will select all json elements in the iterable (array/object) starting off the
+index `n` up till the end:
+```
+bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[+3]'
+3
+4
+5
+```
+- `[N:N]` - range select, allows selecting flexibly any slice of the json elements in the iterable. The first index denotes
+beginning of the range/slice, the last one denotes the end index exclusively (i.e. not including the element denoted by
+the last index itself)
+  * `N` - positive N (could be prepended with '+') denotes an offset select _from the beginning_ of the iterable:
+  ````
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[2:4]'
+  2
+  3
+  ````
+  * `-N` - negative index denotes an offset select _from the end_ of the iterable. i.e. `-1` here addresses the last element,
+  `-2` addressed 2nd element from the end, etc:
+  ```
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[-4:-2]'
+  2
+  3
+  ```
+  * either of indices could be omitted: first empty index indicates a beginning of the iterable, the last one indicates the end.
+  Thus `[:]` will select all elements (it duplicates `[+0]` notation). Some more examples:
+  ```
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[:-4]'
+  0
+  1
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[:2]'
+  0
+  1
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[-2:]'
+  4
+  5
+  bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[4:]'
+  4
+  5
+  ```
+Finally, if any of numerical offsets does not result in a valid numerical value, such offset then is treated as
+a text offset (btw, spaces within the offset also make the offset textual), e.g. following offsets is textual:
+`[ +1 ]` - i.e., it will select an element with label `" +1 "` (if one exists of course)
+
+
+##### Searches
+there are 2 types of search notations:
+- enclosed like `<...>`: defines a _recursive_ search off the currently selected JSON element
+- enclosed like `>...<`: defines a _non-recursive_ among immediate children of (the currently selected) JSON element
+
+Compare:
+```
+bash $ echo '[ "a", "b", "c", ["d", "e", "f"]]' | jtc -w'<a>'
+"a"
+bash $ echo '[ "a", "b", "c", ["d", "e", "f"]]' | jtc -w'>a<'
+"a"
+bash $ echo '[ "a", "b", "c", ["d", "e", "f"]]' | jtc -w'<d>'
+"d"
+bash $ echo '[ "a", "b", "c", ["d", "e", "f"]]' | jtc -w'>d<'
+bash $
+```
+Note, the last search yields no result, it's because there's no element `"d"` among root's immediate children.
+The rest of the details applies to both search types, however notation `<...>` will be used only.
+
+A full syntax for searches is: `<...>SN`, where:
+- `S` is an _optional_ one letter suffix altering a search semantic (described earlier)
+- `N` is an _optional_ quantifier, allowing selecting one or multiple successful search matches:
+  * `n` - a plain number will instruct to select `n`th (zero based) encounter among all successful matches, by default `0` is assumed:
+  ```
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>' -l
+  "a": "1"
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>0' -l
+  "a": "1"
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>1' -l
+  "e": "1"
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>2' -l
+  bash $
+  ```
+  * `+n` - explicitly marked a positive search allows selecting all successful matches starting from `n`'th one (zero based):
+  ```
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>+0' -l
+  "a": "1"
+  "e": "1"
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<1>+1' -l
+  "e": "1"
+  bash $
+  ```
+  * `N:N` - allows expressing a range of selections (very much like in subscripts, but N cannot go negative here):
+  ```
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "e":"1", "f":"2", "g":"3" } }' | jtc -w'<>a2:5' -l
+  "c": "3"
+  "e": "1"
+  "f": "2"
+  bash $
+  ```
+  if index is not recognized as a valid in quantifier, the exception will be printed
+
+
+
+#### 6. There are 4 operations to modify source JSON:
 - insert/merge JSON arrays/objects `-i`
 - update existing entries `-u`
-- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires exactly 2 walk paths) 
+- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires exactly 2 walk paths)
 - remove (purge) walked entry `-p` (if `-pp` given then purge all entries _except_ walked)
 
 each of the above options would require a walk path (`-s` would require two) to operate on.
@@ -408,20 +547,20 @@ bash $ jtc -w"<stamp>l+0" -pp Bookmarks
       }
    ]
 }
-bash $ 
+bash $
 ```
 
 
 ##### Update (replace) (`-u`) and insert (`-i`) options:
 Each of those options supports 4 types of parameters:
 1. file (e.g.: `-i file.json`)
-2. string-json (e.g.: `-i '{"pi": 3.14 }'` 
+2. string-json (e.g.: `-i '{"pi": 3.14 }'`
 3. cli line (e.g.: `-e -i date \| xargs -I% echo \"%\" \;` )
 4. walk-path from source JSON (e.g.: `-i'<url>l+0 [-1] [name]'`)
 
 \- every of those options parameters must represent a valid JSON.
-\- the behavior for both options also could be modified by option `-m` 
-\- additionaly, together with parameter type 4 an option `-p` could be used, which turns it into _move_ operation  
+\- the behavior for both options also could be modified by option `-m`
+\- additionally, together with parameter type 4 an option `-p` could be used, which turns it into _move_ operation
 
 
 
@@ -501,7 +640,7 @@ proceed to the next walked entry for another update attempt)
 
 
 ##### Insert/merge option:
-Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON), or a file 
+Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON), or a file
 containing a valid JSON. There are different modes how insert/merge option work:
 
 Consider inserting one array (e.g.: `["a", "b", "c"]`) into another, e.g.: `[1, 2, 3]`. By default, insertion occurs like this:
@@ -517,10 +656,10 @@ bash $ echo '[1, 2, 3]' | jtc -w[-1] -i'["a", "b", "c"]'
       "c"
    ]
 ]
-bash $ 
+bash $
 ```
 _(Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
-either of the notation could be used: `-w[^0]`, or at the begining of walk-path `-w" "`, or `-w[-1]`)_
+either of the notation could be used: `-w[^0]`, or at the beginning of walk-path `-w" "`, or `-w[-1]`)_
 
 But the intention of the inserting array could be _merge_ - so, option `-m` ensures that upon insertion (`-i`) or update ('-u') any
 clashing labels/elements will be merged into an array:
@@ -534,7 +673,7 @@ bash $ echo '[1, 2, 3]' | jtc -w' ' -i'["a", "b", "c"]' -m
    "b",
    "c"
 ]
-bash $ 
+bash $
 ```
 JSON objects are unordered (i.e. one cannot insert a JSON element at the back or at the front of the object, it will be inserted by
 the notion of _labels_ instead), thus the insertion operation for objects must always be _merge_ type (and jtc does it recursively).
@@ -547,7 +686,7 @@ bash $ echo '{ "numbers": { "integer": 123, "rational": -2.76 } }' | jtc
       "rational": -2.76
    }
 }
-bash $ 
+bash $
 ```
 with/into another object:
 ```
@@ -570,7 +709,7 @@ bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{"num
       "rational": -2.76
    }
 }
-bash $ 
+bash $
 ```
 Two objects are merged now, but clashing non-object labels (i.e. `"integer"`) got overwritten (if clashing labels were object types,
 they would be merged recursively). Option `-m` (enable merging of clashing labels/element into an array) will alter the behavior into
@@ -587,7 +726,7 @@ bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "nu
       "rational": -2.76
    }
 }
-bash $ 
+bash $
 ```
 
 
@@ -618,7 +757,7 @@ bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | j
    2,
    "three"
 ]
-bash $ 
+bash $
 ```
 
 
@@ -641,7 +780,7 @@ Below is the code sample how that could be achieved using `Json.hpp` class and t
 using namespace std;
 
 
-int main(int argc, char *argv[]) { 
+int main(int argc, char *argv[]) {
  Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );  // read and parse json from cin
  vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());    // get all the names
  sort(names.begin(), names.end());                                               // sort the names
@@ -719,7 +858,7 @@ bash $ cat addressbook-sample.json
     }
   ]
 }
-bash $ 
+bash $
 ```
 
 Output result:
@@ -787,16 +926,16 @@ bash$ cat addressbook-sample.json | sort_ab
       }
    ]
 ]
-bash $ 
+bash $
 ```
-for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp) 
+for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
 
 ## jtc vs jq:
 #### 1. tool positioning:
  - `jq` is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
  - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
-  
+
 that way `jtc` is never meant to surpass or even match `jq` in capabilities, but there is a flip side:
 
 #### 2. learning curve:
@@ -820,7 +959,7 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
  (at least one class of the issues is off the table) - STL guaranty.
 
 #### 5. performance
- - as per my benchmarking both `jq` and `jtc` have excellent performance (though `jtc` is a notch faster - if comparing apples to 
+ - as per my benchmarking both `jq` and `jtc` have excellent performance (though `jtc` is a notch faster - if comparing apples to
  apples - capabilities that employ both tools)
 - the rest of judgement is up to you!
 
