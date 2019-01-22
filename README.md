@@ -306,7 +306,7 @@ walk printing rather than interleaved.
 
 
 #### 5. Subscripts (offsets) and Searches explained
-##### Subscripts
+##### _Subscript lexemes_
 subscripts let addressing/selecting one or more JSON elements among immediate children (off the currently selected JSON element),
 or address a parent(s). A full list of all types of subscripts supported by `jtc`:
 - `[]` - addresses/selects an empty text label:
@@ -389,7 +389,7 @@ a text offset (btw, spaces within the offset also make the offset textual), e.g.
 `[ +1 ]` - i.e., it will select an element with label `" +1 "` (if one exists of course)
 
 
-##### Searches
+##### _Search lexemes_
 there are 2 types of search notations:
 - enclosed like `<...>`: defines a _recursive_ search off the currently selected JSON element
 - enclosed like `>...<`: defines a _non-recursive_ among immediate children of (the currently selected) JSON element
@@ -444,10 +444,9 @@ A full syntax for searches is: `<...>SN`, where:
 specific labels, the notation then is like this `[label]:<...>` (emphasis is on the `:` between a subscript and a search lexemes),
 e.g.:
   ```
-  dlyssenk $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "a":"4", "b":"5", "c":"6" } }' | jtc -w'[b]:<.*>R:' -l
+  bash $ echo '{ "a":"1", "b":"2", "c":"3", "d": { "a":"4", "b":"5", "c":"6" } }' | jtc -w'[b]:<.*>R:' -l
   "b": "2"
   "b": "5"
-  dlyssenk $ 
   ```
 in the above example `jtc` will search all JSON string values (with any content, as per RE), but match only those strings which
 are directly attached to the label `"b"`
@@ -462,7 +461,7 @@ are directly attached to the label `"b"`
 each of the above options would require a walk path (`-s` would require two) to operate on.
 
 
-##### Purge (delete) option:
+##### _Purge (delete) option:_
 Say, let's delete (`-p`) all the stamps from the JSON:
 ```
 bash $ jtc -w"<stamp>l+0" -p Bookmarks
@@ -561,10 +560,10 @@ bash $
 ```
 
 
-##### Update (replace) (`-u`) and insert (`-i`) options:
+##### _Update (replace) (`-u`) and insert (`-i`) options:_
 Each of those options supports 4 types of parameters:
 1. file (e.g.: `-i file.json`)
-2. string-json (e.g.: `-i '{"pi": 3.14 }'`
+2. json-string (e.g.: `-i '{"pi": 3.14 }'`
 3. cli line (e.g.: `-e -i date \| xargs -I% echo \"%\" \;` )
 4. walk-path from source JSON (e.g.: `-i'<url>l+0 [-1] [name]'`)
 
@@ -573,13 +572,78 @@ Each of those options supports 4 types of parameters:
 \- additionally, together with parameter type 4 an option `-p` could be used, which turns it into _move_ operation
 
 
+##### _Insert (-i) option:_
+By default, insert option allows inserting its parameters into arrays and objects only (indeed, one cannot _insert_
+a value into an atomic value, for that overwrite operation is required, i.e. `-u`):
+- new value will be pushed at the end of an array:
+  ```
+  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -i'[3,4]' -r
+  [ 1, 2, [ 3, 4 ] ]
+  ```
+  In the example, destination walk-path `-w'[-1]'` merely selects a root (other notations to address root could be:
+  `-w' '`, `-w'[^0]'`), which is an array type, and the source JSON being inserted is a parameter of `-i`
+- merging modifier (`-m`) alters that behavior allowing merging of destination and sources, it also allows merging
+even into atomic types:
+  * merging two arrays:
+  ```
+  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -m -i'[3,4]' -r
+  [ 1, 2, 3, 4 ]
+  ```
+  * merging object into array:
+  ```
+  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -m -i'{"a":3,"b":4}' -r
+  [ 1, 2, 3, 4 ]
+  ```
+  * merging array into (with) an atomic value:
+  ```
+  bash $ echo '[ 1, 2 ]' | jtc -w'[-1:]' -m -i'[3,4]' -r
+  [ 1, [ 2, 3, 4 ] ]
+  ```
+  in the latter example JSON array `[3, 4]` is merged with the atomic element (`2`) pointed by the walk path `-w'[-1:]'`
+
+- objects only could be merged, hence by default `-i` will merge two objects, however in case of clashing labels no
+overwrite will occur (destination is preserved in that sense):
+  * merging 2 objects with clashing labels:
+  ```
+  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -i'{ "b":3, "c":3 }' -r
+  { "a": 1, "b": 2, "c": 3 }
+  bash $
+  ```
+  * with `-m` modifier though, the values with clashing labels will be merged into a common array:
+  ```
+  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -mi'{ "b":3, "c":3 }' -r
+  { "a": 1, "b": [ 2, 3 ], "c": 3 }
+  bash $
+  ```
+- a real power adds ability to specify a walk-path in the source JSON as the parameter of the `-i` option - effectively it
+let _copying_ portion of source JSON into another part of it, some examples:
+  * duplicate all json entries:
+  ```
+  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w'[-1]' -i'[:]' -r
+  [ null, 1, "2", { "a": 1, "b": 2 }, null, 1, "2", { "a": 1, "b": 2 } ]
+  ```
+  * extend the array with all its values (i.e. de-nest the object/arrays):
+  ```
+  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w'[-1]' -i'[:]' -r -m
+  [ null, 1, "2", { "a": 1, "b": 2 }, null, 1, "2", 1, 2 ]
+  ```
+  * with `-p` added (while `-i`'s parameter is a walk-path), a _copy_ semantic turns into the _move_ - source-walked elements
+  are removed, let's move all elements out of object into parent array:
+  ```
+  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w' ' -i[-1:][:]  -m -p -r
+  [ null, 1, "2", {}, 1, 2 ]
+  ```
+  * the above step leaves an empty leftover from the object, which could be removed (purged) in a subsequent step:
+  ```
+  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w' ' -i[-1:][:]  -m -p | jtc -w'<{}>j:' -p -r
+  [ null, 1, "2", 1, 2 ]
+  ```
 
 
-##### Update option (`-u`):
-
-Update/replace operation (`-u`) optionally may undergo a shell evaluation (predicated by `-e`).
+##### _Update (`-u`) option:_
+Insert and update operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by `-e`).
 E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
-seconds since epoch:
+seconds since the epoch:
 ```
 bash $ jtc -w'<stamp>l+0' -eu date -jf '"%F, %H:%M:%S"' {} +%s \; Bookmarks
 {
@@ -637,110 +701,44 @@ bash $ jtc -w'<stamp>l+0' -eu date -jf '"%F, %H:%M:%S"' {} +%s \; Bookmarks
 }
 bash $
 ```
-
-Once options `-e` and `-u` used together following rules must be observed:
- - option `-e` must precede `-u`
- - char sequence following option `-u` must be terminated with escaped `;`
- - any occurrence of `{}` will be interpolated with JSON entry being updated
+Once options `-e` and `-i`,`-u` used together following rules must be observed:
+ - option `-e` must precede `-i`,`-u`
+ - char sequence following option `-i`,`-u` must be terminated with escaped `;`
+ - any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
  - the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
  - if piping in the cli is required then pipe symbol itself needs to be escaped: `\|`
  - returned result of a shell evaluation still must be a valid JSON
- - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather
-proceed to the next walked entry for another update attempt)
+ - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather proceed to the next walked
+ entry for another update attempt)
+
+- Update operation overwrites the destination entirely:
+  * even atomic value overwrites any json at destination:
+  ```
+  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -u'3'
+  3
+  ```
+  * objects by default are not merged:
+  ```
+  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -u'{ "c": 3 }' -r
+  { "c": 3 }
+  ```
+- however merge option (`-m`) let altering that behavior (only for objects), now destination and source objects will get
+merged, but the source will overwrite the destination:
+  ```
+  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -m -u'{ "b":3, "c":4 }' -r
+  { "a": 1, "b": 3, "c": 4 }
+  ```
+- adding option `-p` (again, it's only useful while `-u`'s parameter is a walk-path) has the same effect as in case with `-i` option:
+_copy_with_overwrite_ turns into _move_with_overwrite_:
+  ```
+  bash $ echo '[1,2,{ "a":3, "b":4 }]' | jtc -w'[0]' -u'[-1:][-1:]' -r -p
+  [ 4, 2, { "a": 3 } ]
+  ```
+  \- in that example, the first value of the root array (`1`), gets overwritten by a moved last value out of the last object
+  (i.e. "b": 4), the label of course will be lost, as the array does not cater labels
 
 
-##### Insert/merge option:
-Option `-i` (as well as `-u`) requires an argument in a fully qualified JSON notation (it has to be a valid JSON), or a file
-containing a valid JSON. There are different modes how insert/merge option work:
-
-Consider inserting one array (e.g.: `["a", "b", "c"]`) into another, e.g.: `[1, 2, 3]`. By default, insertion occurs like this:
-```
-bash $ echo '[1, 2, 3]' | jtc -w[-1] -i'["a", "b", "c"]'
-[
-   1,
-   2,
-   3,
-   [
-      "a",
-      "b",
-      "c"
-   ]
-]
-bash $
-```
-_(Note: every walk path (`-w`) begins at root (i.e. any notation will begin addressing root's children), thus to address the root itself
-either of the notation could be used: `-w[^0]`, or at the beginning of walk-path `-w" "`, or `-w[-1]`)_
-
-But the intention of the inserting array could be _merge_ - so, option `-m` ensures that upon insertion (`-i`) or update ('-u') any
-clashing labels/elements will be merged into an array:
-```
-bash $ echo '[1, 2, 3]' | jtc -w' ' -i'["a", "b", "c"]' -m
-[
-   1,
-   2,
-   3,
-   "a",
-   "b",
-   "c"
-]
-bash $
-```
-JSON objects are unordered (i.e. one cannot insert a JSON element at the back or at the front of the object, it will be inserted by
-the notion of _labels_ instead), thus the insertion operation for objects must always be _merge_ type (and jtc does it recursively).
-However, there are different modes how clashing of non-object labels are handled. Consider following example - merge an object:
-```
-bash $ echo '{ "numbers": { "integer": 123, "rational": -2.76 } }' | jtc
-{
-   "numbers": {
-      "integer": 123,
-      "rational": -2.76
-   }
-}
-bash $
-```
-with/into another object:
-```
-bash $ echo '{ "numbers": { "integer": -17, "irrational": "pi" } }' | jtc
-{
-   "numbers": {
-      "integer": -17,
-      "irrational": "pi"
-   }
-}
-bash $
-```
-The result of such object insertion/merging will be:
-```
-bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{"numbers":{"integer":-17,"irrational":"pi"}}'
-{
-   "numbers": {
-      "integer": -17,
-      "irrational": "pi",
-      "rational": -2.76
-   }
-}
-bash $
-```
-Two objects are merged now, but clashing non-object labels (i.e. `"integer"`) got overwritten (if clashing labels were object types,
-they would be merged recursively). Option `-m` (enable merging of clashing labels/element into an array) will alter the behavior into
-following:
-```
-bash $ echo '{"numbers":{"integer":123,"rational":-2.76}}' | jtc -w[-1] -i'{ "numbers":{"integer":-17,"irrational":"pi"}}' -m
-{
-   "numbers": {
-      "integer": [
-         123,
-         -17
-      ],
-      "irrational": "pi",
-      "rational": -2.76
-   }
-}
-bash $
-```
-
-
-##### Swap option:
+##### _Swap option:_
 Swap option requires strictly 2 walk paths (which in turn may be iterative) and will swap around all corresponding instances of
 walk-paths (their iterations). In particular, swap operation is useful when it's required to reduce a (redundant) nestedness of
 JSON structure:
@@ -974,6 +972,7 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
 - the rest of judgement is up to you!
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
+
 
 
 
