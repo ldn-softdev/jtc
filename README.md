@@ -455,7 +455,7 @@ are directly attached to the label `"b"`
 ##### _Understand how [-n] and [^n] subscripts work_
 say we have a folloing JSON:
 ```
-dlyssenk $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
+bash $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
 {
    "a": [
       {
