@@ -453,7 +453,7 @@ are directly attached to the label `"b"`
 
 
 ##### _Understand how `[-n]` and `[^n]` subscripts work_
-say we have a folloing JSON:
+say, we have a following JSON:
 ```
 bash $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
 {
@@ -1005,7 +1005,6 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
 - the rest of judgement is up to you!
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
-
 
 
 
