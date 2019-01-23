@@ -471,16 +471,16 @@ Once a recursive search like `-w'<3.14>d'` is applied, upon finding a match `jtc
 references to the found object, namely `["a"] [1] ["c3"]`, now addressing any of those elements with `[-n]` or `[^n]` becomes easy to 
 understand:
 ````
-                                   etc.
-                                   [^3]
-addressing off the root: [^0] [^1] [^2] 
-                           |    |    |
-                           v    v    v
-          internal path: ["a"] [1] ["c3"]
-                           ^    ^    ^
-                           |    |    |
-addressing off the leaf:  [-2] [-1] [-0]
-                          [-3]
+                                          etc.
+                                          [^4]
+addressing off the root:  [^0] [^1] [^2] [^3]
+                            |    |    |    |
+                            v    v    v    v
+           internal path: root ["a"] [1] ["c3"]
+                            ^    ^    ^    ^
+                            |    |    |    |
+addressing off the leaf:  [-3] [-2] [-1] [-0]
+                          [-4]
                           etc.
 ````
 
