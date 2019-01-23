@@ -806,7 +806,7 @@ bash $
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 
-#### 7. Debugability
+#### 7. Debugability / JSON validation
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced.
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful -
 when parsing of the input JSON is failing, `jtc` throws the exception:
