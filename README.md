@@ -452,6 +452,35 @@ in the above example `jtc` will search all JSON string values (with any content,
 are directly attached to the label `"b"`
 
 
+##### _Understand how [-n] and [^n] subscripts work_
+say we have a folloing JSON:
+```
+dlyssenk $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
+{
+   "a": [
+      {
+         "b3": 123
+      },
+      {
+         "c3": 3.14
+      }
+   ]
+}
+```
+Once a recursive search like `-w'<3.14>d'` is applied, upon finding a match `jtc` internally will build a path (off the root) of direct 
+references to the found object, namely `["a"] [0] ["b3"]`, now addressing any of those elements with `[-n]` or `[^n]` becomes easy to 
+understand:
+````
+addressing off the root: [^0] [^1] [^2] 
+                           |    |    |
+                           v    v    v
+          internal path: ["a"] [1] ["c3"]
+                           ^    ^    ^
+                           |    |    |
+addressing off the leaf:  [-2] [-1] [-0]
+````
+
+
 #### 6. There are 4 operations to modify source JSON:
 - insert/merge JSON arrays/objects `-i`
 - update existing entries `-u`
@@ -569,7 +598,7 @@ Each of those options supports 4 types of parameters:
 
 \- every of those options parameters must represent a valid JSON.
 \- the behavior for both options also could be modified by option `-m`
-\- additionally, together with parameter type 4 an option `-p` could be used, which turns it into _move_ operation
+\- additionally, together with parameter type 4 an option `-p` could be used, which turns it into a _move_ operation
 
 
 ##### _Insert (-i) option:_
