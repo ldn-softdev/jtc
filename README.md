@@ -468,7 +468,7 @@ bash $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc
 }
 ```
 Once a recursive search like `-w'<3.14>d'` is applied, upon finding a match `jtc` internally will build a path (off the root) of direct 
-references to the found object, namely `["a"] [0] ["c3"]`, now addressing any of those elements with `[-n]` or `[^n]` becomes easy to 
+references to the found object, namely `["a"] [1] ["c3"]`, now addressing any of those elements with `[-n]` or `[^n]` becomes easy to 
 understand:
 ````
                                    etc.
