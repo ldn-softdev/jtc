@@ -1,4 +1,5 @@
 
+
 # jtc - cli tool to extract, manipulate and transform source JSON
 
 jtc stand for: JSON test console, but it's a legacy name, don't get mislead. jtc offers a powerful way to select one
@@ -805,10 +806,10 @@ bash $
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
 
 
-#### 7. Debuggability
+#### 7. Debugability
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced.
-Enabling too many debugs might be overwhelming, though one specific case many would find extreamly useful -
-when parsing of the input JSON is failing `jtc` throws an exception:
+Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful -
+when parsing of the input JSON is failing, `jtc` throws the exception:
 ```
 bash $ cat addressbook-sampe.json | jtc 
 jtc json exception: expected_json_value
@@ -823,7 +824,6 @@ bash $ cat addressbook-sampe.json | jtc -d
 jtc json exception: expected_json_value
 bash $ 
 ```
-
 
 
 
