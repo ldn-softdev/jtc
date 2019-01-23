@@ -452,7 +452,7 @@ in the above example `jtc` will search all JSON string values (with any content,
 are directly attached to the label `"b"`
 
 
-##### _Understand how [-n] and [^n] subscripts work_
+##### _Understand how `[-n]` and `[^n]` subscripts work_
 say we have a folloing JSON:
 ```
 bash $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
