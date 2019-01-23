@@ -485,7 +485,7 @@ addressing off the leaf:  [-3] [-2] [-1] [-0]
 ````
 
 
-#### 6. There are 4 operations to modify source JSON:
+#### 6. 4 operations to modify source JSON:
 - insert/merge JSON arrays/objects `-i`
 - update existing entries `-u`
 - swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires exactly 2 walk paths)
@@ -803,6 +803,28 @@ bash $
 
 
 for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
+
+
+#### 7. Debuggability
+`jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced.
+Enabling too many debugs might be overwhelming, though one specific case many would find extreamly useful -
+when parsing of the input JSON is failing `jtc` throws an exception:
+```
+bash $ cat addressbook-sampe.json | jtc 
+jtc json exception: expected_json_value
+```
+If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
+parsing failure point:
+```
+bash $ cat addressbook-sampe.json | jtc -d
+.read_json(), start parsing json from file: <stdin>
+.read_json(), exception locus: ...|          }|       ],|       "children": [,],|       "spouse": null|    },|    {|    ...
+.read_json(), exception spot: ---------------------------------------------->|
+jtc json exception: expected_json_value
+bash $ 
+```
+
+
 
 
 ## A tiny example of class usage and its interface (c++14):
