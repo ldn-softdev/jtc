@@ -152,7 +152,9 @@ mutually exclusive options:
 option -)" STR(OPT_EXE) R"( with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage:
  - when used together, option -)" STR(OPT_EXE) R"( must precede option -)" STR(OPT_UPD)
    R"( or option -)" STR(OPT_INS) R"(; every
-   occurrence of )" INTRP_STR R"( is interpolated with walked JSON entry using raw format;
+   occurrence of )" INTRP_STR R"( is interpolated with walked JSON entry using a raw format;
+   if interpolation results in a string value, then every occurrence of )" INTRP_SWQ R"( is
+   interpolation of the value occurs dropping the outside qoutation marks;
    interpolated entry is completely escaped, thus does not require quoting;
    all shell-specific chars (e.g.: `|', `;', `\"', etc) have to be quoted or
    escaped; terminate the cli with trailing semicolon (which needs to be

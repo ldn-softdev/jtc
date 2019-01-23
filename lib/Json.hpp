@@ -626,9 +626,11 @@ class Jnode {
                 expected_valid_label, \
                 missing_label_separator, \
                 expected_json_value, \
-                expected_enumeration, \
+                missed_prior_enumeration, \
                 invalid_number, \
                 unexpected_trailing, \
+                \
+                /* walk iterator exceptions */ \
                 json_search_invalid, \
                 walk_offset_missing_closure, \
                 walk_search_label_with_attached_label, \
@@ -1972,7 +1974,7 @@ void Json::parse_(Jnode & node, std::string::const_iterator &jsp) {
  node.type_ = classify_jnode_(jsp);
 
  DBG(4) {                                                       // print currently parsed point
-   static const char* pfx{"parsing point ->"};
+   const char* pfx{"parsing point ->"};
    bool truncate = std::strlen(&*jsp) > (DBG_WIDTH-sizeof(pfx));
    std::string str {jsp, jsp + (truncate? DBG_WIDTH - sizeof(pfx) - 3: strlen(&*jsp))};
    for(auto &c: str)
@@ -2040,7 +2042,7 @@ void Json::parse_array_(Jnode & node, std::string::const_iterator &jsp) {
    ep_ = jsp; throw EXP(Jnode::expected_json_value);            // e.g.: "[ , ...", or "[ 123,, ]"
   }
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
-   { ep_ = jsp; throw EXP(Jnode::expected_enumeration); }
+   { ep_ = jsp; throw EXP(Jnode::missed_prior_enumeration); }
 
   node.children_().emplace(node.next_key_(), std::move(child));
   comma_read = false;
@@ -2078,7 +2080,7 @@ void Json::parse_object_(Jnode & node, std::string::const_iterator &jsp) {
    { ep_ = jsp; throw EXP(Jnode::expected_json_value); }        // a valid JSON value
 
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
-   { ep_ = jsp; throw EXP(Jnode::expected_enumeration); }
+   { ep_ = jsp; throw EXP(Jnode::missed_prior_enumeration); }
 
   node.children_().emplace(std::move(label.str()), std::move(child));
   comma_read = false;
