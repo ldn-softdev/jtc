@@ -731,14 +731,14 @@ bash $ jtc -w'<stamp>l+0' -eu date -jf '"%F, %H:%M:%S"' {} +%s \; Bookmarks
 bash $
 ```
 Once options `-e` and `-i`,`-u` used together following rules must be observed:
- - option `-e` must precede `-i`,`-u`
- - char sequence following option `-i`,`-u` must be terminated with escaped `;`
- - any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
- - the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
- - if piping in the cli is required then pipe symbol itself needs to be escaped: `\|`
- - returned result of a shell evaluation still must be a valid JSON
- - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather proceed to the next walked
- entry for another update attempt)
+- option `-e` must precede `-i`,`-u`
+- char sequence following option `-i`,`-u` must be terminated with escaped `;`
+- any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
+- the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
+- if piping in the cli is required then pipe symbol itself needs to be escaped: `\|`
+- returned result of a shell evaluation still must be a valid JSON
+- failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather proceed to the next walked
+entry for another update attempt)
 
 - Update operation overwrites the destination entirely:
   * even atomic value overwrites any json at destination:
