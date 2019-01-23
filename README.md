@@ -471,8 +471,8 @@ Once a recursive search like `-w'<3.14>d'` is applied, upon finding a match `jtc
 references to the found object, namely `["a"] [1] ["c3"]`, now addressing any of those elements with `[-n]` or `[^n]` becomes easy to 
 understand:
 ````
-                                          etc.
-                                          [^4]
+                                         etc.
+                                         [^4]
 addressing off the root:  [^0] [^1] [^2] [^3]
                             |    |    |    |
                             v    v    v    v
