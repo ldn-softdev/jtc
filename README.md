@@ -1032,6 +1032,7 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
  ```
  bash $ echo "0.99999999999999999" | jq .
  1
+ bash $
  ```
  - `jtc` will always keep the numerical data they way it's given, while validating the numericals upon parsing in accordance with JSON
  specification, thus no loss or change of the numerical representation may ever occur:
