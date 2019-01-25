@@ -1026,15 +1026,15 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
  apples - capabilities that employ both tools)
 - the rest of judgement is up to you!
 
-#### 6. numerical accuracy
- - upon parsing `jq` is converting JSON numerical values into an internal digital representation and outputs back into a symbolic form.
- Such approach may cause a deviation in the numerical values representation and some accuracy loss:
+#### 6. numerical precision
+ - upon parsing `jq` is converting JSON numerical values into an internal digital representation and outputs back from it.
+ Such approach may cause a deviation in the numerical values representation and some precision loss:
  ```
  bash $ echo "0.99999999999999999" | jq .
  1
  bash $
  ```
- - `jtc` will always keep the numerical data they way it's given, while validating the numericals upon parsing in accordance with JSON
+ - `jtc` will always preserve the numerical data they way it's given, while validating the numericals upon parsing in accordance with JSON
  specification, thus no loss or change of the numerical representation may ever occur:
  ```
  bash $ echo "0.99999999999999999" | jtc
