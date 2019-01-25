@@ -999,7 +999,8 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
 
-that way `jtc` is never meant to surpass or even match `jq` in capabilities, but there is a flip side:
+`jtc` is never meant to surpass `jq` in capabilities (due to confining its operations only to the domain of its data model and
+performing one operation with the input data at a time), however, it offers a powerful alternative to jq:
 
 #### 2. learning curve:
  - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
@@ -1013,7 +1014,7 @@ that way `jtc` is never meant to surpass or even match `jq` in capabilities, but
  - `jq`: handling irregular JSONs for `jq` is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging query becomes
  - `jtc` was incepted with the idea being capable of handling complex irregular JSONs with simplified interface - that all is fitted
- in the concept of the walk-path
+ in the concept of the walk-path, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every ask. 
 
 #### 4. programming model
  - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation
