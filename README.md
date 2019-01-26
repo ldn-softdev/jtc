@@ -41,10 +41,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.49)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.49)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.49)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.49)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.50)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.50)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.50)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.50)
 
 
 #### Compile and install instructions:
@@ -820,7 +820,7 @@ parsing failure point:
 bash $ cat addressbook-sampe.json | jtc -d
 .read_json(), start parsing json from file: <stdin>
 .read_json(), exception locus: ...|          }|       ],|       "children": [,],|       "spouse": null|    },|    {|    ...
-.read_json(), exception spot: ---------------------------------------------->|
+.read_json(), exception spot: ---------------------------------------------->| (offset: 857)
 jtc json exception: expected_json_value
 bash $ 
 ```
