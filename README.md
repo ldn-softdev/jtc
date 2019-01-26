@@ -815,7 +815,7 @@ bash $ cat addressbook-sampe.json | jtc
 jtc json exception: expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
-parsing failure point:
+parsing failure point and its locus:
 ```
 bash $ cat addressbook-sampe.json | jtc -d
 .read_json(), start parsing json from file: <stdin>
