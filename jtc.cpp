@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.49"
+#define VERSION "1.50"
 
 
 // option definitions
@@ -162,9 +162,8 @@ class Jtc {
 #undef MERGEOBJ
 
 
-
 string quote_str(const string &src);
-//int wp_guide(void);
+
 
 
 
@@ -282,11 +281,11 @@ void Jtc::read_json(void) {
                                     cin >> noskipws:
                                     ifstream{opt_[0].c_str(), ifstream::in} >> noskipws),
              istream_iterator<char>{}};
+
  try { json_.parse(jsrc); }
  catch(Json::stdException & e) {
-  if(e.code() < Jnode::unexpected_end_of_string or
-     e.code() > Jnode::unexpected_trailing) throw e;
-
+  if(e.code() < Jnode::start_of_json_parsing_exceptions or
+     e.code() > Jnode::end_of_json_parsing_exceptions) throw e;
   DBG(0) {                                                      // format pretty exception point
    const char * pfx = "exception locus: ";
    for(auto &c: jsrc)
@@ -299,8 +298,8 @@ void Jtc::read_json(void) {
      { jsrc = "..." + jsrc.substr(from_start - DBG_WIDTH/2 + 3); ptr = DBG_WIDTH/2; }
     if(to_end > DBG_WIDTH/2) jsrc = jsrc.substr(0, DBG_WIDTH - 3) + "...";
    }
-   DOUT() << pfx << jsrc << endl;
-   DOUT() << DBG_PROMPT(0) << "exception spot: " << string(ptr, '-') << ">|" << endl;
+   DOUT() << pfx << jsrc << endl << DBG_PROMPT(0) << "exception spot: "
+          << string(ptr, '-') << ">| (offset: " << from_start << ")" << endl;
   }
   throw e;
  }
@@ -387,7 +386,7 @@ int Jtc::demux_opt(void) {
 //           "c": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2, "c": 3 }
 //    c. insertion into atomic types:
 //       converted to arrays and merged: [ "a", "b" ] -> 1 = [ 1, "a" , "b" ]
-//    d. if -p is present, : source-walked elements are purged
+//    d. if -p is present: source-walked elements are purged
 // Destination walks (-w <dst walk-path>) define mode of insertion:
 //  - if insertion point is single (only one walk given and it's non-iterable), then
 //    all source jsons/walks will be attempted to be inserted into a single location
@@ -424,7 +423,8 @@ void Jtc::insert_by_iterator(Json::iterator &it, size_t group) {
    if(isrc_[key_].is_valid())
     merge_jsons_(it, isrc_[key_]);                              // then insert/merge
    else
-    cerr << "error: walk path instance " << key_ << " became invalid, skipping" << endl;
+    cerr << "error: walk instance " << key_
+         << " became invalid due to prior operations, skipping" << endl;
   }
 
   ++key_;
@@ -484,7 +484,7 @@ void Jtc::purge_json(void) {
 //       b1. by walk-path: labeled elements merged overwriting clashing labels:
 //           "b": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 3 }
 //           "c": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2, "c": 3 }
-//    c. if -p is present, : source-walked element is purged
+//    c. if -p is present: source-walked element is purged
 void Jtc::update_json() {
  check_walk_requirements_(1);
  parse_params_(CHR(OPT_UPD));                                   // collect all sources
@@ -517,7 +517,8 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
    if(isrc_[key_].is_valid())
     update_jsons_(it, isrc_[key_]);                             // then update/merge w. overwrite
    else
-    cerr << "error: walk path instance " << key_ << " became invalid, skipping" << endl;
+    cerr << "error: walk instance " << key_
+         << " became invalid due to prior operations, skipping" << endl;
   }
 
   ++key_;
@@ -540,8 +541,11 @@ int Jtc::swap_json(void) {
 
  size_t max_i = min(swaps[0].size(), swaps[1].size());
  for(size_t i = 0; i < max_i; ++i) {                            // swap only paired walks
-  if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid())
-   { cerr << "error: walk path instance " << i << " became invalid" << endl; return RC_WP_INV; }
+  if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid()) {
+   cerr << "error: walk instance " << i
+        << " became invalid due to prior operations, aborting" << endl;
+   return RC_WP_INV;
+  }
   swap(*swaps[0][i], *swaps[1][i]);
  }
  return RC_OK;

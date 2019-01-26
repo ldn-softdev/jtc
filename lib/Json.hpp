@@ -602,6 +602,7 @@ class Jnode {
 
  public:
     #define THROWREASON \
+                start_of_jnode_exceptions, \
                 type_non_indexable, \
                 type_non_subscriptable, \
                 type_non_iterable, \
@@ -617,20 +618,24 @@ class Jnode {
                 label_request_for_non_object_enclosed, \
                 index_request_for_non_array_enclosed, \
                 index_out_of_range, \
+                end_of_jnode_exceptions, \
                 \
                 /* now define Json exceptions */ \
+                start_of_json_parsing_exceptions, \
                 unexpected_end_of_string, \
                 unexpected_end_of_line, \
                 unquoted_character, \
                 unexpected_character_escape, \
                 expected_valid_label, \
-                missing_label_separator, \
                 expected_json_value, \
+                missing_label_separator, \
                 missed_prior_enumeration, \
                 invalid_number, \
                 unexpected_trailing, \
+                end_of_json_parsing_exceptions, \
                 \
                 /* walk iterator exceptions */ \
+                start_of_walk_exceptions, \
                 json_search_invalid, \
                 walk_offset_missing_closure, \
                 walk_search_label_with_attached_label, \
@@ -644,6 +649,7 @@ class Jnode {
                 walk_bad_suffix, \
                 walk_bad_position, \
                 walk_a_bug, \
+                end_of_walk_exceptions, \
                 end_of_throw
     ENUMSTR(ThrowReason, THROWREASON)
 
@@ -1576,18 +1582,23 @@ class Json{
     struct Itr {
         // path-vector is made of Itr - result of walking WalkStep vector (walk path)
         // last Itr in path-vector points to the found JSON element (via jit)
-        // lbl keeps a copy of jit's key: this is required for validation - jit could
-        // be invalidated due to JSON manipulation, preserved lbl ensures safe execution
-        // of is_nested() and is_valid() methods
+        // lbl and jnp keep a copy of jit's key and Jnode addr: this is required for
+        // validation - jit could be invalidated due to a prior JSON manipulation,
+        // preserved lbl and jnode addr ensure safe execution of is_nested() and
+        // is_valid() methods;
         // wsi (filled only when path is terminated with end() - out of iterations/non
         // iterable) used in increment_() facilitating walk path iterations
 
                             Itr(void) = default;                // for pv_.resize()
-                            Itr(const iter_jn &it, const std::string &l, size_t i = 0):
-                             jit(it), lbl(l), wsi(i) {}         // enable emplacement
+                            Itr(const iter_jn &it):             // for emplacement
+                             jit(it), lbl(it->KEY), jnp(&it->VALUE), wsi(0) {}
+                            Itr(const iter_jn &it, size_t i):   // for emplacement
+                             jit(it), wsi(0) {}
 
+        // typedef std::map<std::string, Jnode>::iterator iter_jn;
         iter_jn             jit;                                // iterator pointing to JSON
-        std::string         lbl;                                // preserved label for validation
+        std::string         lbl;                                // label and node ptr are required
+        const Jnode *       jnp{nullptr};                       // for iterator (jit) validation
         size_t              wsi;                                // walk step index (for increments)
     };
 
@@ -1818,7 +1829,8 @@ class Json{
 
      protected:
                             iterator(Json *ptr): jp_{ptr} {};
-                            iterator(const iter_jn & it) { pv_.emplace_back(it, ""); }
+                            iterator(const iter_jn & it)        // used to return end() iterator
+                             { pv_.emplace_back(it,0); }
 
       std::vector<WalkStep> ws_;                                // walk state vector (walk path)
         path_vector         pv_;                                // path_vector (result of walking)
@@ -2482,8 +2494,8 @@ void Json::parse_subscript_type_(WalkStep & ws) const {
 
 bool Json::iterator::is_nested(iterator & it) const {
  // check if we're nesting iterator. end() iterator considered to be non-nested
- if(pv_.empty()) return true;                                   // root always nest
- if(pv_.back().jit == jp_->root().children_().end())
+ if(pv_.empty()) return jp_->is_iterable();                     // root always nests (if iterable)
+ if(pv_.back().jit == jp_->root().children_().end())            // end() does not nest
   return false;
  for(size_t i = 0; i<pv_.size() and i<it.pv_.size(); ++i)
   if(pv_[i].lbl != it.pv_[i].lbl)
@@ -2494,11 +2506,11 @@ bool Json::iterator::is_nested(iterator & it) const {
 
 bool Json::iterator::is_valid_(Jnode & jn, size_t idx) const {
  // check if all labels in path-vector are present
- if(idx >= pv_.size())
-  return true;
- auto it = jn.children_().find(pv_[idx].lbl);
- if(it != jn.children_().end())
-  return is_valid_(it->VALUE, idx+1);
+ if(idx >= pv_.size())                                          // no more pv_ idx to check
+  return true;                                                  // all checked, return true then
+ auto it = jn.children_().find(pv_[idx].lbl);                   // first try by label, if found
+ if(it != jn.children_().end() and &it->VALUE == pv_[idx].jnp)  // then validate by Jnode addr
+  return is_valid_(it->VALUE, idx+1);                           // check the rest of the tree
  return false;
 }
 
@@ -2578,9 +2590,9 @@ void Json::iterator::walk_numeric_offset_(size_t idx, Jnode *jn) {
 
  // [0], [+1], [..:..] etc
  if(ws.offset >= node_size or ws.offset >= ws.tail)             // beyond children's size or tail
-  { pv_.emplace_back(json_().root().children_().end(), "", idx); return; }
+  { pv_.emplace_back(json_().root().children_().end(), idx); return; }
  auto it = jn->iterator_by_idx_(ws.offset);
- pv_.emplace_back(it, it->KEY);
+ pv_.emplace_back(it);
 }
 
 
@@ -2589,9 +2601,9 @@ void Json::iterator::walk_text_offset_(size_t idx, Jnode *jn) {
  auto &ws = ws_[idx];
  auto it = jn->children_().find(ws.stripped.front());           // see if label exist
  if(it == jn->children_().end())
-  pv_.emplace_back(json_().root().children_().end(), "", idx);
+  pv_.emplace_back(json_().root().children_().end(), idx);
  else
-  pv_.emplace_back(it, it->KEY);                                // if so, add to the path-vector
+  pv_.emplace_back(it);                                         // if so, add to the path-vector
 }
 
 
@@ -2599,19 +2611,19 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
  // if search is iterable, build a cache (if not yet), otherwise do a one-time search
  auto &ws = ws_[idx];
  if(ws.offset >= ws.tail)                                       // counted beyond tail
-  return pv_.emplace_back(json_().root().children_().end(), "", idx);
+  return pv_.emplace_back(json_().root().children_().end(), idx);
 
  auto i = ws.offset;                                            // needed stateful, for recursion
                                                                 // quantifier is always positive
  if(ws.lexeme.front() == LXM_SCH_CLS) {                         // '>': search immediate children
   if(not child_found_(jn, ws, i))
-   pv_.emplace_back(json_().root().children_().end(), "", idx);
+   pv_.emplace_back(json_().root().children_().end(), idx);
   return;
  }
 
  if(ws.type == WalkStep::static_select) {                       // non-iterable, find once
   if(not search_one_(jn, nullptr, ws, i))
-   pv_.emplace_back(json_().root().children_().end(), "", idx);
+   pv_.emplace_back(json_().root().children_().end(), idx);
   return;
  }
 
@@ -2626,7 +2638,7 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
  }
 
  if(i >= static_cast<long>(cache[skey].size()))                 // offset outside of cache:
-  pv_.emplace_back(json_().root().children_().end(), "", idx);  // return end() iterator
+  pv_.emplace_back(json_().root().children_().end(), idx);      // return end()
  else                                                           // otherwise augment the path
   for(auto &path: cache[skey][i])
    pv_.push_back(path);
@@ -2640,7 +2652,7 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
  if(jn->is_iterable()) {
   if(match_iterables_(jn, lbl, ws, vpv)) return;
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
-   vpv.back().emplace_back(it, it->KEY);
+   vpv.back().emplace_back(it);
    if(json_().is_engaged(walk_callback))                            // engage walk callbacks
     wlk_callback_(jn);
    if(jn->is_object()) {
@@ -2689,7 +2701,7 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
  if(jn->is_iterable()) {
   if(match_iterables_(jn, lbl, ws, i)) return true;
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
-   pv_.emplace_back(it, it->KEY);
+   pv_.emplace_back(it);
    if(json_().is_engaged(walk_callback))
     wlk_callback_(jn);
    if(jn->is_object()) {
@@ -2774,25 +2786,25 @@ bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
    continue;
   if(ws.jsearch == json_match) {                                // match j suffix
    if(ws.user_json == it->VALUE and --i < 0)
-    { pv_.emplace_back(it, it->KEY); return true; }
+    { pv_.emplace_back(it); return true; }
    continue;
   }
   if((ws.jsearch == object_match and jn->is_object()) or
      (ws.jsearch == iterable_match and jn->is_array())) {
    if(--i < 0)
-    { pv_.emplace_back(it, it->KEY); return true; }
+    { pv_.emplace_back(it); return true; }
    continue;
   }
   if(jn->is_object() and (ws.jsearch AMONG(label_match, Label_RE_search))) {// match l, L suffix
    if(label_matched_(it->KEY, ws, i)) {
-    pv_.emplace_back(it, it->KEY);
+    pv_.emplace_back(it);
     return true;
    }
    continue;
   }
   if(it->VALUE.is_atomic())                                     // try to match str/num/bool/null
    if(atomic_matched_(&it->VALUE, it->KEY.c_str(), ws) and --i < 0) {
-    pv_.emplace_back(it, it->KEY);
+    pv_.emplace_back(it);
     return true;
    }
  }
@@ -2878,7 +2890,7 @@ bool Json::iterator::incremented(void) {
 
  long i = next_iterable_ws_(walk_path_().size());
  if(i < 0) {
-  pv_.emplace_back(json_().root().children_().end(), "");
+  pv_.emplace_back(json_().root().children_().end(), 0);
   DBG(json_(), 2) DOUT(json_()) << "path is non-iterable" << std::endl;
   return false;
  }
