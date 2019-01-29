@@ -143,7 +143,7 @@
 
 
 #define OPT_ARG_OFFSET 256
-#define OPT_WIDTH 80
+#define OPT_WIDTH 100
 
 
 

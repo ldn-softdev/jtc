@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.50"
+#define VERSION "1.51"
 
 
 // option definitions
@@ -126,8 +126,8 @@ class Jtc {
     bool                remove_others_(set<Jnode*> &ws, Jnode &jn);
     walk_vec            collect_walks_(const string &walk_path);
     void                merge_jsons_(Json::iterator &dst, Json::iterator src);
-    void                merge_arrays_(Jnode &dst, const Jnode &src);
-    void                merge_objects_(Jnode &dst, const Jnode &src, MergeObj mode);
+    void                merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode);
+    void                merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode);
     void                update_jsons_(Json::iterator &dst, Json::iterator src);
     bool                execute_cli_(Json &update, const Jnode &src_jnode);
     void                parse_params_(char option);
@@ -176,37 +176,49 @@ int main(int argc, char *argv[]){
  opt.prolog("\nJSON test console\nVersion " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
- opt[CHR(OPT_EXE)].desc("option parameters for -" STR(OPT_INS) " and -" STR(OPT_UPD)
-                        " undergo shell evaluation; see -" STR(OPT_GDE));
- opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON)");
+ opt[CHR(OPT_EXE)].desc("make option parameters for -" STR(OPT_INS) ", -" STR(OPT_UPD)
+                        " undergo shell evaluation; see -" STR(OPT_GDE) " for more info");
+ opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON"
+                        " to stdout)");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax, usage notes and examples");
- opt[CHR(OPT_JSN)].desc("wrap walked elements into JSON array; see usage notes -"
-                        STR(OPT_GDE));
- opt[CHR(OPT_LBL)].desc("print labels too (if present) for walked JSON");
- opt[CHR(OPT_MDF)].desc("modifier: toggle merge for -" STR(OPT_INS) ", -" STR(OPT_UPD)
-                        "; see usage notes -" STR(OPT_GDE));
- opt[CHR(OPT_SEQ)].desc("print walks sequentially (i.e. do not print interleaved)");
- opt[CHR(OPT_PRG)].desc("purge all walked elements (-" STR(OPT_PRG) STR(OPT_PRG)
-                        ": purge all except walked)");
+ opt[CHR(OPT_JSN)].desc("wrap walked JSON elements into array; see with -"
+                        STR(OPT_GDE) " for more info");
+ opt[CHR(OPT_LBL)].desc("print labels (if present) for walked JSON; together with -"
+                        STR(OPT_JSN) "  warp into objects");
+ opt[CHR(OPT_MDF)].desc("modifier: toggle merging for options -" STR(OPT_INS) ", -" STR(OPT_UPD)
+                        "; see with -" STR(OPT_GDE) " for more info");
+ opt[CHR(OPT_SEQ)].desc("do not print/process walks interleaved (i.e. print/process all walks "
+                        "sequentially)");
+ opt[CHR(OPT_PRG)].desc("purge all walked JSON elements (-" STR(OPT_PRG) STR(OPT_PRG)
+                        ": purge all elements except walked)");
  opt[CHR(OPT_SLD)].desc("enforce strict quoted solidus parsing");
  opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact, one-line) format");
- opt[CHR(OPT_SWP)].desc("swap around two JSON elements (two -" STR(OPT_WLK) " must be given)");
- opt[CHR(OPT_SZE)].desc("print JSON size (number of nodes in JSON)");
- opt[CHR(OPT_INS)].desc("insert/merge JSON (file), or copy from walk-path").name("f|j|w");
+ opt[CHR(OPT_SWP)].desc("swap around two JSON elements pointed by walks" STR(OPT_WLK)
+                        " must be given)");
+ opt[CHR(OPT_SZE)].desc("print JSON size (number of nodes in JSON) at the end of JSON/walks");
+ opt[CHR(OPT_INS)].desc("insert/merge JSON, or from file, or pointed by a walk-path, see with -"
+                        STR(OPT_GDE) " for more").name("f|j|w");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
- opt[CHR(OPT_UPD)].desc("update/replace from JSON (file), or by walk-path").name("f|j|w");
- opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given); see -"
-                        STR(OPT_GDE)).name("walkpath");
- opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every followed -" STR(OPT_PRT))
-                  .bind("").name("common wp");
- opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by preceding -" STR(OPT_CMN))
-                  .name("partial wp");
+ opt[CHR(OPT_UPD)].desc("update/replace JSON, of from file, or pointed by a walk-path, see with -"
+                        STR(OPT_GDE) " for more").name("f|j|w");
+ opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given); see with -"
+                        STR(OPT_GDE) " for more").name("walkpath");
+ opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every followed -" STR(OPT_PRT)
+                        " option").name("common wp");
+ opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by preceding -" STR(OPT_CMN)
+                        " option").name("partial wp");
+
+
  opt[0].desc("file to read json from").name("json_file").bind("<stdin>");
- opt.epilog("\nthis tool provides ability to:\n\
- - parse, validate and display JSON (in a compact and pretty formats)\n\
- - walk about JSON using various subscripting/search criteria (see -" STR(OPT_GDE) ")\n\
- - manipulate JSON via purge/insert/copy/merge/update/move/swap operations\n\n\
- for walk-path explanation, usage notes and examples run with -" STR(OPT_GDE) "\n");
+ opt.epilog(R"(
+this tool provides ability to:
+ - parse, validate and display JSON (in a compact and pretty formats)
+ - walk about input JSON using various subscripting and search criteria (see with -)" STR(OPT_GDE)
+ R"( fore more)
+ - manipulate JSON via purge/insert/copy/merge/update/replace/move/swap operations
+
+for walk-path explanation, usage notes and examples run with -)" STR(OPT_GDE) R"(
+)");
 
 
  // parse options
@@ -355,43 +367,37 @@ int Jtc::demux_opt(void) {
 
 
 
-// insert handles 4 cases:
+// insert handles 4 parameter types:
 //  1. static insert ( -i <json> )
 //  2. insert from file ( -i <file> ) - file must contain a valid JSON
 //  3. insert from cli ( -e -i <cli> \; ) - cli must return a valid JSON
 //  4. insert by walk-path (-i <src walk-path>) effectively performing copy operation
-// Without -m: insertion can only occur into iterables only:
-//    a. insertion into array:
-//       a0. json/file/cli: [ "a" ] -> [ 1, 2 ] = [ 1, 2, [ "a" ] ]
-//       a1. via walk-path: labeled elements inserted as objects:
-//           "c": 3 -> [ 1, 2 ] = [ 1, 2, { "c", 3 } ]
-//    b. insertion into object:
-//       b0. json/file/cli: merging w/o overwrite (for clashing labels) occurs:
-//           { "a": 1, "b": 3 } -> { "b": 2 } = { "a": 1, "b": 2 }
-//       b1. by walk-path: labeled elements inserted/merged individually (no overwrite):
-//           "c": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2, "c": 3 }
-//           "b": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2 }
-//    - other types of insertions are invalid
-// with -m, insertion occurs via merging:
-//    a. insertion into array:
-//       a0. json/file/cli: iterables merged: [ "a" ] -> [ 1, 2 ] = [ 1, 2, "a" ]
-//           { "a": 3 } -> [ 1, 2 ] = [ 1, 2, 3 ]
-//       a1. via walk-path: labeled elements lose labels:
-//           "c": 3 -> [ 1, 2 ] = [ 1, 2, 3 ]
-//    b. insertion into object
-//       b0. json/file/cli: merging occurs extending clashing labels into arrays:
-//           { "b": 3, "c": 4 } -> { "a": 1, "b": 2 } = { "a": 1, "b": [ 2, 3 ], "c": 4 }
-//       b1. by walk-path: labeled elements merged, clashing labels extended into arrays
-//           "b": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": [ 2, 3 ] }
-//           "c": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2, "c": 3 }
-//    c. insertion into atomic types:
-//       converted to arrays and merged: [ "a", "b" ] -> 1 = [ 1, "a" , "b" ]
-//    d. if -p is present: source-walked elements are purged
 // Destination walks (-w <dst walk-path>) define mode of insertion:
 //  - if insertion point is single (only one walk given and it's non-iterable), then
 //    all source jsons/walks will be attempted to be inserted into a single location
 //  - if multiple insertions points given (ether multiple -w, or single -w with
-//    an iterable walk-path), then sources are inserted in a circular manner
+//    an iterable walk-path), then sources are inserted in a circular manner//
+//
+// insert matrix (src -> dst):
+//                                    insert w/o -m
+//   to  \ from  |     [3,4]     |    {"a":3,"c":4}    |      "a":3,"c":4      |     "c"
+//---------------+---------------+---------------------+-----------------------+---------------+	
+//      [1,2]    |   [1,2,[3,4]  | [1,2,{"a":3,"c":4}] | [1,2,{"a":3},{"c":4}] |  [1,2,"c"]
+// {"a":1,"b":2} | {"a":1,"b":2} | {"a":1,"b":2,"c":4} |  {"a":1,"b":2,"c":4}  | {"a":1,"b":2}
+//     "a":1     |     "a":1     |        "a":1        |         "a":1         |     "a":1
+//
+//                                       insert with -m
+//  to  \ from |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |     "c"
+//-------------+---------------------+-----------------------+-----------------------+------------+
+//    [1,2]    |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |  [1,2,"c"]
+//{"a":1,"b":2}|{"a":[1,3],"b":[2,4]}|{"a":[1,3],"b":2,"c":4}|{"a":[1,3],"b":2,"c":4}|{"a":1,"b":2}
+//    "a":1    |     "a":[1,3,4]     |      "a":[1,3,4]      |      "a":[1,3,4]      |  "a":[1,"c"]
+//
+// Basic principles:
+//  o w/o '-m' src param (-i src) is considered as a whole, with '-m' as an mergeable iterable
+//  o insert operation never rewrites the dst data (-w dst), while '-m' may extend it
+
+
 void Jtc::insert_json() {
  check_walk_requirements_(1);
  parse_params_(CHR(OPT_INS));                                   // collect all sources
@@ -409,23 +415,21 @@ void Jtc::insert_by_iterator(Json::iterator &it, size_t group) {
  // insert each/all -i processed jsons
  if(ecli_) {                                                    // -e was given
   Json insert;
+  DBG().severity(insert);
   if(execute_cli_(insert, *it))                                 // cli resulted in a valid json
-   merge_jsons_(it, insert.walk("", Json::keep_cache));
+   merge_jsons_(it, insert.walk());
   return;
  }
 
  while(key_ < jsrc_.size() + isrc_.size()) {
   DBG(1) DOUT() << "trying to insert instance " << key_ << " out of "
                 << jsrc_.size() + isrc_.size() << endl;
-  if(jsrc_.count(key_) > 0)                                     // key is in jsrc_ (it's a json)
-   merge_jsons_(it, jsrc_[key_].walk("", Json::keep_cache));
-  else {                                                        // key must be in isrc_ (walk-path)
-   if(isrc_[key_].is_valid())
-    merge_jsons_(it, isrc_[key_]);                              // then insert/merge
-   else
-    cerr << "error: walk instance " << key_
-         << " became invalid due to prior operations, skipping" << endl;
-  }
+
+  if(jsrc_.count(key_) == 0 and not isrc_[key_].is_valid())     // key is in isrc_
+   cerr << "error: walk instance " << key_
+        << " became invalid due to prior operations, skipping" << endl;
+  else
+   merge_jsons_(it, jsrc_.count(key_)==0? isrc_[key_]: jsrc_[key_].walk("", Json::keep_cache));
 
   ++key_;
   if(is_multi_walk_) {
@@ -466,25 +470,26 @@ void Jtc::purge_json(void) {
 //  2. update from file ( -u <file> ) - file must contain a valid JSON
 //  3. update from cli ( -e -u <cli> \; ) - cli must return a valid JSON
 //  4. update by walk-path (-u <src walk-path>) effectively performing overwrite/move operation
-// Without -m:
-//    a. update of any element: it gets overwritten
-//       a0. json/file/cli: [ "a" ] -> [ 1, 2 ] = [ "a" ]
-//           { "c": 3 } -> { "a": 1, "b": 2 } = { "c": 3 }
-//       a1. walk-path: labeled element: "a": 3 -> [ 1, 2 ] = 3
-//           "c": 3 -> { "a": 1, "b": 2 } = 3
-// with -m, update occurs via merging with overwrite:
-//    a. any non-object elements are updated the same way:
-//       a0. json/file/cli: iterables merged: [ "a" ] -> [ 1, 2 ] = [ "a" ]
-//           { "a": 3 } -> [ 1, 2 ] = { "a": 3 }
-//       a1. via walk-path: labeled elements replace as standalone objects:
-//           "c": 3 -> [ 1, 2 ] = { "c": 3 }
-//    b. insertion into object
-//       b0. json/file/cli: merging occurs with overwriting clashing labels:
-//           { "b": 3, "c": 4 } -> { "a": 1, "b": 2 } = { "a": 1, "b": 3, "c": 4 }
-//       b1. by walk-path: labeled elements merged overwriting clashing labels:
-//           "b": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 3 }
-//           "c": 3 -> { "a": 1, "b": 2 } = { "a": 1, "b": 2, "c": 3 }
-//    c. if -p is present: source-walked element is purged
+//
+// update matrix (src -> dst):
+//                               update w/o -m
+//   to  \ from  |   [3,4]   |   {"a":3,"c":4}   | "a":3 |  "c"
+//---------------+-----------+-------------------+-------+--------+
+//      [1,2]    |   [3,4]   |   {"a":3,"c":4}   |   3   |   "c"
+// {"a":1,"b":2} |   [3,4]   |   {"a":3,"c":4}   |   3   |   "c"
+//     "a":1     | "a":[3,4] | "a":{"a":3,"c":4} | "a":3 | "a":"c"
+//
+//                                     update with -m
+//   to  \ from  |     [3,4]     |    {"a":3,"c":4}    |     "a":3     |     "c"
+//---------------+---------------+---------------------+---------------+----------------+
+//      [1,2]    |     [3,4]     |        [3,4]        |     [3,2]     |   ["c",2]
+// {"a":1,"b":2} | {"a":3,"b":4} | {"a":3,"b":2,"c":4} | {"a":3,"b":2} | {"a":"c","b":2}
+//     "a":1     |   "a":[3,4]   |  "a":{"a":3,"c":4}  |  "a":{"a":3}  |   "a":"c"
+//
+// Basic principles:
+//  o w/o '-m' dst param (-u dst) is considered as a whole, with '-m' as an mergeable iterable
+//  o update operation rewrites the dst data (-w dst)
+
 void Jtc::update_json() {
  check_walk_requirements_(1);
  parse_params_(CHR(OPT_UPD));                                   // collect all sources
@@ -502,8 +507,9 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
  // insert each/all -i processed jsons
  if(ecli_) {                                                    // -e was given
   Json update;
+  DBG().severity(update);
   if(execute_cli_(update, *it))                                 // cli resulted in a valid json
-   update_jsons_(it, update.walk("", Json::keep_cache));
+   update_jsons_(it, update.walk());
   return;
  }
 
@@ -511,15 +517,11 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
   DBG(1) DOUT() << "trying to update instance " << key_ << " out of "
                 << jsrc_.size() + isrc_.size() << endl;
 
-  if(jsrc_.count(key_) > 0)                                     // key is in jsrc_ (it's a json)
-   update_jsons_(it, jsrc_[key_].walk("", Json::keep_cache));
-  else {                                                        // key must be in isrc_ (walk-path)
-   if(isrc_[key_].is_valid())
-    update_jsons_(it, isrc_[key_]);                             // then update/merge w. overwrite
-   else
+  if(jsrc_.count(key_) == 0 and not isrc_[key_].is_valid())
     cerr << "error: walk instance " << key_
          << " became invalid due to prior operations, skipping" << endl;
-  }
+  else
+   update_jsons_(it, jsrc_.count(key_)==0? isrc_[key_]: jsrc_[key_].walk("", Json::keep_cache));
 
   ++key_;
   if(is_multi_walk_) {
@@ -761,6 +763,7 @@ void Jtc::crop_out_(void) {
 bool Jtc::remove_others_(set<Jnode*> &ws, Jnode &jn) {
  // return true if node has to be removed
  bool remove = true;
+ if(ws.count(&jn.value())) return false;                        // preserve root itself if found
 
  for(auto it = jn.begin(); it != jn.end();) {
   if(it->is_atomic()) {
@@ -806,18 +809,21 @@ void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
  // merge 2 jsons. convert to array non-array dst jsons (predicated by -m)
  if(it_dst->is_object()) {                                      // dst is object
   if(it_src->has_label())                                       // it's coming from -i walk-path
-   merge_objects_(*it_dst, OBJ{ LBL{it_src->label(), *it_src} }, preserve); //
+   merge_into_object_(*it_dst, OBJ{ LBL{it_src->label(), *it_src} }, preserve); //
   else
-   if(it_src->is_object())                                      // from either json/walk-path
-    merge_objects_(*it_dst, *it_src, preserve);
+   if(it_src->is_iterable())                                    // from either json/walk-path
+    merge_into_object_(*it_dst, *it_src, preserve);
    else
-    cerr << "fail: only an object could be merged with an object" << endl;
+    cerr << "fail: only an iterable could be insert-merged with an object" << endl;
   return;
  }
+
  if(merge_) {                                                   // -m given
-  merge_arrays_(*it_dst, *it_src);                              // merge any jsons
+  DBG(1) DOUT() << "merging into array" << endl;
+  merge_into_array_(*it_dst, *it_src, preserve);                // merge any jsons
   return;
  }
+
  if(it_dst->is_array()) {                                       // merge only 1 json object
   it_dst->push_back(it_src->has_label()? OBJ{ LBL{it_src->label(), *it_src} }: *it_src);
   return;
@@ -827,39 +833,67 @@ void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
 
 
 
-void Jtc::merge_arrays_(Jnode &dst, const Jnode &src) {
- // merge 2 jsons into array. convert to array any of non-array jsons
+void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
+ // merge 2 jsons into array.
+ // convert dst to array if non-array. convert src to array if non-iterable
  const Jnode *src_ptr = &src;
  Jnode src_array;
 
- if(not dst.is_array()) dst = ARY{ move(dst) };
+ if(not dst.is_array()) dst = ARY{ move(dst) };                 // convert to arrays if not yet
  if(not src.is_iterable())
-  { src_array = ARY{ src }; src_ptr = &src_array; }
+  { src_array = ARY{ move(src) }; src_ptr = &src_array; }
 
- size_t safity_cnt = src_ptr->children();                       // to avoid endless loop when src
+ if(mode == preserve) {
+  DBG(2) DOUT() << "pushing into destination" << endl;
+  size_t safity_cnt = src_ptr->children();                      // to avoid endless loop when src
+  for(auto &src_child: *src_ptr) {
+   dst.push_back(src_child);
+   if(--safity_cnt == 0) break;                                 // and dst is the same array
+  }
+  return;
+ }
+                                                                // mode == overwrite
+ DBG(2) DOUT() << "overwriting destination" << endl;
+ auto di = dst.begin();
  for(auto &src_child: *src_ptr) {
-  dst.push_back(src_child);
-  if(--safity_cnt == 0) break;                                  // and dst is the same array
+  *di = src_child;
+  if(++di == dst.end()) break;
  }
 }
 
 
 
-void Jtc::merge_objects_(Jnode &dst, const Jnode &src, MergeObj mode) {
- // merge 2 objects recursively
+void Jtc::merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode) {
+ // merge int object, recursively. assert(dst.is_object() and src.is_iterable())
+ if(not src.is_object()) {                                           // merge array->object, node by node
+  DBG(2) DOUT() << "merge array into object" << endl;
+  if(not merge_) return;                                        // only if -m given
+  auto di = dst.begin();
+  for(auto &src_child: src.is_array()? src: ARY{ move(src) }) { // go by every element in the src
+   if(di == dst.end()) break;
+   if(mode == overwrite)
+    *di = src_child;                                            // overwrite upon instruction only
+   else
+    merge_into_array_(*di, src_child, mode);
+   ++di;
+  }
+  return;
+ }
+                                                                // merge object->object recursively
+ DBG(2) DOUT() << "merge objects" << endl;
  for(auto &src_child: src) {                                    // go by every element in the src
   auto di = dst.find(src_child.label());                        // dst iterator
   if(di == dst.end())                                           // labels not clashing
    { dst[src_child.label()] = src_child; continue; }            // merge non-clashing labels
 
   if(di->is_object() and src_child.is_object())                 // both clashing elements are OBJ
-   { merge_objects_(*di, src_child, mode); continue; }          // merge OBJ elements recursively
+   { merge_into_object_(*di, src_child, mode); continue; }          // merge OBJ elements recursively
 
-  if(merge_) {
+  if(merge_) {                                                  // if -m given
    if(mode == overwrite)
     *di = src_child;                                            // overwrite upon instruction only
    else
-    merge_arrays_(*di, src_child);                              // merge clashing non-obj into array
+    merge_into_array_(*di, src_child, mode);                    // merge clashing non-obj into array
   }
  }
 }
@@ -869,14 +903,20 @@ void Jtc::merge_objects_(Jnode &dst, const Jnode &src, MergeObj mode) {
 void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
  // update dst with src, merge jsons with overwrite if -m is given
  if(not merge_) {
+  DBG(2) DOUT() << "destination being overwritten" << endl;
   *it_dst = *it_src;
   return;
  }
+
+ DBG(2) DOUT() << "destination being merged" << endl;
  if(it_dst->is_object())
-  merge_objects_(*it_dst,
-                 it_src->has_label()? OBJ{ LBL{ it_src->label(), *it_src } }: *it_src, overwrite);
+  merge_into_object_(*it_dst, it_src->has_label()?
+                              OBJ{ LBL{ it_src->label(), *it_src } }: *it_src, overwrite);
  else
-  *it_dst = it_src->has_label()? OBJ{ LBL{ it_src->label(), *it_src } }: *it_src;
+  if(it_dst->is_array())
+   merge_into_array_(*it_dst, *it_src, overwrite);
+  else
+   *it_dst = it_src->has_label()? OBJ{ LBL{ it_src->label(), *it_src } }: *it_src;
 }
 
 
