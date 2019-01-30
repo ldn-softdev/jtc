@@ -1589,7 +1589,7 @@ class Json{
                             Itr(const iter_jn &it):             // for emplacement
                              jit(it), lbl(it->KEY), jnp(&it->VALUE), wsi(0) {}
                             Itr(const iter_jn &it, size_t i):   // for emplacement
-                             jit(it), wsi(0) {}
+                             jit(it), wsi(i) {}
 
         // typedef std::map<std::string, Jnode>::iterator iter_jn;
         iter_jn             jit;                                // iterator pointing to JSON
@@ -2263,7 +2263,9 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
 
  DBG(0) {
   DOUT() << "dump completed lexemes:" << std::endl;
-  for(const auto &ws: it.walk_path_()) DOUT() << DBG_PROMPT(0) << ws << std::endl;
+  size_t i = 0;
+  for(const auto &ws: it.walk_path_()) 
+   DOUT() << DBG_PROMPT(0) << '[' << i++ << "]: " << ws << std::endl;
  }
 
  if(action == invalidate) {                                     // talking a conservative approach:
@@ -2906,6 +2908,8 @@ bool Json::iterator::increment_(long l) {
  if(pv_.back().jit != json_().root().children_().end()) return true;    // successful walk
 
  // unsuccessful walk (out of iterations)
+ DBG(json_(), 2)
+  DOUT(json_()) << "ws idx from a fruitless walk: " << pv_.back().wsi << std::endl;
  if(l < static_cast<long>(pv_.back().wsi)) {                    // it's not my position, plus
   DBG(json_(), 2)                                               // it's in less significant place
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
@@ -2928,6 +2932,7 @@ long Json::iterator::next_iterable_ws_(long idx) const {
  // otherwise (whole path non-iterable) return -1
  while(--idx >= 0)
   if(walk_path_()[idx].type == WalkStep::range_walk) break;
+ DBG(json_(), 3) DOUT(json_()) << "iterable walk-step: [" << idx << "]" << std::endl;
  return idx;
 }
 
