@@ -75,9 +75,9 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      L: same as l, but expression in braces is a Regex (regex search applied)
      d: match a number (i.e. searches numeric JSON values only)
      D: same as d, but expression in braces is a Regex (value is treated as a string value here)
-     b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled,
+     b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled
         e.g.: '<true>b', '<any>b'
-     n: match null values only, the content within the encasement could be anything and is ignored,
+     n: match null values only, the content within the encasement could be anything and is ignored
         e.g.: '<>n', '>null<n', etc
      a: match any atomic JSON value (string, numeric, boolean, null); the content within the
         encasements is ignored
@@ -86,7 +86,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         ignored
      j: match user specific JSON value, the content within the encasement should be a valid JSON
         value, e.g.: '<[]>j' - will find the first empty JSON array
-   N: an integer quantifier specifying search match instance/range, and comes in following variants
+   N: an integer quantifier specifying search match instance/range, comes in following variants
       n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
         the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
         zero based
@@ -113,7 +113,7 @@ There're cases when JSON values have to be searched where they attached only to 
 a following lexeme syntax facilitates such case: '[a label]:<some text>' - in that example
 "some text" will be searched (and matched) only among JSON values which are attached to the label
 "a label"; in that notation all suffixes (and quantifiers) are allowed except 'l' and 'L', e.g.:
-'[age]:<25>j:' will match all JSON numerical values 25, where it's attached to the label "age" only
+'[age]:<25>j:' matches all JSON numerical values 25, where it's attached to the label "age" only
 )";
 }
 
@@ -127,33 +127,32 @@ void guide_un(void) {
 multiple -)" STR(OPT_WLK) R"( usage:
  - if switch -)" STR(OPT_SEQ)
    R"( is given, then all walk paths will be processed sequentially, otherwise, results
-   would be grouped by relevance and walks interleaved; the order of provided walks will be (if can
-   be) honored
+   would be grouped by relevance and walks interleaved; the order of provided walks will be (if
+   can be) honored
 
 options -)" STR(OPT_JSN) R"( and -)" STR(OPT_LBL) R"( usage:
  - when -)" STR(OPT_JSN) R"( is given w/o -)" STR(OPT_LBL)
    R"(, then all walked elements will be collected into a JSON array; when
-   use together, all walked elements will be grouped into *relevant* objects within a parent array;
+   use together, all walked elements will be grouped into *relevant* objects within a parent array
    options -)" STR(OPT_JSN) R"(, -)" STR(OPT_LBL)
    R"( only modify the output of walked items, i.e. they will ignored when either of
    -i, -u, -s, -p is given
 
 mutually exclusive options:
  - options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)" STR(OPT_SWP) R"(, -)" STR(OPT_PRG)
-   R"( normally are mutually exclusive; if found together, only one type will be
-   executed (selected in the priority of the listed order); though there's one case usage of -)"
-   STR(OPT_PRG) R"(
-   together with options -i, -u, see notes below
+   R"( normally are mutually exclusive; if found together, only one type will
+   be executed (selected in the priority of the listed order); though there's one case usage of
+   -)" STR(OPT_PRG) R"( together with options -i, -u, see notes below
 
 options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R"(:
  - the options accept one parameter which may be treated differently: initially a file name
    assumed; if the file is not found, then the parameter is treated as a JSON and its parsing is
-   attempted; if parsing fails then a walk-path is assumed; then if it fails an exception is thrown
+   attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
  - when used together with  option -)" STR(OPT_EXE)
    R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; every
    occurrence of ')" INTRP_STR R"(', or ')" INTRP_SWQ
    R"(' is interpolated with walked JSON entry using a raw format; if
-   interpolation results in a string value, then for every occurrence of ')" INTRP_SWQ
+   interpolation results in a string value, then for every occurrence ')" INTRP_SWQ
    R"(' the outside quotation
    marks are dropped; the interpolated entry is completely escaped, thus does not require any
    additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be quoted or
@@ -169,9 +168,9 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
            JSON type
    for -)" STR(OPT_UPD)
            R"(: toggles "merge" semantic instead of overwrite when updating;
- - due to a variety of combinations of sources (-)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
-   R"() and destination (-)" STR(OPT_WLK) R"(), the number of various
-   operation possibilities is big, therefore it's best to track is in the following tables:
+ - due to a variety of combinations of sources -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
+   R"( and destination -)" STR(OPT_WLK) R"(, the number of various
+   operation possibilities is big, therefore it's best to track is in the following table:
  * insert operation (-)" STR(OPT_INS) R"() without merge:
   to  \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
@@ -283,14 +282,14 @@ multiple walks
     "Sophia"
     "Olivia"
 
-- however, the above walk syntax is prone to false positives, as it finds any string, starting with
-"John"; to improve it, we have to ensure that the search is attached to the label, i.e.,
+- however, the above walk syntax is prone to false positives, as it finds any string, starting
+with "John"; to improve it, we have to ensure that the search is attached to the label, i.e.,
 '"parent": "John..."':
     jtc -)" STR(OPT_WLK) R"( '[parent]:<^John>R[-1][children][+0]' example.json
 
 
-- to add (insert) a child "James" to a parent whose name starts with "John" and reflect the changes
-right into the source file, run:
+- to add (insert) a child "James" to a parent whose name starts with "John" and reflect the
+changes right into the source file, run:
     jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"('[parent]:<^John>R[-1][children]' -)"
     STR(OPT_INS) R"('"James"' example.json; jtc example.json
     {
@@ -345,8 +344,8 @@ right into the source file, run:
 
 
 - to add a new record:
-    jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( '[parent]:<Jane Smith> [-1]' -)"
-    STR(OPT_INS) R"( '{"Y-chromosome": true}' example.json; jtc example.json
+    jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"('[parent]:<Jane Smith> [-1]' -)"
+    STR(OPT_INS) R"('{"Y-chromosome": true}' example.json; jtc example.json
     {
        "Relation": [
           {

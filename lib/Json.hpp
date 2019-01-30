@@ -717,23 +717,19 @@ class Jnode {
                                                ::type * = nullptr):
                          type_{Null} {}
 
+
                         // JSON atomic type adapters (string, numeric, boolean):
                         operator const std::string & (void) const {
                          if(not is_string()) throw EXP(expected_string_type);
                          return str();
                         }
 
-                        template<typename T>
-                        operator typename std::enable_if<std::is_floating_point<T>::value, double>
-                                             ::type (void) const {
+                        operator double (void) const {
                          if(not is_number()) throw EXP(expected_number_type);
                          return num();
                         }
-                        // concept ensures in-lieu application (avoid clashing with string type)
 
-                        template<typename T>
-                        operator typename std::enable_if<std::is_same<T, bool>::value, bool>
-                                             ::type (void) const {
+                        operator bool (void) const {
                          if(not is_bool()) throw EXP(expected_boolean_type);
                          return bul();
                         }
