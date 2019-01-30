@@ -1030,18 +1030,18 @@ performing one operation with the input data at a time), however, it offers a po
 #### 6. numerical precision
  - upon parsing `jq` is converting JSON numerical values into an internal digital representation and outputs back from it.
  Such approach may cause a deviation in the numerical values representation and some precision loss:
- ```
- bash $ echo "0.99999999999999999" | jq .
- 1
- bash $
- ```
+```
+bash $ echo '[0.99999999999999999, 0.00001]' | jq -cM .
+[1,1e-05]
+bash $
+```
  - `jtc` will always preserve the numerical data they way it's given, while validating the numericals upon parsing in accordance with JSON
  specification, thus no loss or change of the numerical representation may ever occur:
- ```
- bash $ echo "0.99999999999999999" | jtc
- 0.99999999999999999
- bash $
- ```` 
+```
+bash $ echo '[0.99999999999999999, 0.00001]' | jtc -r
+[ 0.99999999999999999, 0.00001 ]
+bash $
+``` 
  Another benign side effect of such approach - numerical values in `jtc` are searchable with RE (suffix `D`)
  
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
