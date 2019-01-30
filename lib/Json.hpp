@@ -2646,7 +2646,7 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
  // find all matches from given json node, cache them into current vector of paths:
  // cache is the vector of all found path-vectors
  if(jn->is_iterable()) {
-  if(match_iterables_(jn, lbl, ws, vpv)) return;
+  match_iterables_(jn, lbl, ws, vpv);
   for(auto it = jn->children_().begin(); it != jn->children_().end(); ++it) {
    vpv.back().emplace_back(it);
    if(json_().is_engaged(walk_callback))                            // engage walk callbacks
