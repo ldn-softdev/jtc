@@ -86,6 +86,8 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         ignored
      j: match user specific JSON value, the content within the encasement should be a valid JSON
         value, e.g.: '<[]>j' - will find the first empty JSON array
+     w: wide range match - match any JSON value (atomic, objects, arrays)
+     e: end-node match (matches leaves only) - match any of: atomic, {}, []
    N: an integer quantifier specifying search match instance/range, comes in following variants
       n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
         the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
@@ -150,9 +152,9 @@ options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
  - when used together with  option -)" STR(OPT_EXE)
    R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; every
-   occurrence of ')" INTRP_STR R"(', or ')" INTRP_SWQ
+   occurrence of ')" INTRP_STR R"(', or ')" INTRP_NKD
    R"(' is interpolated with walked JSON entry using a raw format; if
-   interpolation results in a string value, then for every occurrence ')" INTRP_SWQ
+   interpolation results in a string value, then for every occurrence ')" INTRP_NKD
    R"(' the outside quotation
    marks are dropped; the interpolated entry is completely escaped, thus does not require any
    additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be quoted or
@@ -172,28 +174,28 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
    R"( and destination -)" STR(OPT_WLK) R"(, the number of various
    operation possibilities is big, therefore it's best to track is in the following table:
  * insert operation (-)" STR(OPT_INS) R"() without merge:
-  to  \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |     3
  -------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |      [1,2,[3,4]     |  [1,2,{"a":3,"c":4}]  | [1,2,{"a":3},{"c":4}] |   [1,2,3]
+    [1,2]     |      [1,2,[3,4]     |  [1,2,{"a":3,"c":4}]  | [1,2,{"a":3},{"c":4}] |  [1,2,3]
  {"a":1,"b":2}|    {"a":1,"b":2}    |  {"a":1,"b":2,"c":4}  |  {"a":1,"b":2,"c":4}  |{"a":1,"b":2}
-     "a"      |         "a"         |          "a"          |          "a"          |     "a"
+     "a"      |         "a"         |          "a"          |          "a"          |    "a"
  * insert (-)" STR(OPT_INS) R"() with the merge (-)" STR(OPT_MDF) R"():
-  to  \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |     3
  -------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |   [1,2,3]
+    [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |  [1,2,3]
  {"a":1,"b":2}|{"a":[1,3],"b":[2,4]}|{"a":[1,3],"b":2,"c":4}|{"a":[1,3],"b":2,"c":4}|{"a":1,"b":2}
-     "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |   ["a",3]
+     "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |  ["a",3]
  * update operation (-)" STR(OPT_UPD) R"() without merge:
-  to  \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |     3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |     3
 --------------+---------------------+-----------------------+-----------------------+-------------
-     [1,2]    |        [3,4]        |     {"a":3,"c":4}     |            3          |     3
- {"a":1,"b":2}|        [3,4]        |     {"a":3,"c":4}     |            3          |     3
-     "a"      |        [3,4]        |     {"a":3,"c":4}     |            3          |     3
+    [1,2]     |        [3,4]        |     {"a":3,"c":4}     |           3           |     3
+ {"a":1,"b":2}|        [3,4]        |     {"a":3,"c":4}     |           3           |     3
+     "a"      |        [3,4]        |     {"a":3,"c":4}     |           3           |     3
  * update (-)" STR(OPT_UPD) R"() with the merge (-)" STR(OPT_MDF) R"():
-  to  \ from  |        [3,4]        |     {"a":3,"c":4}     |          "a":3        |     3
- -------------+---------------------+-----------------------+-----------------------+-------------
-     [1,2]    |        [3,4]        |         [3,4]         |          [3,2]        |   [3,2]
- {"a":1,"b":2}|    {"a":3,"b":4}    |  {"a":3,"b":2,"c":4}  |      {"a":3,"b":2}    |{"a":3,"b":2}
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |     3
+--------------+---------------------+-----------------------+-----------------------+-------------
+    [1,2]     |        [3,4]        |         [3,4]         |         [3,2]         |   [3,2]
+ {"a":1,"b":2}|    {"a":3,"b":4}    |  {"a":3,"b":2,"c":4}  |     {"a":3,"b":2}     |{"a":3,"b":2}
      "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |     3
 
 option -)" STR(OPT_PRG) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(:

@@ -1361,9 +1361,11 @@ class Json{
                 Label_RE_search,/* RE match among JSON object labels only */ \
                 atomic_match,   /* JSON atomic, matches any of: string/number/boolean/null */ \
                 object_match,   /* JSON object, matches any object {...} */ \
-                iterable_match, /* JSON array, matches any of: [...] */ \
+                indexable_match,/* JSON array, matches any of: [...] */ \
                 json_match,     /* matches provided JSON */ \
-                end_of_match, \
+                wide_match,     /* matches any JSON: atomics + objects + arrays */ \
+                end_node_match, /* matches all leaf nodes */ \
+                end_of_match,   /* matches any of: atomics, [], {} */\
                 text_offset,    /* in addition to search, these two used for subscript offsets */ \
                 numeric_offset  /* to disambiguate numeric subscripts [0], from textual [zero] */
     ENUMSTR(Jsearch, JS_ENUM)
@@ -2264,7 +2266,7 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  DBG(0) {
   DOUT() << "dump completed lexemes:" << std::endl;
   size_t i = 0;
-  for(const auto &ws: it.walk_path_()) 
+  for(const auto &ws: it.walk_path_())
    DOUT() << DBG_PROMPT(0) << '[' << i++ << "]: " << ws << std::endl;
  }
 
@@ -2383,8 +2385,8 @@ void Json::parse_suffix_(std::string::const_iterator &si,
   DBG(1) DOUT() << "search type sfx: " << ENUMS(Jsearch, sfx) << std::endl;
 
   if(back_ws.stripped.front().empty())                          // search lexeme is empty: <>S
-   if( not(back_ws.jsearch AMONG(regular_match, label_match, null_match,
-                                 atomic_match, object_match, iterable_match)) )
+   if( not(back_ws.jsearch AMONG(regular_match, label_match, null_match, atomic_match,
+                                 object_match, indexable_match, wide_match, end_node_match)) )
     throw EXP(Jnode::walk_bad_suffix);                          // others must have non-empty lexeme
   ++si;
  }                                                              // else jsearch = regular_match
@@ -2632,7 +2634,7 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
   cache[skey].resize(1);                                        // prepare place for 1st pathvector
   search_all_(jn, nullptr, ws, cache[skey]);                    // build cache
   cache[skey].pop_back();                                       // last entry is redundant
-  DBG(json_(), 1) DOUT(json_()) << "cached " << cache[skey].size() << " searches" << std::endl;
+  DBG(json_(), 1) DOUT(json_()) << "cached in " << cache[skey].size() << " searches" << std::endl;
  }
 
  if(i >= static_cast<long>(cache[skey].size()))                 // offset outside of cache:
@@ -2677,16 +2679,20 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
 
 bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl,
                             const WalkStep &ws, std::vector<path_vector> & vpv) {
- // match suffixes [joi] and attached label (if any) - for search_all_
- if(ws.stripped.size() > 1 and lbl and ws.stripped.back() != lbl)
-  return false;
+ // match suffixes [joiwe] and attached label (if any) - for search_all_
+ if(ws.stripped.size() > 1) {                                   // there's an attached search label
+  if(lbl == nullptr) return false;                              // there's no label
+  if(ws.stripped.back() != lbl)  return false;                  // label does not match
+ }
  if(ws.jsearch == json_match) {
   if(ws.user_json == *jn)
    { vpv.push_back(vpv.back()); return true; }
   return false;
  }
  if((ws.jsearch == object_match and jn->is_object()) or
-    (ws.jsearch == iterable_match and jn->is_array()))
+    (ws.jsearch == indexable_match and jn->is_array()) or
+    (ws.jsearch == wide_match) or
+    (ws.jsearch == end_node_match and jn->empty()))
   { vpv.push_back(vpv.back()); return true; }
  return false;
 }
@@ -2724,16 +2730,20 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
 
 
 bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
- // match suffixes [joi] and attached label (if any) - for search_one_
- if(ws.stripped.size() > 1 and lbl and ws.stripped.back() != lbl)
-  return false;
+ // match suffixes [joiw] and attached label (if any) - for search_one_
+ if(ws.stripped.size() > 1) {                                   // there's an attached search label
+  if(lbl == nullptr) return false;                              // there's no label
+  if(ws.stripped.back() != lbl)  return false;                  // label does not match
+ }
  if(ws.jsearch == json_match) {
   if(ws.user_json == *jn and --i < 0)
    return true;
   return false;
  }
  if((ws.jsearch == object_match and jn->is_object()) or
-    (ws.jsearch == iterable_match and jn->is_array()))
+    (ws.jsearch == indexable_match and jn->is_array()) or
+    (ws.jsearch == wide_match) or
+    (ws.jsearch == end_node_match and jn->empty()))
   if(--i < 0)
    return true;
  return false;
@@ -2788,7 +2798,9 @@ bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
    continue;
   }
   if((ws.jsearch == object_match and jn->is_object()) or
-     (ws.jsearch == iterable_match and jn->is_array())) {
+     (ws.jsearch == indexable_match and jn->is_array()) or
+     (ws.jsearch == wide_match) or
+     (ws.jsearch == end_node_match and jn->empty())) {
    if(--i < 0)
     { pv_.emplace_back(it); return true; }
    continue;
@@ -2827,8 +2839,10 @@ bool Json::iterator::atomic_matched_(const Jnode *jn, const char *lbl, const Wal
 
  switch (ws.jsearch) {
   case object_match:
-  case iterable_match:
+  case indexable_match:
         return false;
+  case wide_match:
+  case end_node_match:
   case atomic_match:
         return true;
   case json_match:
