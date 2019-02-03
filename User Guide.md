@@ -1140,7 +1140,7 @@ bash $
 ```
 Second step: now we need to multiply those records, to match number of records in the address book:
 ```
-bash $ for i in $(seq 2 `jtc -w'[Directory][:]' -r ab.json  | wc -l`); do jtc -f -w'[^0]' -i'[0:1]' abc.json; done
+bash $ for i in $(seq 2 `jtc -w'[Directory][:]' -r ab.json  | wc -l`); do jtc -f -i'[0:1]' abc.json; done
 bash $ jtc abc.json 
 [
    {
@@ -1164,7 +1164,7 @@ bash $
 Thus, in this step:
 - `for` loop is arranged in the sequence from 2 to numbers of records in the `Directory` (`jtc -w'[Directory][:]' -r ab.json  | wc -l`)
 - in each pass, file `abc.json` modified in-place (`-f`) by inserting the first entry from the book (`-i'[0:1]'`)
-into the root (`-w'[^0]'`)
+into the root (if no `-w` given, root is assumed)
 
 Last step:
 let's copy values from the `ab.json` into the new file. For that we need to come up with the JSON which list all the values
