@@ -34,7 +34,7 @@
    * [Update operations (`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations)
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
-   * [Insert, Update: argument shell evaluation (`-e`,`-i`,`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluaton)
+   * [Insert, Update: argument shell evaluation (`-e`,`-i`,`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
 5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates (`-ee`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
