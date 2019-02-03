@@ -14,7 +14,7 @@
      * [Search suffixes](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Search quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[...]:<...>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
-     * [Non-recursive search (`>...<)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
+     * [Non-recursive search (`>...<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
    * [Walking multiple paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-paths)
      * [Sequential walk processing (`-n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing)
