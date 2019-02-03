@@ -41,10 +41,10 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.53)
-- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.53)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.53)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.53)
+- [macOS 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-64.v1.54)
+- [macOS 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-macos-32.v1.54)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-64.v1.54)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.54)
 
 
 #### Compile and install instructions:
@@ -147,9 +147,11 @@ let's have a look at the walk-path `<url>l+0`:
   * `b`: matches JSON boolean value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches JSON null value, the lexeme value is ignored, could be something like `<null>n`, or `<>n`, etc
   * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null
-  * `o`: matches any JSON object - {...}
-  * `i`: matches any JSON array (iterable) [...]
+  * `o`: matches any JSON object - `{...}`
+  * `i`: matches any JSON array (iterable) `[...]`
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j+0` - finds all empty arrays
+  * `w`: matches any JSON value (atomic, objects, arrays)
+  * `e`: matches end nodes only (atomic, `{}`, `[]`)
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifiers (preceded with `+`) makes a path *iterable*
 
