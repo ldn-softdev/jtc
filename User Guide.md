@@ -680,7 +680,7 @@ bash $ cat ab.json | jtc -x '[Directory] [:' -y'] <name>l:' -y'] <number>l:'
 However, if a reinstatement of the options results in a valid walk-path - that's all what matters.
 
 It's possible to combine both syntaxes (i.e. `-w` with `-x` and `-y`), however, given that the processing of `-x` and `-y`
-internally reinstates respective options `-w`, the latter will be appended after any of given `-w` options (which will affect the 
+internally reinstates respective options `-w`, the former will be appended after any of given `-w` options (which will affect the 
 order of processing/outputting) even though the order of their appearance is different:
 ```
 bash $ cat ab.json | jtc -x '[Directory] [:]' -y'<name>l:' -y'<number>l:' -w '<children>l:' -rnl
