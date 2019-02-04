@@ -209,7 +209,7 @@ bash $ cat ab.json | jtc -w'[Directory][1][address]'
 }
 bash $
 ```
-or, equally could be done like this, but the latter syntax is preferable (for your own good):
+or, equally could be done like this, but the former syntax is preferable (for your own good):
 ```
 bash $ cat ab.json | jtc -w'[0][1][0]'
 {
