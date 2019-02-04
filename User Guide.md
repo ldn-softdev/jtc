@@ -1005,7 +1005,7 @@ Here's the matrix table for update operations with and without merging:
 -------------+---------------------+-----------------------+-----------------------+-------------
    [1,2]     |        [3,4]        |         [3,4]         |         [3,2]         |    [3,2]
 {"a":1,"b":2}|    {"a":3,"b":4}    |  {"a":3,"b":2,"c":4}  |      {"a":3,"b":2}    |{"a":3,"b":2}
-    "a"      |          3          |     {"a":3,"c":4}     |         {"a":3}       |      3
+    "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |      3
 ```
 - when updating without `-m`, the operation is straightforward - a source overwrites the destination
 - when objects merge-updated, for clashing labels, a source does overwrite the destination (unlike with insertion)
