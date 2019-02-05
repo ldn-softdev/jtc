@@ -1123,8 +1123,8 @@ There're 2 variants of the substitution patterns:
 - `}{` - if substituted JSON is a _string_, then outer quotation marks are dropped, otherwise substitute as it is
 
 ## Comparing JSONs
-`-c` allows comparing JSONs (or JSONs element pointed by walk-paths). Let's compare `phone` records from the first and the last
-entries from the addrss book:
+`-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
+Let's compare `phone` records from the first and  the second entries of the address book:
 ```
 bash $ cat ab.json | jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 "json_1": [
@@ -1147,7 +1147,7 @@ bash $ cat ab.json | jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 ]
 bash $ 
 ```
-When both jsons are equal, an empty set is displayed and return code is 0.
+When both JSONs are equal, an empty set is displayed and return code is 0.
 ```
 bash $ echo '123' | jtc -c'123' -l
 "json_1": {}
@@ -1156,7 +1156,7 @@ bash $ echo $?
 0
 bash $ 
 ```
-Otherwise (JSONs are differnet) a non-zero code is returned:
+Otherwise (JSONs are different) a non-zero code is returned:
 ```
 bash $ echo '[1,2,3]' | jtc -c'[2,3]' -lr
 "json_1": [ 1, 2, 3 ]
