@@ -6,19 +6,20 @@
 or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected
 elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare and swap around).
 
-#### Simple but efficient cli tool to manipulate JSON data
+
+## Short description
+\- `jtc` is simple but efficient cli utility tool to manipulate JSON data
 
 `jtc` offers following features:
-  - simple user interface allowing applying bulk changes in one command
-  - featured walk interface let extracting any combination of data from source JSON
+  - simple user interface allowing applying a bulk changes in one command
+  - featured walk-path interface let extracting any combination of data from source JSON
   - extracted data is representable either as it found, or as a complete JSON format
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
-  - updates operations optionally undergo shell cli evaluation
+  - insert/updates operations optionally undergo shell cli evaluation
   - written entirely in C++, no dependencies (STL only)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
-
 
 Walk path is a feature easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards **and upwards**
@@ -30,8 +31,7 @@ A walk path is made of an arbitrary number of lexemes, while the tool accepts an
 paths. See below more detailed explanation with examples
 
 
-
-#### Linux and MacOS precompiled binaries are available for download
+### Linux and MacOS precompiled binaries are available for download
 
 For compiling c++14 (or later) is required:
   - to compile under MacOS, use cli: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
@@ -47,7 +47,7 @@ or download the latest precompiled binary:
 - [linux 32 bit](https://github.com/ldn-softdev/jtc/raw/master/jtc-linux-32.v1.55)
 
 
-#### Compile and install instructions:
+### Compile and install instructions:
 
 download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using
 an appropriate command, move compiled file into an install location.
@@ -61,10 +61,8 @@ folder:
   - `sudo mv ./jtc /usr/local/bin/`
 
 
-
-
-## Quick usage guide:
-*run `jtc -g` for walk path explanations and additional usage examples*
+## Quickstart guide:
+*run `jtc -g` for walk path explanations, usage notes and additional usage examples*
 
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
 ```
@@ -126,7 +124,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 
-#### 1. let's start with a simple thing: list all URLs:
+### 1. let's start with a simple thing: list all URLs:
 ```
 bash $ jtc -w "<url>l+0" Bookmarks
 "https://www.nytimes.com/"
@@ -137,28 +135,12 @@ bash $ jtc -w "<url>l+0" Bookmarks
 ```
 let's have a look at the walk-path `<url>l+0`:
 - search lexemes are enclosed in angular brackets `<`, `>`
-- suffix `l` instructs to search among labels only (all suffixes: `r`,`R`,`l`,`L`,`d`,`D`,`b`,`n`):
-  * `r`: default (could be omitted), fully matches *JSON string* value
-  * `R`: same as `r`, but the lexeme is a search RE
-  * `l`: fully matches *JSON label*
-  * `L`: same as `l`, but the lexeme is a search RE
-  * `d`: fully matches *JSON number*
-  * `D`: same as `d`, but the lexeme is an RE
-  * `b`: matches JSON boolean value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
-  * `n`: matches JSON null value, the lexeme value is ignored, could be something like `<null>n`, or `<>n`, etc
-  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null
-  * `o`: matches any JSON object - `{...}`
-  * `i`: matches any JSON array (iterable) `[...]`
-  * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j+0` - finds all empty arrays
-  * `w`: matches any JSON value (atomic, objects, arrays)
-  * `e`: matches end nodes only (atomic, `{}`, `[]`)
+- suffix `l` instructs to search among labels only
 - quantifier `+0` instructs to find all occurrences starting from the first (zero based),
 such quantifiers (preceded with `+`) makes a path *iterable*
 
 
-
-
-#### 2. dump all bookmark names from the `Work` folder:
+### 2. dump all bookmark names from the `Work` folder:
 ```
 bash $ jtc -w "<Work> [-1] [children] [+0] [name]" Bookmarks
 "Stack Overflow"
@@ -255,7 +237,7 @@ bash $ jtc -w "<Work> [-1] [children] [+0] [name]" -l Bookmarks
 ```
 
 
-#### 3. dump all URL's names:
+### 3. dump all URL's names:
 ```
 bash $ jtc -w "<url>l+0 [-1] [name]" Bookmarks
 "The New York Times"
@@ -273,8 +255,7 @@ this walk path `<url>l+0 [-1] [name]`:
  - then JSON element with label `"name"` is selected (encasement `[`, `]`) within parent's immediate children
 
 
-
-#### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
+### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
 ```
 bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 [
@@ -308,8 +289,8 @@ bash $ jtc -w"<url>l+0" -w "<url>l+0 [-1] [name]" -jl Bookmarks
 walk printing rather than interleaved.
 
 
-#### 5. Subscripts (offsets) and Searches explained
-##### _Subscript lexemes_
+### 5. Subscripts (offsets) and Searches explained
+#### _Subscript lexemes_
 subscripts let addressing/selecting one or more JSON elements among immediate children (off the currently selected JSON element),
 or address a parent(s). A full list of all types of subscripts supported by `jtc`:
 - `[]` - addresses/selects an empty text label:
@@ -392,7 +373,7 @@ a text offset (btw, spaces within the offset also make the offset textual), e.g.
 `[ +1 ]` - i.e., it will select an element with label `" +1 "` (if one exists of course)
 
 
-##### _Search lexemes_
+#### _Search lexemes_
 there are 2 types of search notations:
 - enclosed like `<...>`: defines a _recursive_ search off the currently selected JSON element
 - enclosed like `>...<`: defines a _non-recursive_ among immediate children of (the currently selected) JSON element
@@ -455,7 +436,7 @@ in the above example `jtc` will search all JSON string values (with any content,
 are directly attached to the label `"b"`
 
 
-##### _Understand how `[-n]` and `[^n]` subscripts work_
+#### _Understand how `[-n]` and `[^n]` subscripts work_
 say, we have a following JSON:
 ```
 bash $ echo '{"a":[  {"b3": 123 }, { "c3": 3.14 }  ] }' | jtc 
@@ -487,328 +468,7 @@ addressing off the leaf:  [-3] [-2] [-1] [-0]
                           etc.
 ````
 
-
-#### 6. 4 operations to modify source JSON:
-- insert/merge JSON arrays/objects `-i`
-- update existing entries `-u`
-- swap around 2 entries `-s` in every pair or walked paths (thus `-s` requires exactly 2 walk paths)
-- remove (purge) walked entry `-p` (if `-pp` given then purge all entries _except_ walked)
-
-each of the above options would require a walk path (`-s` would require two) to operate on.
-
-
-##### _Purge (delete) option:_
-Say, let's delete (`-p`) all the stamps from the JSON:
-```
-bash $ jtc -w"<stamp>l+0" -p Bookmarks
-{
-   "Bookmarks": [
-      {
-         "children": [
-            {
-               "children": [
-                  {
-                     "name": "The New York Times",
-                     "url": "https://www.nytimes.com/"
-                  },
-                  {
-                     "name": "HuffPost UK",
-                     "url": "https://www.huffingtonpost.co.uk/"
-                  }
-               ],
-               "name": "News"
-            },
-            {
-               "children": [
-                  {
-                     "name": "Digital Photography Review",
-                     "url": "https://www.dpreview.com/"
-                  }
-               ],
-               "name": "Photography"
-            }
-         ],
-         "name": "Personal"
-      },
-      {
-         "children": [
-            {
-               "name": "Stack Overflow",
-               "url": "https://stackoverflow.com/"
-            },
-            {
-               "name": "C++ reference",
-               "url": "https://en.cppreference.com/"
-            }
-         ],
-         "name": "Work"
-      }
-   ]
-}
-```
-- option `-f` would enforce such modification into the source JSON file (unless the input was _stdin_), otherwise
-the resulting JSON is only printed
-
-
-let's do a reverse thing - delete everything but the time stamps from the JSON (i.e. display only walked JSON elements):
-```
-bash $ jtc -w"<stamp>l+0" -pp Bookmarks
-{
-   "Bookmarks": [
-      {
-         "children": [
-            {
-               "children": [
-                  {
-                     "stamp": "2017-10-03, 12:05:19"
-                  },
-                  {
-                     "stamp": "2017-11-23, 12:05:19"
-                  }
-               ],
-               "stamp": "2017-10-02, 12:05:19"
-            },
-            {
-               "children": [
-                  {
-                     "stamp": "2017-02-27, 12:05:19"
-                  }
-               ],
-               "stamp": "2017-02-27, 12:05:19"
-            }
-         ],
-         "stamp": "2017-01-22, 12:05:19"
-      },
-      {
-         "children": [
-            {
-               "stamp": "2018-05-01, 12:05:19"
-            },
-            {
-               "stamp": "2018-06-21, 12:05:19"
-            }
-         ],
-         "stamp": "2018-03-06, 12:07:29"
-      }
-   ]
-}
-bash $
-```
-
-
-##### _Update (replace) (`-u`) and insert (`-i`) options:_
-Each of those options supports 4 types of parameters:
-1. file (e.g.: `-i file.json`)
-2. json-string (e.g.: `-i '{"pi": 3.14 }'`
-3. cli line (e.g.: `-e -i date \| xargs -I% echo \"%\" \;` )
-4. walk-path from source JSON (e.g.: `-i'<url>l+0 [-1] [name]'`)
-
-\- every of those options parameters must represent a valid JSON.
-\- the behavior for both options also could be modified by option `-m`
-\- additionally, together with parameter type 4 an option `-p` could be used, which turns it into a _move_ operation
-
-
-##### _Insert (-i) option:_
-By default, insert option allows inserting its parameters into arrays and objects only (indeed, one cannot _insert_
-a value into an atomic value, for that overwrite operation is required, i.e. `-u`):
-- new value will be pushed at the end of an array:
-  ```
-  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -i'[3,4]' -r
-  [ 1, 2, [ 3, 4 ] ]
-  ```
-  In the example, destination walk-path `-w'[-1]'` merely selects a root (other notations to address root could be:
-  `-w' '`, `-w'[^0]'`), which is an array type, and the source JSON being inserted is a parameter of `-i`
-- merging modifier (`-m`) alters that behavior allowing merging of destination and sources, it also allows merging
-even into atomic types:
-  * merging two arrays:
-  ```
-  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -m -i'[3,4]' -r
-  [ 1, 2, 3, 4 ]
-  ```
-  * merging object into array:
-  ```
-  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -m -i'{"a":3,"b":4}' -r
-  [ 1, 2, 3, 4 ]
-  ```
-  * merging array into (with) an atomic value:
-  ```
-  bash $ echo '[ 1, 2 ]' | jtc -w'[-1:]' -m -i'[3,4]' -r
-  [ 1, [ 2, 3, 4 ] ]
-  ```
-  in the latter example JSON array `[3, 4]` is merged with the atomic element (`2`) pointed by the walk path `-w'[-1:]'`
-
-- objects only could be merged, hence by default `-i` will merge two objects, however in case of clashing labels no
-overwrite will occur (destination is preserved in that sense):
-  * merging 2 objects with clashing labels:
-  ```
-  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -i'{ "b":3, "c":3 }' -r
-  { "a": 1, "b": 2, "c": 3 }
-  bash $
-  ```
-  * with `-m` modifier though, the values with clashing labels will be merged into a common array:
-  ```
-  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -mi'{ "b":3, "c":3 }' -r
-  { "a": 1, "b": [ 2, 3 ], "c": 3 }
-  bash $
-  ```
-- a real power adds ability to specify a walk-path in the source JSON as the parameter of the `-i` option - effectively it
-let _copying_ portion of source JSON into another part of it, some examples:
-  * duplicate all json entries:
-  ```
-  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w'[-1]' -i'[:]' -r
-  [ null, 1, "2", { "a": 1, "b": 2 }, null, 1, "2", { "a": 1, "b": 2 } ]
-  ```
-  * extend the array with all its values (i.e. de-nest the object/arrays):
-  ```
-  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w'[-1]' -i'[:]' -r -m
-  [ null, 1, "2", { "a": 1, "b": 2 }, null, 1, "2", 1, 2 ]
-  ```
-  * with `-p` added (while `-i`'s parameter is a walk-path), a _copy_ semantic turns into the _move_ - source-walked elements
-  are removed, let's move all elements out of object into parent array:
-  ```
-  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w' ' -i[-1:][:]  -m -p -r
-  [ null, 1, "2", {}, 1, 2 ]
-  ```
-  * the above step leaves an empty leftover from the object, which could be removed (purged) in a subsequent step:
-  ```
-  bash $ echo '[ null, 1, "2", { "a":1, "b":2 } ]' | jtc -w' ' -i[-1:][:]  -m -p | jtc -w'<{}>j:' -p -r
-  [ null, 1, "2", 1, 2 ]
-  ```
-
-
-##### _Update (`-u`) option:_
-Insert and update operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by `-e`).
-E.g., let's replace all the time-stamps in the original Bookmarks JSON with a number of
-seconds since the epoch:
-```
-bash $ jtc -w'<stamp>l+0' -eu date -jf '"%F, %H:%M:%S"' {} +%s \; Bookmarks
-{
-   "Bookmarks": [
-      {
-         "children": [
-            {
-               "children": [
-                  {
-                     "name": "The New York Times",
-                     "stamp": 1507025119,
-                     "url": "https://www.nytimes.com/"
-                  },
-                  {
-                     "name": "HuffPost UK",
-                     "stamp": 1511435119,
-                     "url": "https://www.huffingtonpost.co.uk/"
-                  }
-               ],
-               "name": "News",
-               "stamp": 1506938719
-            },
-            {
-               "children": [
-                  {
-                     "name": "Digital Photography Review",
-                     "stamp": 1488193519,
-                     "url": "https://www.dpreview.com/"
-                  }
-               ],
-               "name": "Photography",
-               "stamp": 1488193519
-            }
-         ],
-         "name": "Personal",
-         "stamp": 1485083119
-      },
-      {
-         "children": [
-            {
-               "name": "Stack Overflow",
-               "stamp": 1525169119,
-               "url": "https://stackoverflow.com/"
-            },
-            {
-               "name": "C++ reference",
-               "stamp": 1529575519,
-               "url": "https://en.cppreference.com/"
-            }
-         ],
-         "name": "Work",
-         "stamp": 1520334449
-      }
-   ]
-}
-bash $
-```
-Once options `-e` and `-i`,`-u` used together following rules must be observed:
-- option `-e` must precede `-i`,`-u`
-- char sequence following option `-i`,`-u` must be terminated with escaped `;`
-- any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
-- the cli chars in argument do not require any additional escaping (except those which would normally be required by shell)
-- if piping in the cli is required then pipe symbol itself needs to be escaped: `\|`
-- returned result of a shell evaluation still must be a valid JSON
-- failed or empty results of the shell evaluations are ignored (JSON entry wont be updated, rather proceed to the next walked
-entry for another update attempt)
-
-- Update operation overwrites the destination entirely:
-  * even atomic value overwrites any json at destination:
-  ```
-  bash $ echo '[ 1, 2 ]' | jtc -w'[-1]' -u'3'
-  3
-  ```
-  * objects by default are not merged:
-  ```
-  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -u'{ "c": 3 }' -r
-  { "c": 3 }
-  ```
-- however merge option (`-m`) let altering that behavior (only for objects), now destination and source objects will get
-merged, but the source will overwrite the destination:
-  ```
-  bash $ echo '{ "a":1, "b":2 }' | jtc -w'[-1]' -m -u'{ "b":3, "c":4 }' -r
-  { "a": 1, "b": 3, "c": 4 }
-  ```
-- adding option `-p` (again, it's only useful while `-u`'s parameter is a walk-path) has the same effect as in case with `-i` option:
-_copy_with_overwrite_ turns into _move_with_overwrite_:
-  ```
-  bash $ echo '[ 1, 2,{ "a":3, "b":4 }]' | jtc -w'[0]' -u'[-1:][-1:]' -r -p
-  [ 4, 2, { "a": 3 } ]
-  ```
-  \- in that example, the first value of the root array (`1`), gets overwritten by a moved last value out of the last object
-  (i.e. `"b": 4`), the label of course will be lost, as the array does not cater labels
-
-
-##### _Swap option:_
-Swap option requires strictly 2 walk paths (which in turn may be iterative) and will swap around all corresponding instances of
-walk-paths (their iterations). In particular, swap operation is useful when it's required to reduce a (redundant) nestedness of
-JSON structure:
-```
-bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | jtc
-[
-   {
-      "A": null
-   },
-   {
-      "A": true
-   },
-   {
-      "A": 2
-   },
-   {
-      "A": "three"
-   }
-]
-bash $ echo '[ { "A": null }, { "A": true }, { "A": 2 }, { "A": "three" } ]' | jtc -w'<A>l+0' -w'<A>l+0 [-1]' -s
-[
-   null,
-   true,
-   2,
-   "three"
-]
-bash $
-```
-
-
-for more examples and a complete option list run *`jtc -h`* and *`jtc -g`*
-
-
-#### 7. Debugability / JSON validation
+#### 6. Debugability / JSON validation
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced.
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful -
 when parsing of the input JSON is failing, `jtc` throws the exception:
@@ -826,7 +486,6 @@ bash $ cat addressbook-sampe.json | jtc -d
 jtc json exception: expected_json_value
 bash $ 
 ```
-
 
 
 ## A tiny example of class usage and its interface (c++14):
@@ -996,7 +655,8 @@ bash $
 for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
 
 ## jtc vs jq:
-#### 1. tool positioning:
+`jtc` was "inspired" by the complexity of jq interface, aiming to provide a user interface which could be undertood easily.
+### 1. tool positioning:
  - `jq` is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
  - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
@@ -1004,7 +664,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 `jtc` is never meant to surpass `jq` in capabilities (due to confining its operations only to the domain of its data model and
 performing one operation with the input data at a time), however, it offers a powerful alternative to jq:
 
-#### 2. learning curve:
+### 2. learning curve:
  - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
  which will take some time. Coming up with the complex queries requires being an expert in jq, or spending lots of time on
  stackoverflow and similar
@@ -1012,24 +672,24 @@ performing one operation with the input data at a time), however, it offers a po
  each type having several variants) which is easy to grasp. Once you learn it, you could achieve most of your asks with JSON
  very quickly, thus it's much easier and quicker to drive
 
-#### 3. handling irregular JSONs:
+### 3. handling irregular JSONs:
  - `jq`: handling irregular JSONs for `jq` is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging query becomes
  - `jtc` was incepted with the idea being capable of handling complex irregular JSONs with simplified interface - that all is fitted
  in the concept of the walk-path, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every ask. 
 
-#### 4. programming model
+### 4. programming model
  - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _c++14_ using STL only. Main json engine/library does not have a single `new` operator,
  nor it has a single naked pointer acting as a resource handler/owner, thus` jtc` is free of memory related bugs/issues
  (at least one class of the issues is off the table) - STL guaranty.
 
-#### 5. performance
+### 5. performance
  - as per my benchmarking both `jq` and `jtc` have excellent performance (though `jtc` is a notch faster - if comparing apples to
  apples - capabilities that employ both tools)
 - the rest of judgement is up to you!
 
-#### 6. numerical precision
+### 6. numerical precision
  - upon parsing `jq` is converting JSON numerical values into an internal digital representation and outputs back from it.
  Such approach may cause a deviation in the numerical values representation and some precision loss:
 ```
@@ -1045,7 +705,10 @@ bash $ echo '[0.99999999999999999, 0.00001]' | jtc -r
 bash $
 ``` 
  Another benign side effect of such approach - numerical values in `jtc` are searchable with RE (suffix `D`)
- 
+
+## Complete User Guide
+Refer Complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
 
