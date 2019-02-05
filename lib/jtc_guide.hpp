@@ -138,13 +138,15 @@ options -)" STR(OPT_JSN) R"( and -)" STR(OPT_LBL) R"( usage:
    use together, all walked elements will be grouped into *relevant* objects within a parent array
    options -)" STR(OPT_JSN) R"(, -)" STR(OPT_LBL)
    R"( only modify the output of walked items, i.e. they will ignored when either of
-   -i, -u, -s, -p is given
+   -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)" STR(OPT_SWP) R"(, -)" STR(OPT_PRG) R"( is given
 
 mutually exclusive options:
- - options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)" STR(OPT_SWP) R"(, -)" STR(OPT_PRG)
-   R"( normally are mutually exclusive; if found together, only one type will
-   be executed (selected in the priority of the listed order); though there's one case usage of
-   -)" STR(OPT_PRG) R"( together with options -i, -u, see notes below
+ - options -)" STR(OPT_CMP) R"( -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)"
+   STR(OPT_SWP) R"(, -)" STR(OPT_PRG)
+   R"( normally are mutually exclusive; if found together, only one type
+   will be executed (selected in the priority of the listed order); though there's one case usage
+   of -)" STR(OPT_PRG) R"( together with options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
+   R"(, see notes below
 
 options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R"(:
  - the options accept one parameter which may be treated differently: initially a file name
@@ -174,29 +176,29 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
    R"( and destination -)" STR(OPT_WLK) R"(, the number of various
    operation possibilities is big, therefore it's best to track is in the following table:
  * insert operation (-)" STR(OPT_INS) R"() without merge:
-   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |     3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |      [1,2,[3,4]     |  [1,2,{"a":3,"c":4}]  | [1,2,{"a":3},{"c":4}] |  [1,2,3]
+    [1,2]     |      [1,2,[3,4]     |  [1,2,{"a":3,"c":4}]  | [1,2,{"a":3},{"c":4}] |   [1,2,3]
  {"a":1,"b":2}|    {"a":1,"b":2}    |  {"a":1,"b":2,"c":4}  |  {"a":1,"b":2,"c":4}  |{"a":1,"b":2}
-     "a"      |         "a"         |          "a"          |          "a"          |    "a"
+     "a"      |         "a"         |          "a"          |          "a"          |     "a"
  * insert (-)" STR(OPT_INS) R"() with the merge (-)" STR(OPT_MDF) R"():
-   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |     3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |  [1,2,3]
+    [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |   [1,2,3]
  {"a":1,"b":2}|{"a":[1,3],"b":[2,4]}|{"a":[1,3],"b":2,"c":4}|{"a":[1,3],"b":2,"c":4}|{"a":1,"b":2}
-     "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |  ["a",3]
+     "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |   ["a",3]
  * update operation (-)" STR(OPT_UPD) R"() without merge:
-   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |     3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |      3
 --------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |        [3,4]        |     {"a":3,"c":4}     |           3           |     3
- {"a":1,"b":2}|        [3,4]        |     {"a":3,"c":4}     |           3           |     3
-     "a"      |        [3,4]        |     {"a":3,"c":4}     |           3           |     3
+    [1,2]     |        [3,4]        |     {"a":3,"c":4}     |           3           |      3
+ {"a":1,"b":2}|        [3,4]        |     {"a":3,"c":4}     |           3           |      3
+     "a"      |        [3,4]        |     {"a":3,"c":4}     |           3           |      3
  * update (-)" STR(OPT_UPD) R"() with the merge (-)" STR(OPT_MDF) R"():
-   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |     3
+   to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |      3
 --------------+---------------------+-----------------------+-----------------------+-------------
-    [1,2]     |        [3,4]        |         [3,4]         |         [3,2]         |   [3,2]
+    [1,2]     |        [3,4]        |         [3,4]         |         [3,2]         |    [3,2]
  {"a":1,"b":2}|    {"a":3,"b":4}    |  {"a":3,"b":2,"c":4}  |     {"a":3,"b":2}     |{"a":3,"b":2}
-     "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |     3
+     "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |      3
 
 option -)" STR(OPT_PRG) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(:
   - if option -)" STR(OPT_PRG) R"( is sighted together with -)" STR(OPT_INS) R"(, or -)"
@@ -422,6 +424,8 @@ capitalize all parent names in our JSON:
           }
        ]
     }
+
+for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
 )";
 }
 

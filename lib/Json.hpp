@@ -1575,6 +1575,33 @@ class Json{
         COUTABLE(WalkStep, ws_type(), offset, range(), search_type(), label(), lexeme, json())
     };
 
+    // Search Cache Key:
+    // - made of jnode pointer and walk step
+    struct SearchCacheKey {
+        // Search may occur off any JSON node and in any of WalkSteps, hence a unique
+        // key would be their combination
+        // WalkStep (ws) needs to be preserved (cannot be referenced) as the original
+        // walk path might not even exist, while cache could be still alive and actual
+
+                            SearchCacheKey(void) = delete;
+                            SearchCacheKey(const Jnode *jp, const WalkStep & w):
+                             jnp(jp), ws(w) {}
+
+        const Jnode *       json_node(void) const { return jnp; }   // only for COUTABLE
+        static bool         cmp(const SearchCacheKey &l, const SearchCacheKey &r)
+                             { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
+
+        const Jnode *       jnp;
+        WalkStep            ws;
+
+        COUTABLE(SearchCacheKey, json_node(), ws)
+    };
+
+
+    // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
+    void                parse_subscript_type_(WalkStep & state) const;
+
+ public:
     // Itr (iterator-label pair):
     // - used by walk iterator (path_vector) and search cache key
     struct Itr {
@@ -1600,39 +1627,14 @@ class Json{
         size_t              wsi;                                // walk step index (for increments)
     };
 
-    // Search Cache Key:
-    // - made of jnode pointer and walk step
-    struct SearchCacheKey {
-        // Search may occur off any JSON node and in any of WalkSteps, hence a unique
-        // key would be their combination
-        // WalkStep (ws) needs to be preserved (cannot be referenced) as the original
-        // walk path might not even exist, while cache could be still alive and actual
-
-                            SearchCacheKey(void) = delete;
-                            SearchCacheKey(const Jnode *jp, const WalkStep & w):
-                             jnp(jp), ws(w) {}
-
-        const Jnode *       json_node(void) const { return jnp; }   // only for COUTABLE
-        static bool         cmp(const SearchCacheKey &l, const SearchCacheKey &r)
-                             { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
-
-        const Jnode *       jnp;
-        WalkStep            ws;
-
-        COUTABLE(SearchCacheKey, json_node(), ws)
-    };
-
     typedef std::vector<Itr> path_vector;                       // used by iterator
 
-    // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
-    void                parse_subscript_type_(WalkStep & state) const;
-
- public:
     //                  walk iterator
     //
     // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
-    // container storage with the iterator (e.g. walk-based callback)
+    // container storage with the iterator (e.g. walk-based callbacks)
     //
+
     class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
      // this forward iterator let iterate over *iterable* walk paths
      // once iterator is dereferenced it returns a reference to a Jnode's super-node,
