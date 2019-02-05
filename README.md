@@ -18,6 +18,7 @@ Content:
   * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc/blob/master/README.md#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
   * [Subscripts (offsets) and Searches explained](https://github.com/ldn-softdev/jtc/blob/master/README.md#5-subscripts-offsets-and-searches-explained)
     * [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/README.md#subscript-lexemes)
+    * [Search lexemes](https://github.com/ldn-softdev/jtc/blob/master/README.md#search-lexemes)
     * [Understand `[-n]` and `[^n]` subscripts](https://github.com/ldn-softdev/jtc/blob/master/README.md#understand-how--n-and-n-subscripts-work)
   * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc/blob/master/README.md#6-debugability--json-validation)
 3. [class usage and c++14 interface](https://github.com/ldn-softdev/jtc/blob/master/README.md#a-tiny-example-of-class-usage-and-its-interface-c14)
@@ -491,7 +492,7 @@ addressing off the leaf:  [-3] [-2] [-1] [-0]
                           etc.
 ````
 
-#### 6. Debugability / JSON validation
+### 6. Debugability / JSON validation
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced.
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful -
 when parsing of the input JSON is failing, `jtc` throws the exception:
