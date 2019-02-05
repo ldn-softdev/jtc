@@ -38,7 +38,7 @@
    * [Mixed use of arguments (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
 6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
-   * [Working with templates (`-ee`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
+   * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
 ## Displaying JSON
