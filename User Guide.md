@@ -35,6 +35,7 @@
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
+   * [Mixed use of arguments (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
 6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates (`-ee`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
@@ -1122,6 +1123,18 @@ There're 2 variants of the substitution patterns:
 - `{}` - will substitute JSON (pointed by `-w`) as it is
 - `}{` - if substituted JSON is a _string_, then outer quotation marks are dropped, otherwise substitute as it is
 
+### Mixed use of arguments
+options `-c`, `-u`, `-i` allow two kinds of their arguments:
+1. static JSONs (i.e., `<file>`, `<JSON>`)
+2. walk-path (i.e., `<walk-path>`)
+\- when those used together, namely a `<walk-path>` argument(s) follows either of statics  (e.g.: `jtc -u file.json -u'[Root][:]'`)
+then all subsequent `<walk-path>` apply onto the first argument (here `file.json`). 
+\- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
+
+That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: _all specified `<walk-path>`
+will be processed in a consecutive order, one by one_.
+
+
 ## Comparing JSONs
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
 Let's compare `phone` records from the first and  the second entries of the address book:
@@ -1170,7 +1183,9 @@ If multiple pairs of JSONs compared, zero code is returned only when all compare
 
 ## More Examples
 ### Working with templates
-Say, we need to make a new JSON out of our address book, extracting only a few fields. First let's prepare a template of our new
+Say, we need to craft a new JSON out of our address book, extracting only selected (and possibly renamed) fields. This is attainable
+if 3 simple steps:
+1. First let's prepare a template of our new
 JSON:
 ```
 bash $ echo '[{"Person":"", "Age":"", "Children":""}]' | jtc >abc.json
@@ -1184,10 +1199,11 @@ bash $ jtc abc.json
 ]
 bash $
 ```
-Second step: now we need to multiply those records, to match number of records in the address book:
+2. Now we need to multiply those records, to match number of records in the address book:
 ```
-bash $ for i in $(seq 2 `jtc -w'[Directory][:]' -r ab.json  | wc -l`); do jtc -f -i'[0:1]' abc.json; done
-bash $ jtc abc.json 
+bash $ CNT=$(jtc -w'[Directory][:]' -r ab.json  | wc -l)
+bash $ for i in $(seq 2 $CNT); do jtc -f -i'[0:1]' abc.json; done
+bash $ jtc abc.json
 [
    {
       "Age": "",
@@ -1207,35 +1223,15 @@ bash $ jtc abc.json
 ]
 bash $
 ```
-Thus, in this step:
+in this step:
 - `for` loop is arranged in the sequence from 2 to numbers of records in the `Directory` (`jtc -w'[Directory][:]' -r ab.json  | wc -l`)
 - in each pass, file `abc.json` modified in-place (`-f`) by inserting the first entry from the book (`-i'[0:1]'`)
 into the root (if no `-w` given, root is assumed)
 
-Last step:
-let's copy values from the `ab.json` into the new file. For that we need to come up with the JSON which list all the values
-in the same order as it appears in `abc.json`:
+3. Map (via update) required values from the address book (`ab.json`) only the respective values in the template (`abc.json`):
+let's copy values from the `ab.json` into the new file.
 ```
-bash $ jtc -x'[0][:]' -y'[age]' -y'[children]' -y'[name]' -j ab.json 
-[
-   25,
-   [
-      "Olivia"
-   ],
-   "John",
-   31,
-   [],
-   "Ivan",
-   25,
-   [
-      "Robert",
-      "Lila"
-   ],
-   "Jane"
-]
-bash $
-bash $ jtc -w'<>e:' -eeu jtc -x'[0][:]' -y'[age]' -y'[children]' -y'[name]' -j ab.json \; -f abc.json 
-bash $ jtc abc.json 
+bash $ jtc -n -w'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
 [
    {
       "Age": 25,
@@ -1260,9 +1256,7 @@ bash $ jtc abc.json
 ]
 bash $
 ```
-There's a trick here requiring an explanation: when options `-ee` are given, it facilitates following behavior:
-- the argument of `-u` (same applied to `-i`) would be evaluated only once (unlike with a single `-e`, where it'll be
-shell evaluated upon every iteration of `-w`)
-- also, the evaluated argument (resulting JSON) will be walked using walk-path `[:]` - i.e. every top-element would be selected.
-Thus achieving the desired result - every walked leaf element in abc.json (`-w'<>e:'`) will be updated/rewritten with every
-JSON element from resulting shell evaluation (given at the top of the example)
+NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather than onto `abc.json` in this scenario) are being
+process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
+onto respective entries).
+
