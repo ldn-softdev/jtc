@@ -1201,7 +1201,7 @@ bash $
 ```
 2. Now we need to multiply those records, to match number of records in the address book:
 ```
-bash $ CNT=$(jtc -w'[Directory][:]' -r ab.json  | wc -l)
+bash $ CNT=$(jtc -w'[Directory][:]' -r ab.json  | wc -l); # just count the number of entries
 bash $ for i in $(seq 2 $CNT); do jtc -f -i'[0:1]' abc.json; done
 bash $ jtc abc.json
 [
