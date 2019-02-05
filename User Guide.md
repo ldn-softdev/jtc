@@ -1229,7 +1229,6 @@ in this step:
 into the root (if no `-w` given, root is assumed)
 
 3. Map (via update) required values from the address book (`ab.json`) onto the respective values in the template (`abc.json`):
-let's copy values from the `ab.json` into the new file.
 ```
 bash $ jtc -n -w'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
 [
