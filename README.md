@@ -7,7 +7,7 @@ or multiple elements from a source JSON and apply various actions on the selecte
 elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare and swap around).
 
 ### Content:
-1. [Short description](https://github.com/ldn-softdev/jtc/blob/master/README.md#short-description)
+1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc/blob/master/README.md#linux-and-macos-precompiled-binaries-are-available-for-download)
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc/blob/master/README.md#compile-and-install-instructions)
 
