@@ -35,7 +35,8 @@
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+5. [Comparing JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
+6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates (`-ee`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
@@ -1120,6 +1121,51 @@ rather proceed to the next walked entry for another update attempt)
 There're 2 variants of the substitution patterns:
 - `{}` - will substitute JSON (pointed by `-w`) as it is
 - `}{` - if substituted JSON is a _string_, then outer quotation marks are dropped, otherwise substitute as it is
+
+## Comparing JSONs
+`-c` allows comparing JSONs (or JSONs element pointed by walk-paths). Let's compare `phone` records from the first and the last
+entries from the addrss book:
+```
+bash $ cat ab.json | jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
+"json_1": [
+   {
+      "number": "112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "number": "113-123-2368"
+   }
+]
+"json_2": [
+   {
+      "number": "273-923-6483",
+      "type": "home"
+   },
+   {
+      "number": "223-283-0372"
+   }
+]
+bash $ 
+```
+When both jsons are equal, an empty set is displayed and return code is 0.
+```
+bash $ echo '123' | jtc -c'123' -l
+"json_1": {}
+"json_2": {}
+bash $ echo $?
+0
+bash $ 
+```
+Otherwise (JSONs are differnet) a non-zero code is returned:
+```
+bash $ echo '[1,2,3]' | jtc -c'[2,3]' -lr
+"json_1": [ 1, 2, 3 ]
+"json_2": [ 2, 3 ]
+bash $ echo $?
+5
+bash $ 
+```
+If multiple pairs of JSONs compared, zero code is returned only when all compared JSON pairs are equal. 
 
 
 ## More Examples
