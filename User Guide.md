@@ -1228,7 +1228,7 @@ in this step:
 - in each pass, file `abc.json` modified in-place (`-f`) by inserting the first entry from the book (`-i'[0:1]'`)
 into the root (if no `-w` given, root is assumed)
 
-3. Map (via update) required values from the address book (`ab.json`) only the respective values in the template (`abc.json`):
+3. Map (via update) required values from the address book (`ab.json`) onto the respective values in the template (`abc.json`):
 let's copy values from the `ab.json` into the new file.
 ```
 bash $ jtc -n -w'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
