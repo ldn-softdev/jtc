@@ -686,7 +686,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  The rest is out-tasked to unix cli tooling
 
 `jtc` is never meant to surpass `jq` in capabilities (due to confining its operations only to the domain of its data model and
-performing one operation with the input data at a time), however, it offers a powerful alternative to jq:
+performing one operation with the input data at a time), however, it offers a powerful alternative to jq
 
 ### 2. learning curve:
  - `jq`: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in jq's language,
