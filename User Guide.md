@@ -1111,7 +1111,7 @@ bash $
 ```
 Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - option `-e` must precede `-i`,`-u`
-- cli sequence following option `-i`,`-u` must be terminated with escaped `;`
+- cli sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
 - any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
 - if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
