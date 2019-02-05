@@ -6,6 +6,29 @@
 or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected
 elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare and swap around).
 
+Content:
+1. [Short description](https://github.com/ldn-softdev/jtc/blob/master/README.md#short-description)
+  * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc/blob/master/README.md#linux-and-macos-precompiled-binaries-are-available-for-download)
+  * [Compile and install instructions](https://github.com/ldn-softdev/jtc/blob/master/README.md#compile-and-install-instructions)
+
+2. [Quickstart guide](https://github.com/ldn-softdev/jtc/blob/master/README.md#quickstart-guide)
+  * [list all URLs](https://github.com/ldn-softdev/jtc/blob/master/README.md#1-lets-start-with-a-simple-thing-list-all-urls)
+  * [dump all bookmark names](https://github.com/ldn-softdev/jtc/blob/master/README.md#2-dump-all-bookmark-names-from-the-work-folder)
+  * [dump all URL's names](https://github.com/ldn-softdev/jtc/blob/master/README.md#3-dump-all-urls-names)
+  * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc/blob/master/README.md#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
+  * [Subscripts (offsets) and Searches explained](https://github.com/ldn-softdev/jtc/blob/master/README.md#5-subscripts-offsets-and-searches-explained)
+    * [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/README.md#subscript-lexemes)
+    * [Understand `[-n]` and `[^n]` subscripts](https://github.com/ldn-softdev/jtc/blob/master/README.md#understand-how--n-and-n-subscripts-work)
+  * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc/blob/master/README.md#6-debugability--json-validation)
+3. [class usage and c++14 interface](https://github.com/ldn-softdev/jtc/blob/master/README.md#a-tiny-example-of-class-usage-and-its-interface-c14)
+4. [jtc vs jq](https://github.com/ldn-softdev/jtc/blob/master/README.md#jtc-vs-jq)
+  * [tool positioning](https://github.com/ldn-softdev/jtc/blob/master/README.md#1-tool-positioning)
+  * [learning curve](https://github.com/ldn-softdev/jtc/blob/master/README.md#2-learning-curve)
+  * [handling irregular JSONs](https://github.com/ldn-softdev/jtc/blob/master/README.md#3-handling-irregular-jsons)
+  * [performance](https://github.com/ldn-softdev/jtc/blob/master/README.md#4-programming-model)
+  * [numerical precision](https://github.com/ldn-softdev/jtc/blob/master/README.md#6-numerical-precision)
+5. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
+
 
 ## Short description
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
