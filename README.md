@@ -512,7 +512,7 @@ bash $
 ```
 
 ## Complete User Guide
-Refer Complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+Refer to complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 
 ## A tiny example of class usage and its interface (c++14):
@@ -733,7 +733,7 @@ bash $
 ``` 
  Another benign side effect of such approach - numerical values in `jtc` are searchable with RE (suffix `D`)
 
-Refer Complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+Refer to complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
