@@ -254,11 +254,11 @@ bash $ cat ab.json | jtc -w'[Directory][+1][address][+2]'
 bash $
 ```
 
-Another way to select multiple subscripts is to use range notation `[N:N]`. In that notation N could be either positive or negative, 
+Another way to select multiple subscripts is to use range notation `[N:N]`. In that notation `N` could be either positive or negative, 
 or entirely missed. First position designates beginning of the selection, the last position designates the end of the range exclusively
 (i.e. not including the indexed element itself)
-- positive N subscripts Nth element from the beginning of the collection (whether it's array or an object)
-- negative N subscripts the Nth element from the end of the collection.
+- positive `N` subscripts `N`th element from the beginning of the collection (whether it's array or an object)
+- negative `N` subscripts the `N`th element from the end of the collection.
 - empty (missed N) tells to address either from the the beginning of the collection (in the first position),
 or from the end (last position) 
 
