@@ -21,14 +21,14 @@ Content:
       * [Search lexemes](https://github.com/ldn-softdev/jtc/blob/master/README.md#search-lexemes)
       * [Understand `[-n]` and `[^n]` subscripts](https://github.com/ldn-softdev/jtc/blob/master/README.md#understand-how--n-and-n-subscripts-work)
     * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc/blob/master/README.md#6-debugability--json-validation)
-3. [class usage and c++14 interface](https://github.com/ldn-softdev/jtc/blob/master/README.md#a-tiny-example-of-class-usage-and-its-interface-c14)
-4. [jtc vs jq](https://github.com/ldn-softdev/jtc/blob/master/README.md#jtc-vs-jq)
+3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
+4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc/blob/master/README.md#a-tiny-example-of-class-usage-and-its-interface-c14)
+5. [`jtc` vs jq](https://github.com/ldn-softdev/jtc/blob/master/README.md#jtc-vs-jq)
     * [tool positioning](https://github.com/ldn-softdev/jtc/blob/master/README.md#1-tool-positioning)
     * [learning curve](https://github.com/ldn-softdev/jtc/blob/master/README.md#2-learning-curve)
     * [handling irregular JSONs](https://github.com/ldn-softdev/jtc/blob/master/README.md#3-handling-irregular-jsons)
     * [performance](https://github.com/ldn-softdev/jtc/blob/master/README.md#4-programming-model)
     * [numerical precision](https://github.com/ldn-softdev/jtc/blob/master/README.md#6-numerical-precision)
-5. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 
 
 ## Short description
@@ -511,6 +511,9 @@ jtc json exception: expected_json_value
 bash $ 
 ```
 
+## Complete User Guide
+Refer Complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+
 
 ## A tiny example of class usage and its interface (c++14):
 Say, we want to accomplish a following task:
@@ -730,7 +733,6 @@ bash $
 ``` 
  Another benign side effect of such approach - numerical values in `jtc` are searchable with RE (suffix `D`)
 
-## Complete User Guide
 Refer Complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
