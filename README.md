@@ -24,12 +24,6 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
 5. [`jtc` vs jq](https://github.com/ldn-softdev/jtc#jtc-vs-jq)
-    * [tool positioning](https://github.com/ldn-softdev/jtc#1-tool-positioning)
-    * [learning curve](https://github.com/ldn-softdev/jtc#2-learning-curve)
-    * [handling irregular JSONs](https://github.com/ldn-softdev/jtc#3-handling-irregular-jsons)
-    * [performance](https://github.com/ldn-softdev/jtc#4-programming-model)
-    * [numerical precision](https://github.com/ldn-softdev/jtc#6-numerical-precision)
-
 
 ## Short description
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
@@ -718,7 +712,7 @@ performing one operation with the input data at a time), however, it offers a po
  apples - capabilities that employ both tools)
 - the rest of judgement is up to you!
 
-### 6. numerical precision
+### 6. numerical fidelity
  - upon parsing `jq` is converting JSON numerical values into an internal digital representation and outputs back from it.
  Such approach may cause a deviation in the numerical values representation and some precision loss:
 ```
