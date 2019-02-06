@@ -84,6 +84,8 @@ folder:
   - `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
   - `sudo mv ./jtc /usr/local/bin/`
 
+For Linux you'd have to compile using this line:
+- `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
 
 ## Quickstart guide:
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
