@@ -573,6 +573,8 @@
 
 #define JSN_FBDN "\b\f\n\r\t"                                   // forbidden JSON chars
 #define JSN_QTD "/\"\\bfnrtu"                                   // chrs following quotation in JSON
+#define JSN_TRL "/\"\\\b\f\n\r\tu"                              // translated quoted chars
+
 // NOTE: solidus quotation is optional per JSON spec, a user will have an option
 //       to chose between desired quotation behavior
 
@@ -618,6 +620,8 @@ class Jnode {
                 label_request_for_non_object_enclosed, \
                 index_request_for_non_array_enclosed, \
                 index_out_of_range, \
+                unexpected_end_of_quotation, \
+                unexpected_quotation, \
                 end_of_jnode_exceptions, \
                 \
                 /* now define Json exceptions */ \
@@ -1398,6 +1402,12 @@ class Json{
 
     // relayed Jnode interface
     std::string         to_string(void) const { return root().to_string(); }
+    std::string         unquote_str(std::string && src) const;
+    std::string         unquote_str(const std::string & str) const
+                         { std::string src{str}; return unquote_str(std::move(src)); }
+    std::string         inquote_str(std::string && src) const;
+    std::string         inquote_str(const std::string & str) const
+                         { std::string src{str}; return inquote_str(std::move(src)); }
     Jnode::Jtype        type(void) const { return root().type(); }
     Jnode::Jtype &      type(void) { return root().type(); }
     bool                is_object(void) const { return root().is_object(); }
@@ -2287,6 +2297,47 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
 }
 
 
+std::string Json::unquote_str(std::string && src) const {
+ // unquote JSON source string as per JSON quotation.
+ // even though it looks static, it's best to keep it in-class, due to throwing mechanism
+ std::stringstream ss;
+ size_t start=0;
+ for(size_t end = src.find('\\', start);
+     end != std::string::npos;
+     end = src.find('\\', start)) {
+  char qc = src[++end];                                         // quoted character
+  if(end >= src.size())                                         // i.e. line ending "...\"
+   throw EXP(Jnode::unexpected_end_of_quotation);
+  const char * ptr = strchr(jsn_qtd_, qc);                      // #define JSN_QTD "/\"\\bfnrtu"
+  if(ptr == nullptr)                                            // i.e other (non-Json) char quoted
+   throw EXP(Jnode::unexpected_quotation);
+  src[end-1] = '\0';
+  ss << src.data() + start << (qc == 'u'? "\\":"") << JSN_TRL[ptr - jsn_qtd_];
+  start = ++end;
+ }
+ ss << src.c_str() + start;
+ return ss.str();
+}
+
+
+std::string Json::inquote_str(std::string && src) const {
+ // quote quotation marks and back slashes only, as src is expected to be a valid JSON string
+ // because of unquote_str(), keeping this in-class defined, though it's entirely static
+ std::stringstream ss;
+ size_t start=0;
+ for(size_t end{ src.find_first_of("\"\\", start) };
+     end != std::string::npos;
+     end = src.find_first_of("\"\\", start)) {
+  char chr = src[end];
+  src[end] = '\0';
+  ss << src.data() + start << '\\' << chr;
+  start = end + 1;
+ }
+ ss << src.c_str() + start;
+ return ss.str();
+}
+
+
 void Json::compile_walk_(const std::string & wstr, iterator & it) const {
  // parse walk string and compile all parts for ws_;
  parse_lexemes_(wstr, it);
@@ -2956,6 +3007,7 @@ long Json::iterator::next_iterable_ws_(long idx) const {
 
 
 
+
 #undef DBG_WIDTH
 #undef ARRAY_LMT
 #undef KEY
@@ -2997,7 +3049,7 @@ long Json::iterator::next_iterable_ws_(long idx) const {
 
 #undef JSN_FBDN
 #undef JSN_QTD
-
+#undef JSN_TRL
 
 
 

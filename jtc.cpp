@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.55"
+#define VERSION "1.56"
 
 
 // option definitions
@@ -28,7 +28,7 @@ using namespace std;
 #define OPT_MDF m
 #define OPT_SEQ n
 #define OPT_PRG p
-#define OPT_SLD q
+#define OPT_QUT q
 #define OPT_RAW r
 #define OPT_SWP s
 #define OPT_IND t
@@ -146,6 +146,7 @@ class Jtc {
     void                process_offsets_(vector<walk_deq> &, vector<vector<long>> &,
                                          size_t, vector<size_t> &);
     size_t              build_front_grid_(vector<vector<long>> &, const vector<walk_deq> &);
+    void                location_(string &);
 
     Getopt              opt_;
     Json                json_;                                  // jtc input JSON
@@ -202,7 +203,8 @@ int main(int argc, char *argv[]){
                         "sequentially)");
  opt[CHR(OPT_PRG)].desc("purge all walked JSON elements (-" STR(OPT_PRG) STR(OPT_PRG)
                         ": purge all elements except walked)");
- opt[CHR(OPT_SLD)].desc("enforce strict quoted solidus parsing");
+ opt[CHR(OPT_QUT)].desc("enforce strict quoted solidus parsing "
+                        "(-qq: unquote isolated JSON string)");
  opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact, one-line) format");
  opt[CHR(OPT_SWP)].desc("swap around two JSON elements pointed by walks (two -" STR(OPT_WLK)
                         " must be given)");
@@ -244,7 +246,7 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 
  json.tab(abs(opt[CHR(OPT_IND)]))
      .raw(opt[CHR(OPT_RAW)])
-     .quote_solidus(opt[CHR(OPT_SLD)]);
+     .quote_solidus(opt[CHR(OPT_QUT)].hits() % 2 == 1);
 
  // read json and execute as per options
  try {
@@ -295,13 +297,11 @@ void Jtc::parse_opt(int argc, char *argv[]) {
 }
 
 
-
 void Jtc::read_json(void) {
  // read and parse json
- bool read_from_cin = opt_[CHR(OPT_RDT)].hits() != 0 or opt_[0].hits() == 0;
+ bool read_from_cin{opt_[0].hits()==0 or opt_[CHR(OPT_RDT)].hits()>0};// no file, or forced via '-'
  DBG(0)
-  DOUT() << "start parsing json from file: "
-         << (read_from_cin? "<stdin>": opt_[0].c_str()) <<endl;
+  DOUT() << "start parsing json from " << (read_from_cin? "<stdin>": opt_[0].c_str()) << endl;
 
  string jsrc{istream_iterator<char>(read_from_cin?
                                     cin >> noskipws:
@@ -310,23 +310,9 @@ void Jtc::read_json(void) {
 
  try { json_.parse(jsrc); }
  catch(Json::stdException & e) {
-  if(e.code() < Jnode::start_of_json_parsing_exceptions or
-     e.code() > Jnode::end_of_json_parsing_exceptions) throw e;
-  DBG(0) {                                                      // format pretty exception point
-   const char * pfx = "exception locus: ";
-   for(auto &c: jsrc)
-    c = c AMONG('\r', '\n')? '|': c < ' '? ' ': c;
-   size_t from_start = json_.exception_point() - jsrc.begin();
-   size_t to_end = jsrc.end() - json_.exception_point();
-   size_t ptr = from_start;
-   if(from_start + to_end > DBG_WIDTH) {
-    if(from_start > DBG_WIDTH/2)
-     { jsrc = "..." + jsrc.substr(from_start - DBG_WIDTH/2 + 3); ptr = DBG_WIDTH/2; }
-    if(to_end > DBG_WIDTH/2) jsrc = jsrc.substr(0, DBG_WIDTH - 3) + "...";
-   }
-   DOUT() << pfx << jsrc << endl << DBG_PROMPT(0) << "exception spot: "
-          << string(ptr, '-') << ">| (offset: " << from_start << ")" << endl;
-  }
+  if(e.code() >= Jnode::start_of_json_parsing_exceptions and
+     e.code() <= Jnode::end_of_json_parsing_exceptions)
+   DBG(0) location_(jsrc);
   throw e;
  }
 
@@ -340,14 +326,19 @@ void Jtc::read_json(void) {
 
 int Jtc::write_json(void) {
  // write updated JSON (i.e. resulting from -i/-u/-s/-p/-w options into:
- // a) input json file (if -f given and if the input is not <stdin> ('-' option)
- // b) stdout
- bool write_to_stdout{ opt_[CHR(OPT_RDT)].hits() != 0 or opt_[0].hits() == 0 };
- if(not opt_[CHR(OPT_FRC)] or write_to_stdout)                  // stdout if no -f given,
-  cout << json_ << endl;                                        // or redirect '-' is present
+ // a) input json file (if -f given and if file is specified)
+ // b) otherwise, stdout
+ bool write_to_file{opt_[0].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0};
+ bool unqoute{json_.is_string() and opt_[CHR(OPT_QUT)].hits() >= 2};    // -qq given, unquote
+ bool inqoute{opt_[CHR(OPT_RAW)].hits() >= 2};                          // -rr given, inquote
+
+ ofstream out{write_to_file? opt_[0].c_str(): "/dev/stdout", ofstream::out};
+ DBG(0)
+  DOUT() << "outputting JSON to " << (write_to_file? opt_[0].c_str(): "<stdout>") << endl;
+ if(unqoute) out << json_.unquote_str(json_.str()) << endl;
  else {
-      DBG(0) DOUT() << "updating changes into json file: " << opt_[0].c_str() << endl;
-  ofstream{opt_[0].c_str(), ofstream::out} << json_ << endl;
+  if(inqoute) json_.root() = json_.inquote_str(json_.to_string());
+  out << json_ << endl;
  }
  if(opt_[CHR(OPT_SZE)])
   cout << SIZE_PFX << json_.size() << endl;
@@ -409,14 +400,14 @@ void Jtc::compare_by_iterator(Json::iterator &it, size_t group) {
  // compare two JSONs: one pointed by iterator (it), another taken from params
  if(key_ >= jsrc_.size() + isrc_.size()) return;                // nothing left to process
 
- vector<Json> jv{2};
+ vector<Json> jv{2};                                            // 2 JSONs to compare
  for(auto &j: jv) DBG().severity(j);
 
- jv.front()[CMP_BASE] = *it;
- if(key_ < jsrc_.size()) jv.back()[CMP_COMP] = jsrc_[key_];
- else jv.back()[CMP_COMP] = *isrc_[key_];
+ jv.front()[CMP_BASE] = *it;                                    // 1st comes form walk_interleaved
+ if(key_ < jsrc_.size()) jv.back()[CMP_COMP] = jsrc_[key_];     // 2nd does either from -c <JSON>
+ else jv.back()[CMP_COMP] = *isrc_[key_];                       // or from -c <walk-path>
 
- vector<set<const Jnode*>> sv{2};
+ vector<set<const Jnode*>> sv{2};                               // preserved different node ptrs
  compare_jsons_(jv.front()[CMP_BASE], sv.front(), jv.back()[CMP_COMP], sv.back());
 
  DBG(1) DOUT() << "found diffs (" CMP_BASE ", instance " << key_ << "): " << sv[0].size() << endl;
@@ -424,9 +415,10 @@ void Jtc::compare_by_iterator(Json::iterator &it, size_t group) {
 
  vector<string> lbl{ CMP_BASE, CMP_COMP };
  for(size_t i = 0; i < jv.size(); ++i)
-  if(jv[i][ lbl[i] ].is_iterable()) remove_others_(sv[i], jv[i][ lbl[i] ]);
-  else
-   if(sv[i].empty()) jv[i][ lbl[i] ] = OBJ{};
+  if(jv[i][ lbl[i] ].is_iterable())                             // if root is iterable
+   remove_others_(sv[i], jv[i][ lbl[i] ]);                      // remove then all matching nodes
+  else                                                          // root is atomic
+   if(sv[i].empty()) jv[i][ lbl[i] ] = OBJ{};                   // set is as an empty set {}
 
  for(auto &j: jv) {
   auto jit = j.walk("[0]");
@@ -710,9 +702,16 @@ void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
    }
  }
  else {                                                         // no -j option, output to stdout
+  bool unquote{sr.is_string() and opt_[CHR(OPT_QUT)].hits() >= 2};  // json string + -qq
+  bool inqoute{opt_[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
+
   if(opt_[CHR(OPT_LBL)] and sr.has_label())                     // -l given
-   cout << '"' << sr.label() << "\": ";                         // then print label (if present)
-  cout << sr << endl;
+   { cout << '"' << sr.label() << "\": ";  unquote = false; }   // then print label (if present)
+  if(unquote) cout << json_.unquote_str(sr.str()) << endl;      // don't try collapsing it into
+  else {
+   if(inqoute) sr = json_.inquote_str(sr.to_string());
+   cout << sr << endl;                                      // a single operation!
+  }
   if(opt_[CHR(OPT_SZE)])                                        // -z given
    cout << SIZE_PFX << sr.size() << endl;
  }
@@ -786,8 +785,10 @@ void Jtc::recompile_args_(v_string & args, v_string &new_args) {
     if(not arg.empty()) new_args.back() += " " + arg;
     continue;
    }                                                            // ';' not found while processing
-   if(++opt_r_found_ > 2) new_args.push_back(string("-") + recomp_ + arg);
-   else new_args.back() += arg;
+   if(not arg.empty()) {
+    if(++opt_r_found_ > 2) new_args.push_back(string("-") + recomp_ + arg);
+    else new_args.back() += arg;
+   }
    continue;
   }
 
@@ -826,7 +827,8 @@ void Jtc::parse_rebuilt_(v_string & new_args) {
 
  if(opt_[recomp_].hits() >= opt_r_found_) {
   cerr << "fail: option -" << recomp_ <<
-          " when used together with -" STR(OPT_EXE) " must be given once" << endl;
+          " when used together with -" STR(OPT_EXE)
+          " must be given once and should not be empty" << endl;
   exit(RC_MLT_EXE);
  }
 }
@@ -1064,33 +1066,30 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
 bool Jtc::execute_cli_(Json &json, const Jnode &src_jnode) {
  // execute cli in -i/u option (interpolating src_jnode if required) and parse the result into json
  stringstream is;
+ vector<string> ptnv{INTRP_STR, INTRP_NKD};                     // [ "{}", "}{" ]
  GUARD(json.is_pretty, json.pretty)
  is << src_jnode.raw();
- string src_raw = is.str();
- string src_nkd = src_raw.front() == '"'?                       // w/o double quotes (naked)
-                  src_raw.substr(1, src_raw.size()-2): src_raw;
+ vector<string> srcv{2};
+ srcv.front() = is.str();                                       // for interpolation of "{}"
+ srcv.back() = is.str().front() == '"'? json_.unquote_str(is.str()): is.str();  // for "}{"
 
- is.str(string());                                              // clear input stream is
- for(auto opt_param: opt_[recomp_]) {
-  size_t interpolate = opt_param.find(INTRP_STR);               // see if interpolation required
-  while(interpolate != string::npos) {                          // replace every occurrence of {}
-   opt_param.replace(interpolate, sizeof(INTRP_STR) - 1, src_raw);
-   interpolate = opt_param.find(INTRP_STR);
-  }
-  size_t inter_naked = opt_param.find(INTRP_NKD);               // see if naked interp. required
-  while(inter_naked != string::npos) {                          // replace every occurrence of }{
-   opt_param.replace(inter_naked, sizeof(INTRP_NKD) - 1, src_nkd);
-   inter_naked = opt_param.find(INTRP_NKD);
-  }
-  is << quote_str(opt_param) << " ";                            // quote argument
+ is.str(string());                                              // clear interpolation stream is
+ for(auto opt_param: opt_[recomp_]) {                           // reconcile here all -u/-i options
+  for(size_t i = 0; i < 2; ++i)                                 // process both interp. types
+   for(size_t interpolate_pos = opt_param.find(ptnv[i]);        // see if interpolation required
+       interpolate_pos != string::npos;                         // replace every occurrence of {}
+       interpolate_pos = opt_param.find(ptnv[i]))
+    opt_param.replace(interpolate_pos, ptnv[i].size(), srcv[i]);
+  is << quote_str(opt_param) << ' ';                            // quote argument and separate
  }
- is.seekp(-1, ios_base::cur) << '\0';
+
+ is.seekp(-1, ios_base::cur) << '\0';                           // remove trailing space
  DBG(1) DOUT() << "interpolated & quoted cli string: '" << is.str() << "'" << endl;
 
  sh_.system(is.str());
  if(sh_.rc() != 0)
   { cerr << "error: shell returned error (" << sh_.rc() <<")"<< endl; return false; }
- if(sh_.stdout() == "")
+ if(sh_.stdout().empty())
   { DBG(1) DOUT() << "shell returned empty result, not updating" << endl; return false; }
 
  json.parse(sh_.stdout());
@@ -1267,6 +1266,25 @@ size_t Jtc::build_front_grid_(vector<vector<long>> &fom, const vector<walk_deq> 
  }
 
  return longest;
+}
+
+
+
+void Jtc::location_(string &jsrc) {
+ // show location of the exception
+ const char * pfx = "exception locus: ";
+ for(auto &chr: jsrc)
+  chr = chr AMONG('\r', '\n')? '|': chr < ' '? ' ': chr;
+ size_t from_start = json_.exception_point() - jsrc.begin();
+ size_t to_end = jsrc.end() - json_.exception_point();
+ size_t ptr = from_start;
+ if(from_start + to_end > DBG_WIDTH) {
+  if(from_start > DBG_WIDTH/2)
+   { jsrc = "..." + jsrc.substr(from_start - DBG_WIDTH/2 + 3); ptr = DBG_WIDTH/2; }
+  if(to_end > DBG_WIDTH/2) jsrc = jsrc.substr(0, DBG_WIDTH - 3) + "...";
+ }
+ DOUT() << pfx << jsrc << endl << DBG_PROMPT(0) << "exception spot: "
+        << string(ptr, '-') << ">| (offset: " << from_start << ")" << endl;
 }
 
 
