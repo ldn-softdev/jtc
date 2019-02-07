@@ -399,7 +399,7 @@ Quantifiers exist in the following formats:
 - `+n` - selects all match instances starting from `n`th (zero based)
 - `N:N` - range select: the notation rules for this quantifier the same as for subscript range (`[N:N]`), with just one understandable
 caveat: `N` here cannot go negative (there's no way of knowing upfront how many matches would be produced, so it's impossible to select
-a range/slice based off the last match), the rest of notation rules apply
+a range/slice based off the last match), the rest of the notation rules apply
 
 To illustrate the quantifiers (with suffixes), let's dump all the JSON arrays in the `Directory`:
 ```
