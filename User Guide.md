@@ -238,8 +238,8 @@ bash $ echo '"3.14"' | jtc -qq
 3.14
 bash $
 ```
-NOTE: _option notation `-qq` will not engulf single notation `-q`, if both behavior required the both variants have to be
-specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_
+NOTE: _the option notation `-qq` will not engulf a single notation `-q`, if both behaviors are required the both variants have
+to be specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_
 
 ### Stringifying JSON
 An opposite request is to string-quote a JSON itself (e.g. if you like to embed JSON as a string into another JSON). This is
