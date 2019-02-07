@@ -205,7 +205,7 @@ bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc
 }
 bash $
 ```
-If there's a need for a strict solidus quoting parsing, option `-q` facilitates the need, and will throw an exception 
+If there's a need for a strict solidus quoting parsing, option `-q` facilitates the need. It also will throw an exception 
 upon facing a non-quoted notation:
 ```
 bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc -q -d
