@@ -960,7 +960,7 @@ _\- for brevity, swapped elements only sorted out_
 
 
 Possibly, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
-For the sake of an example, let's remove _array_ encapsulation from phone record, leaving only the last phone in it:
+For the sake of an example, let's remove _array_ encapsulation from phone records, leaving only the last phone in it:
 ```
 bash $ cat ab.json | jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s | jtc -w'<phone>l:' -l
 "phone": {
