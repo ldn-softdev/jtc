@@ -780,7 +780,7 @@ is given in the priority order of operation selection). However, there is a cert
 facilitates _move_ semantic, those cases reviewed in the respective chapters.
 
 Each of options requires one or multiple `-w` to be given to operate on. Options `-i` and `-u` require an argument, which comes in
-different flavors, one of them is the walk-path per-se.
+different flavors, one of them is the `walk-path` per-se.
 
 `jtc` will execute any of operations only once, if multiple operations required, then `jtc` needs to be invoked in a successive order
 (e.g. daisy-chained through the pipe `|`)
