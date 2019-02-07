@@ -677,7 +677,7 @@ belong to `"John"` and preferably should be displayed before `"Ivan"` and so doe
 relevant entries, though it needs a little hint from the walk-paths: the latter supposed to express the relevance between themselves.
 
 Right now both paths (`<name>l:` and `<number>l:`) do not have common lexemes, thus it's unclear how to relate resulting walks
-(hence they just interleaved one by one). Though if we provide walk-path relating each of those searches to their own record,
+(hence they just interleaved one by one). Though if we provide walk-paths relating each of those searches to their own record,
 then magic happens:
 ```
 bash $ cat ab.json | jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
