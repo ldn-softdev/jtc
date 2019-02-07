@@ -776,7 +776,7 @@ there are few options which let modifying input JSON:
 - `-p` - purge (remove) elements from JSON
 
 Typically, those options are mutually exclusive and if sighted together, only one type of operations will be executed (the above list
-is given in the priority order of operation selection). However, there are certain combination of options `-i`,`-u` and `-p`, which
+is given in the priority order of operation selection). However, there is a certain combination of options `-i`,`-u` and `-p`, which
 facilitates _move_ semantic, those cases reviewed in the respective chapters.
 
 Each of options requires one or multiple `-w` to be given to operate on. Options `-i` and `-u` require an argument, which comes in
