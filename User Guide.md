@@ -559,7 +559,7 @@ your shell. Though there are a few tweaks in `jtc` which let harnessing the orde
 will be displaying resulted successful walks in an _interleaved_ manner, but first, let's take a look at
 
 #### Sequential walk processing
-option `-n` ensures that all given walk-paths (`-w`) will be processed (and output) sequentially in the order they given:
+option `-n` ensures that all given walk-paths (`-w`) will be processed (and printed) sequentially in the order they given:
 ```
 bash $ cat ab.json | jtc -w '<name>l:' -w'<number>l:' -n
 "John"
@@ -787,9 +787,54 @@ different flavors, one of them is the walk-path per-se.
 
 
 ### In-place JSON modification 
-Whenever either of the option is executed, it will output entire resulting JSON to `stdout`. Option `-f` will apply (redirect)
-the result of operation into the file (if the filename is given as an argument and input JSON is not read from `stdin`)
+By default `jtc` will expect input from `stdin`. If the standalone argument `json_file` is given, then `jtc` will read
+input from the file, see below:
+```
+bash $ cat file.json 
+[
+   "JSON",
+   "in",
+   "file"
+]
+bash $ 
+bash $ echo '[ "input", "JSON" ]' | jtc
+[
+   "input",
+   "JSON"
+]
+bash $ 
+bash $ echo '[ "input", "JSON" ]' | jtc file.json
+[
+   "JSON",
+   "in",
+   "file"
+]
+bash $
+```
+If option `-f` is given (together with `json_file` argument) then `jtc` will apply (redirect) its output of the operations
+into the file:
+```
+bash $ echo '[ "input", "JSON" ]' | jtc -f file.json
+bash $ cat file.json 
+[
+   "JSON",
+   "in",
+   "file"
+]
+bash $ 
+```
+In the above example, JSON is read from `file.json` and redirected back into the file.
 
+The bare hyphen (`-`) overrides file redirect and ensured that input JSON is read from `stdin`:
+```
+bash $ echo '[ "input", "JSON" ]' | jtc -f - file.json
+bash $ cat file.json
+[
+   "input",
+   "JSON"
+]
+bash $ 
+```
 
 ### Purging JSON
 `-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from address book (for the sake
