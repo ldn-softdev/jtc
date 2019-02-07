@@ -5,8 +5,11 @@
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
    * [Compact printing (`-r`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing)
    * [Printing JSON size (`-z`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
-2. [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
-3. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
+   * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
+   * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
+   * [Unquoting JSON strings (`-qq`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)
+   * [Stringifying JSON (`-rr`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying_json) 
+2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
    * [Walking with subscripts (`[...]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
      * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
    * [Searching JSON (`<...>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
@@ -22,7 +25,7 @@
      * [Wrapping resulted walks to JSON (`-j`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json)
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
-4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
+3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
@@ -36,8 +39,8 @@
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
    * [Mixed use of arguments (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments)
-5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
-6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
+5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
@@ -168,7 +171,7 @@ size: 56
 bash $
 ```
 
-## Validating JSON
+### Validating JSON
 When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, the short exception
 message will be displayed, e.g,:
 ```
@@ -190,6 +193,69 @@ the vertical pipe symbol `|` in the debug replaces new lines, thus it becomes ea
 The offset (`1150`) is given in bytes from the beginning of the input/file. In that particular failure instance, `jtc`
 found end of the line, while _JSON string_ `"Co,` is still open (JSON standard does permit multi-line strings).
 To fix it, the missing quotation mark to be added
+
+### Forcing strict solidus parsing
+JSON specification allows quoting solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
+both quoted and unquoted appearances:
+```
+bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc 
+{
+   "quoted": "\/",
+   "unquoted": "/"
+}
+bash $
+```
+If there's a need for a strict solidus quoting parsing, option `-q` facilitates the need, and will throw an exception 
+upon facing a non-quoted notation:
+```
+bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc -q -d
+.read_json(), start parsing json from <stdin>
+.read_json(), exception locus: { "quoted": "\/", "unquoted": "/" }|
+.location_(), exception spot: ------------------------------->| (offset: 31)
+jtc json exception: unquoted_character
+bash $
+```
+
+### Unquoting JSON strings
+If a JSON itself (or a result of JSON walking) is a single JSON string, then sometimes there's a need to unquote it
+(especially handy it comes if the string itself is an embedded JSON). `-qq` allows unquoting it, here are a few examples:
+```
+bash $ echo '"{ \"JSON\": \"example of an embedded JSON\" }"' | jtc 
+"{ \"JSON\": \"example of an embedded JSON\" }"
+bash $
+bash $ echo '"{ \"JSON\": \"example of an embedded JSON\" }"' | jtc -qq
+{ "JSON": "example of an embedded JSON" }
+bash $
+bash $ echo '"{ \"JSON\": \"example of an embedded JSON\" }"' | jtc -qq | jtc
+{
+   "JSON": "example of an embedded JSON"
+}
+bash $
+bash $ echo '"3.14"' | jtc
+"3.14"
+bash $
+bash $ echo '"3.14"' | jtc -qq
+3.14
+bash $
+```
+NOTE: _option notation `-qq` will not engulf single notation `-q`, if both behavior required the both variants have to be
+specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_
+
+### Stringifying JSON
+An opposite request is to string-quote a JSON itself (e.g. if you like to embed JSON as a string into another JSON). This is
+achieved with option notation `-rr`:
+```
+bash $ echo '[ "JSON", "example" ]' | jtc 
+[
+   "JSON",
+   "example"
+]
+bash $
+bash $ echo '[ "JSON", "example" ]' | jtc -rr
+"[ \"JSON\", \"example\" ]"
+bash $
+```
+
 
 ## Walking JSON
 Whenever there's a need to print only some or multiple JSON elements, walk-paths (`-w`) tell how to do it. A walk path
@@ -1158,7 +1224,7 @@ bash $ cat ab.json | jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
       "number": "223-283-0372"
    }
 ]
-bash $ 
+bash $
 ```
 When both JSONs are equal, an empty set is displayed and return code is 0.
 ```
@@ -1167,7 +1233,7 @@ bash $ echo '123' | jtc -c'123' -l
 "json_2": {}
 bash $ echo $?
 0
-bash $ 
+bash $
 ```
 Otherwise (JSONs are different) a non-zero code is returned:
 ```
@@ -1176,7 +1242,7 @@ bash $ echo '[1,2,3]' | jtc -c'[2,3]' -lr
 "json_2": [ 2, 3 ]
 bash $ echo $?
 5
-bash $ 
+bash $
 ```
 If multiple pairs of JSONs compared, zero code is returned only when all compared JSON pairs are equal. 
 
