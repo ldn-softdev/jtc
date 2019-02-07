@@ -358,7 +358,7 @@ bash $
 ```
 while this one does not (the string value `New York` is found only in the first `Directory` record): 
 ```
-bash $cat ab.json | jtc -w'[Directory][1:]<New York>'
+bash $ cat ab.json | jtc -w'[Directory][1:]<New York>'
 bash $
 ```
 
