@@ -825,7 +825,7 @@ bash $
 ```
 In the above example, JSON is read from `file.json` and redirected back into the file.
 
-The bare hyphen (`-`) overrides a file input and ensured that the input is read from the `stdin`s:
+The bare hyphen (`-`) overrides a file input and ensured that the input is read from the `stdin`:
 ```
 bash $ echo '[ "input", "JSON" ]' | jtc -f - file.json
 bash $ cat file.json
