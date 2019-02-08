@@ -191,7 +191,7 @@ bash $
 ```
 the vertical pipe symbol `|` in the debug replaces new lines, thus it becomes easy to spot the problem. 
 The offset (`1150`) is given in bytes from the beginning of the input/file. In that particular failure instance, `jtc`
-found end of the line, while _JSON string_ `"Co,` is still open (JSON standard does permit multi-line strings).
+found end of the line, while _JSON string_ `"Co,` is still open (JSON standard does not permit multi-line strings).
 To fix it, the missing quotation mark to be added
 
 ### Forcing strict solidus parsing
