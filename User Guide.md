@@ -386,7 +386,7 @@ there are following suffixes to control search behavior:
   * `o`: matches any JSON object - `{...}`, the lexeme value is ignored
   * `i`: matches any JSON array (iterable/indexable) `[...]`, , the lexeme value is ignored
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
-  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays, the lexeme value is ignored
+  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
   * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
 
 \- as you can see, capitalizing either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
