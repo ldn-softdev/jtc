@@ -840,70 +840,25 @@ bash $
 `-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from address book (for the sake
 of an example) all the `home` and `office` phones records (effectively leaving only `mobile` types):
 ```
-bash $ cat ab.json | jtc -w'[type]:<home>: [-1]' -w'[type]:<office>: [-1]' -p
-{
-   "Directory": [
-      {
-         "address": {
-            "city": "New York",
-            "postal code": 10012,
-            "state": "NY",
-            "street address": "599 Lafayette St"
-         },
-         "age": 25,
-         "children": [
-            "Olivia"
-         ],
-         "name": "John",
-         "phone": [
-            {
-               "number": "112-555-1234",
-               "type": "mobile"
-            },
-            {
-               "number": "113-123-2368",
-               "type": "mobile"
-            }
-         ],
-         "spouse": "Martha"
-      },
-      {
-         "address": {
-            "city": "Seattle",
-            "postal code": 98104,
-            "state": "WA",
-            "street address": "5423 Madison St"
-         },
-         "age": 31,
-         "children": [],
-         "name": "Ivan",
-         "phone": [
-            {
-               "number": "223-283-0372",
-               "type": "mobile"
-            }
-         ],
-         "spouse": null
-      },
-      {
-         "address": {
-            "city": "Denver",
-            "postal code": 80206,
-            "state": "CO",
-            "street address": "6213 E Colfax Ave"
-         },
-         "age": 25,
-         "children": [
-            "Robert",
-            "Lila"
-         ],
-         "name": "Jane",
-         "phone": [],
-         "spouse": "Chuck"
-      }
-   ]
-}
-bash $
+bash $ cat ab.json | jtc -w'[type]:<home>: [-1]' -w'[type]:<office>: [-1]' -p | jtc -w'<phone>l:' 
+[
+   {
+      "number": "112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "number": "113-123-2368",
+      "type": "mobile"
+   }
+]
+[
+   {
+      "number": "223-283-0372",
+      "type": "mobile"
+   }
+]
+[]
+bash $ 
 ```
 Of course there's a more succinct syntax:
 ````
