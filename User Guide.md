@@ -195,23 +195,23 @@ found end of the line, while _JSON string_ `"Co,` is still open (JSON standard d
 To fix it, the missing quotation mark to be added
 
 ### Forcing strict solidus parsing
-JSON specification allows quoting solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
-both quoted and unquoted appearances:
+JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
+both unescaped and escaped appearances:
 ```
-bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc 
+bash $ echo '{ "escaped": "\/", "unescaped": "/" }' | jtc 
 {
-   "quoted": "\/",
-   "unquoted": "/"
+   "escaped": "\/",
+   "unescaped": "/"
 }
 bash $
 ```
 If there's a need for a strict solidus quoting parsing, option `-q` facilitates the need. It also will throw an exception 
-upon facing a non-quoted notation:
+upon facing a non-escaped notation:
 ```
-bash $ echo '{ "quoted": "\/", "unquoted": "/" }' | jtc -q -d
+bash $ echo '{ "escaped": "\/", "unescaped": "/" }' | jtc -q -d
 .read_json(), start parsing json from <stdin>
-.read_json(), exception locus: { "quoted": "\/", "unquoted": "/" }|
-.location_(), exception spot: ------------------------------->| (offset: 31)
+.read_json(), exception locus: { "escaped": "\/", "unescaped": "/" }|
+.location_(), exception spot: --------------------------------->| (offset: 33)
 jtc json exception: unquoted_character
 bash $
 ```
