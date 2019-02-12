@@ -1193,6 +1193,7 @@ There're 2 variants of the substitution patterns:
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
 1. static JSONs (i.e., `<file>`, `<JSON>`)
 2. walk-path (i.e., `<walk-path>`)
+
 \- when those used together, namely a `<walk-path>` argument(s) follows either of statics  (e.g.: `jtc -u file.json -u'[Root][:]'`)
 then all subsequent `<walk-path>` apply onto the first argument (here `file.json`). 
 \- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
