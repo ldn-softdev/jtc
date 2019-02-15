@@ -1185,9 +1185,9 @@ Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated/inserted, 
 rather proceed to the next walked entry for another update attempt)
 
-There're 2 variants of the substitution patterns:
+There's a substitution pattern:
 - `{}` - will substitute JSON (pointed by `-w`) as it is
-- `}{` - if substituted JSON is a _string_, then outer quotation marks are dropped, otherwise substitute as it is
+- (there will be more substituation choices in the next releases)
 
 ### Mixed use of arguments
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
