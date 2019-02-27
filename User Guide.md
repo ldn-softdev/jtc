@@ -27,7 +27,7 @@
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
 3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
-   * [Purging JSON (`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
+   * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
      * [Destination driven insertion](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#destination-driven-insertion)
@@ -38,7 +38,9 @@
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-   * [Mixed use of arguments (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments)
+   * [Mixed use of arguments without -e (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without-e)
+   * [Mixed use of arguments with -e (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with-e)
+
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
 5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
@@ -951,7 +953,7 @@ There are 3 different flavors of insertion arguments:
 How `jtc` knows which argument is supplied? The disambiguation path is like this:
 1. initially a `<file>` is assumed and attempted to be read, if that fails (i.e. file not found), then
 2. `<JSON>` string is assumed and attempted to be parsed. If JSON parsing fails, then
-3. `<walk-path>` is assumed and parsed - if that fails too, an short exception message is displayed
+3. `<walk-path>` is assumed and parsed - if that fails too, a short exception message is displayed
 
 _An attention is required when passing a `<walk-path>` argument: some walk-paths look exactly like JSON, e.g:
 `[0]` - this is both a valid JSON array (made of single numeric value `0`) and a valid walk-path (addressing a first element
@@ -1180,18 +1182,20 @@ bash $
 Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - option `-e` must precede `-i`,`-u`
 - cli sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
-- any occurrence of `{}` will be interpolated with JSON entry being updated (or where it's inserted)
+- any occurrence of `{}`, `[]`, `{-}`, `[-]`, will be interpolated with the respecitve JSON entry being updated (see below)
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
 - if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
 - returned result of a shell evaluation still must be a valid JSON
 - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated/inserted, 
 rather proceed to the next walked entry for another update attempt)
 
-There's a substitution pattern:
-- `{}` - will substitute JSON (pointed by `-w`) as it is
-- (there will be more substituation choices in the next releases)
+There're substitution patterns:
+- `{}`  - will substitute JSON (pointed by `-w`) as it is
+- `{-}` - if (and only) a substituted JSON is a string, then substittion occurs dropping outer quotes 
+- `[]`  - will substitute with a JSON element's label/index (pointed by `-w`)
+- `[-]` - if (and only) a substitution is a label (which is a JSON string) then substittion occurs dropping outer quotes
 
-### Mixed use of arguments
+### Mixed use of arguments without -e
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
 1. static JSONs (i.e., `<file>`, `<JSON>`)
 2. walk-path (i.e., `<walk-path>`)
@@ -1202,6 +1206,10 @@ then all subsequent `<walk-path>` apply onto the first argument (here `file.json
 
 That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: _all specified `<walk-path>`
 will be processed in a consecutive order, one by one_.
+
+
+### Mixed use of arguments with -e
+
 
 
 ## Comparing JSONs
