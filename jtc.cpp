@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.58"
+#define VERSION "1.59"
 
 
 // option definitions
@@ -588,6 +588,9 @@ void Jtc::update_json() {
 
 void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
  // update each/all -u processed jsons
+ if(it.walks().back().jsearch == Json::value_of_label and not it.is_valid())
+  { cerr << "error: destination walk became invalid, skipping update" << endl; return; }
+
  if(processed_by_cli_(it)) return;                          // -e w/o trailing -u  processed
 
  while(key_ < jsrc_.size() + isrc_.size()) {
@@ -1030,8 +1033,6 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
  // update dst with src, merge jsons with overwrite if -m is given
  if(it_dst.walks().back().jsearch == Json::value_of_label) {    // facilitate '<>v'
   DBG(2) DOUT() << "label being updated" << endl;
-  if(not it_dst.is_valid())
-   { cerr << "error: destination walk became invalid, skipping update" << endl; return; }
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }
   if(not it_src->is_string())
