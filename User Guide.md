@@ -38,8 +38,8 @@
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-   * [Mixed use of arguments without -e (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without-e)
-   * [Mixed use of arguments with -e (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with-e)
+   * [Mixed use of arguments without `-e` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without--e)
+   * [Mixed use of arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with--e)
 
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
 5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
@@ -1182,7 +1182,7 @@ bash $
 Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - option `-e` must precede `-i`,`-u`
 - cli sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
-- any occurrence of `{}`, `[]`, `{-}`, `[-]`, will be interpolated with the respecitve JSON entry being updated (see below)
+- any occurrence of `{}`, `[]`, `{-}`, `[-]`, will be interpolated with the respective JSON entry being updated (see below)
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
 - if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
 - returned result of a shell evaluation still must be a valid JSON
@@ -1191,11 +1191,11 @@ rather proceed to the next walked entry for another update attempt)
 
 There're substitution patterns:
 - `{}`  - will substitute JSON (pointed by `-w`) as it is
-- `{-}` - if (and only) a substituted JSON is a string, then substittion occurs dropping outer quotes 
+- `{-}` - if (and only) a substituted JSON is a string, then substitution occurs dropping outer quotes 
 - `[]`  - will substitute with a JSON element's label/index (pointed by `-w`)
-- `[-]` - if (and only) a substitution is a label (which is a JSON string) then substittion occurs dropping outer quotes
+- `[-]` - if (and only) a substitution is a label (which is a JSON string) then substitution occurs dropping outer quotes
 
-### Mixed use of arguments without -e
+### Mixed use of arguments without `-e`
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
 1. static JSONs (i.e., `<file>`, `<JSON>`)
 2. walk-path (i.e., `<walk-path>`)
@@ -1208,7 +1208,40 @@ That rule is in play to facilitate a walking capability over the specified stati
 will be processed in a consecutive order, one by one_.
 
 
-### Mixed use of arguments with -e
+### Mixed use of arguments with `-e`
+options `-u`, `-i` when used together with `-e` also allow specifying multiple instances of the option usage:
+1. first option occurrence must prove a shell cli line, terminated with `;`
+2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation.
+Thus, in the case if mixed option arguments usage is detected (together with `-e`, then the semantic of the jtc arguments would be
+like this (e.g., for option `-u`):
+```
+jtc  -w'<dst>' -e -u <shell cli ...> \; -u'<src>' 
+```
+That way it's possible to decouple source (of interpolation) from the destination: all trailing (subsequent) arguments of `-u` will be
+used in every shell evaluation (interpolating respective JSON elements)
+whiley arguments pointed by (all) `-w` specify where retu/evaluated JSON should be placed.
+
+The described argument behavior facilitates transformation of a JSON when a source location of transformation is not the same as
+a destination
+
+Hopefully this example will clarify:
+- say (just for a sake of the example), we want to add to every record's `children` the `name` of the person, but not just - we
+want to add it in all capitals (i.e. transform the record).
+```
+bash $ cat ab.json | jtc -ei echo {} \| tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:' | jtc -lrw'<name>l:' -w'<children>l:'
+"name": "John"
+"children": [ "Olivia", "JOHN" ]
+"name": "Ivan"
+"children": [ "IVAN" ]
+"name": "Jane"
+"children": [ "Robert", "Lila", "JANE" ]
+bash $ 
+```
+- there the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'`), while the destination were `children`
+(specified with `-w'<children>l:'`)
+
+In case if only a single option instance (`-u`/`-i`) is used, then the source (of interpolation) and the destination (of operation)
+would be provided with `-w` option argument
 
 
 
@@ -1335,4 +1368,3 @@ bash $
 NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather than onto `abc.json` in this scenario) are being
 process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
 onto respective entries).
-
