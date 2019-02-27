@@ -1382,6 +1382,7 @@ bash $
 ```
 
 However, their schemas would be the same. To compare schemas, label directive `<>v` used together with `<>c` search suffix come handy:
+```
 bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l; echo $?
 "json_1": {}
 "json_2": {}
@@ -1397,7 +1398,7 @@ bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-
 "json_2": {}
 0
 bash $ 
-  
+```
 
 NOTE: _usage of '<>v' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print label of the root always result in the exception:_
