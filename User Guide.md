@@ -1242,8 +1242,8 @@ bash $
 - there the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'`), while the destination were `children`
 (specified with `-w'<children>l:'`)
 
-In case if only a single option instance (`-u`/`-i`) is used, then the source (of interpolation) and the destination (of operation)
-would be provided with `-w` option argument
+In case if only a single option instance (`-u`/`-i`) is used, then both the source (of interpolation) and the destination
+(of operation) would be provided with `-w` option argument
 
 ## Working with labels
 Among walk-path search suffixes, there's one unlike others: `<>v`. Even though it looks like a search suffix, unlike all others it
