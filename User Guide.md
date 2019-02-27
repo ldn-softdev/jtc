@@ -1430,13 +1430,12 @@ bash $
 ```
 
 NOTE: _usage of '<>v' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
-attempting to print label of the root always result in the exception:_
+attempting to print a label of the root always results in the exception:_
 ```
 bash $ cat ab.json | jtc -w'<>v'
 jtc json exception: walk_root_has_no_label
 bash $ 
 ```
-
 
 
 
