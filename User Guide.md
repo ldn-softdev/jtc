@@ -14,7 +14,7 @@
      * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
    * [Searching JSON (`<...>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<...>R`,`<...>L`, `<...>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
-     * [Search suffixes (`rRlLdDbnaoijwe`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
+     * [Search suffixes (`rRlLdDbnaoicjwev`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[...]:<...>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>...<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
@@ -385,9 +385,11 @@ there are following suffixes to control search behavior:
   * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value is ignored
   * `o`: matches any JSON object - `{...}`, the lexeme value is ignored
   * `i`: matches any JSON array (iterable/indexable) `[...]`, , the lexeme value is ignored
+  * `c`: matches either arrays or objects; the content within the encasement is ignored
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
   * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
   * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
+  * `v`: not a search, it's a directive: instructs to treat a label/index as a value
 
 \- as you can see, capitalizing either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
