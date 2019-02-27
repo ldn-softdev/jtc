@@ -1276,7 +1276,7 @@ bash $
 ```
 
 NOTE: _mind the caveat though - destination walk-path may become invalid (namely when altering labels of the nested elements after
-the parent's label was altered), in such case update operation won't be applied due to invalideated destination_:
+the parent's label was altered), in such case update operation won't be applied due to invalidated destination_:
 ```
 bash $ cat ab.json | jtc -x'[Directory][0][address] <>v' -y' ' -y'[:] <>v' 
 "address"
