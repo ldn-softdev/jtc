@@ -1,4 +1,5 @@
 
+
 # [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
@@ -42,6 +43,7 @@
    * [Mixed use of arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with--e)
 4. [Working with labels (`<>v`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-labels)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
+   * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
@@ -1363,6 +1365,50 @@ bash $
 ```
 If multiple pairs of JSONs compared, zero code is returned only when all compared JSON pairs are equal. 
 
+### Comparing JSON schemas
+JSON schema essentially is a JSON's structure (JSON containers, labels, indices) without leaf data. I.e., two JSONs may have
+different contents (leaf data), while their structures could be the same.
+
+E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
+```
+bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1]' -c'ab.json' -c'<Ivan>[-1]' -l
+"json_1": {
+   "children": [
+      "Norma"
+   ]
+}
+"json_2": {}
+bash $ 
+```
+
+However, their schemas would be the same. To compare schemas, label directive `<>v` used together with `<>c` search suffix come handy:
+bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l; echo $?
+"json_1": {}
+"json_2": {}
+"json_1": {}
+"json_2": {}
+"json_1": {}
+"json_2": {}
+"json_1": {}
+"json_2": {}
+"json_1": {}
+"json_2": {}
+"json_1": {}
+"json_2": {}
+0
+bash $ 
+  
+
+NOTE: _usage of '<>v' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
+attempting to print label of the root always result in the exception:_
+```
+bash $ cat ab.json | jtc -w'<>v'
+jtc json exception: walk_root_has_no_label
+bash $ 
+```
+
+
+
 
 ## More Examples
 ### Working with templates
@@ -1441,5 +1487,4 @@ bash $
 NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather than onto `abc.json` in this scenario) are being
 process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
 onto respective entries).
-
 
