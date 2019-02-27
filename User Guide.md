@@ -1217,9 +1217,9 @@ like this (e.g., for option `-u`):
 ```
 jtc  -w'<dst>' -e -u <shell cli ...> \; -u'<src>' 
 ```
-That way it's possible to decouple source (of interpolation) from the destination: all trailing (subsequent) arguments of `-u` will be
-used in every shell evaluation (interpolating respective JSON elements)
-whiley arguments pointed by (all) `-w` specify where retu/evaluated JSON should be placed.
+That way it's possible to decouple source(s) (of interpolation) from the destination(s): all trailing (subsequent) arguments of `-u`
+will be used in every shell evaluation (interpolating respective JSON elements), while arguments pointed by (all) `-w` option(s)
+will point where returned/evaluated resulting JSONs should be placed.
 
 The described argument behavior facilitates transformation of a JSON when a source location of transformation is not the same as
 a destination
@@ -1244,7 +1244,7 @@ In case if only a single option instance (`-u`/`-i`) is used, then the source (o
 would be provided with `-w` option argument
 
 ## Working with labels
-Among walk-path search suffixes, there's one unlike others: `<>v`. Even though it looks like a search suffix, unlike all others id
+Among walk-path search suffixes, there's one unlike others: `<>v`. Even though it looks like a search suffix, unlike all others it
 does not facilitate any search/match criteria. Instead, it instructs to treat last found/selected JSON element's label/index as a JSON
 value.
 
@@ -1441,3 +1441,5 @@ bash $
 NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather than onto `abc.json` in this scenario) are being
 process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
 onto respective entries).
+
+
