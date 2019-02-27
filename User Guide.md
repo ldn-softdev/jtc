@@ -844,7 +844,7 @@ bash $
 
 ### Purging JSON
 `-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from address book (for the sake
-of an example) all the `home` and `office` phones records (effectively leaving only `mobile` types):
+of example) all the `home` and `office` phones records (effectively leaving only `mobile` types):
 ```
 bash $ cat ab.json | jtc -w'[type]:<home>: [-1]' -w'[type]:<office>: [-1]' -p | jtc -w'<phone>l:' -l
 "phone": [
@@ -921,7 +921,7 @@ _\- for brevity, swapped elements only sorted out_
 
 
 Possibly, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
-For the sake of an example, let's remove _array_ encapsulation from phone records, leaving only the last phone in it:
+For the sake of example, let's remove _array_ encapsulation from phone records, leaving only the last phone in it:
 ```
 bash $ cat ab.json | jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s | jtc -w'<phone>l:' -l
 "phone": {
@@ -1227,7 +1227,7 @@ The described argument behavior facilitates transformation of a JSON when a sour
 a destination
 
 Hopefully this example will clarify:
-- say (just for a sake of the example), we want to add to every record's `children` the `name` of the person, but not just - we
+- say (just for the sake of example), we want to add to every record's `children` the `name` of the person, but not just - we
 want to add it in all capitals (i.e. transform the record).
 ```
 bash $ cat ab.json | jtc -ei echo {} \| tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:' | jtc -lrw'<name>l:' -w'<children>l:'
