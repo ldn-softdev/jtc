@@ -1284,7 +1284,7 @@ bash $ cat ab.json | jtc -x'[Directory][0][address] <>v' -y' ' -y'[:] <>v'
 "postal code"
 "state"
 "street address"
-bash $ cat ab.json | jtc -x'[Directory][0][address] <>v' -y' ' -y'[:] <>v' -eu echo {} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+bash $ cat ab.json | jtc -x'[Directory][0][address]' -y'<>v' -y'[:] <>v' -eu echo {} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
 error: destination walk became invalid, skipping update
 error: destination walk became invalid, skipping update
 error: destination walk became invalid, skipping update
