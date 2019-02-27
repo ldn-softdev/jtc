@@ -1214,7 +1214,7 @@ will be processed in a consecutive order, one by one_.
 options `-u`, `-i` when used together with `-e` also allow specifying multiple instances of the option usage:
 1. first option occurrence must prove a shell cli line, terminated with `;`
 2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation.
-Thus, in the case if mixed option arguments usage is detected (together with `-e`, then the semantic of the jtc arguments would be
+Thus, in the case if mixed option arguments usage is detected (together with `-e`), then the semantic of the jtc arguments would be
 like this (e.g., for option `-u`):
 ```
 jtc  -w'<dst>' -e -u <shell cli ...> \; -u'<src>' 
