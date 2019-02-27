@@ -1318,6 +1318,35 @@ error: destination walk became invalid, skipping update
 bash $ 
 ```
 
+to achieve what's intended, first the deepest labels have to be walked/processed and then the outers:
+```
+bash $ cat ab.json | jtc -x'[Directory][0][address]' -y'[:]<>v' -y'<>v' -eu echo {} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+{
+   "ADDRESS": {
+      "CITY": "New York",
+      "POSTAL CODE": 10012,
+      "STATE": "NY",
+      "STREET ADDRESS": "599 Lafayette St"
+   },
+   "age": 25,
+   "children": [
+      "Olivia"
+   ],
+   "name": "John",
+   "phone": [
+      {
+         "number": "112-555-1234",
+         "type": "mobile"
+      },
+      {
+         "number": "113-123-2368",
+         "type": "mobile"
+      }
+   ],
+   "spouse": "Martha"
+}
+bash $ 
+```
 
 
 ## Comparing JSONs
