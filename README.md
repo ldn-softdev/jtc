@@ -21,7 +21,7 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
       * [Search lexemes](https://github.com/ldn-softdev/jtc#search-lexemes)
       * [Understand `[-n]` and `[^n]` subscripts](https://github.com/ldn-softdev/jtc#understand-how--n-and-n-subscripts-work)
     * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#6-debugability--json-validation)
-3. [Complete User Guide](https://github.com/ldn-softdev/jtc/User%20Guide.md)
+3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
 5. [`jtc` vs jq](https://github.com/ldn-softdev/jtc#jtc-vs-jq)
 
@@ -508,7 +508,7 @@ bash $
 ```
 
 ## Complete User Guide
-Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/User%20Guide.md) for further examples and guidelines.
+Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 
 ## A tiny example of class usage and its interface (c++14):
@@ -729,7 +729,7 @@ bash $
 ``` 
  Another benign side effect of such approach - numerical values in `jtc` are searchable with RE (suffix `D`)
 
-Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/User%20Guide.md) for further examples and guidelines.
+Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
