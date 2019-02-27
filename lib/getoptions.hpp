@@ -219,7 +219,7 @@ class Option {
                          { val_.resize(1); order_.resize(1); return *this; }
                         // reset to the state after setup and before parse
 
-    // methods to iterate over parametric option values
+    // methods to iterate over parametric option values, skip default value
     iter_opt            begin(void) { return ++val_.begin(); }
     citer_opt           begin(void) const { return ++val_.cbegin(); }
     iter_opt            end(void) { return val_.end(); }
@@ -336,7 +336,7 @@ class Getopt {
     ENUMSTR(ThrowReason, THROWREASON)
 
 
-    Getopt &            suppress_opterr(void) { opterr = 0; return *this; }
+    Getopt &            suppress_opterr(bool x=true) { opterr = !x; return *this; }
     Getopt &            suppress_exceptions(void) { throwException_ = false; return *this; }
     Getopt &            suppress_autohelp(void) { autohelp_ = false; return *this; }
     Getopt &            variadic(bool x = true) { variadic_ = x; return *this; }
@@ -421,7 +421,7 @@ void Getopt::parse(int argc, char *argv[], const char *f) {
  // 2. generate auto-help (if -h given) and setup program name
  // 3. process input 'argv' array (via getopt call), then post process standalone arguments
  #ifndef __linux__
- optreset = 1;                                                  // this is done in order to allow
+ optreset = 1;                                                  // allow multiple parsing
  #endif
  optind = 1;                                                    // - linux way to use optreset
  std::string fmt = recoverFormat_(f);                           // recovered format

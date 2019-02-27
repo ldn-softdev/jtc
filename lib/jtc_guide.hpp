@@ -67,8 +67,8 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRlLdDbnaoij], each one altering the search
-     in the following way:
+   S: an optional one letter suffix, either of these: [rRlLdDbnaoicjwe], each one altering the
+     search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex search applied)
      l: apply exact match while searching object labels only
@@ -84,19 +84,22 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      o: match any object JSON value (i.e. '{...}'); the content within the encasement is ignored
      i: match any array (iterable) JSON value (i.e. '[...]'); the content within the encasement is
         ignored
+     c: match either arrays or objects; the content within the encasement is ignored
      j: match user specific JSON value, the content within the encasement should be a valid JSON
         value, e.g.: '<[]>j' - will find the first empty JSON array
      w: wide range match - match any JSON value (atomic, objects, arrays)
      e: end-node match (matches leaves only) - match any of: atomic, {}, []
+     v: not a search, it's a directive; the suffix instructs to treat a label/index (if exists) as
+        a value (thus a label/index along can be updated/extracted programmatically)
    N: an integer quantifier specifying search match instance/range, comes in following variants
-      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
-        the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
-        zero based
-      +n - collects all matched encounters staring from index n, e.g.: '<a text>+2' will match 3rd
-        encounter of "a text", 4th, 5th and so on until all matches found
-      +n:+n - once ':' is sighted within a quantifier, then it specifies a range; the range
-        quantifiers follow the same notation as offset's range with just one exception - the
-        indices here cannot go negative
+     n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
+       the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
+       zero based
+     +n - collects all matched encounters staring from index n, e.g.: '<a text>+2' will match 3rd
+       encounter of "a text", 4th, 5th and so on until all matches found
+     +n:+n - once ':' is sighted within a quantifier, then it specifies a range; the range
+       quantifiers follow the same notation as offset's range with just one exception - the
+       indices here cannot go negative
 
    - empty search lexemes '<>', '><' may only have either of suffixes: [rlna] - those may match
      empty JSON elements (or do not require the lexeme), while others require non-empty lexemes
@@ -154,9 +157,9 @@ options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
  - when used together with  option -)" STR(OPT_EXE)
    R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; every
-   occurrence of ')" INTRP_STR R"(', or ')" INTRP_NKD
+   occurrence of ')" INTRP_VAL R"(', or ')" INTRP_VNQ
    R"(' is interpolated with walked JSON entry using a raw format; if
-   interpolation results in a string value, then for every occurrence ')" INTRP_NKD
+   interpolation results in a string value, then for every occurrence ')" INTRP_VNQ
    R"(' the outside quotation
    marks are dropped; the interpolated entry is completely escaped, thus does not require any
    additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be quoted or
@@ -228,7 +231,9 @@ options -)" STR(OPT_CMN) R"( and -)" STR(OPT_PRT) R"( usage:
 void guide_ex(void) {
  cout << R"(
 
-  * Examples with explanations:
+  * Some examples with explanations:
+  * - for a complete user guide visit:
+  *   https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
 
  Consider following source JSON (stored in the file example.json):
     {

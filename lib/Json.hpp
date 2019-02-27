@@ -308,25 +308,27 @@
  *                the given node
  *      - optionally a one letter suffix (either of [rlRLdbnaoij]) could be used:
  *        which affect search in the following way:
- *        r - apply exact match (default) while searching string values,
- *        R - same as r, but Regex search is applied
- *        l - apply exact match while searching labels only,
- *        L - same as l with Regex search
- *        d - match a number (i.e. searching only numeric json values),
- *        D - same as d with Regex search
- *        b - match a boolean (i.e. searching only boolean values), true/false/any
- *            must be fully spelled, e.g.: "<true>b",
- *        n - match null value (), the content within the encasement could be empty,
- *            or anything - it's ignored, e.g.: "<>n", ">null<n", etc
- *        a - match any JSON atomic value (string, numeric, boolean, null), the
- *            content within the encasements ignored
- *        o - match any object JSON value (i.e. {...}); the content within the
- *            encasement is ignored
- *        i - match any array (iterable) JSON value (i.e. [...]); the content
- *            within the encasement is ignored
- *        j - match user specific JSON value, the content within the encasement
- *            should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
- *            arrays
+ *        r: apply exact match (default, may be omitted) while searching JSON string values only
+ *        R: same as r, but expression in braces is a Regex (regex search applied)
+ *        l: apply exact match while searching object labels only
+ *        L: same as l, but expression in braces is a Regex (regex search applied)
+ *        d: match a number (i.e. searches numeric JSON values only)
+ *        D: same as d, but expression in braces is a Regex (value is treated as a string value here)
+ *        b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled
+ *           e.g.: '<true>b', '<any>b'
+ *        n: match null values only, the content within the encasement could be anything and is ignored
+ *           e.g.: '<>n', '>null<n', etc
+ *        a: match any atomic JSON value (string, numeric, boolean, null); the content within the
+ *           encasements is ignored
+ *        o: match any object JSON value (i.e. '{...}'); the content within the encasement is ignored
+ *        i: match any array (iterable) JSON value (i.e. '[...]'); the content within the encasement is
+ *           ignored
+ *        c: match either arrays or objects; the content within the encasement is ignored
+ *        j: match user specific JSON value, the content within the encasement should be a valid JSON
+ *           value, e.g.: '<[]>j' - will find the first empty JSON array
+ *        w: wide range match - match any JSON value (atomic, objects, arrays)
+ *        e: end-node match (matches leaves only) - match any of: atomic, {}, []
+ *        v: not a search, this suffix instructs to treat a label/index (if exists) as a value;
  *      - optionally a numeric quantifier could follow search (or suffix):
  *      n - integer quantifier specifying match instance, e.g.: "<text>2"
  *          will match only upon a 3rd (i.e. zero based) encounter of the word
@@ -652,6 +654,7 @@ class Jnode {
                 walk_root_non_iterable, \
                 walk_bad_suffix, \
                 walk_bad_position, \
+                walk_root_has_no_label, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
@@ -786,17 +789,33 @@ class Jnode {
                          return iterator_by_idx_(i)->VALUE;
                         }
 
+    virtual Jnode &     operator[](int i)
+                         { return operator[](static_cast<long>(i)); }
+
   virtual const Jnode & operator[](long i) const {
                          if(is_atomic()) throw EXP(type_non_indexable);
                          return iterator_by_idx_(i)->VALUE;
                         }
+
+  virtual const Jnode & operator[](int i) const
+                         { return operator[](static_cast<long>(i)); }
 
     Jnode &             operator[](const std::string & l) {
                          if(not is_object()) throw EXP(type_non_subscriptable);
                          return children_()[l];
                         }
 
+    Jnode &             operator[](const char * l) {
+                         if(not is_object()) throw EXP(type_non_subscriptable);
+                         return children_()[l];
+                        }
+
     const Jnode &       operator[](const std::string & l) const {
+                         if(not is_object()) throw EXP(type_non_subscriptable);
+                         return children_().at(l);
+                        }
+
+    const Jnode &       operator[](const char * l) const {
                          if(not is_object()) throw EXP(type_non_subscriptable);
                          return children_().at(l);
                         }
@@ -1366,8 +1385,10 @@ class Json{
                 atomic_match,   /* JSON atomic, matches any of: string/number/boolean/null */ \
                 object_match,   /* JSON object, matches any object {...} */ \
                 indexable_match,/* JSON array, matches any of: [...] */ \
+                collection_match,/* JSON array & objects */ \
                 json_match,     /* matches provided JSON */ \
                 wide_match,     /* matches any JSON: atomics + objects + arrays */ \
+                value_of_label, /* not a match, a directive - treats label/index as a value */ \
                 end_node_match, /* matches all leaf nodes */ \
                 end_of_match,   /* matches any of: atomics, [], {} */\
                 text_offset,    /* in addition to search, these two used for subscript offsets */ \
@@ -1423,8 +1444,10 @@ class Json{
     bool                has_children(void) const { return root().has_children(); }
     size_t              children(void) const { return root().children(); }
     Json &              clear(void) { root().clear(); return *this; }
-    Jnode &             operator[](size_t i) { return root()[i]; }
-    const Jnode &       operator[](size_t i) const { return root()[i]; }
+    Jnode &             operator[](long i) { return root()[i]; }
+    Jnode &             operator[](int i) { return root()[i]; }
+    const Jnode &       operator[](long i) const { return root()[i]; }
+    const Jnode &       operator[](int i) const { return root()[i]; }
     Jnode &             operator[](const std::string & l) { return root()[l]; }
     const Jnode &       operator[](const std::string & l) const { return root()[l]; }
     Jnode &             front(void) { return root().front(); }
@@ -1648,7 +1671,7 @@ class Json{
     class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
      // this forward iterator let iterate over *iterable* walk paths
      // once iterator is dereferenced it returns a reference to a Jnode's super-node,
-     // super-node adds following powers to regular Jnode's:
+     // super-node adds following powers to regular Jnode:
      // - label() allows accessing node's label if node is nested by object
      // - index() allows accessing node's ordinal index if nested by array
      // - value() provides access to the Jnode itself (but this methods is quite
@@ -1698,15 +1721,15 @@ class Json{
                                  // to address supernode with negative index, e.g: [-1],
                                  // like in the walk-string to reference a parent
                                  if(i >= 0) return Jnode::operator[](i);
-                                 if(-i >= static_cast<long>(jit_->pv_.size()))
-                                  return jit_->json_().root();
-                                 return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
+                                 return -i >= static_cast<long>(jit_->pv_.size())?
+                                        jit_->json_().root():
+                                        jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
                                 }
             const Jnode &       operator[](long i) const {
                                  if(i >= 0) return Jnode::operator[](i);
-                                 if(-i >= static_cast<long>(jit_->pv_.size()))
-                                  return jit_->json_().root();
-                                 return jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
+                                 return -i >= static_cast<long>(jit_->pv_.size())?
+                                        jit_->json_().root():
+                                        jit_->pv_[jit_->pv_.size() + i -1].jit->VALUE;
                                 }
             Jtype               parent_type(void) const { return type_; }
             Jtype &             parent_type(void) { return type_; }
@@ -1775,20 +1798,34 @@ class Json{
         template<typename T>
         bool                operator!=(const T & rhs) const
                              { return not operator==(rhs); }
-
         Jnode &             operator*(void) {
+                             if(not ws_.empty() and ws_.back().jsearch == value_of_label) {
+                              // return value of label/index in the supernode's JSON
+                              if(pv_.empty()) throw jp_->EXP(Jnode::walk_root_has_no_label);
+                              switch (sn_.type_) {
+                               case Jnode::Object: sn_.type_ = Jnode::String;
+                                                   sn_.value_ = pv_.back().jit->KEY;
+                                                   break;
+                               case Jnode::Array:  sn_.type_ = Jnode::Number;
+                                                   sn_.value_ = std::to_string(
+                                                                 std::stol(pv_.back().jit->KEY,
+                                                                           nullptr, 16));
+                                                   break;
+                               default: break;
+                              }
+                              return sn_(pv_.back().jit->KEY, static_cast<Jnode&>(sn_), this);
+                             }
                              return pv_.empty()?
                               sn_(jp_->root(), this):
                               sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
                             }
-        Jnode *             operator->(void) {
-                             return pv_.empty()?
-                              &sn_(jp_->root(), this):
-                              &sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
-                            }
-        iterator &          operator++(void) { incremented(); return *this; }
+        Jnode *             operator->(void)
+                             { return & operator*(); }
+        iterator &          operator++(void)
+                             { incremented(); return *this; }
         bool                incremented(void);
-        iterator &          begin(void) { return *this; }
+        iterator &          begin(void)
+                             { return *this; }
         iterator            end(void) const {
                              if(not jp_->root().is_iterable())
                               throw jp_->EXP(Jnode::walk_root_non_iterable);
@@ -1834,8 +1871,7 @@ class Json{
                              return ws_[position].jsearch;
                             }
         bool                is_walkable(void) const
-                             { return next_iterable_ws_(walk_path_().size()) >= 0;
-}
+                             { return next_iterable_ws_(walk_path_().size()) >= 0; }
 
      protected:
                             iterator(Json *ptr): jp_{ptr} {};
@@ -1845,7 +1881,7 @@ class Json{
       std::vector<WalkStep> ws_;                                // walk state vector (walk path)
         path_vector         pv_;                                // path_vector (result of walking)
         Json *              jp_;                                // json pointer (for json().end())
-        SuperJnode          sn_{Jnode::Neither};                // super node's type_ holds parent's
+        SuperJnode          sn_{Jnode::Neither};                // super node type_ holds parent's
 
      private:
         bool                is_valid_(Jnode & jnp, size_t idx) const;
@@ -2213,23 +2249,7 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 //    - <text>: perform search of the entire node to match the text
 //    - <...> perform forward search, >...< perform search among immediate children
 //      only
-//    - optional suffix S could be either of [rlRLdbnaoij]:
-//       r - default, performs exact match of the string,
-//       R - expression in brackets is treated as RE and RE search is applied
-//       l - performs exact match of the label
-//       L - same as R but RE search is applied on labels
-//       d - matches digital JSONs only
-//       b - matches boolean JSONs only (value must be fully spelled, e.g.: <true>b)
-//       n - finds null values (value in brackets is ignored, could be empty).
-//       a - match any JSON atomic value (string, numeric, boolean, null), the
-//           content within the encasements ignored
-//       o - match any object JSON value (i.e. {...}); the content within the
-//           encasement is ignored
-//       i - match any array (iterable) JSON value (i.e. [...]); the content
-//           within the encasement is ignored
-//       j - match user specific JSON value, the content within the encasement
-//           should be a valid JSON value, e.g.: "<[]>j+0" - matches all empty
-//           arrays
+//    - optional suffix S alters search behavior, see descriptions in the header
 //    - N optional quantifier (must take the last position), could be in the form of:
 //       n - search find' n'th (zero based) match instance
 //      +n - indicates that the path is iterable (starting from n'th match)
@@ -2312,7 +2332,7 @@ std::string Json::unquote_str(std::string && src) const {
   if(ptr == nullptr)                                            // i.e other (non-Json) char quoted
    throw EXP(Jnode::unexpected_quotation);
   src[end-1] = '\0';
-  ss << src.data() + start << (qc == 'u'? "\\":"") << JSN_TRL[ptr - jsn_qtd_];
+  ss << src.data() + start << (qc == 'u'? "\\": "") << JSN_TRL[ptr - jsn_qtd_];
   start = ++end;
  }
  ss << src.c_str() + start;
@@ -2439,8 +2459,9 @@ void Json::parse_suffix_(std::string::const_iterator &si,
 
   if(back_ws.stripped.front().empty())                          // search lexeme is empty: <>S
    if( not(back_ws.jsearch AMONG(regular_match, label_match, null_match, atomic_match,
-                                 object_match, indexable_match, wide_match, end_node_match)) )
-    throw EXP(Jnode::walk_bad_suffix);                          // others must have non-empty lexeme
+                                 object_match, indexable_match, collection_match, wide_match,
+                                 end_node_match, value_of_label)) )
+    throw EXP(Jnode::walk_bad_suffix);                          // others must have non-empty
   ++si;
  }                                                              // else jsearch = regular_match
 }
@@ -2459,6 +2480,8 @@ void Json::parse_quantifier_(std::string::const_iterator &si, iterator & it) con
  // quantifier could be: [+]0, :, [+]1:, , :[+]2, [+]3:[+]4
  auto & back_ws = it.walk_path_().back();
  parse_range(si, back_ws, may_throw);
+ if(back_ws.jsearch == value_of_label)
+  back_ws.type = WalkStep::static_select;
 
  while(*si == ' ') ++si;
  if(not(*si AMONG(LXM_SUB_OPN, LXM_SCH_OPN, LXM_SCH_CLS, CHR_NULL)))
@@ -2469,11 +2492,11 @@ void Json::parse_quantifier_(std::string::const_iterator &si, iterator & it) con
 void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThrow throwing) const {
  // parse quantifier or subscript, update WalkStep's: offset, head, tail, type
  if(*si AMONG(' ', CHR_NULL, LXM_SUB_OPN, LXM_SCH_OPN, LXM_SCH_CLS)) return;// legit end of quant.
- bool is_quantifier = throwing == may_throw;
+ bool is_quantifier = throwing == may_throw;                    // allowed when parsing quantifiers
 
  if(*si == PFX_WFR) {                                           // '^' - it's a roots select
   if(is_quantifier) throw EXP(Jnode::walk_bad_number);          // '^' not allowed in quantifiers
-  ws.type = WalkStep::root_select; ++si;
+  ws.type = WalkStep::root_select; ++si;                        // it could be a subscript
   if(*si == CHR_NULL) { --si; return; }                         // i.e. [^] - indicate failure
  }
  if(ws.type == WalkStep::static_select)                         // i.e. type is yet a default
@@ -2481,8 +2504,8 @@ void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThro
 
  if(*si == RNG_SPR) {                                           // ':' - first or second char
   if(ws.type == WalkStep::root_select) {                        // i.e. ^:
-   if(is_quantifier) throw EXP(Jnode::walk_bad_range);
-   else return;
+   if(is_quantifier) throw EXP(Jnode::walk_bad_range);          // [^:] is a bad range quantifier
+   else return;                                                 // otherwise it's a subscript
   }
  }
  else
@@ -2536,6 +2559,7 @@ void Json::parse_subscript_type_(WalkStep & ws) const {
  if(ws.stripped[0].empty() or *si != CHR_NULL)
   ws.jsearch = text_offset;                                     // parsing failed - it's a text
 }
+
 
 
 //
@@ -2613,6 +2637,8 @@ void Json::iterator::walk_step_(size_t idx, Jnode *jn) {
         return walk_numeric_offset_(idx, jn);
   case text_offset:
         return walk_text_offset_(idx, jn);
+  case value_of_label:
+        return;
   default:
         return walk_search_(idx, jn);
  }
@@ -2729,7 +2755,6 @@ void Json::iterator::search_all_(Jnode *jn, const char *lbl,
 }
 
 
-
 bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl,
                             const WalkStep &ws, std::vector<path_vector> & vpv) {
  // match suffixes [joiwe] and attached label (if any) - for search_all_
@@ -2742,14 +2767,13 @@ bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl,
    { vpv.push_back(vpv.back()); return true; }
   return false;
  }
- if((ws.jsearch == object_match and jn->is_object()) or
-    (ws.jsearch == indexable_match and jn->is_array()) or
+ if((jn->is_object() and ws.jsearch AMONG(object_match, collection_match) ) or
+    (jn->is_array() and ws.jsearch AMONG(indexable_match, collection_match) ) or
     (ws.jsearch == wide_match) or
     (ws.jsearch == end_node_match and jn->empty()))
   { vpv.push_back(vpv.back()); return true; }
  return false;
 }
-
 
 
 bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
@@ -2781,7 +2805,6 @@ bool Json::iterator::search_one_(Jnode *jn, const char *lbl, const WalkStep &ws,
 }
 
 
-
 bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl, const WalkStep &ws, long &i) {
  // match suffixes [joiw] and attached label (if any) - for search_one_
  if(ws.stripped.size() > 1) {                                   // there's an attached search label
@@ -2793,15 +2816,14 @@ bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl, const WalkStep
    return true;
   return false;
  }
- if((ws.jsearch == object_match and jn->is_object()) or
-    (ws.jsearch == indexable_match and jn->is_array()) or
+ if((jn->is_object() and ws.jsearch AMONG(object_match, collection_match)) or
+    (jn->is_array() and ws.jsearch AMONG(indexable_match, collection_match)) or
     (ws.jsearch == wide_match) or
     (ws.jsearch == end_node_match and jn->empty()))
   if(--i < 0)
    return true;
  return false;
 }
-
 
 
 void Json::iterator::lbl_callback_(const std::string &label,
@@ -2850,8 +2872,8 @@ bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
     { pv_.emplace_back(it); return true; }
    continue;
   }
-  if((ws.jsearch == object_match and jn->is_object()) or
-     (ws.jsearch == indexable_match and jn->is_array()) or
+  if((jn->is_object() and ws.jsearch AMONG(object_match, collection_match)) or
+     (jn->is_array() and ws.jsearch AMONG(indexable_match, collection_match)) or
      (ws.jsearch == wide_match) or
      (ws.jsearch == end_node_match and jn->empty())) {
    if(--i < 0)
@@ -2893,6 +2915,7 @@ bool Json::iterator::atomic_matched_(const Jnode *jn, const char *lbl, const Wal
  switch (ws.jsearch) {
   case object_match:
   case indexable_match:
+  case collection_match:
         return false;
   case wide_match:
   case end_node_match:
