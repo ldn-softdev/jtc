@@ -162,6 +162,7 @@ class Jtc {
     bool                convert_req_{false};                    // used in output_by_iterator
     bool                ecli_{false};                           // -e status for insert/update
     bool                merge_{false};                          // -m status for insert/update
+    bool                lbl_update_{false};                     // label update operation detected
     char                opt_ui_{'\0'};                          // either -i or -u for recompile
     size_t              opt_r_found_{0};                        // used for recompile once -e found
     size_t              last_group_{0};                         // used in output_by_iterator
@@ -588,8 +589,11 @@ void Jtc::update_json() {
 
 void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
  // update each/all -u processed jsons
- if(it.walks().back().jsearch == Json::value_of_label and not it.is_valid())
-  { cerr << "error: destination walk became invalid, skipping update" << endl; return; }
+ if(lbl_update_ == false)                                   // not faced label update yet
+  lbl_update_ = not it.walks().empty() and it.walks().back().jsearch == Json::value_of_label;
+ else                                                       // lbl update occurred at least once
+  if(not it.is_valid())                                     // then verify sanity of dst walks
+   { cerr << "error: destination walk became invalid, skipping update" << endl; return; }
 
  if(processed_by_cli_(it)) return;                          // -e w/o trailing -u  processed
 
