@@ -1251,7 +1251,7 @@ does not facilitate any search/match criteria. Instead, it instructs to treat la
 value.
 
 Thus, it let extracting labels, or even updating the pointed labels - all programmatically.
-- the lexeme `<>v` could be placed into an position of the walk-path, though it only makes sence to place it as the last lexeme
+- the lexeme `<>v` could be placed into any position of the walk-path, though it only makes sence to place it as the last lexeme
 of the walk-path (otherwise it will have no effect)
 - also, because it's not a search lexeme, even though parsing accepts lexeme's value and quantifiers, the both are just ignored, e.g.,
 saying `<something>v0:2` is as good as `<>v` (just results in a few extra cpu cycles upon its parsing)
