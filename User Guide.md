@@ -1366,7 +1366,7 @@ bash $
 If multiple pairs of JSONs compared, zero code is returned only when all compared JSON pairs are equal. 
 
 ### Comparing JSON schemas
-JSON schema essentially is a JSON's structure (JSON containers, labels, indices) without leaf data. I.e., two JSONs may have
+JSON schema essentially is a JSON structure (JSON containers, labels, indices) without leaf data. I.e., two JSONs may have
 different contents (leaf data), while their structures could be the same.
 
 E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
