@@ -40,9 +40,9 @@
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
    * [Mixed use of arguments without `-e` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without--e)
    * [Mixed use of arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with--e)
-
-4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
-5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+4. [Working with labels (`<>v`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-labels)
+5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
+6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
@@ -1242,6 +1242,79 @@ bash $
 
 In case if only a single option instance (`-u`/`-i`) is used, then the source (of interpolation) and the destination (of operation)
 would be provided with `-w` option argument
+
+## Working with labels
+Among walk-path search suffixes, there's one unlike others: `<>v`. Even though it looks like a search suffix, unlike all others id
+does not facilitate any search/match criteria. Instead, it instructs to treat last found/selected JSON element's label/index as a JSON
+value.
+
+Thus, it let extracting labels, or even updating the pointed labels - all programmatically.
+- the lexeme `<>v` could be placed into an position of the walk-path, though it only makes sence to place it as the last lexeme
+of the walk-path (otherwise it will have no effect)
+- also, because it's not a search lexeme, even though parsing accepts lexeme's value and quantifiers, the both are just ignored, e.g.,
+saying `<something>v0:2` is as good as `<>v` (just results in a few extra cpu cycles upon its parsing)
+
+When printing labels (via `<>v` lexeme), the `-l` option is rendered ineffective (i.e. labels do not have labels):
+```
+bash $ cat ab.json | jtc -w'[name]:<Ivan> [-1][:] <>v' -l
+"address"
+"age"
+"children"
+"name"
+"phone"
+"spouse"
+bash $ 
+```
+
+In the following example, we'll capitalize all the labels within all `address`'es in `ab.json`:
+```
+bash $ cat ab.json | jtc -w'<address>l: [:] <>v' -eu echo {} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'<address>l:' -rl
+"address": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" }
+"address": { "CITY": "Seattle", "POSTAL CODE": 98104, "STATE": "WA", "STREET ADDRESS": "5423 Madison St" }
+"address": { "CITY": "Denver", "POSTAL CODE": 80206, "STATE": "CO", "STREET ADDRESS": "6213 E Colfax Ave" }
+bash $ 
+```
+
+NOTE: _mind the caveat though - destination walk-path may become invalid (namely when altering labels of the nested elements after
+the parent's label was altered), in such case update operation won't be applied due to invalideated destination_:
+```
+bash $ cat ab.json | jtc -x'[Directory][0][address] <>v' -y' ' -y'[:] <>v' 
+"address"
+"city"
+"postal code"
+"state"
+"street address"
+bash $ cat ab.json | jtc -x'[Directory][0][address] <>v' -y' ' -y'[:] <>v' -eu echo {} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+{
+   "ADDRESS": {
+      "city": "New York",
+      "postal code": 10012,
+      "state": "NY",
+      "street address": "599 Lafayette St"
+   },
+   "age": 25,
+   "children": [
+      "Olivia"
+   ],
+   "name": "John",
+   "phone": [
+      {
+         "number": "112-555-1234",
+         "type": "mobile"
+      },
+      {
+         "number": "113-123-2368",
+         "type": "mobile"
+      }
+   ],
+   "spouse": "Martha"
+}
+bash $ 
+```
 
 
 
