@@ -1396,7 +1396,8 @@ If multiple pairs of JSONs compared, zero code is returned only when all compare
 
 ### Comparing JSON schemas
 JSON schema essentially is a JSON structure (JSON containers, labels, indices) without leaf data. I.e., two JSONs may have
-different contents (leaf data), while their structures could be the same.
+different contents (leaf data), while their structures could be the same (though the statment is rather loose - JSON schema does
+include types of the leaf data as well).
 
 E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
 ```
@@ -1410,7 +1411,8 @@ bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-
 bash $ 
 ```
 
-However, their schemas would be the same. To compare schemas, label directive `<>v` used together with `<>c` search suffix come handy:
+However, their schemas would be the same. To compare schemas of two jsons (well, with applied exemption on checking leaves data types),
+label directive `<>v` used together with `<>c` search suffix come handy:
 ```
 bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l; echo $?
 "json_1": {}
