@@ -1414,7 +1414,7 @@ bash $
 However, their schemas would be the same. To compare schemas of two jsons (well, with applied exemption on checking leaves data types),
 label directive `<>v` used together with `<>c` search suffix come handy:
 ```
-bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l; echo $?
+bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l
 "json_1": {}
 "json_2": {}
 "json_1": {}
@@ -1427,8 +1427,9 @@ bash $ cat ab.json | jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-
 "json_2": {}
 "json_1": {}
 "json_2": {}
+bash $ echo $?
 0
-bash $ 
+bash $
 ```
 
 NOTE: _usage of '<>v' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
