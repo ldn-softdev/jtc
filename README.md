@@ -186,6 +186,7 @@ given index will be selected (e.g.: [+2] will select/address all immediate child
 selected/found node, a parent of a parent, etc
   * textual offsets (e.g. `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
 immediate children (i.e. textual subscripts)
+
 _*** there's more on offsets and search quantifiers below_
 
 in order to understand better how a walk path works, let's run a series of cli, gradually adding lexemes
