@@ -409,9 +409,11 @@ with the currently walked JSON elements:
   the corresponding namespace
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
 
-Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON
+Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
 Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in templates and arguments
-for a shell evaluation
+for a shell evaluation.
+
+
 
 #### Search quantifiers
 Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix).
