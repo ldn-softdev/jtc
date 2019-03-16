@@ -9,11 +9,11 @@ _Relese Notes for `jtc` v.1.60_
 - added namespaces (allow storing JSON elements in the named space while walking paths); namespaces are reused in templates and in
 walk-paths
 - added new search keys facilitating namespaces: `<..>k`, `<..>v`, `<..>z`, `<..>s`, `<..>t`
-  - `<..>k`: save into a namespace current JSON element's label/index (it also reinterprets label/index as the value)
-  - `<..>v`: save into a namespace current element's JSON value
-  - `<..>z`: erase given name from the namespace (`<>z` will clear entire namespace)
-  - `<..>s`: search recursively (off the current node) for the JSON matching one in the namespace  
-  - `<..>t`: search recursively (off the current node) for the label matching one in the namespace  
+  - `<..>k`: save current JSON element's **k**ey (label/index); it also reinterprets label/index as the value
+  - `<..>v`: save into a namespace current element's JSON **v**alue
+  - `<..>z`: *z*ip (erase) given name from the namespace (`<>z` will clear entire namespace)
+  - `<..>s`: *s*earch (off the current node) for the JSON matching one in the namespace  
+  - `<..>t`: search (off the current node) for the **t**ag (label) matching one in the namespace  
 #### Improvements, changes, fixes:
 - improved parser debug alignments and aligned indentation for relevant calls/data structures
 - made debugs unicode UTF-8 compatible
