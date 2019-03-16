@@ -401,7 +401,7 @@ there are following suffixes to control search behavior:
 \- as you can see, capitalizaztion of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
 #### Walk directives and Namespaces
-there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certaion actions
+there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certain actions
 with the currently walked JSON elements:
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
