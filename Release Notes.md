@@ -9,7 +9,7 @@ _Relese Notes for `jtc` v.1.60_
 - added namespaces (allow storing JSON elements in the named space while walking paths); namespaces are reused in templates and in
 walk-paths
 - added new search keys facilitating namespaces: `<..>k`, `<..>v`, `<..>z`, `<..>s`, `<..>t`
-  - `<..>k`: save into a namespace current JSON element's label/index
+  - `<..>k`: save into a namespace current JSON element's label/index (it also reinterprets label/index as the value)
   - `<..>v`: save into a namespace current element's JSON value
   - `<..>z`: erase given name from the namespace (`<>z` will clear entire namespace)
   - `<..>s`: search recursively (off the current node) for the JSON matching one in the namespace  
@@ -19,3 +19,4 @@ walk-paths
 - made debugs unicode UTF-8 compatible
 - debug locus now shows offset correctly and in UTF-8 unicode characters
 - fixed issue, where a non-recursive array search (`>...<i`) might produce a false positive match for objects
+- changed semantic for directive `<>v`: in the previous version (1.59) it used to facilitate the same function as `<>k` now
