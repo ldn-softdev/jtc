@@ -10,6 +10,7 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc#linux-and-macos-precompiled-binaries-are-available-for-download)
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
+    * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
 2. [Quickstart guide](https://github.com/ldn-softdev/jtc#quickstart-guide)
     * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing-list-all-urls)
@@ -29,12 +30,13 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
 
 `jtc` offers following features:
-  - simple user interface allowing applying a bulk changes in one command
+  - simple user interface allowing applying a bulk of changes in one command
   - featured walk-path interface let extracting any combination of data from source JSON
   - extracted data is representable either as it found, or as a complete JSON format
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
   - insert/updates operations optionally undergo shell cli evaluation
+  - features namespaces and templates
   - written entirely in C++, no dependencies (STL only)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
@@ -80,6 +82,10 @@ folder:
 
 For Linux you'd have to compile using this line:
 - `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
+
+### Release Notes
+See the latest [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
+
 
 ## Quickstart guide:
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
