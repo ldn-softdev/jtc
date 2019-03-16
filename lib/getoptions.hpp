@@ -163,6 +163,17 @@ class Option {
     typedef vec_string::iterator iter_opt;
     typedef vec_string::const_iterator citer_opt;
 
+    friend void             swap(Option &l, Option &r) {
+                             using std::swap;
+                             swap(l.id_, r.id_);
+                             swap(l.ot_, r.ot_);
+                             swap(l.val_, r.val_);
+                             swap(l.order_, r.order_);
+                             swap(l.name_, r.name_);
+                             swap(l.desc_, r.desc_);
+                             swap(l.go_, r.go_);
+                            }
+
  public:
     friend Getopt;
 
@@ -173,9 +184,15 @@ class Option {
     enum ArgKind { opt, arg };
     enum OptType { boolean, parametric };
 
-                        Option(void) = delete;
-                        Option(short opt, Getopt *go): id_{opt}, go_{go}
-                         { name_ = toupper(opt); }
+
+                        Option(void) = delete;                  // DC deleted
+                        Option(short opt, Getopt *go):          // Custom constructor
+                         id_{opt}, go_{go} { name_ = toupper(opt); }
+                        Option(const Option &) = default;       // CC
+                        Option(Option && o)                     // MC
+                         { swap(*this, o); }
+    Option &            operator=(Option o)                     // CA, MA
+                         { swap(*this, o); return *this; }
 
     // User interface:
     short int           id(void) const { return id_; }          // could be: 'a', 'x', 256, 257, ...
@@ -292,13 +309,24 @@ class Getopt {
     typedef std::map<short, Option> map_opt;
     typedef map_opt::iterator iter_opt;
 
-    class OptionOrdered {
+    class OptionsOrdered {
      // facilitates back-tracing every option to it's original position in user cli
+        friend void         swap(OptionsOrdered &l, OptionsOrdered &r) {
+                             using std::swap;
+                             swap(l.opt_, r.opt_);
+                             swap(l.cnt_, r.cnt_);
+                             swap(l.go_, r.go_);
+                            }
+
      public:
-                            OptionOrdered(void) = delete;
-                            OptionOrdered(short opt, size_t cnt, Getopt *go):
-                             opt_{opt}, cnt_{cnt}, go_(go)
-                              {}
+                            OptionsOrdered(void) = default;     // DC
+                            OptionsOrdered(short opt, size_t cnt, Getopt *go):  // Custom Const.
+                             opt_{opt}, cnt_{cnt}, go_(go) {}
+                            OptionsOrdered(const OptionsOrdered &) = default;   // CC
+                            OptionsOrdered(OptionsOrdered && o) // MC
+                             { swap(*this, o); }
+        OptionsOrdered &    operator=(OptionsOrdered o)         // CA, MA
+                             { swap(*this, o); return *this; }
 
         size_t              count(void) const { return cnt_; }
         Option &            option(void) { return go_->om_.at(opt_); }
@@ -319,8 +347,25 @@ class Getopt {
         Getopt *            go_{nullptr};
     };
 
-    friend OptionOrdered;
+    friend OptionsOrdered;
     friend Option;
+
+    friend void             swap(Getopt &l, Getopt &r) {
+                             using std::swap;
+                             swap(l.exception_, r.exception_);
+                             swap(l.throwException_, r.throwException_);
+                             swap(l.autohelp_, r.autohelp_);
+                             swap(l.variadic_, r.variadic_);
+                             swap(l.argc_, r.argc_);
+                             swap(l.argv_, r.argv_);
+                             swap(l.prolog_, r.prolog_);
+                             swap(l.epilog_, r.epilog_);
+                             swap(l.arguments_, r.arguments_);
+                             swap(l.prgname_, r.prgname_);
+                             swap(l.om_, r.om_);
+                             swap(l.ov_, r.ov_);
+                            }
+
  public:
 
     #define THROWREASON \
@@ -334,6 +379,14 @@ class Getopt {
                 inconsistent_format_string, \
                 end_of_throw
     ENUMSTR(ThrowReason, THROWREASON)
+
+
+                        Getopt(void) = default;             // DC
+                        Getopt(const Getopt &) = default;   // CC
+                        Getopt(Getopt && go)                // MC
+                         { swap(*this, go); }
+    Getopt &            operator=(Getopt go)                // CA, MA
+                         { swap(*this, go); return *this; }
 
 
     Getopt &            suppress_opterr(bool x=true) { opterr = !x; return *this; }
@@ -355,9 +408,9 @@ class Getopt {
     Getopt &            reset(void)
                          { for(auto &om: om_) om.second.reset(); ov_.clear(); return *this; }
     bool                defined(char opt) const { return om_.count(opt) == 1; }
-    std::vector<OptionOrdered> &
+    std::vector<OptionsOrdered> &
                         order(void) { return ov_; }
-    OptionOrdered &     order(size_t idx) { return ov_[idx]; }
+    OptionsOrdered &    order(size_t idx) { return ov_[idx]; }
 
     EXCEPTIONS(ThrowReason)
 
@@ -379,7 +432,7 @@ class Getopt {
     std::string         prgname_;                               // program name, after parsing
 
     map_opt             om_;                                    // opt. map: { 'c' -> Option('c') }
-    std::vector<OptionOrdered>                                  // keeps record of options
+    std::vector<OptionsOrdered>                                 // keeps record of options
                         ov_;                                    // in the order they come
 
  private:

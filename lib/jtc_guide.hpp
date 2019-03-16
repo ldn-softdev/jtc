@@ -67,30 +67,40 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRlLdDbnaoicjwe], each one altering the
-     search in the following way:
+   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstvkz], each one altering
+     the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex search applied)
-     l: apply exact match while searching object labels only
-     L: same as l, but expression in braces is a Regex (regex search applied)
      d: match a number (i.e. searches numeric JSON values only)
      D: same as d, but expression in braces is a Regex (value is treated as a string value here)
      b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled
         e.g.: '<true>b', '<any>b'
      n: match null values only, the content within the encasement could be anything and is ignored
         e.g.: '<>n', '>null<n', etc
+     l: apply exact match while searching object labels only
+     L: same as l, but expression in braces is a Regex (regex search applied)
      a: match any atomic JSON value (string, numeric, boolean, null); the content within the
         encasements is ignored
      o: match any object JSON value (i.e. '{...}'); the content within the encasement is ignored
-     i: match any array (iterable) JSON value (i.e. '[...]'); the content within the encasement is
-        ignored
+     i: match any array (indexable) JSON value (i.e. '[...]'); the content within the encasement
+        is ignored
      c: match either arrays or objects; the content within the encasement is ignored
-     j: match user specific JSON value, the content within the encasement should be a valid JSON
-        value, e.g.: '<[]>j' - will find the first empty JSON array
-     w: wide range match - match any JSON value (atomic, objects, arrays)
-     e: end-node match (matches leaves only) - match any of: atomic, {}, []
-     v: not a search, it's a directive; the suffix instructs to treat a label/index (if exists) as
-        a value (thus a label/index along can be updated/extracted programmatically)
+     e: end-node match (matches leaves only) - matches any of: atomic, {}, []
+     w: wide range match - matches any JSON value (atomic, objects, arrays)
+     j: match user specific JSON value, the content within the encasement should be a valid literal
+        JSON value, e.g.: '<[]>j' - will find the first empty JSON array
+     s: match a JSON value previously saved in a namespace by directives '<...>k', '<...>v', the
+        lexeme content within the encasement points to the namespace
+     t: match a label previously saved in a namespace by directives '<...>k', '<...>v', the
+        lexeme must points to the namespace, which should be JSON string or numeric type only
+
+   Following suffixes define lexemes as directives (which do not perform any search/match):
+     v: saves the most recent/found JSON value into a namespace
+     k: instructs to treat the most recent/found label/index (if exists) as a value (thus a
+        label/index along can be updated/extracted programmatically), if lexeme value is non-empty
+        then also saves found label/index into the corresponding namespace
+     z: erase namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
+
    N: an integer quantifier specifying search match instance/range, comes in following variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
        the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
@@ -142,6 +152,10 @@ options -)" STR(OPT_JSN) R"( and -)" STR(OPT_LBL) R"( usage:
    options -)" STR(OPT_JSN) R"(, -)" STR(OPT_LBL)
    R"( only modify the output of walked items, i.e. they will ignored when either of
    -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)" STR(OPT_SWP) R"(, -)" STR(OPT_PRG) R"( is given
+ - when -)" STR(OPT_JSN) STR(OPT_JSN)
+   R"( is given, walked elements with labels only (thus elements in arrays and root ignored)
+   will be collected into JSON object; usage of options -)" STR(OPT_LBL) R"( and -)" STR(OPT_SEQ)
+   R"( in this case is moot
 
 mutually exclusive options:
  - options -)" STR(OPT_CMP) R"( -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)"
@@ -156,14 +170,11 @@ options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R
    assumed; if the file is not found, then the parameter is treated as a JSON and its parsing is
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
  - when used together with  option -)" STR(OPT_EXE)
-   R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; every
-   occurrence of ')" INTRP_VAL R"(', or ')" INTRP_VNQ
-   R"(' is interpolated with walked JSON entry using a raw format; if
-   interpolation results in a string value, then for every occurrence ')" INTRP_VNQ
-   R"(' the outside quotation
-   marks are dropped; the interpolated entry is completely escaped, thus does not require any
-   additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be quoted or
-   escaped; terminate the cli with trailing semicolon (which has to be escaped): \;
+   R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; in such
+   case the parameter is subjected for shell evaluation, but before than an interpolation occurs
+   (see notes on interpolation); the interpolated entry is completely escaped, thus does not
+   require any additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be
+   quoted or escaped; terminate the cli line with trailing semicolon (which has to be escaped): \;
 
 option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(:
  - option -)" STR(OPT_MDF) R"( modifies behaviors of the these options:
@@ -178,6 +189,7 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
  - due to a variety of combinations of sources -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
    R"( and destination -)" STR(OPT_WLK) R"(, the number of various
    operation possibilities is big, therefore it's best to track is in the following table:
+
  * insert operation (-)" STR(OPT_INS) R"() without merge:
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
@@ -190,6 +202,7 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
     [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |   [1,2,3]
  {"a":1,"b":2}|{"a":[1,3],"b":[2,4]}|{"a":[1,3],"b":2,"c":4}|{"a":[1,3],"b":2,"c":4}|{"a":1,"b":2}
      "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |   ["a",3]
+
  * update operation (-)" STR(OPT_UPD) R"() without merge:
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |      3
 --------------+---------------------+-----------------------+-----------------------+-------------
@@ -223,6 +236,14 @@ options -)" STR(OPT_CMN) R"( and -)" STR(OPT_PRT) R"( usage:
    in -)" STR(OPT_CMN) R"( and -)" STR(OPT_PRT)
    R"( until they converted into the respective -)" STR(OPT_WLK)
    R"( options, then walk validation occurs
+
+interpolation:
+ - interpolation may occur when using templates (-)" STR(OPT_TMP)
+   R"(), or in shell cli argument; the notation for
+   an interpolation is expressed in by tokens like {name}, or {{name}}. In the latter notation
+   form the token gets interpolated from the namespace pointed by token 'name' - the JSON element
+   (in the namespace) being interpolated is preserved; in the former notation form, if JSON is a
+   string, then outer quotation marks are dropped
 )";
 }
 
