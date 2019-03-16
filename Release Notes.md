@@ -13,4 +13,4 @@ walk-paths
 - improved parser debug alignments and aligned indentation for relevant calls/data structures
 - made debugs unicode UTF-8 compatible
 - debug locus now shows offset correctly and in UTF-8 unicode characters
-- fixed issue, where a non-recursive array search (>...<i) might produce a false positive match for objects
+- fixed issue, where a non-recursive array search (`>...<i`) might produce a false positive match for objects
