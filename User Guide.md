@@ -1,6 +1,6 @@
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.60_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -11,14 +11,15 @@
    * [Unquoting JSON strings (`-qq`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)
    * [Stringifying JSON (`-rr`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json) 
 2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
-   * [Walking with subscripts (`[...]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
+   * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
      * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
-   * [Searching JSON (`<...>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
-     * [Searching JSON with RE (`<...>R`,`<...>L`, `<...>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
-     * [Search suffixes (`rRlLdDbnaoicjwev`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
+   * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
+     * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
+     * [Search suffixes (`rRdDbnlLaoicewjst`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
+     * [Walk directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walk-directives-and-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
-     * [Scoped search `[...]:<...>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
-     * [Non-recursive search (`>...<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
+     * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
+     * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
    * [Walking multiple paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-paths)
      * [Sequential walk processing (`-n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing)
@@ -187,16 +188,16 @@ though the message let us know that there's a problem with the input JSON, it no
 the problem. An easy way to see the spot where the problem and its locus is via debug (`-d`):
 ```
 bash $ <ab.json jtc -d
-.read_json(), start parsing json from file: <stdin>
-.read_json(), exception locus: ...6213 E Colfax Ave",|          "state": "CO,|          "postal code": 80206|       },| ...
-.read_json(), exception spot: ---------------------------------------------->| (offset: 1150)
+.read_json(), start parsing json from <stdin>
+.read_json(), exception locus: ... Ave",|          "state": "CO,|          "postal code": 80206...
+.location_(), exception spot: --------------------------------->| (offset: 1150)
 jtc json exception: unexpected_end_of_line
-bash $
+bash $ 
 ```
-the vertical pipe symbol `|` in the debug replaces new lines, thus it becomes easy to spot the problem. 
-The offset (`1150`) is given in bytes from the beginning of the input/file. In that particular failure instance, `jtc`
-found end of the line, while _JSON string_ `"Co,` is still open (JSON standard does not permit multi-line strings).
-To fix it, the missing quotation mark to be added
+the vertical pipe symbol `|` in the debug showing JSON replaces new lines, thus it becomes easy to spot the problem. 
+The offset (`1150`) is given in _unicode UTF-8_ characters from the beginning of the input/file. In that particular failure 
+instance, `jtc` found end of the line, while _JSON string_ `"Co,` is still open (JSON standard does not permit multi-line strings).
+To fix that, the missing quotation mark to be added
 
 ### Forcing strict solidus parsing
 JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
@@ -209,15 +210,15 @@ bash $ echo '{ "escaped": "\/", "unescaped": "/" }' | jtc
 }
 bash $
 ```
-If there's a need for a strict solidus quoting parsing, option `-q` facilitates the need. It also will throw an exception 
-upon facing a non-escaped notation:
+If there's a need for a strict solidus parsing, option `-q` facilitates the need. It also will throw an exception upon facing
+a non-escaped notation:
 ```
 bash $ echo '{ "escaped": "\/", "unescaped": "/" }' | jtc -q -d
 .read_json(), start parsing json from <stdin>
 .read_json(), exception locus: { "escaped": "\/", "unescaped": "/" }|
 .location_(), exception spot: --------------------------------->| (offset: 33)
 jtc json exception: unquoted_character
-bash $
+bash $ 
 ```
 
 ### Unquoting JSON strings
@@ -242,7 +243,7 @@ bash $ echo '"3.14"' | jtc -qq
 3.14
 bash $
 ```
-NOTE: _the option notation `-qq` will not engulf a single notation `-q`, if both behaviors are required the both variants have
+NOTE: _the option notation `-qq` will not engulf a single notation `-q`, if both behaviors are required then both variants have
 to be specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_
 
 ### Stringifying JSON
@@ -264,11 +265,11 @@ bash $
 ## Walking JSON
 Whenever there's a need to print only some or multiple JSON elements, walk-paths (`-w`) tell how to do it. A walk path
 (an argument of `-w` option) is made of an arbitrary number of lexemes. Though there are only 2 types of the lexemes:
-- offset lexeme (`[...]`)
-- search lexeme (`<...>`)
+- offset lexeme (`[..]`)
+- search lexeme (`<..>`)
 
 ### Walking with subscripts (offset lexemes)
-offsets are always enclosed into square brackets `[`,`]`, selecting of JSON elements always happens from the JSON root.
+offsets are always enclosed into square brackets `[`,`]`, selecting of JSON elements always happens from a root.
 Both arrays and objects can be subscripted using numerical offset, though it's best to utilize literal offsets to subscript objects.
 E.g. let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
 ```
@@ -281,7 +282,8 @@ bash $ <ab.json jtc -w'[Directory][1][address]'
 }
 bash $
 ```
-or, equally could be done like this, but the former syntax is preferable (for your own good):
+or, equally could be done like this, but the former syntax is preferable (for your own good - when giving indices you need 
+to _guess_ the index of a labeled entry, which might be prone to mistakes):
 ```
 bash $ <ab.json jtc -w'[0][1][0]'
 {
@@ -329,7 +331,7 @@ or entirely missed. First position designates beginning of the selection, the la
 (i.e. not including the indexed element itself)
 - positive `N` subscripts `N`th element from the beginning of the collection (whether it's array or an object)
 - negative `N` subscripts the `N`th element from the end of the collection.
-- empty (missed N) tells to address either from the the beginning of the collection (in the first position),
+- empty (missed `N`) tells to address either from the the beginning of the collection (in the first position),
 or from the end (last position) 
 
 Thus, multiple notations with the same semantics are possible, e.g.:
@@ -351,12 +353,12 @@ bash $
 ### Searching JSON
 Walk-path lexemes enclosed into `<`,`>` braces instruct to perform a _recursive_ search of the value under a selected JSON node. 
 I.e., if the search lexeme appears as the first one in the walk-path, then the search will be done from the root, otherwise
-from the node in JSON where a prior lexeme stopped.
+from the node in JSON where a prior lexeme has finished.
 
 By default, if no modifying suffixes given, a search lexeme will search _JSON string_ values only (i.e. it won't match 
 _JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search find a match:
 ```
-bash $ <ab.json jtc -w'[Directory][0]<New York>'
+bash $ <ab.json jtc -w'<New York>'
 "New York"
 bash $
 ```
@@ -367,7 +369,7 @@ bash $
 ```
 
 #### Searching JSON with RE
-Search lexemes support suffixes: an optional one letter following the closing bracket.
+Search lexemes may have various suffixes: an optional signle character following the closing bracket.
 These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a regex search among string values
 (btw, RE in `jtc` are PCRE):
 ```
@@ -380,22 +382,36 @@ bash $
 there are following suffixes to control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ value
   * `R`: the lexeme is a search RE, only _JSON sting_ values searched
-  * `l`: fully matches _JSON label_
-  * `L`: the lexeme is a search RE, only _JSON labels_ searched
-  * `d`: fully matches _JSON number_
   * `D`: the lexeme is an RE, only _JSON numerical_ values searched
+  * `d`: fully matches _JSON number_
   * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches _JSON null_ value, the lexeme value is ignored, could be anything, like `<null>n`, or `<>n`, etc
+  * `l`: fully matches _JSON label_
+  * `L`: the lexeme is a search RE, only _JSON labels_ searched
   * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value is ignored
-  * `o`: matches any JSON object - `{...}`, the lexeme value is ignored
-  * `i`: matches any JSON array (iterable/indexable) `[...]`, , the lexeme value is ignored
+  * `o`: matches any JSON object - `{..}`, the lexeme value is ignored
+  * `i`: matches any JSON array (iterable/indexable) `[..]`, , the lexeme value is ignored
   * `c`: matches either arrays or objects; the content within the encasement is ignored
-  * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
-  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
   * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
-  * `v`: not a search, it's a directive: instructs to treat a label/index as a value
+  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
+  * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
+  * `s`: matches a JSON value previously strored in the namespace by directives: `<..>k`, `<..>v`
+  * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
 
-\- as you can see, capitalizing either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
+\- as you can see, capitalizaztion of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
+
+#### Walk directives and Namespaces
+there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certaion actions
+with the currently walked JSON elements:
+  * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme
+  * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
+  can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key (label/index) into
+  the corresponding namespace
+  * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
+
+Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON
+Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in templates and arguments
+for a shell evaluation
 
 #### Search quantifiers
 Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix).
@@ -446,7 +462,7 @@ I.e., once the label lexeme is attached to the search lexeme over `:`, it signif
 #### Non-recursive search
 Sometimes there's a need to apply a non-recursive search onto collectable JSON nodes (arrays, objects) - i.e. find a value within
 immediate children of the element and do not descend recursively. The notation facilitating such search is the same one, but
-angular brackets to be put inside-out, i.e.: `>...<`. To illustrate that: say, we want to find all string values in the 1st `Directory`
+angular brackets to be put inside-out, i.e.: `>..<`. To illustrate that: say, we want to find all string values in the 1st `Directory`
 record containing the letter `o`. If we do this using a recursive search, then all following entries will be found:
 ```
 bash $ <ab.json jtc -w'[Directory] [0] <o>R:'
