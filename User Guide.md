@@ -1347,7 +1347,7 @@ bash $ <ab.json jtc -w'<name>l:'
 "Ivan"
 "Jane"
 bash $
-bash $ <ab.json jtc -w'<name>l:' -eu echo {} \| tr "[:lower:]" "[:upper:]" \; | jtc -w'<name>l:'
+bash $ <ab.json jtc -w'<name>l:' -eu echo '"{}"' \| tr "[:lower:]" "[:upper:]" \; | jtc -w'<name>l:'
 "JOHN"
 "IVAN"
 "JANE"
@@ -1397,7 +1397,7 @@ Hopefully this example will clarify:
 - say (just for the sake of example), we want to add to every record's `children` the `name` of the person, but not just - we
 want to add it in all capitals (i.e. transform the record).
 ```
-bash $ <ab.json jtc -ei echo {} \| tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:' | jtc -lrw'<name>l:' -w'<children>l:'
+bash $ <ab.json jtc -ei echo '"{}"' \| tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:' | jtc -lrw'<name>l:' -w'<children>l:'
 "name": "John"
 "children": [ "Olivia", "JOHN" ]
 "name": "Ivan"
