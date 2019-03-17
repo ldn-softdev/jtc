@@ -47,7 +47,8 @@
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
-6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
+7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
@@ -1559,7 +1560,7 @@ bash $ echo '{ "label": "value" }' | jtc
 {
    "label": "value"
 }
-dlyssenk $ echo '{ "label": "value" }' | jtc -w'<label>l<>k' -u'<label>l<lbl>k' -T'"new {lbl}"'
+bash $ echo '{ "label": "value" }' | jtc -w'<label>l<>k' -u'<label>l<lbl>k' -T'"new {lbl}"'
 {
    "new label": "value"
 }
@@ -1572,13 +1573,30 @@ bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc
    "pi": 3.14,
    "type": "irrational"
 }
-dlyssenk $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'{ "{val}": {{key}} }' -p
+bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'{ "{val}": {{key}} }' -p
 {
    "3.14": "pi",
    "irrational": "type"
 }
 bash $ 
 ```
+
+
+
+## Templates
+Templates can be used upon walking, insertion, updates and when comparing. The result of template 
+[interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
+still must be a valid JSON. When walking only is in process, then template  interpolation occurs from the walk-path (`-w`):
+```
+bash $ <ab.json jtc -w'[0][0]<number>l:' 
+"112-555-1234"
+"113-123-2368"
+bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
+"+1 112-555-1234"
+"+1 113-123-2368"
+bash $ 
+```
+
 
 
 
