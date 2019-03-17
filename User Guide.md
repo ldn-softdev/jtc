@@ -416,28 +416,28 @@ for a shell evaluation.
 
 Say, we have a following JSON:
 ```
-bash $ echo '{ "key": "value 2", "list":[ { "value 1": "abcde" }, { "value 2": 12345 } ] }' | jtc
+bash $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc 
 {
-   "key": "value 2",
+   "item": "bread",
    "list": [
       {
-         "value 1": "abcde"
+         "milk": 0.90
       },
       {
-         "value 2": 12345
+         "bread": 1.20
       }
    ]
 }
 bash $ 
 ```
-the ask here is to retrieve a value defined by `key` - that would requie a cross-referece look up.
-Using namespaces, this becomes a trivial task:
+the ask here is to retrieve a value from `list` defined by `item` - that would requie a cross-referece look up.
+Using namespaces it becomes a trivial task:
 ```
-bash $ echo '{ "key": "value 2", "list":[ { "value 1": "abcde" }, { "value 2": 12345 } ] }' | jtc -w'[key]<val>v[^0][list]<val>t'
-12345
+dlyssenk $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc -w'[item]<lbl>v[^0][list]<lbl>t'
+1.20
 bash $ 
 ```
-- `[key]<val>v` - will retrieve a value in `key` and store it in the namespace `val`
+- `[item]<lbl>v` - will retrieve a value in `key` and store it in the namespace `val`
 - `[^0][list]<val>t` - will reset the point of departure back to the root, then will walk to `list` and will search recursively
 the label matching the value stored in the namespace `val` (which is `value 2`)
 
