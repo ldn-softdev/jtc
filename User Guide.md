@@ -24,7 +24,7 @@
    * [Walking multiple paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-paths)
      * [Sequential walk processing (`-n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing)
      * [Displaying walks with labels (`-l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-walks-with-labels)
-     * [Wrapping resulted walks to JSON (`-j`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json)
+     * [Wrapping resulted walks to JSON (`-j, -jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json)
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
 3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
@@ -662,7 +662,8 @@ bash $
 ```
 
 #### Wrapping resulted walks to JSON
-`-j` does a quite simple thing - it wraps walked entries back to JSON, however predicated by `-l` and `-n` options the result will vary:
+`-j` does a quite simple thing - it wraps walked entries back into a _JSON array_, however predicated by `-l` and `-n` options
+the result will vary:
 - `-j` without `-l` will just arrange walked entries into a JSON array:
   ```
   bash $ <ab.json jtc -w '<name>l:' -w'<number>l:' -nj 
@@ -780,6 +781,36 @@ bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:' -
 ]
 bash $
 ```
+
+`-jj` let wrapping walked JSON elements into a _JSON object_. All the elements in JSON object must have labels, thus any walked elements
+which do not have labels (i.e. elements in _JSON array_ and root) will be ignored.
+
+E.g., let's dump all values from `Jane`'s record and wrap them all into an object:
+```
+bash $ <ab.json jtc -w'<Jane>[-1]<>a:' 
+{
+   "age": 25,
+   "city": "Denver",
+   "name": "Jane",
+   "number": [
+      "358-303-0373",
+      "333-638-0238"
+   ],
+   "postal code": 80206,
+   "spouse": "Chuck",
+   "state": "CO",
+   "street address": "6213 E Colfax Ave",
+   "type": [
+      "office",
+      "home"
+   ]
+}
+bash $ 
+```
+As you can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output,
+because they are enlisted as array and therefore have no attached labels (and hence were ignored).
+
+Another point to note: the values with the clashing labels will be reassembled into an array
 
 #### Succinct walk-path syntax
 If you look at the prior example, you may notice that a common part of both walk-paths (`[Directory][:]`) we had to give twice. There's
@@ -1237,19 +1268,14 @@ bash $
 ```
 Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - option `-e` must precede `-i`,`-u`
-- cli sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
-- any occurrence of `{}`, `[]`, `{-}`, `[-]`, will be interpolated with the respective JSON entry being updated (see below)
+- cli arguments sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
+- the cli is also subjected for interpolation before it gets shell evaluated
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
-- if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
+- if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: ` \| `
 - returned result of a shell evaluation still must be a valid JSON
 - failed or empty results of the shell evaluations are ignored (JSON entry wont be updated/inserted, 
 rather proceed to the next walked entry for another update attempt)
 
-There're substitution patterns:
-- `{}`  - will substitute JSON (pointed by `-w`) as it is
-- `{-}` - if (and only) a substituted JSON is a string, then substitution occurs dropping outer quotes 
-- `[]`  - will substitute with a JSON element's label/index (pointed by `-w`)
-- `[-]` - if (and only) a substitution is a label (which is a JSON string) then substitution occurs dropping outer quotes
 
 ### Mixed use of arguments without `-e`
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
@@ -1261,7 +1287,7 @@ then all subsequent `<walk-path>` apply onto the first argument (here `file.json
 \- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
 
 That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: _all specified `<walk-path>`
-will be processed in a consecutive order, one by one_.
+will be processed in a consecutive order, one by one (i.e. interleaving occurs only with `-w` walks)_.
 
 
 ### Mixed use of arguments with `-e`
