@@ -416,17 +416,13 @@ for a shell evaluation.
 
 Say, we have a following JSON:
 ```
-bash $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc 
+bash $ echo '{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' | jtc 
 {
    "item": "bread",
-   "list": [
-      {
-         "milk": 0.90
-      },
-      {
-         "bread": 1.20
-      }
-   ]
+   "list": {
+      "bread": 1.20,
+      "milk": 0.90
+   }
 }
 bash $ 
 ```
@@ -437,9 +433,9 @@ dlyssenk $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 }
 1.20
 bash $ 
 ```
-- `[item]<lbl>v` - will retrieve a value in `key` and store it in the namespace `val`
-- `[^0][list]<val>t` - will reset the point of departure back to the root, then will walk to `list` and will search recursively
-the label matching the value stored in the namespace `val` (which is `value 2`)
+- `[item]<lbl>v` - will retrieve a value in `item` and store it in the namespace `lbl`
+- `[^0][list]<val>t` - will reset the point of departure back to the root, then will select `list` and search the label
+matching the value stored in the namespace `lbl` (which is `bread`)
 
 
 #### Search quantifiers
