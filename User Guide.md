@@ -1168,6 +1168,93 @@ Here's the matrix table for update operations with and without merging:
 - when updating without `-m`, the operation is straightforward - a source overwrites the destination
 - when objects merge-updated, for clashing labels, a source does overwrite the destination (unlike with insertion)
 
+#### Updating labels
+A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespase.
+Another function featured by the lexeme is that the label is reinterpretted as a _JSON string_ value, that allows rewriting labels
+using update operation (insert into labels is not possible even semantically)
+
+As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
+```
+bash $ <ab.json jtc -w'<address>l:[:]<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'<address>l:' -rl
+"address": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" }
+"address": { "CITY": "Seattle", "POSTAL CODE": 98104, "STATE": "WA", "STREET ADDRESS": "5423 Madison St" }
+"address": { "CITY": "Denver", "POSTAL CODE": 80206, "STATE": "CO", "STREET ADDRESS": "6213 E Colfax Ave" }
+bash $ 
+```
+
+NOTE: _mind the caveat though - destination walk-path may become invalid (namely when altering labels of the nested elements after
+the parent's label has been altered), in such case the update operation won't be applied due to invalidated destination_:
+```
+bash $ <ab.json jtc -x'[Directory][0][address]' -y'<>k' -y'[:]<>k'
+"address"
+"city"
+"postal code"
+"state"
+"street address"
+bash $ 
+bash $ <ab.json jtc -x'[Directory][0][address]' -y'<>k' -y'[:]<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+error: destination walk became invalid, skipping update
+{
+   "ADDRESS": {
+      "city": "New York",
+      "postal code": 10012,
+      "state": "NY",
+      "street address": "599 Lafayette St"
+   },
+   "age": 25,
+   "children": [
+      "Olivia"
+   ],
+   "name": "John",
+   "phone": [
+      {
+         "number": "112-555-1234",
+         "type": "mobile"
+      },
+      {
+         "number": "113-123-2368",
+         "type": "mobile"
+      }
+   ],
+   "spouse": "Martha"
+}
+bash $ 
+```
+
+to achieve what's intended, first the deepest labels have to be walked/processed and then the outers:
+```
+bash $ <ab.json jtc -x'[Directory][0][address]' -y'[:]<>k' -y'<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+{
+   "ADDRESS": {
+      "CITY": "New York",
+      "POSTAL CODE": 10012,
+      "STATE": "NY",
+      "STREET ADDRESS": "599 Lafayette St"
+   },
+   "age": 25,
+   "children": [
+      "Olivia"
+   ],
+   "name": "John",
+   "phone": [
+      {
+         "number": "112-555-1234",
+         "type": "mobile"
+      },
+      {
+         "number": "113-123-2368",
+         "type": "mobile"
+      }
+   ],
+   "spouse": "Martha"
+}
+bash $ 
+```
+
+
 ### Insert, Update with move
 if a source argument for either `-i` or `-u` is given in the form of `<file>` or `<JSON>`, then those obviously cannot be moved.
 The move semantic is only applicable when the argument is given in the form of a `<walk-path>`, then upon completing
