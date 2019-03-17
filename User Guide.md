@@ -38,6 +38,7 @@
      * [Insertion matrix with merging (`-m`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-with-merging)
    * [Update operations (`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations)
      * [Update operations matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations-matrix)
+     * [Updating labels](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#updating-labels)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
    * [Mixed use of arguments without `-e` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without--e)
@@ -1175,7 +1176,7 @@ using update operation (insert into labels is not possible even semantically)
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
 ```
-bash $ <ab.json jtc -w'<address>l:[:]<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'<address>l:' -rl
+bash $ <ab.json jtc -w'<address>l:[:]<>k' -eu echo '"{}"' \| tr '[:lower:]' '[:upper:]' \; | jtc -w'<address>l:' -rl
 "address": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" }
 "address": { "CITY": "Seattle", "POSTAL CODE": 98104, "STATE": "WA", "STREET ADDRESS": "5423 Madison St" }
 "address": { "CITY": "Denver", "POSTAL CODE": 80206, "STATE": "CO", "STREET ADDRESS": "6213 E Colfax Ave" }
@@ -1192,7 +1193,7 @@ bash $ <ab.json jtc -x'[Directory][0][address]' -y'<>k' -y'[:]<>k'
 "state"
 "street address"
 bash $ 
-bash $ <ab.json jtc -x'[Directory][0][address]' -y'<>k' -y'[:]<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+bash $ <ab.json jtc -x'[Directory][0][address]' -y'<>k' -y'[:]<>k' -eu echo '"{}"' \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
 error: destination walk became invalid, skipping update
 error: destination walk became invalid, skipping update
 error: destination walk became invalid, skipping update
@@ -1226,7 +1227,7 @@ bash $
 
 to achieve what's intended, first the deepest labels have to be walked/processed and then the outers:
 ```
-bash $ <ab.json jtc -x'[Directory][0][address]' -y'[:]<>k' -y'<>k' -eu echo {{}} \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
+bash $ <ab.json jtc -x'[Directory][0][address]' -y'[:]<>k' -y'<>k' -eu echo '"{}"' \| tr '[:lower:]' '[:upper:]' \; | jtc -w'[Directory][0]'
 {
    "ADDRESS": {
       "CITY": "New York",
