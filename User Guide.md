@@ -1539,6 +1539,48 @@ bash $
 
 
 
+## Interpolation
+Interpolation may occur either for argument undergoing
+[shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
+(`-e` in insert/update operations), or for template arguments (`-T`).
+
+Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
+shell cli) of `{}` or `{{}}` will trigger interpolation:
+- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
+- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace
+The difference between single `{}` and double `{{}}` notation: upon interpolation of single notation when _JSON string_ is interpolated
+then outer quote marks are dropped (other JSON elements interpolated w/o any change); when double notation is getting interpolated
+then no exemption made - all JSON elements interpolated without any changes.
+
+A string interpolation w/o outer quotes is handy when requierd altering an existing string, here's example of altering JSON label:
+```
+bash $ echo '{ "label": "value" }' | jtc 
+{
+   "label": "value"
+}
+dlyssenk $ echo '{ "label": "value" }' | jtc -w'<label>l<>k' -u'<label>l<lbl>k' -T'"new {lbl}"'
+{
+   "new label": "value"
+}
+bash $ 
+```
+Here's an illustration when double braces are handier (e.g., swapping around labels and values):
+```
+bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc
+{
+   "pi": 3.14,
+   "type": "irrational"
+}
+dlyssenk $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'{ "{val}": {{key}} }' -p
+{
+   "3.14": "pi",
+   "irrational": "type"
+}
+bash $ 
+```
+
+
+
 ## More Examples
 ### Working with templates
 Say, we need to craft a new JSON out of our address book, extracting only selected (and possibly renamed) fields. This is attainable
