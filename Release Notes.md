@@ -13,10 +13,13 @@ walk-paths
   - `<..>v`: save into a namespace current element's JSON **v**alue
   - `<..>z`: **z**ip (erase) given name from the namespace (`<>z` will clear entire namespace)
   - `<..>s`: **s**earch (off the current node) for the JSON matching one in the namespace  
-  - `<..>t`: search (off the current node) for the **t**ag (label) matching one in the namespace  
+  - `<..>t`: search (off the current node) for the **t**ag (label) matching one in the namespace
 #### Improvements, changes, fixes:
 - improved parser debug alignments and aligned indentation for relevant calls/data structures
 - made debugs unicode UTF-8 compatible
 - debug locus now shows offset correctly and in UTF-8 unicode characters
 - fixed issue, where a non-recursive array search (`>...<i`) might produce a false positive match for objects
 - changed semantic for directive `<>v`: in the previous version (1.59) it used to facilitate the same function as `<>k` now
+- substitution operation now replaced with interpolation: removed parsing of `{-}`,`[]`,`[-]`; interpolation now occurs
+with `{}` and `{{}}`, the latter one interpolates JSON as it is, the former one affects string interpolation only - the string value
+is interpolated without outer quote marks
