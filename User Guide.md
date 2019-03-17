@@ -429,7 +429,7 @@ bash $
 the ask here is to retrieve a value from `list` defined by `item` - that would requie a cross-referece look up.
 Using namespaces it becomes a trivial task:
 ```
-dlyssenk $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc -w'[item]<lbl>v[^0][list]<lbl>t'
+bash $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc -w'[item]<lbl>v[^0][list]<lbl>t'
 1.20
 bash $ 
 ```
