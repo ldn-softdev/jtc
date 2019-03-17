@@ -8,7 +8,7 @@ _Relese Notes for `jtc` v.1.60_
 - settled on unified interpolation semantic for templates and shell-evaluation
 - added namespaces (allow storing JSON elements in the named space while walking paths); namespaces are reused in templates and in
 walk-paths
-- added new search keys facilitating namespaces: `<..>k`, `<..>v`, `<..>z`, `<..>s`, `<..>t`
+- added new search keys and directives facilitating namespaces: `<..>k`, `<..>v`, `<..>z`, `<..>s`, `<..>t`
   - `<..>k`: save current JSON element's **k**ey (label/index); it also reinterprets label/index as the value
   - `<..>v`: save into a namespace current element's JSON **v**alue
   - `<..>z`: **z**ip (erase) given name from the namespace (`<>z` will clear entire namespace)
