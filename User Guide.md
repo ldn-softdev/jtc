@@ -434,7 +434,7 @@ dlyssenk $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 }
 bash $ 
 ```
 - `[item]<lbl>v` - will retrieve a value in `item` and store it in the namespace `lbl`
-- `[^0][list]<val>t` - will reset the point of departure back to the root, then will select `list` and search the label
+- `[^0][list]<lbl>t` - will reset the point of departure back to the root, then will select `list` and search the label
 matching the value stored in the namespace `lbl` (which is `bread`)
 
 
