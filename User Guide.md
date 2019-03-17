@@ -43,6 +43,7 @@
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
    * [Mixed use of arguments without `-e` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without--e)
    * [Mixed use of arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with--e)
+   * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
@@ -1356,7 +1357,7 @@ bash $
 Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - option `-e` must precede `-i`,`-u`
 - cli arguments sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
-- the cli is also subjected for interpolation before it gets shell evaluated
+- the cli is also subjected for namespace and walked elements interpolation before it gets shell evaluated
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
 - if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: ` \| `
 - returned result of a shell evaluation still must be a valid JSON
@@ -1411,6 +1412,38 @@ bash $
 
 In case if only a single option instance (`-u`/`-i`) is used, then both the source (of interpolation) and the destination
 (of operation) would be provided with `-w` option argument
+
+
+### Summary of modes of operations
+`jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilites:
+
+##### _A. Update JSON from other locations of the same JSON:_
+`<file.json jtc -w<dst_wlk> -u<src_wlk>`
+* destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk`
+
+#####
+##### _B. Update JSON with a static JSON (either from file, or a spelled literally):_
+`<file.json jtc -w<dst_wlk> -u<static.json>`
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static.json` (a file, or a literal JSON)
+
+#####
+##### _C. Update JSON from some locations from a static JSON (either from file, or a spelled literally):_
+`<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>`
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static.json`
+
+#####
+##### _D. Update JSON with the transformed JSON elements via shell cli:_
+`<file.json jtc -w<dst_wlk> -e -u<cli>`
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
+interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces here is also populated while
+walking `dst_wlk`.
+
+#####
+##### _E. Update JSON from some locations of the transformed JSON via shell cli:_
+`<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>`
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walking shell-evaluated `cli`. 
+`cli` here is subjected for interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces
+here is also populated while walking `dst_wlk`.
 
 
 ## Comparing JSONs
