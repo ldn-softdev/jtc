@@ -1,6 +1,6 @@
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.60_)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.60_, currently being updated)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -400,6 +400,7 @@ there are following suffixes to control search behavior:
 
 \- as you can see, capitalizaztion of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
+
 #### Walk directives and Namespaces
 there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certain actions
 with the currently walked JSON elements:
@@ -413,6 +414,32 @@ Thus a _namespace_ is a container within `jtc`, which allows storing JSON elemen
 Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in templates and arguments
 for a shell evaluation.
 
+Say, we have a following JSON:
+```
+bash $ echo '{ "key": "value 2", "list":[ { "value 1": "abcde" }, { "value 2": 12345 } ] }' | jtc
+{
+   "key": "value 2",
+   "list": [
+      {
+         "value 1": "abcde"
+      },
+      {
+         "value 2": 12345
+      }
+   ]
+}
+bash $ 
+```
+the ask here is to retrieve a value defined by `key` - that would requie a cross-referece look up.
+Using namespaces, this becomes a trivial task:
+```
+bash $ echo '{ "key": "value 2", "list":[ { "value 1": "abcde" }, { "value 2": 12345 } ] }' | jtc -w'[key]<val>v[^0][list]<val>t'
+12345
+bash $ 
+```
+- `[key]<val>v` - will retrieve a value in `key` and store it in the namespace `val`
+- `[^0][list]<val>t` - will reset the point of departure back to the root, then will walk to `list` and will search recursively
+the label matching the value stored in the namespace `val` (which is `value 2`)
 
 
 #### Search quantifiers
@@ -425,10 +452,9 @@ Quantifiers exist in the following formats:
 caveat: `N` here cannot go negative (there's no way of knowing upfront how many matches would be produced, so it's impossible to select
 a range/slice based off the last match), the rest of the notation rules apply
 
-To illustrate the quantifiers (with suffixes), let's dump all the JSON arrays in the `Directory`:
+To illustrate the quantifiers (with suffixes), let's dump all the JSON arrays in the `Directory`, except the top one:
 ```
-bash $ <ab.json jtc -w'<>i:' -r
-[ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ]
+bash $ <ab.json jtc -w'<>i1:' -r
 [ "Olivia" ]
 [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ]
 []
@@ -437,7 +463,8 @@ bash $ <ab.json jtc -w'<>i:' -r
 [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
 bash $
 ```
-\- the final `:` in the walk path is the empty quantifier, which selects (prints) all the matches
+\- the trailing `1:` in the walk path is the range quantifier, which selects (prints) all the matches starting from second one (all
+quantifiers and indices are zero-based)
 
 #### Scoped search 
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e. the JSON node
