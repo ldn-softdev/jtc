@@ -437,6 +437,19 @@ bash $
 - `[^0][list]<lbl>t` - will reset the point of departure back to the root, then will select `list` and search the label
 matching the value stored in the namespace `lbl` (which is `bread`)
 
+Similar way labels/indices could be accessed and stored in the namespaces - using directive `k`. The directive lets reinterpretting
+label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ value respectively.
+Say, we want to list all labels in the `address` record:
+```
+bash $ <ab.json jtc -w'<address>l[:]<>k'
+"city"
+"postal code"
+"state"
+"street address"
+bash $ 
+```
+When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
+
 
 #### Search quantifiers
 Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix).
