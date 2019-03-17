@@ -1586,7 +1586,9 @@ bash $
 ## Templates
 Templates can be used upon walking, insertion, updates and when comparing. The result of template 
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
-still must be a valid JSON. When walking only is in process, then template  interpolation occurs from the walk-path (`-w`):
+still must be a valid JSON.
+
+When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
 ```
 bash $ <ab.json jtc -w'[0][0]<number>l:' 
 "112-555-1234"
@@ -1596,6 +1598,9 @@ bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
 "+1 113-123-2368"
 bash $ 
 ```
+
+For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation itself and
+never from `-w`:
 
 
 
