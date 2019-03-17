@@ -46,7 +46,8 @@
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
-5. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
+6. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
      
      
