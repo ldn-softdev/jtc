@@ -1553,7 +1553,7 @@ Interpolation may occur either for argument undergoing
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
 - if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
-- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace
+- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace.
 The difference between single `{}` and double `{{}}` notation: upon interpolation of single notation when _JSON string_ is interpolated
 then outer quote marks are dropped (other JSON elements interpolated w/o any change); when double notation is getting interpolated
 then no exemption made - all JSON elements interpolated without any changes.
