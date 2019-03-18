@@ -49,7 +49,8 @@
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
-   * [Generating new JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-jsons)
+   * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
+   * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
      
      
 ## Displaying JSON
@@ -1643,7 +1644,7 @@ Thus using teamplates it becomes easy to transmutate existing JSON into a new on
 
 
 ## More Examples
-### Generating new JSONs (1)
+### Generating new JSON (1)
 Say, we need to craft a new JSON out of our address book, extracting only selected (and possibly renamed) fields. This is attainable
 if 3 simple steps:
 1. First let's prepare a template of our new
@@ -1720,7 +1721,7 @@ NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather
 process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
 onto respective entries).
 
-### Generating new JSONs (2)
+### Generating new JSON (2)
 The same operations could have been achieved in a different (probably a more concise) way:
 1. purge JSON leaving only requried records (namely `name`, `age`, `children`):
 ```
