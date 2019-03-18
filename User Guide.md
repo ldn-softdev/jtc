@@ -49,7 +49,7 @@
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
-   * [Working with templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#working-with-templates)
+   * [Generating new JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-jsons)
      
      
 ## Displaying JSON
@@ -1643,7 +1643,7 @@ Thus using teamplates it becomes easy to transmutate existing JSON into a new on
 
 
 ## More Examples
-### Working with templates
+### Generating new JSONs (1)
 Say, we need to craft a new JSON out of our address book, extracting only selected (and possibly renamed) fields. This is attainable
 if 3 simple steps:
 1. First let's prepare a template of our new
@@ -1691,7 +1691,7 @@ into the root (if no `-w` given, root is assumed)
 
 3. Map (via update) required values from the address book (`ab.json`) onto the respective values in the template (`abc.json`):
 ```
-bash $ jtc -n -w'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
+bash $ jtc -nw'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
 [
    {
       "Age": 25,
@@ -1720,3 +1720,60 @@ NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather
 process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
 onto respective entries).
 
+### Generating new JSONs (2)
+The same operations could have been achieved in a different (probably a more concise) way:
+1. purge JSON leaving only requried records (namely `name`, `age`, `children`):
+```
+bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]'
+[
+   {
+      "age": 25,
+      "children": [
+         "Olivia"
+      ],
+      "name": "John"
+   },
+   {
+      "age": 31,
+      "children": [],
+      "name": "Ivan"
+   },
+   {
+      "age": 25,
+      "children": [
+         "Robert",
+         "Lila"
+      ],
+      "name": "Jane"
+   }
+]
+bash $ 
+```
+
+2. update all labels (in 3 succesive updates) with required new labels:
+```
+bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]' | jtc -w'<age>l:<>k' -u'"Age"' | jtc -w'<children>l:<>k' -u'"Children"' | jtc -w'<name>l:<>k' -u'"Person"'
+[
+   {
+      "Age": 25,
+      "Children": [
+         "Olivia"
+      ],
+      "Person": "John"
+   },
+   {
+      "Age": 31,
+      "Children": [],
+      "Person": "Ivan"
+   },
+   {
+      "Age": 25,
+      "Children": [
+         "Robert",
+         "Lila"
+      ],
+      "Person": "Jane"
+   }
+]
+bash $ 
+```
