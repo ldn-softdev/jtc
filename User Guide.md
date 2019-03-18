@@ -1447,6 +1447,8 @@ walking `dst_wlk`.
 `cli` here is subjected for interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces
 here is also populated while walking `dst_wlk`.
 
+_NOTE: if destination walk (`-w`) is pointing to the root of JSON then the switch can be entirely dismissed (in any of the above
+examples)_
 
 ## Comparing JSONs
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
