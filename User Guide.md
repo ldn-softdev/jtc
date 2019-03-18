@@ -1,6 +1,7 @@
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.60_, currently being updated)
+
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.60_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -373,7 +374,7 @@ bash $
 ```
 
 #### Searching JSON with RE
-Search lexemes may have various suffixes: an optional signle character following the closing bracket.
+Search lexemes may have various suffixes: an optional single character following the closing bracket.
 These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a regex search among string values
 (btw, RE in `jtc` are PCRE):
 ```
@@ -399,10 +400,10 @@ there are following suffixes to control search behavior:
   * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
   * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
-  * `s`: matches a JSON value previously strored in the namespace by directives: `<..>k`, `<..>v`
+  * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
   * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
 
-\- as you can see, capitalizaztion of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
+\- as you can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
 
 #### Walk directives and Namespaces
@@ -430,7 +431,7 @@ bash $ echo '{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' | jtc
 }
 bash $ 
 ```
-the ask here is to retrieve a value from `list` defined by `item` - that would requie a cross-referece look up.
+the ask here is to retrieve a value from `list` defined by `item` - that would require a cross-reference look up.
 Using namespaces it becomes a trivial task:
 ```
 bash $ echo '{ "item": "bread", "list":[ { "milk": 0.90 }, { "bread": 1.20 } ] }' | jtc -w'[item]<lbl>v[^0][list]<lbl>t'
@@ -441,7 +442,7 @@ bash $
 - `[^0][list]<lbl>t` - will reset the point of departure back to the root, then will select `list` and search the label
 matching the value stored in the namespace `lbl` (which is `bread`)
 
-Similar way labels/indices could be accessed and stored in the namespaces - using directive `k`. The directive lets reinterpretting
+Similar way labels/indices could be accessed and stored in the namespaces - using directive `k`. The directive lets reinterpreting
 label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ value respectively.
 Say, we want to list all labels in the `address` record:
 ```
@@ -1174,8 +1175,8 @@ Here's the matrix table for update operations with and without merging:
 - when objects merge-updated, for clashing labels, a source does overwrite the destination (unlike with insertion)
 
 #### Updating labels
-A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespase.
-Another function featured by the lexeme is that the label is reinterpretted as a _JSON string_ value, that allows rewriting labels
+A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
+Another function featured by the lexeme is that the label is reinterpreted as a _JSON string_ value, that allows rewriting labels
 using update operation (insert into labels is not possible even semantically)
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
@@ -1418,7 +1419,7 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 
 
 ### Summary of modes of operations
-`jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilites:
+`jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilities:
 
 ##### _A. Update JSON from other locations of the same JSON:_
 `<file.json jtc -w<dst_wlk> -u<src_wlk>`
@@ -1498,7 +1499,7 @@ If multiple pairs of JSONs compared, zero code is returned only when all compare
 
 ### Comparing JSON schemas
 JSON schema essentially is a JSON structure (JSON containers, labels, indices) without leaf data. I.e., two JSONs may have
-different contents (leaf data), while their structures could be the same (though the statment is rather loose - JSON schema does
+different contents (leaf data), while their structures could be the same (though the statement is rather loose - JSON schema does
 include types of the leaf data as well).
 
 E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
@@ -1513,7 +1514,7 @@ bash $ <ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1]' -
 bash $ 
 ```
 
-However, their schemas would be the same. To compare schemas of two jsons (well, with applied exemption on checking leaves data types),
+However, their schemas would be the same. To compare schemas of two JSONs (well, with applied exemption on checking leaves data types),
 label directive `<>v` used together with `<>c` search suffix come handy:
 ```
 bash $ <ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l
@@ -1551,13 +1552,13 @@ Interpolation may occur either for argument undergoing
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
-- if the content under tbraces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
+- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
 - if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace
 The difference between single `{}` and double `{{}}` notation: upon interpolation of single notation when _JSON string_ is interpolated
 then outer quote marks are dropped (other JSON elements interpolated w/o any change); when double notation is getting interpolated
 then no exemption made - all JSON elements interpolated without any changes.
 
-A string interpolation w/o outer quotes is handy when requierd altering an existing string, here's example of altering JSON label:
+A string interpolation w/o outer quotes is handy when required altering an existing string, here's example of altering JSON label:
 ```
 bash $ echo '{ "label": "value" }' | jtc 
 {
@@ -1590,7 +1591,7 @@ bash $
 Template is a literal JSON containing tokens for
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
 insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template(s) is given
-then it's a teamplate (after interpolation) will be used for the operation, not the source walk.
+then it's a template (after interpolation) will be used for the operation, not the source walk.
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
 ```
@@ -1604,7 +1605,7 @@ bash $
 ```
 
 For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation itself and
-never from `-w`. The namespaces resulting from wakling `-w` and any of operations (`-i`, `-u`, `-c`) do not intersect or clash,
+never from `-w`. The namespaces resulting from walking `-w` and any of operations (`-i`, `-u`, `-c`) do not intersect or clash,
 as operation parameters walking (often referred as source walk) and template interpolation always occurs before starting walking `-w`
 (and generally, namespaces for `-w` and source walks even reside in different containers).
 
@@ -1640,7 +1641,7 @@ Explanations:
 namespace `val`; option `-p` turns _insert_ operation into _move_
 - `-T'{ "phone number": "+1 {val}" }'` after each walk (in `-i`) a template interpolations occurs here - a new JSON entry is generated
 from the template and namespace `val` and the new entry is then used for insertion into the respective destination walk (`-w`).
-Thus using teamplates it becomes easy to transmutate existing JSON into a new one.
+Thus using templates it becomes easy to transmutate existing JSON into a new one.
 
 
 ## More Examples
@@ -1723,7 +1724,7 @@ onto respective entries).
 
 ### Generating new JSON (2)
 The same operations could have been achieved in a different (probably a more concise) way:
-1. purge JSON leaving only requried records (namely `name`, `age`, `children`):
+1. purge JSON leaving only required records (namely `name`, `age`, `children`):
 ```
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]'
 [
@@ -1751,7 +1752,7 @@ bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -p
 bash $ 
 ```
 
-2. update all labels (in 3 succesive updates) with required new labels:
+2. update all labels (in 3 successive updates) with required new labels:
 ```
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]' | jtc -w'<age>l:<>k' -u'"Age"' | jtc -w'<children>l:<>k' -u'"Children"' | jtc -w'<name>l:<>k' -u'"Person"'
 [
