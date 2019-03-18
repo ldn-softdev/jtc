@@ -1549,8 +1549,8 @@ Interpolation may occur either for argument undergoing
 (`-e` in insert/update operations), or for template arguments (`-T`).
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
-shell cli) of `{}` or `{{}}` will trigger interpolation:
-- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
+shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
+- if the content under tbraces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
 - if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace
 The difference between single `{}` and double `{{}}` notation: upon interpolation of single notation when _JSON string_ is interpolated
 then outer quote marks are dropped (other JSON elements interpolated w/o any change); when double notation is getting interpolated
@@ -1586,9 +1586,10 @@ bash $
 
 
 ## Templates
-Templates can be used upon walking, insertion, updates and when comparing. The result of template 
-[interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
-still must be a valid JSON.
+Template is a literal JSON containing tokens for
+[interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
+insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template(s) is given
+then it's a teamplate (after interpolation) will be used for the operation, not the source walk.
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
 ```
@@ -1602,9 +1603,43 @@ bash $
 ```
 
 For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation itself and
-never from `-w`:
+never from `-w`. The namespaces resulting from wakling `-w` and any of operations (`-i`, `-u`, `-c`) do not intersect or clash,
+as operation parameters walking (often referred as source walk) and template interpolation always occurs before starting walking `-w`
+(and generally, namespaces for `-w` and source walks even reside in different containers).
 
-
+Below is an example of updating the phone records for the first entry in the `Directory`:
+```
+bash $ <ab.json jtc -w'[0][0]<phone>l'
+[
+   {
+      "number": "112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "number": "113-123-2368",
+      "type": "mobile"
+   }
+]
+bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<val>v' -T'{ "phone number": "+1 {val}" }' | jtc -w'[0][0]<phone>l'
+[
+   {
+      "phone number": "+1 112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "phone number": "+1 113-123-2368",
+      "type": "mobile"
+   }
+]
+bash $ 
+```
+Explanations:
+- `-w'[0][0]<phone>l[:]'` - that's our destination which we will be updating (i.e. all phone records in the first `Directory` entry)
+- `-pi'[0][0]<number>l:<val>v'` - we'll walk (synchronously with `-w`) all the `number` records and memorize number values in the
+namespace `val`; option `-p` turns _insert_ operation into _move_
+- `-T'{ "phone number": "+1 {val}" }'` after each walk (in `-i`) a template interpolations occurs here - a new JSON entry is generated
+from the template and namespace `val` and the new entry is then used for insertion into the respective destination walk (`-w`).
+Thus using teamplates it becomes easy to transmutate existing JSON into a new one.
 
 
 ## More Examples
