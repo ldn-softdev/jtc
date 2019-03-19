@@ -403,7 +403,7 @@ there are following suffixes to control search behavior:
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
   * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
 
-\- as you can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
+\- as one can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
 
 #### Directives and Namespaces
@@ -812,7 +812,7 @@ bash $ <ab.json jtc -w'<Jane>[-1]<>a:'
 }
 bash $ 
 ```
-As you can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output,
+As one can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output,
 because they are enlisted as array and therefore have no attached labels (and hence were ignored).
 
 Another point to note: the values with the clashing labels will be reassembled into an array
