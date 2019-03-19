@@ -17,7 +17,7 @@
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjst`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
-     * [Walk directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walk-directives-and-namespaces)
+     * [Directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
@@ -406,7 +406,7 @@ there are following suffixes to control search behavior:
 \- as you can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
 
-#### Walk directives and Namespaces
+#### Directives and Namespaces
 there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certain actions
 with the currently walked JSON elements:
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme
