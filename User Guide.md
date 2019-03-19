@@ -1104,7 +1104,7 @@ bash $ <ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street address":
 }
 bash $
 ```
-\- as you can see, the `"PO box"` label was inserted, but the destination object's value in the `"street address"` was preserved
+\- as one can see, the `"PO box"` label was inserted, but the destination object's value in the `"street address"` was preserved
 
 #### Insertion matrix without merging
 Source (JSON being inserted) and destination (JSON point where insertion occurs) elements might represent different types:
