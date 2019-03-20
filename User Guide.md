@@ -50,8 +50,11 @@
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
-   * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
-   * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
+   * [Taming duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
+     * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
+     * [Remove all but duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-all-but-duplicates)
+     * [Leave only those which have no duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-only-those-which-have-no-duplicates)
+     * [Leave all duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-all-duplicates)
      
      
 ## Displaying JSON
@@ -454,6 +457,24 @@ bash $ <ab.json jtc -w'<address>l[:]<>k'
 bash $ 
 ```
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
+
+RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
+- `$0` is auto-created for entire RE match,
+- `$1` for a first subgroup,
+- `$2` for a second subgroup, and so on
+```
+bash $ <ab.json jtc -w'<^J(.*)>R:'
+"John"
+"Jane"
+bash $ <ab.json jtc -w'<^J(.*)>R:' -T'"j{$1}"' 
+"john"
+"jane"
+bash $ 
+```
+
+
+
+
 
 
 #### Search quantifiers
@@ -1779,3 +1800,94 @@ bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -p
 ]
 bash $ 
 ```
+
+### Taming duplicates
+Quite very common tasks (and requests) for JSON is to process duplicates. Say, we deal with the following JSON:
+```
+bash $ echo '[ "str-1", true, null, 3.14, "str-1", null ]' | jtc 
+[
+   "string",
+   true,
+   null,
+   3.14,
+   "string",
+   null
+]
+bash $ 
+```
+So, let's
+#### Remove duplicates
+```
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1:' -p
+[
+   "string",
+   true,
+   null,
+   3.14
+]
+bash $ 
+```
+by now if you grasp the idea of the walk-path, it's not that difficult to read/understand:
+- for each walked top element `[:]`,
+- `<V>v` - memorize its value in the namespace `V`,
+- then reset the walk-path to the root `[^0]`
+- find all instances of the memorized JSON element (memorized in the namespace `V`) starting from 2nd (`<V>s1:`)
+
+Because switch `-p` is given, all the elements that did not fail (which would be only duplicates) will be purged, thus leaving
+the list only with non-duplicate elements
+
+But there's a reverse action:
+#### Remove all but duplicates
+```
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1:' -pp
+[
+   "string",
+   null
+]
+bash $ 
+```
+That one is obvious - we just reversed the prior example.
+
+How about:
+#### Leave only those which have no duplicates
+```
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1[^0]<V>s:' -p 
+[
+   true,
+   3.14
+]
+bash $ 
+```
+it's just a tiny bit more complex:
+- `[:]<V>v[^0]<V>s1` - for each element, we'll memorize it as `V` and re-search it from the root finding only the 2nd match - 
+that ensures that we found a duplicate, then
+- `[^0]<V>s:` reset the search path again to the root and now find all the elements (i.e. duplicates).
+
+that way all duplicates will be removed, leaving the array only with those which have no duplicates.
+
+and finally
+#### Leave all duplicates
+```
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1[^0]<V>s:' -pp
+[
+   "string",
+   null,
+   "string",
+   null
+]
+bash $ 
+```
+it's just a reverse action.
+
+
+
+
+
+
+
+
+
+
+
+
+
