@@ -1,5 +1,19 @@
 
 ## `jtc` Release Notes
+_Relese Notes for `jtc` v.1.61_
+#### New features:
+A small, but very useful update: RE search suffixes (`R`, `L`, `D`) now auto-populate namespaces:
+ * `$0` the namespace created for matched whole RE
+ * `$1` is created for the 1st subgroup,
+ * `$2` is created for the 2nd subgroup, and so on.
+
+Interpolation of such namespaces occurs usually, e.g.: `{$1}`
+
+#### Improvements, changes, fixes:
+ * minor correction in the jtc guide (`-g`)
+
+***
+
 _Relese Notes for `jtc` v.1.60_
 #### New features:
 - added `-jj` option to jsonize into JSON object (in addition to `-j` which jsonizes into JSON array)
