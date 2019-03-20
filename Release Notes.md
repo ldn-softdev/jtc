@@ -3,7 +3,7 @@
 _Relese Notes for `jtc` v.1.61_
 #### New features:
 A small, but very useful update: RE search suffixes (`R`, `L`, `D`) now auto-populate namespaces:
- * `$0` the namespace created for matched whole RE
+ * `$0` the namespace created for matched entire RE
  * `$1` is created for the 1st subgroup,
  * `$2` is created for the 2nd subgroup, and so on.
 
