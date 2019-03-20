@@ -10,7 +10,7 @@ A small, but very useful update: RE search suffixes (`R`, `L`, `D`) now auto-pop
 Interpolation of such namespaces occurs usually, e.g.: `{$1}`
 
 #### Improvements, changes, fixes:
- * minor correction in the jtc guide (`-g`)
+ * minor correction in the `jtc` guide (`-g`)
 
 ***
 
