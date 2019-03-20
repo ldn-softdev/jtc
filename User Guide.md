@@ -57,8 +57,8 @@
      * [Remove all but duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-all-but-duplicates)
      * [Leave only those which have no duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-only-those-which-have-no-duplicates)
      * [Leave all duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-all-duplicates)
-     
-     
+---
+
 ## Displaying JSON
 ### Pretty printing
 if no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file pointed by the argument.
