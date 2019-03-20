@@ -50,6 +50,8 @@
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+   * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
+   * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
    * [Taming duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
      * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
      * [Remove all but duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-all-but-duplicates)
