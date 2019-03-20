@@ -695,7 +695,7 @@ void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
  static jd_ptr demux_out[2] = {&Jtc::direct_output_, &Jtc::jsonized_output_};
  (this->*demux_out[opt_[CHR(OPT_JSN)].hits() > 0])(wi, group, interpolated? &tmp: nullptr);
 
- last_group_ = group
+ last_group_ = group;
 }
 
 
