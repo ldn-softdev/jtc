@@ -691,12 +691,10 @@ void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
    { tmp.parse(istr, Json::strict_trailing); interpolated = true; }
  }
 
- if(opt_[CHR(OPT_JSN)])                                         // -j given (jsonize output)
-  jsonized_output_(wi, group, interpolated? &tmp: nullptr);
- else
-  direct_output_(wi, group, interpolated? &tmp: nullptr);
+ typedef void (Jtc::*jd_ptr)(Json::iterator &, size_t, const Json *);
+ static jd_ptr demux_out[2] = {&Jtc::direct_output_, &Jtc::jsonized_output_};
 
- last_group_ = group;
+ (this->*demux_out[opt_[CHR(OPT_JSN)].hits() > 0])(wi, group, interpolated? &tmp: nullptr);
 }
 
 
@@ -1050,6 +1048,7 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
  }
                                                                 // mode == overwrite
  DBG(2) DOUT() << "overwriting destination" << endl;
+ if(dst.empty()) return;
  auto di = dst.begin();
  for(auto &src_child: *src_ptr) {
   *di = src_child;
@@ -1060,7 +1059,7 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
 
 
 void Jtc::merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode) {
- // merge int object, recursively. assert(dst.is_object() and src.is_iterable())
+ // merge into object, recursively. assert(dst.is_object() and src.is_iterable())
  if(not src.is_object()) {                                      // merge arr->obj, node by node
   DBG(2) DOUT() << "merge array into object" << endl;
   if(not merge_) return;                                        // only if -m given
@@ -1103,7 +1102,7 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }
   if(not it_src->is_string())
-   { cerr << "error: labels could be updated with valid JSON strings only" << endl; return; }
+   { cerr << "error: only labels could be updated with valid JSON strings" << endl; return; }
   auto & parent = (*it_dst)[-1];
   if(not parent.is_object())
    { cerr << "error: labels could be updated in objects only" << endl; return; }
@@ -1139,8 +1138,9 @@ bool Jtc::processed_by_cli_(Json::iterator &it) {
 
  DBG().severity(jexc_[0]);
  if(execute_cli_(jexc_[0], *it) == true) {                      // cli resulted in a valid json
-  if(subscriber_ == &Jtc::insert_by_iterator) merge_jsons_(it, jexc_[0].walk());
-  else update_jsons_(it, jexc_[0].walk());
+  typedef void (Jtc::*op_ptr)(Json::iterator &, Json::iterator);
+  static op_ptr op_json[2] = {&Jtc::update_jsons_, &Jtc::merge_jsons_};
+  (this->*op_json[subscriber_ == &Jtc::insert_by_iterator])(it, jexc_[0].walk());
  }
  return true;
 }
@@ -1433,6 +1433,7 @@ string quote_str(const string &src) {
  if(src == "|") return src;
  for(auto chr: src) {
   if(not isalnum(chr)) quoted += '\\';
+  if(chr AMONG('<', '>')) quoted.pop_back();
   quoted += chr;
  }
  return quoted;

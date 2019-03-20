@@ -62,8 +62,8 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
    '>txt<', '>txt<S', '>txt<N', '>txt<SN'
    where txt - is any text to search for, S - is an optional one letter suffix, N - is an optional
    quantifier, which comes in several variants
-   - if a lexeme is given using '<...>' encasement, then a *recursive* search off the current JSON
-     point is applied, otherwise (i.e. '>...<' encasement given) - a *non-recursive* search is
+   - if a lexeme is given using '<..>' encasement, then a *recursive* search off the current JSON
+     point is applied, otherwise (i.e. '>..<' encasement given) - a *non-recursive* search is
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
@@ -81,17 +81,17 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      L: same as l, but expression in braces is a Regex (regex search applied)
      a: match any atomic JSON value (string, numeric, boolean, null); the content within the
         encasements is ignored
-     o: match any object JSON value (i.e. '{...}'); the content within the encasement is ignored
-     i: match any array (indexable) JSON value (i.e. '[...]'); the content within the encasement
+     o: match any object JSON value (i.e. '{..}'); the content within the encasement is ignored
+     i: match any array (indexable) JSON value (i.e. '[..]'); the content within the encasement
         is ignored
      c: match either arrays or objects; the content within the encasement is ignored
      e: end-node match (matches leaves only) - matches any of: atomic, {}, []
      w: wide range match - matches any JSON value (atomic, objects, arrays)
      j: match user specific JSON value, the content within the encasement should be a valid literal
         JSON value, e.g.: '<[]>j' - will find the first empty JSON array
-     s: match a JSON value previously saved in a namespace by directives '<...>k', '<...>v', the
+     s: match a JSON value previously saved in a namespace by directives '<..>k', '<..>v', the
         lexeme content within the encasement points to the namespace
-     t: match a label previously saved in a namespace by directives '<...>k', '<...>v', the
+     t: match a label previously saved in a namespace by directives '<..>k', '<..>v', the
         lexeme must points to the namespace, which should be JSON string or numeric type only
 
    Following suffixes define lexemes as directives (which do not perform any search/match):
@@ -244,6 +244,8 @@ interpolation:
    form the token gets interpolated from the namespace pointed by token 'name' - the JSON element
    (in the namespace) being interpolated is preserved; in the former notation form, if JSON is a
    string, then outer quotation marks are dropped
+ - if an empty token is given (e.g.: {}, {{}}), then the interpolation of the currently selected
+   JSON element occurs (same interpolation rules apply)
 )";
 }
 
@@ -425,8 +427,8 @@ grouped and displayed accordingly:
 
 - an insert and update options could be subjected for a shell cli evaluation, e.g., say we want to
 capitalize all parent names in our JSON:
-    jtc -)" STR(OPT_WLK) R"('<parent>l+0' -)" STR(OPT_EXE) STR(OPT_UPD)
-    R"( echo {} \| tr "[:lower:]" "[:upper:]" \; example.json
+    jtc -)" STR(OPT_WLK) R"('<parent>l:' -)" STR(OPT_EXE) STR(OPT_UPD)
+    R"( echo '"{}"' \| tr "[:lower:]" "[:upper:]" \; example.json
     {
        "Relation": [
           {
