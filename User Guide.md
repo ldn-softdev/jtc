@@ -16,7 +16,7 @@
      * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
-     * [Search suffixes (`rRdDbnlLaoicewjst`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
+     * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
@@ -407,6 +407,8 @@ there are following suffixes to control search behavior:
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
   * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
+  * `q`: matches only unique JSON values; stores the matched elemetns in the namespace 
+  * `Q`: matches only repeatitive (duplicate) JSON values; stores the matched elemetns in the namespace
 
 \- as one can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
@@ -1806,7 +1808,7 @@ bash $
 ### Taming duplicates
 Quite very common tasks (and requests) for JSON is to process duplicates. Say, we deal with the following JSON:
 ```
-bash $ echo '[ "str-1", true, null, 3.14, "str-1", null ]' | jtc 
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc 
 [
    "string",
    true,
@@ -1820,7 +1822,7 @@ bash $
 So, let's
 #### Remove duplicates
 ```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1:' -p
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:' -p
 [
    "string",
    true,
@@ -1829,19 +1831,13 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0
 ]
 bash $ 
 ```
-by now if you grasp the idea of the walk-path, it's not that difficult to read/understand:
-- for each walked top element `[:]`,
-- `<V>v` - memorize its value in the namespace `V`,
-- then reset the walk-path to the root `[^0]`
-- find all instances of the memorized JSON element (memorized in the namespace `V`) starting from 2nd (`<V>s1:`)
-
-Because switch `-p` is given, all the elements that did not fail (which would be only duplicates) will be purged, thus leaving
-the list only with non-duplicate elements
+Because switch `-p` is given, all the duplicate elements will be purged, thus leaving the list only with non-duplicate (unique) 
+elements
 
 But there's a reverse action:
 #### Remove all but duplicates
 ```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1:' -pp
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:' -pp
 [
    "string",
    null
@@ -1853,7 +1849,7 @@ That one is obvious - we just reversed the prior example.
 How about:
 #### Leave only those which have no duplicates
 ```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1[^0]<V>s:' -p 
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<.>s:' -p 
 [
    true,
    3.14
@@ -1861,16 +1857,15 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0
 bash $ 
 ```
 it's just a tiny bit more complex:
-- `[:]<V>v[^0]<V>s1` - for each element, we'll memorize it as `V` and re-search it from the root finding only the 2nd match - 
-that ensures that we found a duplicate, then
-- `[^0]<V>s:` reset the search path again to the root and now find all the elements (i.e. duplicates).
+- `<.>Q:` - for each duplicate element, we'll memorize it into `.` namespace, then
+- `[^0]<.>s:` reset the search path back to the root and now find all the elements (i.e. all duplicates).
 
-that way all duplicates will be removed, leaving the array only with those which have no duplicates.
+that way all duplicates (and their origins) will be removed, leaving the array only with those which have no duplicates.
 
 and finally
 #### Leave all duplicates
 ```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'[:]<V>v[^0]<V>s1[^0]<V>s:' -pp
+bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<.>s:' -pp
 [
    "string",
    null,
