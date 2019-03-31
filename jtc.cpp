@@ -369,6 +369,7 @@ void CommonResource::parse_opt(int argc, char *argv[]) {
    { opt_.usage(); exit(e.code() + OFF_GETOPT); }
  }
 
+ convert_xyw_();                                                // -w = -x + -y...
  if(opt_[CHR(OPT_GDE)].hits() > 0) exit(print_guide());         // -g, print guide
  if(opt_[CHR(OPT_JAL)].hits() > 0) {                            // -J,
   opt_[CHR(OPT_ALL)].hit();                                     // ensure -a hit unconditionally
@@ -378,7 +379,6 @@ void CommonResource::parse_opt(int argc, char *argv[]) {
  if(opt_[CHR(OPT_JSN)].hits() > 0)
   if(opt_[CHR(OPT_WLK)].hits() == 0) opt_[CHR(OPT_WLK)] = "";
  if(opt_[CHR(OPT_ALL)].hits() > 0) opt_[CHR(OPT_FRC)].reset();  // -a, ensure -f ignored
- convert_xyw_();                                                // -w = -x + -y...
 }
 
 
