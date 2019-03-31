@@ -1,6 +1,21 @@
-
 ## `jtc` Release Notes
-_Relese Notes for `jtc` v.1.61_
+
+_Release Notes for `jtc` v.1.62_
+#### New features:
+- added option `-a` process all input (and valid) JSONs (by default only first JSON is read and the rest of the input ignored)
+- added option `-J` jsonize into a _JSON array_ all input (and processed) JSONs (option `-a` assumed); `-J` has similar relation
+to input JSONs as option `-j` to provided walks (`-w`)
+- added search lexeme `q` - search and match only unique JSON elements; matched unique values recored into a provided namespace
+- added search lexeme `Q` - opposite to `q` lexeme: search and match all duplicate JSON elements, matched duplicates placed into a
+provided namespace
+
+#### Improvements, changes, fixes:
+- option `-j` applies now not to walks only (as it was before), but to all operation
+- fixed in-quoting `-rr`
+***
+
+
+_Release Notes for `jtc` v.1.61_
 #### New features:
 A small, but very useful update: RE search suffixes (`R`, `L`, `D`) now auto-populate namespaces:
  * `$0` the namespace created for matched entire RE
@@ -11,10 +26,10 @@ Interpolation of such namespaces occurs usually, e.g.: `{$1}`
 
 #### Improvements, changes, fixes:
  * minor correction in the `jtc` guide (`-g`)
-
 ***
 
-_Relese Notes for `jtc` v.1.60_
+
+_Release Notes for `jtc` v.1.60_
 #### New features:
 - added `-jj` option to jsonize into JSON object (in addition to `-j` which jsonizes into JSON array)
 - added support for JSON templates, option `-T` let specifying template(s); templating work for walking, insert/update/compare operations
