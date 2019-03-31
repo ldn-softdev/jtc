@@ -5,13 +5,13 @@ _Release Notes for `jtc` v.1.62_
 - added option `-a` process all input (and valid) JSONs (by default only first JSON is read and the rest of the input ignored)
 - added option `-J` jsonize into a _JSON array_ all input (and processed) JSONs (option `-a` assumed); `-J` has similar relation
 to input JSONs as option `-j` to provided walks (`-w`)
-- added search lexeme `q` - search and match only unique JSON elements; matched unique values recored into a provided namespace
-- added search lexeme `Q` - opposite to `q` lexeme: search and match all duplicate JSON elements, matched duplicates placed into a
+- added search lexeme `<..>q` - search and match only unique JSON elements; matched unique values recored into a provided namespace
+- added search lexeme `<..>Q` - opposite to `q` lexeme: search and match all duplicate JSON elements, matched duplicates placed into a
 provided namespace
 
 #### Improvements, changes, fixes:
 - option `-j` applies now not to walks only (as it was before), but to all operation
-- fixed in-quoting `-rr`
+- fixed accidentally broken in-quoting (`-rr`, now UT'ed).
 ***
 
 
