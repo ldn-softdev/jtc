@@ -12,17 +12,19 @@
 
 using namespace std;
 
-#define VERSION "1.61"
+#define VERSION "1.62"
 
 
 // option definitions
 #define OPT_RDT -
+#define OPT_ALL a
 #define OPT_CMP c
 #define OPT_DBG d
 #define OPT_EXE e
 #define OPT_FRC f
 #define OPT_GDE g
 #define OPT_INS i
+#define OPT_JAL J
 #define OPT_JSN j
 #define OPT_LBL l
 #define OPT_MDF m
@@ -58,7 +60,6 @@ using namespace std;
         RC_WLK_MISS, \
         RC_WP_INV, \
         RC_SC_MISS, \
-        RC_MLT_EXE, \
         RC_CMP_NEQ, \
         RC_END
 ENUM(ReturnCodes, RETURN_CODES)
@@ -70,9 +71,11 @@ ENUM(ReturnCodes, RETURN_CODES)
 
 // simple macro for to expose class aliases
 // usage: REVEAL(jtc, opt, json)
-#define __REFX__(A) auto & A = __reveal_class__.A();
+#define __REVEAL_TKN1__(X,Y) X ## Y
+#define __REVEAL_TKN2__(X,Y) __REVEAL_TKN1__(X, Y)
+#define __REFX__(A) auto & A = __REVEAL_TKN2__(__reveal_class__,__LINE__).A();
 #define REVEAL(X, ARGS...) \
-        auto & __reveal_class__ = X; \
+        auto & __REVEAL_TKN2__(__reveal_class__, __LINE__) = X; \
         MACRO_TO_ARGS(__REFX__, ARGS)
 
 #define DBG_WIDTH 67                                            // max print len upon parser's dbg
@@ -80,11 +83,50 @@ ENUM(ReturnCodes, RETURN_CODES)
 #define VALUE second                                            // instead of first/second
 
 
+typedef vector<string> v_string;
+
+
+
+
+
+class CommonResource {
+ // the class facilitates -J option:
+ // caters original opt (which is copied to each Jtc instance), input string
+ // and json for jsonization of all processed/waled jsons
+ public:
+    Getopt &            opt(void) { return opt_; };
+    size_t              opt_e_found(void) { return opt_e_found_; }  // used for recompile once
+    char                opt_ui(void){  return opt_ui_; };           // -i or -u for recompile
+    const string &      istr(void){  return istr_; };
+    Json &              json(void) { return gj_; };
+
+    void                parse_opt(int argc, char *argv[]);
+    const string &      read_inputs(void);
+    void                jsonize(Json jout);
+
+    DEBUGGABLE()
+
+ private:
+    string              istr_;
+    Getopt              opt_;
+    size_t              opt_e_found_{0};                        // used for recompile once -e found
+    char                opt_ui_{'\0'};                          // either -i or -u for recompile
+    bool                ji_{false};                             // '-j' imposed?
+    Json                gj_{ ARY{} };                           // global json
+
+    bool                is_recompile_required_(int argc, char *argv[]);
+    void                recompile_args_(v_string &args, v_string &new_args);
+    void                parse_rebuilt_(v_string & new_args);
+    void                convert_xyw_(void);
+};
+
+
+
+
 
 class Jtc {
     typedef vector<Json::iterator> walk_vec;
     typedef deque<Json::iterator> walk_deq;
-    typedef vector<string> v_string;
     typedef void (Jtc::*mptr)(Json::iterator &wi, size_t group);
     typedef map<size_t, Json> map_json;
     typedef map<size_t, Json::iterator> map_jit;
@@ -102,15 +144,25 @@ class Jtc {
 
  public:
 
+                        Jtc(void) = delete;
+                        Jtc(CommonResource & cr):
+                         cr_{cr}, opt_{cr.opt()} {
+                         ecli_ = opt_[CHR(OPT_EXE)].hits() > 0;     // flag used by -i/-u options
+                         merge_ = opt_[CHR(OPT_MDF)].hits() > 0;    // flag used by -i/-u options
+                         json_.tab(abs(opt_[CHR(OPT_IND)]))
+                              .raw(opt_[CHR(OPT_RAW)])
+                              .quote_solidus(opt_[CHR(OPT_QUT)].hits() % 2 == 1);
+                        }
+
+
     // expose private objects
     auto &              opt(void) { return opt_; }
     auto &              json(void) { return json_; }
     auto &              jout(void) { return jout_; }
 
     // user methods
-    void                parse_opt(int argc, char *argv[]);
-    void                read_json(void);
-    int                 write_json(void);
+    void                parsejson(string::const_iterator & jsp);
+    int                 write_json(Json & jsn, bool jsnize = true);
     int                 demux_opt(void);
     ReturnCodes         compare_jsons(void);
     void                compare_by_iterator(Json::iterator &it, size_t group);
@@ -128,11 +180,6 @@ class Jtc {
     void                jsonized_output_ary_(Json::iterator &, size_t group, const Json *jptr);
     void                jsonized_output_obj_(Json::iterator &, size_t group, const Json *jptr);
     void                direct_output_(Json::iterator &, size_t group, const Json *jptr);
-    void                convert_xyw_(void);
-    bool                recompile_required_(int argc, char *argv[]);
-    bool                is_recompile_required_(int argc, char *argv[]);
-    void                recompile_args_(v_string &args, v_string &new_args);
-    void                parse_rebuilt_(v_string & new_args);
     void                check_walk_requirements_(unsigned, WalkReq req=minimum);
     void                crop_out_(void);
     bool                remove_others_(set<const Jnode*> &ws, Jnode &jn);
@@ -155,13 +202,13 @@ class Jtc {
     void                process_offsets_(deque<walk_deq> &, vector<vector<long>> &,
                                          size_t, vector<size_t> &);
     size_t              build_front_grid_(vector<vector<long>> &, const deque<walk_deq> &);
-    void                location_(string &);
+    void                location_(string::const_iterator & start);
 
+    CommonResource &    cr_;
     Getopt              opt_;
     Json                json_;                                  // jtc input JSON
     map_json            jexc_;                                  // json for -ei or -eu
     Json                jout_;                                  // json output
-                        // following jsrc_, isrc_ are mutually exclusive: either of them only used
     map_json            jsrc_;                                  // JSON in parameters of -i, -u
     map_jit             isrc_;                                  // walk iterators in params -i, -u
     map_ns              wns_;                                   // namespaces for walked (-w) paths
@@ -171,8 +218,6 @@ class Jtc {
     bool                ecli_{false};                           // -e status for insert/update
     bool                merge_{false};                          // -m status for insert/update
     bool                lbl_update_{false};                     // label update operation detected
-    char                opt_ui_{'\0'};                          // either -i or -u for recompile
-    size_t              opt_r_found_{0};                        // used for recompile once -e found
     size_t              last_group_{0};                         // used in output_by_iterator
     size_t              key_{0};                                // for -i, -u options processing
     mptr                subscriber_;                            // method ptr for output processor
@@ -188,6 +233,7 @@ class Jtc {
 #undef MERGEOBJ
 
 
+
 string quote_str(const string &src);
 size_t utf8_adjusted(size_t start, const string &jsrc, size_t end = -1);
 size_t byte_offset(const string &jsrc, size_t offset);
@@ -198,17 +244,20 @@ size_t byte_offset(const string &jsrc, size_t offset);
 
 int main(int argc, char *argv[]){
 
- Jtc jtc;
- REVEAL(jtc, opt, json)
+ CommonResource cr;
+ REVEAL(cr, opt)
 
  opt.prolog("\nJSON test console\nVersion " VERSION \
             ", developed by Dmitry Lyssenko (ldn.softdev@gmail.com)\n");
+ opt[CHR(OPT_ALL)].desc("process all inputs (by default only one JSON processed; -"
+                        STR(OPT_FRC) " ignored)");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
  opt[CHR(OPT_EXE)].desc("make option parameters for -" STR(OPT_INS) ", -" STR(OPT_UPD)
                         " undergo shell evaluation; see -" STR(OPT_GDE) " for more info");
  opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON"
                         " to stdout)");
  opt[CHR(OPT_GDE)].desc("explain walk path syntax, usage notes and examples");
+ opt[CHR(OPT_JAL)].desc("wrap all processed JSONs into array (option -" STR(OPT_ALL) " assumed)");
  opt[CHR(OPT_JSN)].desc("wrap walked JSON elements into JSON array (-" STR(OPT_JSN) STR(OPT_JSN)
                         " wrap into JSON object)");
  opt[CHR(OPT_LBL)].desc("print labels (if present) for walked JSON; together with -"
@@ -256,43 +305,56 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 
 
  // parse options
- jtc.parse_opt(argc, argv);
+ cr.parse_opt(argc, argv);
 
  DEBUGGABLE()
  DBG().use_ostream(cerr)
       .level(opt[CHR(OPT_DBG)]);
 
- json.tab(abs(opt[CHR(OPT_IND)]))
-     .raw(opt[CHR(OPT_RAW)])
-     .quote_solidus(opt[CHR(OPT_QUT)].hits() % 2 == 1);
+ // read json
+ int main_rc = RC_OK;
+ string::const_iterator jsp = cr.read_inputs().begin();
 
- // read json and execute as per options
+ // execute as per read options
  try {
-  jtc.read_json();
-  return jtc.demux_opt();
+  do {
+   Jtc jtc(cr);
+   jtc.parsejson(jsp);
+   int rc = jtc.demux_opt();
+   main_rc = rc != RC_OK? rc: main_rc;
+  } while(*jsp != '\0' and opt[CHR(OPT_ALL)].hits() > 0);
  }
  catch(Jnode::stdException & e) {
   DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
   cerr << opt.prog_name() << " jnode exception: " << e.what() << endl;
-  return e.code() + OFF_JSON;
+  main_rc = e.code() + OFF_JSON;
  }
  catch(Json::stdException & e) {
   DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
   cerr << opt.prog_name() << " json exception: " << e.what() << endl;
-  return e.code() + OFF_JSON;
+  main_rc = e.code() + OFF_JSON;
  }
  catch(std::regex_error & e) {
   cerr << "regexp exception: " << e.what() << endl;
-  return e.code() + OFF_REGEX;
+  main_rc = e.code() + OFF_REGEX;
  }
+
+ if(not cr.json().empty()) {
+  Jtc jtc(cr);
+  for(const char *o = STR(OPT_JAL)STR(OPT_JSN)STR(OPT_QUT)STR(OPT_RAW); *o != '\0'; ++o)
+   jtc.opt()[*o].reset();
+  jtc.write_json(cr.json());
+ }
+
+ return main_rc;
 }
 
 
 
 //
-// Jtc methods definitions
+// CR methods definitions
 //
-void Jtc::parse_opt(int argc, char *argv[]) {
+void CommonResource::parse_opt(int argc, char *argv[]) {
  // parse options, if option -e detected, rebuild -u's arguments and parse with rebuilt args
  v_string args{argv, argv + argc};
 
@@ -301,68 +363,200 @@ void Jtc::parse_opt(int argc, char *argv[]) {
   recompile_args_(args, new_args);                              // rebuild -u/i's arguments as one
   parse_rebuilt_(new_args);
  }
- else {                                                         // re recompiling, parse normally
+ else {                                                         // parse normally
   try { opt_.parse(argc, argv); }
   catch(Getopt::stdException &e)
    { opt_.usage(); exit(e.code() + OFF_GETOPT); }
  }
 
- if(opt_[CHR(OPT_GDE)].hits() > 0) exit(print_guide());
- convert_xyw_();
-
- ecli_ = opt_[CHR(OPT_EXE)].hits() > 0;                         // flag used by -i/-u options
- merge_ = opt_[CHR(OPT_MDF)].hits() > 0;                        // flag used by -i/-u options
+ if(opt_[CHR(OPT_GDE)].hits() > 0) exit(print_guide());         // -g, print guide
+ if(opt_[CHR(OPT_JAL)].hits() > 0) {                            // -J,
+  opt_[CHR(OPT_ALL)].hit();                                     // ensure -a hit unconditionally
+  if(opt_[CHR(OPT_JSN)].hits() == 0)                            // if no -j given
+   { opt_[CHR(OPT_JSN)].hit(); ji_ = true; }                    // impose one
+ }
+ if(opt_[CHR(OPT_JSN)].hits() > 0)
+  if(opt_[CHR(OPT_WLK)].hits() == 0) opt_[CHR(OPT_WLK)] = "";
+ if(opt_[CHR(OPT_ALL)].hits() > 0) opt_[CHR(OPT_FRC)].reset();  // -a, ensure -f ignored
+ convert_xyw_();                                                // -w = -x + -y...
 }
 
 
 
-void Jtc::read_json(void) {
- // read and parse json
+const string & CommonResource::read_inputs(void) {
  bool read_from_cin{opt_[0].hits()==0 or opt_[CHR(OPT_RDT)].hits()>0};// no file, or forced via '-'
  DBG(0)
-  DOUT() << "start parsing json from " << (read_from_cin? "<stdin>": opt_[0].c_str()) << endl;
+  DOUT() << "reading json from " << (read_from_cin? "<stdin>": opt_[0].c_str()) << endl;
 
- string jsrc{istream_iterator<char>(read_from_cin?
-                                    cin >> noskipws:
-                                    ifstream{opt_[0].c_str(), ifstream::in} >> noskipws),
-             istream_iterator<char>{}};
+ istr_ = string{istream_iterator<char>(read_from_cin?
+                                       cin >> noskipws:
+                                       ifstream{opt_[0].c_str(), ifstream::in} >> noskipws),
+                istream_iterator<char>{}};
+ return istr_;
+}
 
- try { json_.parse(jsrc); }
+
+bool CommonResource::is_recompile_required_(int argc, char *argv[]) {
+ // check if option -e is present in the arguments (then re-parsing is required)
+ opt_.suppress_opterr(true);
+ try { opt_.parse(argc, argv); } catch(Getopt::stdException &e) { }
+ bool rr = opt_[CHR(OPT_EXE)];
+ opt_.reset().suppress_opterr(false);
+ return rr;
+}
+
+
+
+void CommonResource::jsonize(Json jout) {
+ // put all walked and non-walked json results into a global json
+ if(ji_ and jout.is_iterable()) {                               // -j was imposed
+  for(auto &jn: jout)                                           // therefore push one by one
+   gj_.push_back(move(jn));
+  return;
+ }
+                                                                // no -j were imposed:
+ gj_.push_back(move(jout));                                     // move jout as it is
+}
+
+
+
+void CommonResource::recompile_args_(v_string & args, v_string &new_args) {
+ // recompile argv minding -u/i's arguments, put re-parsed args into new_args
+ bool semicolon_found = false;
+
+ for(auto &arg: args) {                                         // go through all args
+  if(semicolon_found)                                           // -i/u already found and processed
+   { new_args.push_back(arg); continue; }                       // push arg w/o any processing
+
+  if(opt_e_found_ > 0) {                                        // facing -i/u; ';' not found yet,
+   if(arg.back() == ';')                                        // ';' found
+    { semicolon_found = true; arg.pop_back(); }                 // trim trailing ';'
+   if(not arg.empty()) {
+    if(++opt_e_found_ == 2) new_args.back() += arg;             // first argument
+    else new_args.push_back(string("-") + opt_ui_ + arg);       // any subsequent arg
+   }
+   continue;
+  }
+
+  if(arg.front() == '-')                                        // opt, see if opt -i/u is present
+   for(const char &chr: arg) {
+    if(&chr == &arg[0]) continue;                               // skip first char '-'
+    if(not opt_.defined(chr)) break;                            // undefined option, process arg
+    if(chr == CHR(OPT_UPD) or chr == CHR(OPT_INS)) {            // opt -i/u found, indicate&record
+     opt_e_found_ = 1;
+     opt_ui_ = chr;
+     if(arg.back() == ';')                                      // ';' found
+      { semicolon_found = true; arg.pop_back(); ++opt_e_found_; }
+     else
+      if(&arg.back() != &chr)                                   // arg is attached to the option
+       ++opt_e_found_;
+     break;
+    }
+   }
+  new_args.push_back(arg);
+ }
+
+ if(opt_e_found_ > 0 and not semicolon_found) {
+  cerr << "fail: don't see parameter termination of '-" << opt_ui_ << "' - `\\;'" << endl;
+  exit(RC_SC_MISS);
+ }
+}
+
+
+
+void CommonResource::parse_rebuilt_(v_string & new_args) {
+ // parse rebuilt arguments
+ char *nargv[new_args.size()];                                  // here, build a new argv
+ for(size_t i = 0; i < new_args.size(); ++i) {
+  nargv[i] = new char[new_args[i].size()+1];
+  stpcpy(nargv[i], new_args[i].c_str());
+ }
+
+ try { opt_.reset().parse(new_args.size(), nargv); }            // re-parse newly rebuilt args
+ catch(Getopt::stdException & e)
+  { opt_.usage(); exit(e.code() + OFF_GETOPT); }
+
+ for(size_t i = 0; i < new_args.size(); ++i)                    // clean up nargv now
+  delete [] nargv[i];
+}
+
+
+
+void CommonResource::convert_xyw_(void) {
+ // convert -x, -y options into -w
+ string last_x, last_y;
+ v_string new_w;                                                // record new -w options here
+
+ for(auto &option: opt_.order()) {                              // go by options order
+  if(option.id() == CHR(OPT_CMN)) {                             // option -x, process it
+   if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
+    new_w.push_back(move(last_x));                              // standalone -x is converted to -w
+   last_x = move(option.str());
+   last_y.clear();
+   continue;
+  }
+  if(option.id() == CHR(OPT_PRT)) {                             // option -y
+   last_y = move(option.str());
+   new_w.push_back(last_x + last_y);
+  }
+ }
+ if(not last_x.empty() and last_y.empty())                      // option -x... is given alone
+  new_w.push_back(move(last_x));
+
+ for(auto &opt_w: new_w)                                        // move all new '-w' to opt
+  opt_[CHR(OPT_WLK)] = opt_w;
+}
+
+
+
+//
+// Jtc methods definitions
+//
+void Jtc::parsejson(string::const_iterator & jsp) {
+ // parse read json text via string iterator
+ string::const_iterator jbegin = jsp;                           // for debug only
+ try { json_.parse(jsp); }
  catch(Json::stdException & e) {
   if(e.code() >= Jnode::start_of_json_parsing_exceptions and
      e.code() <= Jnode::end_of_json_parsing_exceptions)
-   DBG(0) location_(jsrc);
+   DBG(0) location_(jbegin);
   throw e;
  }
 
  if(json_.is_atomic() and opt_[CHR(OPT_WLK)].hits() > 0) {
-  cerr << "error: a walk-path for a non-iterable value does not make sense, ignoring all" << endl;
+  DBG(1) DOUT() << "read json is an atomic value, ignoring all possible walk-paths" << endl;
   opt_[CHR(OPT_WLK)].reset();
  }
-
 }
 
 
 
-int Jtc::write_json(void) {
- // write updated JSON (i.e. resulting from -i/-u/-s/-p/-w options into:
- // a) input json file (if -f given and if file is specified)
- // b) otherwise, stdout
+int Jtc::write_json(Json & json, bool jsonize) {
+ // write whole json to output (demultiplexing file and stdout), featuring:
+ // inquoting/unquoting json string, putting array into json (-j), printing size to stdout
  bool write_to_file{opt_[0].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0};  // [0] and -f given
- bool unqoute{json_.is_string() and opt_[CHR(OPT_QUT)].hits() >= 2};    // -qq given, unquote
- bool inqoute{opt_[CHR(OPT_RAW)].hits() >= 2};                          // -rr given, inquote
+ bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given, unquote
+ bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
+
+ if(jsonize and opt_[CHR(OPT_JSN)].hits() == 1)                 // -j given, force jsonizing
+  json = ARY{ move(json) };
+
+ if(not unquote and inquote)
+  json.root() = json.inquote_str(json.to_string(Jnode::Raw));
+ DBG(0)
+  DOUT() << "outputting json to " << (write_to_file? opt_[0].c_str():
+                                      opt_[CHR(OPT_JSN)]? "<JSON>": "<stdout>") << endl;
+ if(opt_[CHR(OPT_JAL)].hits() > 0)                              // -J, jsonize to global
+  { cr_.jsonize(move(json)); return RC_OK; }
 
  ofstream fout{write_to_file? opt_[0].c_str(): nullptr};
  ostream & xout = write_to_file? fout: cout;
- DBG(0)
-  DOUT() << "outputting json to " << (write_to_file? opt_[0].c_str(): "<stdout>") << endl;
- if(unqoute) xout << json_.unquote_str(json_.str()) << endl;
- else {
-  if(inqoute) json_.root() = json_.inquote_str(json_.to_string());
-  xout << json_ << endl;
- }
+
+ if(unquote and json.is_string()) xout << json.unquote_str(json.str()) << endl;
+ else xout << json << endl;
+
  if(opt_[CHR(OPT_SZE)])
-  cout << SIZE_PFX << json_.size() << endl;
+  cout << SIZE_PFX << json.size() << endl;
 
  return RC_OK;
 }
@@ -375,8 +569,8 @@ int Jtc::demux_opt(void) {
   if(opt == '\0' or opt_[opt].hits() == 0) continue;
   DBG(1) DOUT() << "option: " << opt << ", hits: " << opt_[opt].hits() << endl;
   switch(opt) {
-   case CHR(OPT_CMP): return compare_jsons();
-   case CHR(OPT_WLK): return walk_json();
+   case CHR(OPT_CMP): return compare_jsons();                   // will print result
+   case CHR(OPT_WLK): return walk_json();                       // will print result
    case CHR(OPT_INS): insert_json(); break;
    case CHR(OPT_UPD): update_json(); break;
    case CHR(OPT_PRG): purge_json(); break;
@@ -386,13 +580,14 @@ int Jtc::demux_opt(void) {
   break;
  }
 
- return write_json();
+ // this write will be used only by -i, -u, -p, -s
+ return write_json(json_);
 }
 
 
 
 ReturnCodes Jtc::compare_jsons() {
- // plug-in insert_by_iterator and let process walks
+ // plug-in compare_by_iterator and let process walks
  // check_walk_requirements_(0);
  if(opt_[CHR(OPT_WLK)].hits() == 0)
   opt_[CHR(OPT_WLK)] = json_.is_atomic()? "[0]": "[^0]";
@@ -416,8 +611,8 @@ void Jtc::compare_by_iterator(Json::iterator &it, size_t group) {
  for(auto &j: jv) DBG().severity(j);
 
  jv.front()[CMP_BASE] = *it;                                    // 1st comes form walk_interleaved
- if(key_ < jsrc_.size()) jv.back()[CMP_COMP] = jsrc_[key_];     // 2nd does either from -c <JSON>
- else jv.back()[CMP_COMP] = *isrc_[key_];                       // or from -c <walk-path>
+ if(jsrc_.empty()) jv.back()[CMP_COMP] = *isrc_[key_];          // 2nd comes from -c <walk-path>
+ else jv.back()[CMP_COMP] = jsrc_[key_];                        // or from -c <JSON>
 
  vector<set<const Jnode*>> sv{2};                               // preserved different node ptrs
  compare_jsons_(jv.front()[CMP_BASE], sv.front(), jv.back()[CMP_COMP], sv.back());
@@ -662,15 +857,13 @@ int Jtc::walk_json(void) {
  subscriber_ = &Jtc::output_by_iterator;
  walk_interleaved_();
 
- if(opt_[CHR(OPT_JSN)].hits() > 0) {                            // jout_ contains the output
-  cout << jout_ << endl;
-  if(opt_[CHR(OPT_SZE)].hits() > 0)
-   cout << SIZE_PFX << jout_.size() << endl;
- }
-
+ // after walking all paths
+ if(opt_[CHR(OPT_JSN)].hits() > 0)                              // -j, jout_ contains the output
+   write_json(jout_, false);
+                                                                // otherwise it's already stdout'ed
  // check json integrity...
  DBG(0)
-  DOUT() << "json integrity check: "
+  DOUT() << "source json integrity check: "
          << (jdb == json_? "Good. (...phew!)": "BROKEN! (aaaa! panic! bug found!)" ) << endl;
  return RC_OK;
 }
@@ -764,15 +957,15 @@ void Jtc::jsonized_output_obj_(Json::iterator &wi, size_t group, const Json *jtm
 void Jtc::direct_output_(Json::iterator &wi, size_t group, const Json *jtmp_ptr) {
  // no -j given, print out element pointed by iter wi
  auto &sr = jtmp_ptr == nullptr? *wi: jtmp_ptr->root();         // interpolated record
- bool unquote{sr.is_string() and opt_[CHR(OPT_QUT)].hits() >= 2};  // json string & -qq
- bool inqoute{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
+ bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given
+ bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
 
  if(opt_[CHR(OPT_LBL)] and sr.has_label())                      // -l given
   { cout << '"' << sr.label() << "\": ";  unquote = false; }    // then print label (if present)
- if(unquote)
+ if(unquote and sr.is_string())
   cout << json_.unquote_str(sr.str()) << endl;                  // don't try collapsing it into
  else {
-  if(inqoute) cout << Json{json_.inquote_str(sr.to_string())} << endl;
+  if(inquote) cout << '"' << json_.inquote_str(sr.to_string(Jnode::Raw)) << '"' << endl;
   else cout << sr << endl;                                      // a single operation!
  }
 
@@ -785,106 +978,6 @@ void Jtc::direct_output_(Json::iterator &wi, size_t group, const Json *jtmp_ptr)
 //
 // private methods
 //
-void Jtc::convert_xyw_(void) {
- // convert -x, -y options into -w
- string last_x, last_y;
- v_string new_w;                                                // record new -w options here
-
- for(auto &option: opt_.order()) {                              // go by options order
-  if(option.id() == CHR(OPT_CMN)) {                             // option -x, process it
-   if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
-    new_w.push_back(move(last_x));                              // standalone -x is converted to -w
-   last_x = move(option.str());
-   last_y.clear();
-   continue;
-  }
-  if(option.id() == CHR(OPT_PRT)) {                             // option -y
-   last_y = move(option.str());
-   new_w.push_back(last_x + last_y);
-  }
- }
- if(not last_x.empty() and last_y.empty())                      // option -x... is given alone
-  new_w.push_back(move(last_x));
-
- for(auto &opt_w: new_w)                                        // move all new '-w' to opt
-  opt_[CHR(OPT_WLK)] = opt_w;
-}
-
-
-
-bool Jtc::is_recompile_required_(int argc, char *argv[]) {
- // check if option -e is present in the arguments (then re-parsing is required)
- opt_.suppress_opterr(true);
- try { opt_.parse(argc, argv); } catch(Getopt::stdException &e) { }
- bool rr = opt_[CHR(OPT_EXE)];
- opt_.reset().suppress_opterr(false);
- return rr;
-}
-
-
-
-void Jtc::recompile_args_(v_string & args, v_string &new_args) {
- // recompile argv minding -u/i's arguments, put re-parsed args into new_args
- bool semicolon_found = false;
-
- for(auto &arg: args) {                                         // go through all args
-  if(semicolon_found)                                           // -i/u already found and processed
-   { new_args.push_back(arg); continue; }                       // push arg w/o any processing
-
-  if(opt_r_found_ > 0) {                                        // facing -i/u; ';' not found yet,
-   if(arg.back() == ';')                                        // ';' found
-    { semicolon_found = true; arg.pop_back(); }                 // trim trailing ';'
-   if(not arg.empty()) {
-    if(++opt_r_found_ == 2) new_args.back() += arg;             // first argument
-    else new_args.push_back(string("-") + opt_ui_ + arg);       // any subsequent arg
-   }
-   continue;
-  }
-
-  if(arg.front() == '-')                                        // opt, see if opt -i/u is present
-   for(const char &chr: arg) {
-    if(&chr == &arg[0]) continue;                               // skip first char '-'
-    if(not opt_.defined(chr)) break;                            // undefined option, process arg
-    if(chr == CHR(OPT_UPD) or chr == CHR(OPT_INS)) {            // opt -i/u found, indicate&record
-     opt_r_found_ = 1;
-     opt_ui_ = chr;
-     if(arg.back() == ';')                                      // ';' found
-      { semicolon_found = true; arg.pop_back(); ++opt_r_found_; }
-     else
-      if(&arg.back() != &chr)                                   // arg is attached to the option
-       ++opt_r_found_;
-     break;
-    }
-   }
-  new_args.push_back(arg);
- }
-
- if(opt_r_found_ > 0 and not semicolon_found) {
-  cerr << "fail: don't see parameter termination of '-" << opt_ui_ << "' - `\\;'" << endl;
-  exit(RC_SC_MISS);
- }
-}
-
-
-
-void Jtc::parse_rebuilt_(v_string & new_args) {
- // parse rebuilt arguments
- char *nargv[new_args.size()];                                  // here, build a new argv
- for(size_t i = 0; i < new_args.size(); ++i) {
-  nargv[i] = new char[new_args[i].size()+1];
-  stpcpy(nargv[i], new_args[i].c_str());
- }
-
- try { opt_.reset().parse(new_args.size(), nargv); }            // re-parse newly rebuilt args
- catch(Getopt::stdException & e)
-  { opt_.usage(); exit(e.code() + OFF_GETOPT); }
-
- for(size_t i = 0; i < new_args.size(); ++i)                    // clean up nargv now
-  delete [] nargv[i];
-}
-
-
-
 void Jtc::check_walk_requirements_(unsigned x, WalkReq req) {
  // check if actual number of walks fits min requirements
  if(req == exact)
@@ -1165,7 +1258,7 @@ bool Jtc::execute_cli_(Json &json, const Jnode &src_jnode) {
 string Jtc::reconcile_ui_(const Jnode &src_jnode) {
  // reconcile here options -i, or -u. or interpolate a static json string
  stringstream is;                                               // is: interpolation stream
- for(const auto & opt_param: opt_[opt_ui_]) {                   // reconcile here all -u/-i options
+ for(const auto & opt_param: opt_[cr_.opt_ui()]) {              // reconcile here all -u/-i options
   string istr = interpolate_(opt_param, json_.ns(), src_jnode);
   is << quote_str(istr.empty()? opt_param: istr) << ' ';        // quote argument and separate
  }
@@ -1186,8 +1279,8 @@ void Jtc::parse_params_(char option) {
  //size_t key = 0;
  map_json tmp;                                                  // interpolated templates (if any)
  if(ecli_)                                                      // -e detected
-  for(size_t i = opt_r_found_; opt_ui_ and i <= opt_[opt_ui_].hits(); ++i)  // and -u or -i
-   extend_itr_(tmp, json_.ns(), json_.walk(opt_[opt_ui_].str(i), Json::keep_cache));
+  for(size_t i = cr_.opt_e_found(); cr_.opt_ui() and i <= opt_[cr_.opt_ui()].hits(); ++i)
+   extend_itr_(tmp, json_.ns(), json_.walk(opt_[cr_.opt_ui()].str(i), Json::keep_cache));
  else
   for(auto & arg: opt_[option])
    try {
@@ -1210,7 +1303,7 @@ void Jtc::parse_params_(char option) {
  if(not tmp.empty()) jsrc_ = move(tmp);
  DBG(0)
   DOUT() << "option '-" << option << "': total jsons: " << jsrc_.size()
-         << ", total iterations: " << isrc_.size() << endl;
+         << ", total iterators: " << isrc_.size() << endl;
  opt_[CHR(OPT_TMP)].reset();
 }
 
@@ -1240,7 +1333,7 @@ string Jtc::interpolate_(const string &tmp, const Json::map_jn &ns, const Jnode 
  // wrapper for interpolate_tmp_, including the empty case
  string is1 = interpolate_tmp_(tmp, ns);
  string is2 = interpolate_tmp_(is1.empty()? tmp: is1, {pair<string, Jnode>("", src_jnode)});
- return not is2.empty()? is2: not is1.empty()? is1: "";
+ return not is2.empty()? is2: is1;
 }
 
 
@@ -1291,7 +1384,9 @@ string Jtc::interpolate_tmp_(const string &tmp, const Json::map_jn &ns) {
 // 5. repeat until entire wpi is empty
 
 void Jtc::walk_interleaved_(void) {
- // collect all walks (-w) and feed one by one to the subscriber
+ // collect all walks (-w/-i/-u) and feed one by one to the subscriber
+ json_.clear_ns();
+ wns_.clear();
  deque<walk_deq> wpi;
 
  for(const auto &walk_str: opt_[CHR(OPT_WLK)]) {                // process all -w arguments
@@ -1319,7 +1414,7 @@ void Jtc::walk_interleaved_(void) {
   DOUT() << "multi-walk: " << (is_multi_walk_? "true": "false") << endl;
   DOUT() << DBG_PROMPT(1) << "walk-path instances: " << wpi.size() << ":" << endl;
   for(size_t i = 0; i < wpi.size(); ++i)
-   DOUT() << DBG_PROMPT(1) << "instance: " << i << ", iterations: " << wpi[i].size() << endl;
+   DOUT() << DBG_PROMPT(1) << "instance: " << i << ", iterators: " << wpi[i].size() << endl;
  }
 
  while( any_of(wpi.begin(), wpi.end(), [](walk_deq &wi){ return not wi.empty(); }) )
@@ -1404,14 +1499,15 @@ size_t Jtc::build_front_grid_(vector<vector<long>> &fom, const deque<walk_deq> &
 
 
 
-void Jtc::location_(string &jsrc) {
+void Jtc::location_(string::const_iterator &jbegin) {
  // show location of the exception, unicode UTF-8 supported
+ string jsrc{&*jbegin};
  const char * pfx = "exception locus: ";
  for(auto &chr: jsrc)
   chr = chr AMONG('\r', '\n')? '|': static_cast<unsigned char>(chr) < ' '? ' ': chr;
 
- size_t from_start = Json::utf8_adjusted(0, jsrc, json_.exception_point() - jsrc.begin());
- size_t to_end = Json::utf8_adjusted(json_.exception_point() - jsrc.begin(), jsrc);
+ size_t from_start = Json::utf8_adjusted(0, jsrc, json_.exception_point() - jbegin);
+ size_t to_end = Json::utf8_adjusted(json_.exception_point() - jbegin, jsrc);
  size_t ptr = from_start;
 
  if(from_start + to_end > DBG_WIDTH) {

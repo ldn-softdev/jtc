@@ -93,6 +93,8 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         lexeme content within the encasement points to the namespace
      t: match a label previously saved in a namespace by directives '<..>k', '<..>v', the
         lexeme must points to the namespace, which should be JSON string or numeric type only
+     q: match (recursively) only unique JSON elements, every match is stored in the namespace
+     Q: match all non-qunique (duplicate) elements, every match is stored in the namespace
 
    Following suffixes define lexemes as directives (which do not perform any search/match):
      v: saves the most recent/found JSON value into a namespace

@@ -642,7 +642,7 @@ class Jnode {
                 \
                 /* walk iterator exceptions */ \
                 start_of_walk_exceptions, \
-                json_search_invalid, \
+                json_lexeme_invalid, \
                 walk_offset_missing_closure, \
                 walk_search_label_with_attached_label, \
                 walk_expect_search_label, \
@@ -650,7 +650,7 @@ class Jnode {
                 walk_label_seprator_bad_usage,          /* e.g.: ...[0]:: */\
                 walk_unexpexted_suffix, \
                 walk_bad_range, \
-                walk_bad_number, \
+                walk_bad_number_or_suffix, \
                 walk_root_non_iterable, \
                 walk_bad_lexeme, \
                 walk_bad_position, \
@@ -752,9 +752,9 @@ class Jnode {
 
                         // class interface:
     std::string         to_string(PrettyType pt = Pretty) const {
-                         GUARD(Jnode::endl_) pretty(pt == Pretty);
+                         GUARD(Jnode::endl_);
                          std::stringstream ss;
-                         ss << *this;
+                         ss << pretty(pt == Pretty);
                          return ss.str();
                         }
 
@@ -1400,6 +1400,8 @@ class Json {
                 json_match,     /* matches provided JSON */ \
                 search_from_ns, /* matches provided JSON from the namespace */ \
                 tag_from_ns,    /* use namespace to find a label/index */ \
+                query_unique,   /* use namespaces to find unique JSONs */ \
+                Query_duplicate,/* use namespaces to find duplicates JSONs (opposite to q) */ \
                 /* following are directives, not search lexemes: */ \
                 value_of_json,  /* directive: save current json value */ \
                 key_of_value,   /* directive: treat key (label/index) as a value (and save) */ \
@@ -1412,8 +1414,12 @@ class Json {
     // Jsearch is defined so that its first letter corresponds to the suffix
 
     #define PARSETRAILING \
-                relaxed_trailing,   /* allow anything past valid json, default */ \
-                strict_trailing     /* allow only white spaces past valid json, throw otherwise */
+                /* "relaxed" actions do not throw */ \
+                relaxed_trailing,   /* default, allow spaces past valid json, then stops */ \
+                relaxed_no_trail,   /* stops right after json, ep_ points to the next char */ \
+                /* "strict" actions always throw if described violation */ \
+                strict_trailing,    /* allow only white spaces past valid json, throw otherwise */\
+                strict_no_trail     /* don't allow anything past json, throw otherwise */
     ENUM(ParseTrailing, PARSETRAILING)
 
     #define CACHE_STATE \
@@ -1432,7 +1438,13 @@ class Json {
     // class interface:
     Jnode &             root(void) { return root_; }
     const Jnode &       root(void) const { return root_; }
-    Json &              parse(const std::string & jstr, ParseTrailing trail = relaxed_trailing);
+    Json &              parse(const std::string & jstr, ParseTrailing trail = relaxed_trailing)
+                         { return parse(jstr.begin(), trail); }
+    Json &              parse(std::string::const_iterator && jsi,
+                              ParseTrailing trail = relaxed_trailing)
+                         { return parse(jsi, trail); }
+    Json &              parse(std::string::const_iterator & jsi,
+                              ParseTrailing trail = relaxed_trailing);
     std::string::const_iterator
                         exception_point(void) { return ep_; }
     class iterator;
@@ -1535,11 +1547,14 @@ class Json {
  protected:
     // protected data structures
     Jnode               root_;                                  // underlying JSON structure
-    map_jn              jns_;                                   // jnode name space
     std::string::const_iterator
                         ep_;                                    // exception pointer
     const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
     const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
+    map_jn              jns_;                                   // jnode name space
+    const Jnode *       ujn_ptr_;                               // for is_unique_()
+    const Jnode *       djn_ptr_;                               // for is_duplicate_()
+
 
  private:
     struct WalkStep;                                            // fwd decl.
@@ -1662,7 +1677,7 @@ class Json {
         std::regex          re;                                 // RE for R/L/D suffixes
         Jnode               user_json{Jnode::Neither};          // parsed Json for j suffix
 
-        COUTABLE(WalkStep, ws_type(), offset, range(), search_type(), label(), lexeme, json())
+        COUTABLE(WalkStep, search_type(), lexeme, ws_type(), offset, range(), label(), json())
     };
 
     // Search Cache Key:
@@ -1693,12 +1708,12 @@ class Json {
     void                parse_subscript_type_(WalkStep & state) const;
 
  public:
-    //                  walk iterator
+
+    //                      walk iterator
     //
     // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
     // container storage with the iterator (e.g. walk-based callbacks)
     //
-
     class iterator: public std::iterator<std::forward_iterator_tag, Jnode> {
      // this forward iterator let iterate over *iterable* walk paths
      // once iterator is dereferenced it returns a reference to a Jnode's super-node,
@@ -1943,12 +1958,16 @@ class Json {
         bool                label_matched_(const std::string &,
                                            const WalkStep &, map_jn *, long &) const;
         bool                atomic_matched_(const Jnode *, const char *l,
-                                            const WalkStep &, map_jn * nsp, long &i) const;
+                                            const WalkStep &, map_jn * nsp, long &i);
         bool                string_match_(const Jnode *,
                                           const WalkStep &, map_jn * nsp, long &i) const;
         bool                regex_match(const std::string &val,
                                         const WalkStep &ws, map_jn * nsp, long &i) const;
         bool                bull_matched_(const Jnode *, const WalkStep &) const;
+        bool                is_unique_(const Jnode & jn, const WalkStep &ws);
+        bool                is_duplicate_(const Jnode & jn, const WalkStep &ws);
+        void                purge_ns_(const std::string & pfx);
+
         bool                increment_(long l);
         long                next_iterable_ws_(long idx) const;
 
@@ -2046,26 +2065,30 @@ Jnode::Jnode(Json j)                                            // type conversi
 Json operator ""_json(const char *c_str, std::size_t len) {
  // raw string parsing
  Json x;
- return x.parse(c_str);
+ return x.parse(std::string{c_str});
 }
 
 
-Json & Json::parse(const std::string & jstr, ParseTrailing trail) {
+
+Json & Json::parse(std::string::const_iterator & jsp, ParseTrailing trail) {
  // parse input string. this is a wrapper for parse_(), where actual parsing occurs
  root() = OBJ{};
-
- auto jsp = jstr.begin();                                       // json string pointer
+ //auto jsp = jstr.begin();                                       // json string pointer
  parse_(root_, jsp);
- ep_ = jsp;
 
  if(root_.type() == Jnode::Neither)
-  throw EXP(Jnode::expected_json_value);
+  { ep_ = jsp; throw EXP(Jnode::expected_json_value); }
+
+ if(trail == relaxed_no_trail) return *this;
+ if(trail == strict_no_trail)
+  if(*jsp != CHR_NULL)
+   { ep_ = jsp; throw EXP(Jnode::unexpected_trailing); }
 
  for(; *jsp != CHR_NULL; ++jsp) {
-  if(*jsp >= 0 and *jsp <= ' ') continue;
-  ep_ = jsp;
-  if(trail == strict_trailing) throw EXP(Jnode::unexpected_trailing);
-  break;                                                        // relaxed_trailing
+  if(*jsp > 0 and *jsp <= ' ') continue;
+  if(trail == strict_trailing)
+   { ep_ = jsp; throw EXP(Jnode::unexpected_trailing); }
+  break;
  }
 
  return *this;
@@ -2503,7 +2526,7 @@ void Json::parse_suffix_(std::string::const_iterator &si,
   back_ws.jsearch = sfx;                                        // set suffix for given walkstep
   if(sfx == json_match)
    try { back_ws.user_json = Json{ back_ws.stripped.front() }; }
-   catch(Json::stdException & e) { throw EXP(Jnode::json_search_invalid); }
+   catch(Json::stdException & e) { throw EXP(Jnode::json_lexeme_invalid); }
   else
    if(sfx AMONG(Regex_search, Label_RE_search, Digital_regex))
     back_ws.re = back_ws.stripped.front();                      // it's a RE, book RE then
@@ -2547,7 +2570,7 @@ void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThro
  bool is_quantifier = throwing == may_throw;                    // allowed when parsing quantifiers
 
  if(*si == PFX_WFR) {                                           // '^' - it's a roots select
-  if(is_quantifier) throw EXP(Jnode::walk_bad_number);          // '^' not allowed in quantifiers
+  if(is_quantifier) throw EXP(Jnode::walk_bad_number_or_suffix);// '^' not allowed in quantifiers
   ws.type = WalkStep::root_select; ++si;                        // it could be a subscript
   if(*si == CHR_NULL) { --si; return; }                         // i.e. [^] - indicate failure
  }
@@ -2573,7 +2596,7 @@ void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThro
 
  if(is_quantifier or ws.type == WalkStep::root_select)
   if(ws.head < 0 or ws.tail < 0)                                // then cannot be negative
-   throw EXP(Jnode::walk_bad_number);
+   throw EXP(Jnode::walk_bad_number_or_suffix);
 
  DBG(1) DOUT() << "offset / range: " << ws.offset << " / " << ws.range() << std::endl;
 }
@@ -2586,7 +2609,7 @@ long Json::parse_index_(std::string::const_iterator &si, ParseThrow throwing) co
 
  long idx{ strtol(str, &endptr, 10) };
  if(endptr == str) {
-  if(throwing == may_throw) throw EXP(Jnode::walk_bad_number);
+  if(throwing == may_throw) throw EXP(Jnode::walk_bad_number_or_suffix);
   else return 0;
  }
  si += endptr - str;
@@ -2647,6 +2670,7 @@ bool Json::iterator::is_valid_(Jnode & jn, size_t idx) const {
 Json::iterator & Json::iterator::walk_(void) {
  // walk 'ws' structure from the root building a path vector
  // empty pv_ addresses json.root().
+ json_().ujn_ptr_  = json_().djn_ptr_ = nullptr;                // indicate beginning of walk
  Jnode * jnp = & json_().root();
  pv_.clear();                                                   // path-vector being built
 
@@ -2777,7 +2801,8 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
  }
 
  if(ws.type == WalkStep::static_select or                       // non-iterable, find once
-    ws.jsearch AMONG(search_from_ns, tag_from_ns)) {            // don't cache, it's dynamic type
+    ws.jsearch AMONG(search_from_ns, tag_from_ns,
+                     query_unique, Query_duplicate)) {          // don't cache, it's dynamic type
   if(not search_one_(jn, nullptr, ws, i))
    pv_.emplace_back(json_().root().children_().end(), idx);
   return;
@@ -2793,7 +2818,7 @@ void Json::iterator::walk_search_(size_t idx, Jnode *jn) {
   DBG(json_(), 1) DOUT(json_()) << "cached in " << cache[skey].size() << " searches" << std::endl;
  }
 
- if(i >= static_cast<long>(cache[skey].size()))             // offset outside of cache:
+ if(i >= static_cast<long>(cache[skey].size()))                 // offset outside of cache:
   pv_.emplace_back(json_().root().children_().end(), idx);      // return end()
  else {
   DBG(json_(), 1) DOUT(json_()) << "found cached idx " << i << std::endl;
@@ -2847,16 +2872,8 @@ void Json::iterator::match_iterables_(Jnode *jn, const char *lbl,
    return;                                                      // label does not match
  }
 
- auto user_json_ptr = &ws.user_json;
- if(ws.jsearch == search_from_ns) {
-  const auto found = vpv.back().ns.find(ws.stripped[0]);        // see if value was preserved
-  if(found == vpv.back().ns.end()) throw json_().EXP(Jnode::walk_non_existant_namespace);
-  user_json_ptr = &found->VALUE;
- }
- if(ws.jsearch == json_match or ws.jsearch == search_from_ns) {
-  if(*jn == *user_json_ptr) vpv.push_back(vpv.back());
-  return;
- }
+ if(ws.jsearch == json_match)
+  { if(*jn == ws.user_json) vpv.push_back(vpv.back()); return; }
 
  if((jn->is_object() and ws.jsearch AMONG(object_match, collection_match)) or
     (jn->is_array() and ws.jsearch AMONG(indexable_match, collection_match)) or
@@ -2908,10 +2925,13 @@ bool Json::iterator::match_iterables_(Jnode *jn, const char *lbl, const WalkStep
   if(found == json_().jns_.end()) throw json_().EXP(Jnode::walk_non_existant_namespace);
   user_json_ptr = &found->VALUE;
  }
- if(ws.jsearch == json_match or ws.jsearch == search_from_ns) {
-  if(*jn == *user_json_ptr and i-- == 0) return true;
-  return false;
- }
+ if(ws.jsearch == json_match or ws.jsearch == search_from_ns)
+  return *jn == *user_json_ptr and i-- == 0;
+
+ if(ws.jsearch == query_unique)
+  return is_unique_(*jn, ws) and i-- == 0;
+ if(ws.jsearch == Query_duplicate)
+  return is_duplicate_(*jn, ws) and i-- == 0;
 
  if((jn->is_object() and ws.jsearch AMONG(object_match, collection_match)) or
     (jn->is_array() and ws.jsearch AMONG(indexable_match, collection_match)) or
@@ -2982,6 +3002,16 @@ bool Json::iterator::child_found_(Jnode *jn, const WalkStep &ws, long &i) {
     { pv_.emplace_back(it); return true; }
    continue;
   }
+  if(ws.jsearch == query_unique) {                              // match q suffix
+   if(is_unique_(*jn, ws) and i-- == 0)
+    { pv_.emplace_back(it); return true; }
+   continue;
+  }
+  if(ws.jsearch == Query_duplicate) {                           // match Q suffix
+   if(is_duplicate_(*jn, ws) and i-- == 0)
+    { pv_.emplace_back(it); return true; }
+   continue;
+  }
   if((it->VALUE.is_object() and ws.jsearch AMONG(object_match, collection_match)) or
      (it->VALUE.is_array() and ws.jsearch AMONG(indexable_match, collection_match)) or
      (ws.jsearch == wide_match) or (ws.jsearch == end_node_match and it->VALUE.empty())) {
@@ -3024,7 +3054,7 @@ bool Json::iterator::label_matched_(const std::string &lbl,
 
 
 bool Json::iterator::atomic_matched_(const Jnode *jn, const char *lbl,
-                                     const WalkStep &ws, map_jn * nsp, long &i) const {
+                                     const WalkStep &ws, map_jn * nsp, long &i) {
  // see if string/number/bool/null value matches
  if(ws.stripped.size() > 1)                                     // label attached: try matching
   if(lbl == nullptr or ws.stripped.back() != lbl) return false; // no label, or not matching
@@ -3047,6 +3077,10 @@ bool Json::iterator::atomic_matched_(const Jnode *jn, const char *lbl,
        }
   case json_match:
         return *user_json_ptr == *jn and i-- == 0;
+  case query_unique:
+        return is_unique_(*jn, ws) and i-- == 0;
+  case Query_duplicate:
+        return is_duplicate_(*jn, ws) and i-- == 0;
   case regular_match:
   case Regex_search:
   case digital_match:
@@ -3092,7 +3126,6 @@ bool Json::iterator::regex_match(const std::string &val,
 }
 
 
-
 bool Json::iterator::bull_matched_(const Jnode *jn, const WalkStep &ws) const {
  // match bool and null (hence bull)
  switch(ws.jsearch) {
@@ -3106,6 +3139,78 @@ bool Json::iterator::bull_matched_(const Jnode *jn, const WalkStep &ws) const {
   default:                                                      // should never reach here.
         throw json_().EXP(Jnode::walk_a_bug);                   // covering compiler's warning
  }
+}
+
+
+bool Json::iterator::is_unique_(const Jnode & jn, const WalkStep &ws) {
+ // match unique jsons: keep track of matched jsons in the namespaces
+ static const Jnode not_unique;
+ const std::string & prefix = ws.stripped.front();
+
+ if(json_().ujn_ptr_ == nullptr) {                              // first time, prepare
+  purge_ns_(prefix);
+  json_().ujn_ptr_ = &not_unique;
+ }
+ if(json_().ujn_ptr_ == &jn)
+  return true;                                                  // same path being walked again
+
+ size_t idx = 0;
+ std::string key = prefix + std::to_string(idx);
+ auto found = json_().ns().find(key);
+
+ while(found != json_().ns().end()) {
+  if(found->VALUE == jn)                                        // found, i.e. not unique
+   { json_().ujn_ptr_ = &not_unique; return false; }
+  key = prefix + std::to_string(++idx);
+  found = json_().ns().find(key);
+ }
+
+ json_().jns_[key] = jn;                                        // store in ns a unique value
+ json_().jns_[prefix] = jn;                                     // provide to user the unique value
+ json_().ujn_ptr_ = &jn;                                        // cache in, for re-walking
+ return true;
+}
+
+
+bool Json::iterator::is_duplicate_(const Jnode & jn, const WalkStep &ws) {
+ // match duplicate jsons: keep track of matched jsons in the namespaces
+ static const Jnode unique;
+ const std::string & prefix = ws.stripped.front();
+
+ if(json_().djn_ptr_ == nullptr) {                              // first time, prepare
+  purge_ns_(prefix);
+  json_().djn_ptr_ = &unique;
+ }
+ if(json_().djn_ptr_ == &jn)
+  return true;                                                  // same path being walked again
+
+ size_t idx = 0;
+ std::string key = prefix + std::to_string(idx);
+ auto found = json_().ns().find(key);
+
+ while(found != json_().ns().end()) {
+  if(found->VALUE == jn) {                                      // found, i.e. duplicate
+   json_().jns_[prefix] = jn;                                   // provide to user the dup value
+   json_().djn_ptr_ = &jn;                                      // cache in, for re-walking
+   return true;
+  }
+  key = prefix + std::to_string(++idx);
+  found = json_().ns().find(key);
+ }
+
+ json_().djn_ptr_ = &unique;
+ json_().jns_[key] = jn;                                        // store in ns a unique value
+ return false;
+}
+
+
+void Json::iterator::purge_ns_(const std::string &pfx) {
+ // erase from ns all cached value for given prefix
+ size_t idx = 0;
+ for(auto found = json_().ns().find(pfx + "0");
+     found != json_().ns().end();
+     found = json_().ns().find(pfx + std::to_string(++idx)))
+  json_().jns_.erase(found);
 }
 
 
@@ -3144,7 +3249,7 @@ bool Json::iterator::increment_(long l) {
    DOUT(json_()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
   // even if walk_ does not yield a result for a given idx, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
-  // That logic is required to handle irregular JSON
+  // That logic is required to handle irregular JSONs
   long n = next_iterable_ws_(walk_path_().size());
   return n < 0? false: increment_( n );
  }
