@@ -10,7 +10,7 @@ to input JSONs as option `-j` to provided walks (`-w`)
 provided namespace
 
 #### Improvements, changes, fixes:
-- option `-j` applies now not to walks only (as it was before), but to all operation
+- option `-j` applies now not to walks only (as it was before), but to all operations
 - fixed accidentally broken in-quoting (`-rr`, now UT'ed).
 ***
 
