@@ -817,7 +817,7 @@ which do not have labels (i.e. elements in _JSON array_ and root) will be ignore
 
 E.g., let's dump all values from `Jane`'s record and wrap them all into an object:
 ```
-bash $ <ab.json jtc -w'<Jane>[-1]<>a:' 
+bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj 
 {
    "age": 25,
    "city": "Denver",
