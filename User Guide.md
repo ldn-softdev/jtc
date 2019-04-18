@@ -1540,9 +1540,9 @@ bash $
 ```
 
 However, their schemas would be the same. To compare schemas of two JSONs (well, with applied exemption on checking leaves data types),
-label directive `<>v` used together with `<>c` search suffix come handy:
+label directive `<>k` used together with `<>c` search suffix come handy:
 ```
-bash $ <ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>v' -c'ab.json' -c'<Ivan>[-1] <>c: <>v' -l
+bash $ <ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"' | jtc -w'<Ivan>[-1] <>c: <>k' -c'ab.json' -c'<Ivan>[-1] <>c: <>k' -l
 "json_1": {}
 "json_2": {}
 "json_1": {}
