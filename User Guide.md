@@ -49,7 +49,8 @@
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
-7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
+8. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
    * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
    * [Taming duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
@@ -198,8 +199,8 @@ though the message let us know that there's a problem with the input JSON, it no
 the problem. An easy way to see the spot where the problem and its locus is via debug (`-d`):
 ```
 bash $ <ab.json jtc -d
-.read_json(), start parsing json from <stdin>
-.read_json(), exception locus: ... Ave",|          "state": "CO,|          "postal code": 80206...
+.read_inputs(), reading json from <stdin>
+.parsejson(), exception locus: ... Ave",|          "state": "CO,|          "postal code": 80206...
 .location_(), exception spot: --------------------------------->| (offset: 1150)
 jtc json exception: unexpected_end_of_line
 bash $ 
@@ -1667,6 +1668,66 @@ namespace `val`; option `-p` turns _insert_ operation into _move_
 - `-T'{ "phone number": "+1 {val}" }'` after each walk (in `-i`) a template interpolations occurs here - a new JSON entry is generated
 from the template and namespace `val` and the new entry is then used for insertion into the respective destination walk (`-w`).
 Thus using templates it becomes easy to transmutate existing JSON into a new one.
+
+
+## Processing multiple input JSONs
+Normally `jtc` would process only a single input JSON if multiple input JSONs given - the fist JSON will be processed and the 
+rest of the intputs will be silently ignored:
+```
+bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc
+[
+   "1st json"
+]
+bash $ 
+```
+Couple options allow altering the behavior and process all the input JSONs:
+
+### Process all input JSONs
+Option `-a` instructs to process all the input JSONS:
+```
+bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -a
+[
+   "1st json"
+]
+{
+   "2nd": "json"
+}
+"3rd json"
+bash $ 
+```
+\- respected processing (of all given options) will occur for all of the input JSONs:
+```
+bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -a -w'<json>R'
+"1st json"
+"json"
+"3rd json"
+bash $ 
+```
+All the input JSONs will be processed as long they are valid - processing will stops upon the parsing failure:
+```
+bash $ echo '[ "1st json" ] { "2nd": json" } "3rd json"' | jtc -ad
+.read_inputs(), reading json from <stdin>
+.write_json(), outputting json to <stdout>
+[
+   "1st json"
+]
+.parsejson(), exception locus: { "2nd": json" } "3rd json"|
+.location_(), exception spot: --------->| (offset: 9)
+jtc json exception: expected_json_value
+bash $ 
+```
+
+### Wrap all processed JSONs
+option `-J` let wrapping all processed inputs into JSON array (option `-J` assumes option `-a`, no need giving both):
+```
+bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -J -w'<json>R'
+[
+   "1st json",
+   "json",
+   "3rd json"
+]
+bash $ 
+```
 
 
 ## More Examples
