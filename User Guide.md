@@ -1563,10 +1563,10 @@ bash $ echo $?
 bash $
 ```
 
-NOTE: _usage of '<>v' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
+NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print a label of the root always results in the exception:_
 ```
-bash $ <ab.json jtc -w'<>v'
+bash $ <ab.json jtc -w'<>k'
 jtc json exception: walk_root_has_no_label
 bash $ 
 ```
