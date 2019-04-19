@@ -3236,7 +3236,8 @@ bool Json::iterator::label_match_(map_jn::iterator jit, const Jnode *jn, long id
   return regex_match_(jit->KEY, ws, nsp);
                                                                 // >..<: quant. is relative
  long ofs = ws.load_offset(json()), pos = idx - ofs;
- if(pos < 0 or pos >= jn->children_().size()) return false;     // out of range of jn's children
+ if(pos < 0 or pos >= static_cast<long>(jn->children_().size()))// out of range of jn's children
+  return false;
 
  if(jn->is_array())                                             // this only could be >..<t
   return pos == found->VALUE.num();                             // return position match
