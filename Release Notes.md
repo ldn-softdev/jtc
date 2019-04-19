@@ -21,7 +21,7 @@ a neighbor of matched entry (either successive or preceding), so it becomes poss
 - improved debugging for walk-step visualization, now it's UTF-8 compatible
 - enforcing check on the empty types of lexemes (like `<>a` must be now always be empty, otherwise exception is printed)
 - added check for those which must be non-empty (e.g.: `<>R` - such empty lexeme is deemed invalid, exception printed)
-- fixed a quite corner case bug where a too low subscript quantifier could result in the incomplete walking in a subsequent lexeme
+- fixed a quite corner case bug where a too low subscript quantifier could result in an incomplete walking in a subsequent lexeme
 - updated built-in user guide (`-g`)
 ***
 
