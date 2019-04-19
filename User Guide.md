@@ -428,7 +428,8 @@ with the currently walked JSON elements:
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
 
 Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
-Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in 
+Stored in namespaces values could be reused later in the same or different walk-paths and 
+[interpolated](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation) in 
 [templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
 for a shell evaluation.
 
