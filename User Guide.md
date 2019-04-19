@@ -18,6 +18,8 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+     * [RE auto genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
+     * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
@@ -426,7 +428,8 @@ with the currently walked JSON elements:
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
 
 Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
-Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in templates and arguments
+Stored in namespaces values could be reused later in the same or different walk-paths and interpolated in 
+[templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
 for a shell evaluation.
 
 Say, we have a following JSON:
@@ -465,8 +468,10 @@ bash $
 ```
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
 
+
+#### RE auto genenerated namespaces
 RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
-- `$0` is auto-created for entire RE match,
+- `$0` is auto-generated for an entire RE match,
 - `$1` for a first subgroup,
 - `$2` for a second subgroup, and so on
 ```
@@ -479,6 +484,20 @@ bash $ <ab.json jtc -w'<^J(.*)>R:' -T'"j{$1}"'
 bash $ 
 ```
 
+
+#### Path namespaces
+There are also couple resrved namespaces to acqure a current JSON path:
+- `$PATH`: that namespace contains a JSON array describing path to the currently selected element
+- `$path`: this is a strigified represenation of the path
+Here are both demonstrated:
+```
+bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
+[ "Directory", 2, "name" ]
+dlyssenk $ <ab.json jtc -w'<NY>' -T'{{$path}}'
+"Directory_0_address_state"
+bash $ 
+```
+to play safe with the templates, always surrond them with single quotes (to dodge shell interpolation)
 
 
 
