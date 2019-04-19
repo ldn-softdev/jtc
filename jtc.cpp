@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.62"
+#define VERSION "1.63"
 
 
 // option definitions
@@ -51,6 +51,9 @@ using namespace std;
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
 #define SIZE_PFX "size: "
+#define PATH_JSN "$PATH"                                        // token for JSON path interp.
+#define PATH_STR "$path"                                        // token for stringified path
+#define PATH_SPR "_"                                            // stringified path separtor
 
 #include "lib/jtc_guide.hpp"
 
@@ -125,6 +128,16 @@ class CommonResource {
 
 
 class Jtc {
+    struct StringOvr {
+     // overrides string holder only if argument is non-empty
+                            StringOvr(void) = default;
+                            StringOvr(string s): str_{s} {}
+        StringOvr &         operator=(string s) { str_ = s.empty()? str_:s; return *this; }
+                            operator string & (void) { return str_; }
+    private:
+        string              str_;
+    };
+
     typedef vector<Json::iterator> walk_vec;
     typedef deque<Json::iterator> walk_deq;
     typedef void (Jtc::*mptr)(Json::iterator &wi, size_t group);
@@ -191,11 +204,12 @@ class Jtc {
     void                merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode);
     void                update_jsons_(Json::iterator &dst, Json::iterator src);
     bool                processed_by_cli_(Json::iterator &it);
-    bool                execute_cli_(Json &update, const Jnode &src_jnode);
-    string              reconcile_ui_(const Jnode &src_jnode);
+    bool                execute_cli_(Json &update, Json::iterator &jit);
+    string              reconcile_ui_(Json::iterator &jit);
     void                parse_params_(char option);
     void                extend_itr_(map_json &, const Json::map_jn &, Json::iterator);
-    string              interpolate_(const string &, const Json::map_jn &, const Jnode &);
+    void                build_path_(Jnode &jpath, Json::iterator &jit);
+    string              interpolate_(StringOvr, const Json::map_jn &, Json::iterator &);
     string              interpolate_tmp_(const string &, const Json::map_jn &);
     void                walk_interleaved_(void);
     void                process_walk_iterators(deque<walk_deq> &walk_iterators);
@@ -296,7 +310,7 @@ this tool provides ability to:
  - parse, validate and display JSON (in a compact and pretty formats)
  - walk about input JSON using various subscripting and search criteria (see with -)" STR(OPT_GDE)
  R"( fore more)
- - manipulate JSON via purge/insert/copy/merge/update/replace/move/swap operations
+ - manipulate JSON via purge/insert/copy/merge/update/replace/move/swap/iterpolate operations
  - compare JSONs (print diffs)
 
 for walk-path explanation, usage notes and examples run with -)" STR(OPT_GDE) R"(
@@ -378,7 +392,10 @@ void CommonResource::parse_opt(int argc, char *argv[]) {
  }
  if(opt_[CHR(OPT_JSN)].hits() > 0)
   if(opt_[CHR(OPT_WLK)].hits() == 0) opt_[CHR(OPT_WLK)] = "";
- if(opt_[CHR(OPT_ALL)].hits() > 0) opt_[CHR(OPT_FRC)].reset();  // -a, ensure -f ignored
+ if(opt_[CHR(OPT_ALL)].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0) {
+  DBG(0) DOUT() << "ignoring option -" STR(OPT_FRC) " b/c of multi-input processing" << endl;
+  opt_[CHR(OPT_FRC)].reset();                                   // -a (-J), ensure -f ignored
+ }
 }
 
 
@@ -432,7 +449,7 @@ void CommonResource::recompile_args_(v_string & args, v_string &new_args) {
    if(arg.back() == ';')                                        // ';' found
     { semicolon_found = true; arg.pop_back(); }                 // trim trailing ';'
    if(not arg.empty()) {
-    if(++opt_e_found_ == 2) new_args.back() += arg;             // first argument
+    if(opt_e_found_++ == 1) new_args.back() += arg;             // first argument
     else new_args.push_back(string("-") + opt_ui_ + arg);       // any subsequent arg
    }
    continue;
@@ -565,7 +582,7 @@ int Jtc::write_json(Json & json, bool jsonize) {
 
 int Jtc::demux_opt(void) {
  // demultiplex functional options, execute once
- for(char opt: STR(OPT_CMP) STR(OPT_INS) STR(OPT_UPD) STR(OPT_SWP) STR(OPT_PRG) STR(OPT_WLK)) {
+ for(char opt: STR(OPT_CMP)STR(OPT_INS)STR(OPT_UPD)STR(OPT_SWP)STR(OPT_PRG)STR(OPT_WLK)) {
   if(opt == '\0' or opt_[opt].hits() == 0) continue;
   DBG(1) DOUT() << "option: " << opt << ", hits: " << opt_[opt].hits() << endl;
   switch(opt) {
@@ -588,7 +605,6 @@ int Jtc::demux_opt(void) {
 
 ReturnCodes Jtc::compare_jsons() {
  // plug-in compare_by_iterator and let process walks
- // check_walk_requirements_(0);
  if(opt_[CHR(OPT_WLK)].hits() == 0)
   opt_[CHR(OPT_WLK)] = json_.is_atomic()? "[0]": "[^0]";
  parse_params_(CHR(OPT_CMP));                                   // collect all sources
@@ -598,6 +614,8 @@ ReturnCodes Jtc::compare_jsons() {
  subscriber_ = &Jtc::compare_by_iterator;
  walk_interleaved_();
 
+ if(opt_[CHR(OPT_JSN)].hits() > 0)
+  write_json(jout_);
  return cmp_;
 }
 
@@ -671,7 +689,6 @@ void Jtc::compare_by_iterator(Json::iterator &it, size_t group) {
 
 void Jtc::insert_json() {
  // plug-in insert_by_iterator and let process walks
- // check_walk_requirements_(0);
  if(opt_[CHR(OPT_WLK)].hits() == 0)
   opt_[CHR(OPT_WLK)] = json_.is_atomic()? "[0]": "[^0]";
  parse_params_(CHR(OPT_INS));                                   // collect all sources
@@ -702,7 +719,7 @@ void Jtc::insert_by_iterator(Json::iterator &it, size_t group) {
         << " became invalid due to prior operations, skipping" << endl;
   else {
    if(ecli_) {
-    is_cli_success = execute_cli_(jexc_[0], *isrc_[key_]);      // cli resulted in a valid json
+    is_cli_success = execute_cli_(jexc_[0], isrc_[key_]);      // cli resulted in a valid json
     if(is_cli_success) isrc_[key_] = jexc_[0].walk();
    }
    if(is_cli_success)
@@ -720,7 +737,6 @@ void Jtc::insert_by_iterator(Json::iterator &it, size_t group) {
 
 void Jtc::purge_json(void) {
  // remove all json nodes pointed by iterator(s), or do reverse
- // check_walk_requirements_(0);
  if(opt_[CHR(OPT_WLK)].hits() == 0)
   opt_[CHR(OPT_WLK)] = "[^0]";
 
@@ -769,7 +785,6 @@ void Jtc::purge_json(void) {
 
 void Jtc::update_json() {
  // plug-in update_by_iterator and let process walks
- // check_walk_requirements_(0);
  if(opt_[CHR(OPT_WLK)].hits() == 0)
   opt_[CHR(OPT_WLK)] = json_.is_atomic()? "[0]": "[^0]";
  parse_params_(CHR(OPT_UPD));                                   // collect all sources
@@ -806,7 +821,7 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
         << " became invalid due to prior operations, skipping" << endl;
   else {                                                        // isrc_ is valid, or jsrc[key_]
    if(ecli_) {                                                  // -e with trailing -u
-    is_cli_success = execute_cli_(jexc_[0], *isrc_[key_]);      // cli resulted in a valid json
+    is_cli_success = execute_cli_(jexc_[0], isrc_[key_]);      // cli resulted in a valid json
     if(is_cli_success) isrc_[key_] = jexc_[0].walk();
    }
    if(is_cli_success)
@@ -878,7 +893,7 @@ void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
  bool interpolated {false};
 
  if(opt_[CHR(OPT_TMP)].hits() >= 1) {                           // -T given
-  string istr = interpolate_(opt_[CHR(OPT_TMP)].str(key_ + 1), wns_[&wi], *wi);
+  string istr = interpolate_(opt_[CHR(OPT_TMP)].str(key_ + 1), wns_[&wi], wi);
   if(++key_  >= opt_[CHR(OPT_TMP)].size() - 1) key_ = 0;
   if(not istr.empty())
    { tmp.parse(istr, Json::strict_trailing); interpolated = true; }
@@ -1231,7 +1246,7 @@ bool Jtc::processed_by_cli_(Json::iterator &it) {
  if(ecli_ == false or not isrc_.empty()) return false;          // no -e, or isrc has trailing opt.
 
  DBG().severity(jexc_[0]);
- if(execute_cli_(jexc_[0], *it) == true) {                      // cli resulted in a valid json
+ if(execute_cli_(jexc_[0], it) == true) {                       // cli resulted in a valid json
   typedef void (Jtc::*op_ptr)(Json::iterator &, Json::iterator);
   static op_ptr op_json[2] = {&Jtc::update_jsons_, &Jtc::merge_jsons_};
   (this->*op_json[subscriber_ == &Jtc::insert_by_iterator])(it, jexc_[0].walk());
@@ -1241,9 +1256,9 @@ bool Jtc::processed_by_cli_(Json::iterator &it) {
 
 
 
-bool Jtc::execute_cli_(Json &json, const Jnode &src_jnode) {
+bool Jtc::execute_cli_(Json &json, Json::iterator &jit) {
  // execute cli in -i/u option (interpolating src_jnode if required) and parse the result into json
- sh_.system( reconcile_ui_(src_jnode) );
+ sh_.system( reconcile_ui_(jit) );
  if(sh_.rc() != 0)
   { cerr << "error: shell returned error (" << sh_.rc() << ")" << endl; return false; }
  if(sh_.stdout().empty())
@@ -1255,11 +1270,13 @@ bool Jtc::execute_cli_(Json &json, const Jnode &src_jnode) {
 
 
 
-string Jtc::reconcile_ui_(const Jnode &src_jnode) {
+string Jtc::reconcile_ui_(Json::iterator &jit) {
  // reconcile here options -i, or -u. or interpolate a static json string
  stringstream is;                                               // is: interpolation stream
+ size_t opt_idx = 0;
  for(const auto & opt_param: opt_[cr_.opt_ui()]) {              // reconcile here all -u/-i options
-  string istr = interpolate_(opt_param, json_.ns(), src_jnode);
+  if(++opt_idx >= cr_.opt_e_found()) break;
+  string istr = interpolate_(opt_param, json_.ns(), jit);
   is << quote_str(istr.empty()? opt_param: istr) << ' ';        // quote argument and separate
  }
  is.seekp(-1, ios_base::cur) << '\0';                           // remove trailing space
@@ -1315,7 +1332,7 @@ void Jtc::extend_itr_(map_json &tmp, const Json::map_jn &ns, Json::iterator jit)
   isrc_[isrc_.size()] = jit;
 
   for(auto & o: opt_[CHR(OPT_TMP)]) {                       // try interpolationg all -T options
-   string istr = interpolate_(o, ns, *jit);
+   string istr = interpolate_(o, ns, jit);
    if(not istr.empty()) {
     tmp[tmp.size()];
     DBG().severity(tmp[tmp.size()-1]);
@@ -1329,11 +1346,44 @@ void Jtc::extend_itr_(map_json &tmp, const Json::map_jn &ns, Json::iterator jit)
 
 
 
-string Jtc::interpolate_(const string &tmp, const Json::map_jn &ns, const Jnode &src_jnode) {
+void Jtc::build_path_(Jnode &jpath, Json::iterator &jit) {
+ // build json path (Json ARRAY) for given Json::iteratof
+ Jnode *node = &jit.json().root();
+
+ for(auto &itr: jit.path())
+  if(node->is_array()) {
+   long idx = strtol(itr.lbl.c_str(), nullptr, 16);
+   jpath.push_back(idx);
+   node = &(*node)[idx];
+  }
+  else {
+   jpath.push_back(itr.lbl);
+   node = &(*node)[itr.lbl];
+  }
+}
+
+
+
+string Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns, Json::iterator &jit) {
  // wrapper for interpolate_tmp_, including the empty case
- string is1 = interpolate_tmp_(tmp, ns);
- string is2 = interpolate_tmp_(is1.empty()? tmp: is1, {pair<string, Jnode>("", src_jnode)});
- return not is2.empty()? is2: is1;
+ Jnode jpath{ARY{}};
+
+ if(not interpolate_tmp_(tmp, {pair<string, Jnode>(PATH_STR, {})}).empty()) {
+  build_path_(jpath, jit);
+  string spath;
+  for(auto &itm: jpath) spath += itm.val() + PATH_SPR;          // stringify json path
+  spath.pop_back();
+  tmp = interpolate_tmp_(tmp, {pair<string, Jnode>(PATH_STR, spath)});
+ }
+ if(not interpolate_tmp_(tmp, {pair<string, Jnode>(PATH_JSN, {})}).empty()) {
+  if(jpath.empty())
+   build_path_(jpath, jit);
+  tmp = interpolate_tmp_(tmp, {pair<string, Jnode>(PATH_JSN, jpath)});
+ }
+
+ tmp = interpolate_tmp_(tmp, ns);
+ tmp = interpolate_tmp_(tmp, {pair<string, Jnode>("", *jit)});
+ return tmp;
 }
 
 
