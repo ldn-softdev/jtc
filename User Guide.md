@@ -329,7 +329,7 @@ bash $ <ab.json jtc -w'[Directory][+0][phone][+1][number]'
 bash $
 ```
 Here, all records (`[+0]`) from the `Directory` were selected and then in every record all `phone` sub-records selected starting from
-the 2nd entry
+the 2nd entry (`[+1]`)
 
 The same way object elements could be subscripted, here's an example where all address entries staring from the 2nd one are printed,
 each one stating from the 3rd entry: 
