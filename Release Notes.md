@@ -19,7 +19,7 @@ a neighbor of matched entry (either successive or preceding), so it becomes poss
   - only non-cacheable suffixes are of dynamic types: [`stqQ`] (understandably, their result dynamically depends on the current
   state of the namespace) and searches with relative quantifiers (`>..<l` and `>..<t`)
 - improved debugging for walk-step visualization, now it's UTF-8 compatible
-- enforcing check on the empty types of lexemes (like `<>a` must be now always be empty, otherwise exception is printed)
+- enforcing check on the empty types of lexemes (like `<>a` now must be always empty, otherwise exception is printed)
 - added check for those which must be non-empty (e.g.: `<>R` - such empty lexeme is deemed invalid, exception printed)
 - fixed a quite corner case bug where a too low subscript quantifier could result in an incomplete walking in a subsequent lexeme
 - updated built-in user guide (`-g`)
