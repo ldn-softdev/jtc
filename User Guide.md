@@ -1674,7 +1674,7 @@ Thus using templates it becomes easy to transmutate existing JSON into a new one
 
 ## Processing multiple input JSONs
 Normally `jtc` would process only a single input JSON if multiple input JSONs given - the fist JSON will be processed and the 
-rest of the intputs will be silently ignored:
+rest of the inputs will be silently ignored:
 ```
 bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc
 [
@@ -1727,6 +1727,46 @@ bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -J -w'<json>R'
    "1st json",
    "json",
    "3rd json"
+]
+bash $ 
+```
+option `-J` also implicitly imposes `-j` thus it's safely could be used even with a single JSON at the input with the same effect. 
+Though, when walking multiple input JSONs, each of the option would have its own effect, this example clarifies:
+```
+bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -aj
+[
+   "John",
+   "Ivan",
+   "Jane"
+]
+[
+   "John",
+   "Ivan",
+   "Jane"
+]
+bash $ 
+bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -J
+[
+   "John",
+   "Ivan",
+   "Jane",
+   "John",
+   "Ivan",
+   "Jane"
+]
+bash $ 
+bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -Jj
+[
+   [
+      "John",
+      "Ivan",
+      "Jane"
+   ],
+   [
+      "John",
+      "Ivan",
+      "Jane"
+   ]
 ]
 bash $ 
 ```
