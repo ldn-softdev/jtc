@@ -5,7 +5,7 @@ _Release Notes for `jtc` v.1.63_
 - added auto-generated name-spaces `$PATH` and `$path` - they represent a path to the currently selected JSON element. `$PATH`
 represent it as a _JSON array_, while `$path` stores it as a _JSON string_ value
 - added quantifier interpolation from the namespaces, i.e. a search in notation like `<..>{..}`, where a search
-quantifier `{..}` resolved from the namespace (all types of quantifiers supported with all search suffixes, e.g.: `>blah<R:{lbl}`
+quantifier `{..}` resolved from the namespace (all types of quantifiers supported with all search suffixes, e.g.: `>blah<R:{lbl}`)
 - quantifier semantic in search types `>..<l` and `>..<t` now let addressing values by relative offsets, i.e., selecting 
 a neighbor of matched entry (either successive or preceding), so it becomes possible to select "neighbors" of the found entries
 
