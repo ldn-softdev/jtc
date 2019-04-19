@@ -16,7 +16,7 @@ a neighbor of matched entry (either successive or preceding), so it becomes poss
   - it caches up to (but not beyond) specified range, e.g. `>..<N`, - will build the cache up to N'th entry only
   - cache will be extended automatically if a next search (lexeme of walk) addresses beyond existing cache size, e.g.: `>..<:M`,
   where `M`>`N`
-  - only non-cacheable suffixes are of dynamic types: [`stqQ`] (understandably, ther result dynamically depends on the current
+  - only non-cacheable suffixes are of dynamic types: [`stqQ`] (understandably, their result dynamically depends on the current
   state of the namespace) and searches with relative quantifiers (`>..<l` and `>..<t`)
 - improved debugging for walk-step visualization, now it's UTF-8 compatible
 - enforcing check on the empty types of lexemes (like `<>a` must be now always be empty, otherwise exception is printed)
