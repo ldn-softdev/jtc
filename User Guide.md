@@ -506,7 +506,8 @@ to play safe with the templates, always surrond them with single quotes (to dodg
 
 
 #### Search quantifiers
-Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix).
+Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix). 
+Quantifiers in search lexemes allow selecting match instance (i.e. select first match, second one, etc, or a range of matches)
 Quantifiers exist in the following formats:
 - `n`, - a positive number - tells which instance of a match to pick. By default, a quantifier `0` is applied
 (i.e. first match is selected)
@@ -528,6 +529,36 @@ bash $
 ```
 \- the trailing `1:` in the walk path is the range quantifier, which selects (prints) all the matches (we are matching
 _JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
+
+
+There are two search lexemes where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
+Those are non-recursive searches will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
+to address only one single label or index, there could not be any other, e.g. this JSON:
+```
+bash $ echo '{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' | jtc -r
+{ "a": 1, "b": 2, "c": 3, "d": 4, "e": 6 }
+bash $ 
+```
+there could be only one label `"b"`, thus normally trying to match a second, third, etc instance of the label `"b"` would not
+make much sense: `echo '{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' | jtc -w'>b<l2'`
+
+Thus the semantic of quantifiers only in those searches was changed (to extend use cases) - there, quantifiers provide a
+relative offset meaning from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
+once matched/found then its second (successive) neighbor value will be selected:
+```
+bash $ echo '{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' | jtc -w'>b<l2' -l
+"d": 4
+bash $ 
+```
+Because of change in semantic, those are only search quantifiers (they also have to be non-recursive) which allow negative
+values. Positive quantifiers let selecting next (successive) neighbors, while negative quantifiers let selective preceding
+neighbors:
+```
+bash $ echo '{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' | jtc -w'>b<l-1' -l
+"a": 1
+bash $ 
+````
+
 
 #### Scoped search 
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e. the JSON node
