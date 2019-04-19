@@ -18,7 +18,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
-     * [RE auto genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
+     * [RE genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
@@ -469,7 +469,7 @@ bash $
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
 
 
-#### RE auto genenerated namespaces
+#### RE genenerated namespaces
 RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first subgroup,
