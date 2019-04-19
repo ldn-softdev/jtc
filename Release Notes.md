@@ -1,4 +1,29 @@
+
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.63_
+#### New features:
+- added auto-generated name-spaces `$PATH` and `$path` - they represent a path to the currently selected JSON element. `$PATH`
+represent it as a _JSON array_, while `$path` stores it as a _JSON string_ value
+- added quantifier interpolation from the namespaces, i.e. a search in notation like `<..>{..}`, where a search
+quantifier `{..}` resolved from the namespace (all types of quantifiers supported with all search suffixes, e.g.: `>blah<R:{lbl}`
+- quantifier semantic in search types `>..<l` and `>..<t` now let addressing values by relative offsets, i.e., selecting 
+a neighbor of matched entry (either successive or preceding), so it becomes possible to select "neighbors" of the found entries
+
+#### Improvements, changes, fixes:
+- a big rework of the cache engine:
+  - before it only was engaged for recursively ranged searches (`<..>n:n`) and was cacheing entire JSON (off a given node)
+  - now, it's engaged for both search types recursive and non-recursive (`<..>`, `>..<`)
+  - it caches up to (but not beyond) specified range, e.g. `>..<N`, - will build the cache up to N'th entry only
+  - cache will be extended automatically if a next search (lexeme of walk) addresses beyond existing cache size, e.g.: `>..<:M`,
+  where `M`>`N`
+  - only non-cacheable suffixes are of dynamic types: [`stqQ`] (understandably, ther result dynamically depends on the current
+  state of the namespace) and searches with relative quantifiers (`>..<l` and `>..<t`)
+- improved debugging for walk-step visualization, now it's UTF-8 compatible
+- enforcing check on the empty types of lexemes (like `<>a` must be now always be empty, otherwise exception is printed)
+- added check for those which must be non-empty (e.g.: `<..>R` - such empty lexeme is deemed invalid, exception printed)
+- fixed a quite corner case bug where a too low subscript quantifier could result in the incomplete walking in a subsequent lexeme
+- updated built-in user guide (-g)
+***
 
 _Release Notes for `jtc` v.1.62_
 #### New features:
@@ -52,3 +77,4 @@ walk-paths
 - substitution operation now replaced with interpolation: removed parsing of `{-}`,`[]`,`[-]`; interpolation now occurs
 with `{}` and `{{}}`, the latter one interpolates JSON as it is, the former one affects string interpolation only - the string value
 is interpolated without outer quote marks
+
