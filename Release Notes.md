@@ -22,7 +22,7 @@ a neighbor of matched entry (either successive or preceding), so it becomes poss
 - enforcing check on the empty types of lexemes (like `<>a` must be now always be empty, otherwise exception is printed)
 - added check for those which must be non-empty (e.g.: `<>R` - such empty lexeme is deemed invalid, exception printed)
 - fixed a quite corner case bug where a too low subscript quantifier could result in the incomplete walking in a subsequent lexeme
-- updated built-in user guide (-g)
+- updated built-in user guide (`-g`)
 ***
 
 _Release Notes for `jtc` v.1.62_
