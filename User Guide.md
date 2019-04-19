@@ -50,6 +50,7 @@
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
+   * [Search quantifier interpolation (<..>{..})](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifier-interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
@@ -1632,6 +1633,70 @@ bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'
 }
 bash $ 
 ```
+
+### Search quantifier interpolation
+Also interpolation may occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
+index value stored `item`:
+```
+bash $ echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }' | jtc 
+{
+   "item": 2,
+   "list": {
+      "bread": 1.20,
+      "cheese": 2.90,
+      "milk": 0.90
+   }
+}
+bash $ 
+```
+To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
+```
+bash $ echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }' | jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
+"milk": 0.90
+bash $ 
+```
+It should be quite easy to read/understand such walk path (predicated one is familiar with suffixes / directives). Let's see
+how the walk-path works in a slow-mo:
+1. `[item]` selects the value by label `item`:
+```
+bash $ J=$(echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }')
+bash $ echo $J | jtc -w'[item]'
+2
+bash $ 
+```
+2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
+```
+bash $ echo $J | jtc -w'[item]<idx>v'
+2
+bash $ 
+```
+
+3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e. addresses the first parent of the `item` value) which is
+the root of th input json:
+```
+bash $ echo $J | jtc -w'[item]<idx>v[-1]'
+{
+   "item": 2,
+   "list": {
+      "bread": 1.20,
+      "cheese": 2.90,
+      "milk": 0.90
+   }
+}
+bash $ 
+```
+4. `[list]` selects the object value by label `list`:
+```
+bash $ echo $J | jtc -w'[item]<idx>v[-1][list]'
+{
+   "bread": 1.20,
+   "cheese": 2.90,
+   "milk": 0.90
+}
+bash $ 
+```
+5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
+(which is `2`) gives us the required value.
 
 
 
