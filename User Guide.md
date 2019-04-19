@@ -50,7 +50,7 @@
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
-   * [Search quantifier interpolation (<..>{..})](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifier-interpolation)
+   * [Search quantifiers interpolation (<..>{..})](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
 6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
@@ -1634,7 +1634,7 @@ bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'
 bash $ 
 ```
 
-### Search quantifier interpolation
+### Search quantifiers interpolation
 Also interpolation may occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
 index value stored `item`:
 ```
