@@ -526,8 +526,8 @@ bash $ <ab.json jtc -w'<>i1:' -r
 [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
 bash $
 ```
-\- the trailing `1:` in the walk path is the range quantifier, which selects (prints) all the matches starting from second one (all
-quantifiers and indices are zero-based)
+\- the trailing `1:` in the walk path is the range quantifier, which selects (prints) all the matches (we are matching
+_JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
 
 #### Scoped search 
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e. the JSON node
