@@ -185,7 +185,7 @@ bash $ <ab.json jtc -r -z
 size: 56
 bash $
 ```
-if size only required, then use `-zz` option then:
+if size only required, then use `-zz` option:
 ```
 bash $ <ab.json jtc -zz
 56
