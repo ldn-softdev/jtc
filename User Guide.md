@@ -401,18 +401,18 @@ there are following suffixes to control search behavior:
   * `d`: fully matches _JSON number_
   * `D`: the lexeme is an RE, only _JSON numerical_ values searched
   * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
-  * `n`: matches _JSON null_ value, the lexeme value is ignored, could be anything, like `<null>n`, or `<>n`, etc
+  * `n`: matches _JSON null_ value, the lexeme value must be empty:`<>n`
   * `l`: fully matches _JSON label_
   * `L`: the lexeme is a search RE, only _JSON labels_ searched
-  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value is ignored
-  * `o`: matches any JSON object - `{..}`, the lexeme value is ignored
-  * `i`: matches any JSON array (iterable/indexable) `[..]`, , the lexeme value is ignored
-  * `c`: matches either arrays or objects; the content within the encasement is ignored
-  * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
-  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
+  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value must be empty
+  * `o`: matches any JSON object - `{..}`, the lexeme value must be empty
+  * `i`: matches any JSON array (iterable/indexable) `[..]`, , the lexeme value must be empty
+  * `c`: matches either arrays or objects; the content within the encasement must be empty
+  * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value must be empty
+  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value must be empty
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
-  * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
+  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`  
   * `q`: matches only unique JSON values; stores the matched elemetns in the namespace 
   * `Q`: matches only repeatitive (duplicate) JSON values; stores the matched elemetns in the namespace
 
