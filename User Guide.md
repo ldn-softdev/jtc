@@ -1,12 +1,12 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.63_)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.64_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
    * [Compact printing (`-r`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing)
-   * [Printing JSON size (`-z`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
+   * [Printing JSON size (`-z`, `-zz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
    * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
    * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
    * [Unquoting JSON strings (`-qq`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)
@@ -185,11 +185,11 @@ bash $ <ab.json jtc -r -z
 size: 56
 bash $
 ```
-if size only required, then use `tail` command:
+if size only required, then use `-zz` option then:
 ```
-bash $ <ab.json jtc -rz | tail -1
-size: 56
-bash $
+bash $ <ab.json jtc -zz
+56
+bash $ 
 ```
 
 ### Validating JSON
@@ -495,7 +495,7 @@ Here are both demonstrated:
 ```
 bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
 [ "Directory", 2, "name" ]
-dlyssenk $ <ab.json jtc -w'<NY>' -T'{{$path}}'
+bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
 "Directory_0_address_state"
 bash $ 
 ```
