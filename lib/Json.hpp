@@ -2897,16 +2897,16 @@ void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
 
  // [0], [+1], [..:..] etc
  size_t node_size = jn->children_().size();
- ws.offset = normalize_(ws.offset, jn);
- if(ws.offset >= node_size or ws.offset >= normalize_(ws.tail, jn)) // beyond children's size/tail
+ size_t offset = ws.offset = normalize_(ws.offset, jn);
+ if(offset >= node_size or offset >= normalize_(ws.tail, jn))   // beyond children's size/tail
   return pv_.emplace_back(json().end_(), wsi);
 
  if(ws.type == WalkStep::static_select and jn->is_array())      // [N] on array
-  return pv_.emplace_back(jn->iterator_by_idx_(ws.offset));
+  return pv_.emplace_back(jn->iterator_by_idx_(offset));
 
  auto it = build_cache_(jn, wsi);
 
- DBG(json(), 1) DOUT(json()) << "found cached idx " << ws.offset << std::endl;
+ DBG(json(), 1) DOUT(json()) << "found cached idx " << offset << std::endl;
  pv_.emplace_back(it);
 }
 
@@ -2919,7 +2919,7 @@ Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
  auto found_cache = cache_map.find(skey);
  bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
                     (found_cache->KEY.ws.type != WalkStep::cache_complete and   // not cached yet
-                     ws.offset >= found_cache->VALUE.front().pv.size());
+                     static_cast<size_t>(ws.offset) >= found_cache->VALUE.front().pv.size());
  if(build_cache) {
   DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
   auto & cache = found_cache == cache_map.end()? cache_map[skey]: found_cache->VALUE;
