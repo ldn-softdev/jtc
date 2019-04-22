@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define VERSION "1.63"
+#define VERSION "1.64"
 
 
 // option definitions
@@ -212,7 +212,7 @@ class Jtc {
     string              interpolate_(StringOvr, const Json::map_jn &, Json::iterator &);
     string              interpolate_tmp_(const string &, const Json::map_jn &);
     void                walk_interleaved_(void);
-    void                process_walk_iterators(deque<walk_deq> &walk_iterators);
+    void                process_walk_iterators_(deque<walk_deq> &walk_iterators);
     void                process_offsets_(deque<walk_deq> &, vector<vector<long>> &,
                                          size_t, vector<size_t> &);
     size_t              build_front_grid_(vector<vector<long>> &, const deque<walk_deq> &);
@@ -288,7 +288,8 @@ int main(int argc, char *argv[]){
                         " (-rr stringify resulting JSON)");
  opt[CHR(OPT_SWP)].desc("swap around two JSON elements pointed by walks (two -" STR(OPT_WLK)
                         " must be given)");
- opt[CHR(OPT_SZE)].desc("print JSON size (number of nodes in JSON) at the end of JSON/walks");
+ opt[CHR(OPT_SZE)].desc("print size (number of nodes in JSON) at the end of output (-"
+                        STR(OPT_SZE) STR(OPT_SZE) " prints size only)");
  opt[CHR(OPT_CMP)].desc("compare JSONs: display delta between given JSONs").name("f|j|w");
  opt[CHR(OPT_INS)].desc("insert/merge JSON, or from file, or pointed by a walk-path, see with -"
                         STR(OPT_GDE) " for more").name("f|j|w");
@@ -551,6 +552,9 @@ void Jtc::parsejson(string::const_iterator & jsp) {
 int Jtc::write_json(Json & json, bool jsonize) {
  // write whole json to output (demultiplexing file and stdout), featuring:
  // inquoting/unquoting json string, putting array into json (-j), printing size to stdout
+ if(opt_[CHR(OPT_SZE)].hits() > 1)
+  { cout << json.size() << endl; return RC_OK; }
+
  bool write_to_file{opt_[0].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0};  // [0] and -f given
  bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given, unquote
  bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
@@ -971,6 +975,9 @@ void Jtc::jsonized_output_obj_(Json::iterator &wi, size_t group, const Json *jtm
 
 void Jtc::direct_output_(Json::iterator &wi, size_t group, const Json *jtmp_ptr) {
  // no -j given, print out element pointed by iter wi
+ if(opt_[CHR(OPT_SZE)].hits() > 1)
+  { cout << wi->size() << endl; return; }
+
  auto &sr = jtmp_ptr == nullptr? *wi: jtmp_ptr->root();         // interpolated record
  bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given
  bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
@@ -1304,8 +1311,9 @@ void Jtc::parse_params_(char option) {
     string jstr{istream_iterator<char>(ifstream{arg, ifstream::in} >> noskipws),
                istream_iterator<char>{}};
     DBG().severity(jsrc_[jsrc_.size()]);
-    DBG(1) DOUT() << "attempting to parse parameter as json" << endl;
-    jsrc_[jsrc_.size()-1].parse(jstr.empty()? arg: jstr, Json::strict_trailing);
+    DBG(1) DOUT() << "attempting to parse parameter (" << arg << ") as json" << endl;
+    jsrc_[jsrc_.size()-1].parse(jstr.empty()? arg: jstr,
+                                jstr.empty()? Json::strict_no_trail: Json::strict_trailing);
     if(not jexc_.empty()) { jsrc_.erase(jsrc_.size()-1); continue; }
    }
    catch(Json::stdException & e) {                              // not a static json - a walk-path
@@ -1468,12 +1476,12 @@ void Jtc::walk_interleaved_(void) {
  }
 
  while( any_of(wpi.begin(), wpi.end(), [](walk_deq &wi){ return not wi.empty(); }) )
-  process_walk_iterators(wpi);
+  process_walk_iterators_(wpi);
 }
 
 
 
-void Jtc::process_walk_iterators(deque<walk_deq> &wpi) {
+void Jtc::process_walk_iterators_(deque<walk_deq> &wpi) {
  // build front iterators offset matrix: wpi may contain empty deque
  vector<vector<long>> fom(wpi.size());                          // front offset matrix
 

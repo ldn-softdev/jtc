@@ -296,8 +296,8 @@
  *   2) search lexemes: enclosed into angular braces <>, or ><, instructs to perform
  *      a textual match everywhere under the given json's tree. Following notations
  *      are possible:
- *      <txt>, <txt>n, <txt>+n, <txt>S, <txt>Sn, <txt>S+n, and reverse notations:
- *      >txt<, >txt<n, >txt<+n, >txt<S, >txt<Sn, >txt<S+n,
+ *      <txt>, <txt>n, <txt>+n, <txt>S, <txt>Sn, and reverse notations:
+ *      >txt<, >txt<n, >txt<+n, >txt<S, >txt<Sn,
  *      where: txt - is any text to search for,
  *             S - optional one letter suffix,
  *             n - optional quantifier
@@ -306,46 +306,8 @@
  *        children in the given node
  *      "<text>": performs search of the string "text" within json tree under
  *                the given node
- *      - optionally a one letter suffix (either of [rlRLdbnaoij]) could be used:
- *        which affect search in the following way:
- *        r: apply exact match (default, may be omitted) while searching JSON string values only
- *        R: same as r, but expression in braces is a Regex (regex search applied)
- *        l: apply exact match while searching object labels only
- *        L: same as l, but expression in braces is a Regex (regex search applied)
- *        d: match a number (i.e. searches numeric JSON values only)
- *        D: same as d, but expression in braces is a Regex (value is treated as a string value here)
- *        b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled
- *           e.g.: '<true>b', '<any>b'
- *        n: match null values only, the content within the encasement could be anything and is ignored
- *           e.g.: '<>n', '>null<n', etc
- *        a: match any atomic JSON value (string, numeric, boolean, null); the content within the
- *           encasements is ignored
- *        o: match any object JSON value (i.e. '{...}'); the content within the encasement is ignored
- *        i: match any array (iterable) JSON value (i.e. '[...]'); the content within the encasement is
- *           ignored
- *        c: match either arrays or objects; the content within the encasement is ignored
- *        j: match user specific JSON value, the content within the encasement should be a valid JSON
- *           value, e.g.: '<[]>j' - will find the first empty JSON array
- *        w: wide range match - match any JSON value (atomic, objects, arrays)
- *        e: end-node match (matches leaves only) - match any of: atomic, {}, []
- *        v: not a search, this suffix instructs to treat a label/index (if exists) as a value;
- *      - optionally a numeric quantifier could follow search (or suffix):
- *      n - integer quantifier specifying match instance, e.g.: "<text>2"
- *          will match only upon a 3rd (i.e. zero based) encounter of the word
- *          "text"
- *      +n - makes the path iterable: produce a match upon n'th match encounter
- *          and indicates that upon the next iteration a next match instance to
- *          to be selected. e.g: "<text>+1" will match 2nd found instance of "text",
- *          then 3rd, 4fth and so on.
- *      N:N - range quantifier, makes path iterable as well. '+' sign in this
- *          notation as well as the indices are optional. Some of quantifier notations
- *          are duplicate, e.g:
- *          '+0' and ':' - will make select all found matches
- *          '+1' and '1:' and '+1:' have the same effect
- *          '2' and '2:3' both select 3rd match only
- *      - negative quantifiers (ranges in quantifiers) are not allowed
- *      - empty lexemes <> / >< may have either r suffix - matches an empty string,
- *        l - to match empty label, or n suffix, otherwise an exception is thrown
+ *      - optionally a one letter suffix altering search behavior.
+ *        for full description see `jtc_guide.hpp`
  *
  *   3) An offset lexeme ([...]) could be concatenated with a search lexeme (either
  *      <....> or >...<) over the colon sign (':'), e.g.: [some label]:<some text>
@@ -1646,7 +1608,7 @@ class Json {
             parent_select,      /* [-2], quantifier: NA */ \
             root_select,        /* [^5], quantifier: NA */ \
             range_walk,         /* [+0], [1:], [4:10], [-5:-1], quantifiers: +0, 3:, 4:10 */ \
-            cache_complete      /* this is used in SearchCacheKey only */
+            cache_complete      /* this is used in **SearchCacheKey** only */
                                 // note: there's no negative range for iterable quantifier: no way
                                 // to know upfront the number of hits recursive search'd produce
         ENUMSTR(WalkStepType, WALKSTEPTYPE)
@@ -1656,6 +1618,8 @@ class Json {
                              lexeme(std::move(l)), jsearch(js) {}
 
         bool                operator<(const WalkStep &r) const {// only for SearchCacheKey:
+                             if(is_subscript() or r.is_subscript())
+                              return jsearch < r.jsearch;
                              return jsearch != r.jsearch?       // - for caching purpose
                                     jsearch < r.jsearch:        // quantifiers are not compared
                                     ( lexeme != r.lexeme?
@@ -2039,19 +2003,15 @@ class Json {
         void                walk_step_(size_t wsi, Jnode *);
         void                show_built_pv_(std::ostream &out) const;
         void                walk_numeric_offset_(size_t wsi, Jnode *);
+        Json::iter_jn       build_cache_(Jnode *jn, size_t wsi);
         void                walk_text_offset_(size_t wsi, Jnode *);
         void                walk_search_(size_t wsi, Jnode *);
         size_t              normalize_(long &offset, Jnode *jn) {   // normalize head/offset/tail
                              // convert negative idx/offset to true positive
                              long children = static_cast<long>(jn->children_().size());
-                             if(offset >= 0) return offset;
+                             if(offset >= 0) return offset > children? children: offset;
                              if(-offset > children) offset = -children;
                              return children + offset;
-                            }
-        size_t              normalize_(long offset, Jnode *jn) const {  // normalize const version
-                             // convert negative idx/offset to true positive
-                             long children = static_cast<long>(jn->children_().size());
-                             return offset >= 0? offset: children + offset;
                             }
 
         void                research_(Jnode *jn, size_t wsi,
@@ -2938,11 +2898,53 @@ void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
  // [0], [+1], [..:..] etc
  size_t node_size = jn->children_().size();
  ws.offset = normalize_(ws.offset, jn);
- size_t offset = ws.offset;
- if(offset >= node_size or offset >= normalize_(ws.tail, jn))   // beyond children's size or tail
-  return pv_.emplace_back(json().root().children_().end(), wsi);
- auto it = jn->iterator_by_idx_(offset);
+ if(ws.offset >= node_size or ws.offset >= normalize_(ws.tail, jn)) // beyond children's size/tail
+  return pv_.emplace_back(json().end_(), wsi);
+
+ if(ws.type == WalkStep::static_select and jn->is_array())      // [N] on array
+  return pv_.emplace_back(jn->iterator_by_idx_(ws.offset));
+
+ auto it = build_cache_(jn, wsi);
+
+ DBG(json(), 1) DOUT(json()) << "found cached idx " << ws.offset << std::endl;
  pv_.emplace_back(it);
+}
+
+
+Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
+ // build cache for subscripts
+ auto &ws = ws_[wsi];
+ auto & cache_map = json().sc_;                                 // all caches map
+ SearchCacheKey skey{jn, ws};                                   // prepare a search key
+ auto found_cache = cache_map.find(skey);
+ bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
+                    (found_cache->KEY.ws.type != WalkStep::cache_complete and   // not cached yet
+                     ws.offset >= found_cache->VALUE.front().pv.size());
+ if(build_cache) {
+  DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
+  auto & cache = found_cache == cache_map.end()? cache_map[skey]: found_cache->VALUE;
+  if(cache.empty())
+   { cache.resize(1); cache.front().pv.emplace_back(jn->children_().begin()); }
+
+  size_t size = ws.type == WalkStep::static_select? ws.offset: normalize_(ws.tail, jn) - 1;
+  for(size_t i = cache.front().pv.size(); i <= size; ++i) {
+   auto it = cache.front().pv.back().jit;
+   cache.front().pv.emplace_back(++it);
+  }
+  if(cache.front().pv.size() == jn->children_().size()) {
+   // indication that cache is complete is stored in the SearchCacheKey:
+   skey.ws.type = WalkStep::cache_complete;                     // indicate cache completed
+   auto pc = move(cache);                                       // move/preserve the cache
+   json().sc_.erase(skey);                                      // erase old skey
+   json().sc_[skey] = move(pc);                                 // create new one
+  }
+
+  found_cache = cache_map.find(skey);
+  DBG(json(), 1)
+   DOUT(json()) << "built cache size: " << found_cache->VALUE.front().pv.size() << ", cache status: "
+                << ENUMS(WalkStep::WalkStepType, found_cache->KEY.ws.type) << std::endl;
+ }
+ return found_cache->VALUE.front().pv[ws.offset].jit;
 }
 
 
