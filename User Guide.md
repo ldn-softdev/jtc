@@ -398,8 +398,8 @@ bash $
 there are following suffixes to control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ value
   * `R`: the lexeme is a search RE, only _JSON string_ values searched
-  * `D`: the lexeme is an RE, only _JSON numerical_ values searched
   * `d`: fully matches _JSON number_
+  * `D`: the lexeme is an RE, only _JSON numerical_ values searched
   * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
   * `n`: matches _JSON null_ value, the lexeme value is ignored, could be anything, like `<null>n`, or `<>n`, etc
   * `l`: fully matches _JSON label_
