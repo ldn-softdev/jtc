@@ -8,7 +8,7 @@ a very small and quick update:
 and then the size).
 
 #### Improvements, changes, fixes:
-- cacheing is extended to walking subscripts as well (before only search walk lexeme were covered). Now ranged subscripts are
+- cacheing is extended to walking subscripts as well (before only search walk lexemes were covered). Now ranged subscripts are
 cached (`[N:N]`) and static / numerical subscript when addressing _JSON objects_ (`[N]`); _JSON arrays_ addressed directly, thus
 such operation is not prone to an exponential decay and hence does not require cacheing.
 ***
