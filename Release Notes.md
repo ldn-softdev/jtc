@@ -1,5 +1,19 @@
 
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.64_
+
+a very small and quick update:
+#### New features:
+- added an option `-zz` to display JSON size only - it'll skip displaying JSON (unlike `-z` that will display JSON first
+and then the size).
+
+#### Improvements, changes, fixes:
+- cacheing is extended to walking subscripts as well (before only search walk lexeme were covered). Now ranged subscripts are
+cached (`[N:N]`) and static / numerical subscript when addressing _JSON objects ([N]); _JSON arrays_ addressed directly, thus
+such operation is not prone to an exponential decay and hence does not require cacheing.
+***
+
+
 _Release Notes for `jtc` v.1.63_
 #### New features:
 - added auto-generated name-spaces `$PATH` and `$path` - they represent a path to the currently selected JSON element. `$PATH`
