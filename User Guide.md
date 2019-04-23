@@ -1501,30 +1501,36 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 ### Summary of modes of operations
 `jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilities:
 
-##### _A. Update JSON from other locations of the same JSON:_
-`<file.json jtc -w<dst_wlk> -u<src_wlk>`
-* destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk`
+###### _A._ 
+| Update JSON from other locations of the same JSON: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<src_wlk>` |
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` 
 
-#####
-##### _B. Update JSON with a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static.json>`
+###### _B._
+| Update JSON with a static JSON (either from file, or a spelled literally): |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<static.json>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static.json` (a file, or a literal JSON)
 
-#####
-##### _C. Update JSON from some locations from a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>`
+###### _C._
+| Update JSON from some locations from a static JSON (either from file, or a spelled literally): |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static.json`
 
-#####
-##### _D. Update JSON with the transformed JSON elements via shell cli:_
-`<file.json jtc -w<dst_wlk> -e -u<cli>`
+###### _D._
+| Update JSON with the transformed JSON elements via shell cli: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -e -u<cli>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
 interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces here is also populated while
 walking `dst_wlk`.
 
-#####
-##### _E. Update JSON from some locations of the transformed JSON via shell cli:_
-`<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>`
+###### _E._
+| Update JSON from some locations of the transformed JSON via shell cli: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walking shell-evaluated `cli`. 
 `cli` here is subjected for interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces
 here is also populated while walking `dst_wlk`.
