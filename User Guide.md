@@ -1,7 +1,7 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.64_)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.65_, being updated)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -17,7 +17,7 @@
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
-     * [Directives and Namespaces (`vkz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+     * [Directives and Namespaces (`vkzf`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
      * [RE genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -427,6 +427,8 @@ with the currently walked JSON elements:
   can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key (label/index) into
   the corresponding namespace
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
+  *  f: fail-stop: if walking lexemes past the fail-stop directive fails, instead of progressing to the
+        next iteration, a lexeme immediately preceeding the fail-stop will be matched
 
 Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
 Stored in namespaces values could be reused later in the same or different walk-paths and 
@@ -434,6 +436,7 @@ Stored in namespaces values could be reused later in the same or different walk-
 [templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
 for a shell evaluation.
 
+##### dynamic lookup using directives `-v` and `-k`
 Say, we have a following JSON:
 ```
 bash $ echo '{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' | jtc 
@@ -469,6 +472,23 @@ bash $ <ab.json jtc -w'<address>l[:]<>k'
 bash $ 
 ```
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
+
+##### Fail-stop directive -f
+Say, we want to list a `mobile` phone for all entries in the address book, and for those records which do not have mobiles,
+list then entire phone record:
+```
+bash $ <ab.json jtc -w'[0][:][phone]<>f[type]:<mobile>[-1]' -r
+{ "number": "112-555-1234", "type": "mobile" }
+{ "number": "223-283-0372", "type": "mobile" }
+[ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
+bash $ 
+```
+Normally, (without `<>f` lexeme), the above example would dump only 2 records. However, lexeme `<>f` will ensure the entry from
+the walk-step (preceding the lexeme `<>f`) will be "matched" shall the further walk fails
+
+_NOTE, currently there's a caveat: `<>f` is inconsistent with `[-N]` and/or `[^N]` subscript lexemes: the lexeme `<>f` 
+won't be in the effect if the node which it precedes will be "erased" by above mentioned subscripts (in the future releases
+this limitation might be lifted)_ 
 
 
 #### RE genenerated namespaces
