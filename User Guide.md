@@ -1,12 +1,12 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.63_)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.64_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
    * [Compact printing (`-r`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing)
-   * [Printing JSON size (`-z`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
+   * [Printing JSON size (`-z`, `-zz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
    * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
    * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
    * [Unquoting JSON strings (`-qq`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)
@@ -51,7 +51,7 @@
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
    * [Search quantifiers interpolation (<..>{..})](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
-6. [Templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
+6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
@@ -185,11 +185,11 @@ bash $ <ab.json jtc -r -z
 size: 56
 bash $
 ```
-if size only required, then use `tail` command:
+if size only required, then use `-zz` option:
 ```
-bash $ <ab.json jtc -rz | tail -1
-size: 56
-bash $
+bash $ <ab.json jtc -zz
+56
+bash $ 
 ```
 
 ### Validating JSON
@@ -397,22 +397,22 @@ bash $
 #### Search suffixes
 there are following suffixes to control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ value
-  * `R`: the lexeme is a search RE, only _JSON sting_ values searched
-  * `D`: the lexeme is an RE, only _JSON numerical_ values searched
+  * `R`: the lexeme is a search RE, only _JSON string_ values searched
   * `d`: fully matches _JSON number_
+  * `D`: the lexeme is an RE, only _JSON numerical_ values searched
   * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
-  * `n`: matches _JSON null_ value, the lexeme value is ignored, could be anything, like `<null>n`, or `<>n`, etc
+  * `n`: matches _JSON null_ value, the lexeme value must be empty:`<>n`
   * `l`: fully matches _JSON label_
   * `L`: the lexeme is a search RE, only _JSON labels_ searched
-  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value is ignored
-  * `o`: matches any JSON object - `{..}`, the lexeme value is ignored
-  * `i`: matches any JSON array (iterable/indexable) `[..]`, , the lexeme value is ignored
-  * `c`: matches either arrays or objects; the content within the encasement is ignored
-  * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value is ignored
-  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value is ignored
+  * `a`: matches any JSON atomic value, i.e. strings, numerical, boolean, null, the lexeme value must be empty
+  * `o`: matches any JSON object - `{..}`, the lexeme value must be empty
+  * `i`: matches any JSON array (iterable/indexable) `[..]`, , the lexeme value must be empty
+  * `c`: matches either arrays or objects; the content within the encasement must be empty
+  * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value must be empty
+  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value must be empty
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
-  * `t`: matches a label/index previously stored in the namespace by directives `<..>k`, `<..>v`  
+  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`  
   * `q`: matches only unique JSON values; stores the matched elemetns in the namespace 
   * `Q`: matches only repeatitive (duplicate) JSON values; stores the matched elemetns in the namespace
 
@@ -495,7 +495,7 @@ Here are both demonstrated:
 ```
 bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
 [ "Directory", 2, "name" ]
-dlyssenk $ <ab.json jtc -w'<NY>' -T'{{$path}}'
+bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
 "Directory_0_address_state"
 bash $ 
 ```
@@ -1501,30 +1501,36 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 ### Summary of modes of operations
 `jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilities:
 
-##### _A. Update JSON from other locations of the same JSON:_
-`<file.json jtc -w<dst_wlk> -u<src_wlk>`
-* destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk`
+###### _A._ 
+| Update JSON from other locations of the same JSON: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<src_wlk>` |
+- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` 
 
-#####
-##### _B. Update JSON with a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static.json>`
+###### _B._
+| Update JSON with a static JSON (either from file, or a spelled literally): |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<static.json>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static.json` (a file, or a literal JSON)
 
-#####
-##### _C. Update JSON from some locations from a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>`
+###### _C._
+| Update JSON from some locations from a static JSON (either from file, or a spelled literally): |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static.json`
 
-#####
-##### _D. Update JSON with the transformed JSON elements via shell cli:_
-`<file.json jtc -w<dst_wlk> -e -u<cli>`
+###### _D._
+| Update JSON with the transformed JSON elements via shell cli: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -e -u<cli>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
 interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces here is also populated while
 walking `dst_wlk`.
 
-#####
-##### _E. Update JSON from some locations of the transformed JSON via shell cli:_
-`<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>`
+###### _E._
+| Update JSON from some locations of the transformed JSON via shell cli: |
+|:-:|
+| `<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walking shell-evaluated `cli`. 
 `cli` here is subjected for interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces
 here is also populated while walking `dst_wlk`.
