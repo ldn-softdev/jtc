@@ -68,8 +68,8 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkz], each one altering
-     the search in the following way:
+   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzf], each one 
+     altering the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex search applied)
      d: match a number (i.e. searches numeric JSON values only)
@@ -96,12 +96,14 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      q: match only unique JSON elements, every match is stored in the namespace
      Q: match all non-qunique (duplicate) elements, every match is stored in the namespace
 
-   Following suffixes define lexemes as directives (which do not perform any search/match):
+   Following suffixes define lexemes as directives (which do not perform any search):
      v: saves the most recent/found JSON value into a namespace
      k: instructs to treat the most recent/found label/index (if exists) as a value (thus a
         label/index along can be updated/extracted programmatically), if a lexeme value is
         non-empty then also saves found label/index into the given namespace
      z: erase namespace pointed by lexeme value; if the lexeme is empty, erase entire namespace
+     f: fail-stop: if walking lexemes past the fail-stop fails, instead of progressing to the
+        next iteration, a lexeme immediately preceeding the fail-stop will be matched
 
    N: an integer quantifier specifying search match instance/range, comes in following variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within

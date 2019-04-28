@@ -145,7 +145,7 @@
  *  type - Jtype (String, Number, Bool, Null).
  *  - num() for example, will convert a string to a double and return the value
  *    (but first will check if the accessed JSON has type Jtype::Number - if not
- *     it will throw 'expected_number_type' exception)
+ *     it will throw 'expected_numerical_type' exception)
  *  - boolean values are stored internally as strings "T" and "F" respectively (along
  *    with Jtype::Bool)
  *  - null values are kept as empty string with Jtype::Null type
@@ -310,7 +310,7 @@
  *        for full description see `jtc_guide.hpp`
  *
  *   3) An offset lexeme ([...]) could be concatenated with a search lexeme (either
- *      <....> or >...<) over the colon sign (':'), e.g.: [some label]:<some text>
+ *      <..> or >..<) over the colon sign (':'), e.g.: [some label]:<some text>
  *      - such syntax signifies a search (with all due suffixes and quantifiers,
  *       if any) only among Json values attached to the specified label
  *
@@ -442,7 +442,7 @@
  * 8. Callbacks
  *  there provided 2 types of callbacks for event-driven processing.
  *  Once callbacks are plugged and engaged, they'll get fired only upon performing
- *  recursive search walks e.g. from <...> types of walking.
+ *  recursive search walks e.g. from <..> types of walking.
  *    a) label based callback (will fire upon matching the label)
  *    b) walk based callback (will fire upon matching walk-iterator)
  *
@@ -469,7 +469,7 @@
 #include <utility>              // std::forward, std::move, std::make_pair, ...
 #include <algorithm>            // std::min
 #include <limits>               // numeric_limits
-#include <climits>              // LONG_MAX
+#include <climits>              // LONG_MAX, LONG_MIN
 #include <iomanip>              // std::setprecision
 #include <initializer_list>
 #include <regex>
@@ -575,7 +575,7 @@ class Jnode {
                 type_non_subscriptable, \
                 type_non_iterable, \
                 expected_string_type, \
-                expected_number_type, \
+                expected_numerical_type, \
                 expected_boolean_type, \
                 expected_object_type, \
                 expected_array_type, \
@@ -708,7 +708,7 @@ class Jnode {
                         }
 
                         operator double (void) const {
-                         if(not is_number()) throw EXP(expected_number_type);
+                         if(not is_number()) throw EXP(expected_numerical_type);
                          return num();
                         }
 
@@ -842,7 +842,7 @@ class Jnode {
                         }
 
     double              num(void) const {
-                         if(not is_number()) throw EXP(expected_number_type);
+                         if(not is_number()) throw EXP(expected_numerical_type);
                          return stod(value().value_);
                         }
 
@@ -1364,8 +1364,8 @@ class Json {
                 label_match,    /* searches among JSON object labels only */ \
                 Label_RE_search,/* RE match among JSON object labels only */ \
                 atomic_match,   /* JSON atomic, matches any of: string/number/boolean/null */ \
-                object_match,   /* JSON object, matches any object {...} */ \
-                indexable_match,/* JSON array, matches any of: [...] */ \
+                object_match,   /* JSON object, matches any object {..} */ \
+                indexable_match,/* JSON array, matches any of: [..] */ \
                 collection_match,/* JSON array & objects */ \
                 end_node_match, /* matches any of: atomics, [], {} */ \
                 wide_match,     /* matches any JSON: atomics + objects + arrays */ \
@@ -1378,6 +1378,7 @@ class Json {
                 value_of_json,  /* directive: save current json value */ \
                 key_of_value,   /* directive: treat key (label/index) as a value (and save) */ \
                 zip_namespace,  /* directive: erase namespace */ \
+                fail_stop,      /* directive: stop at the preserved point when ws fails */ \
                 /*user_specific,  directive: user-specific callback */ \
                 end_of_lexemes, \
                 text_offset,    /* in addition to search, these two used for subscript offsets */ \
@@ -1645,7 +1646,7 @@ class Json {
                              { return not is_lbl_based(); }
         bool                is_tag_based(void) const            // only tags 't' and 'l'
                              { return jsearch AMONG(label_match, tag_from_ns); }
-        bool                is_qnt_relative(void) const         // only in >..<t/l/L
+        bool                is_qnt_relative(void) const         // only in >..<t/l
                              { return is_non_recursive() and is_tag_based(); }
         bool                is_cacheless(void) const
                              { return is_namespaced() or is_qnt_relative(); }
@@ -1654,8 +1655,10 @@ class Json {
                              { return lexeme.front() == LXM_SUB_OPN; }
         bool                is_search(void) const
                              { return not is_subscript(); }
-        bool                is_directive(void) const
-                             { return jsearch AMONG(key_of_value, value_of_json, zip_namespace); }
+        bool                is_directive(void) const {
+                             return jsearch AMONG(key_of_value, value_of_json,
+                                                    zip_namespace, fail_stop);
+                            }
         bool                is_search_suffix(void) const
                              { return not is_directive(); }
         bool                is_lexeme_required(void) const
@@ -1666,7 +1669,7 @@ class Json {
         bool                must_lexeme_be_empty(void) const
                              { return jsearch AMONG(null_match, atomic_match, object_match,
                                                     indexable_match, collection_match,
-                                                    end_node_match, wide_match);}
+                                                    end_node_match, wide_match, fail_stop);}
         long                load_head(const Json &j) const
                              { return heads.empty()? head: fetch_from_ns(heads, j); }
         long                load_tail(const Json &j) const
@@ -1701,6 +1704,7 @@ class Json {
                             // stripped[1] -> attached label match (optional)
         std::regex          re;                                 // RE for R/L/D suffixes
         Jnode               user_json{Jnode::Neither};          // parsed Json for j suffix
+        const Jnode *       failstop{& user_json};
 
         // Below definitions only for COUTABLE interface
         const char *        search_type() const
@@ -1724,7 +1728,8 @@ class Json {
                              return ss.str();
                             }
         std::string         ofst() const {                      // only for COUTABLE
-                             if(type == range_walk) return std::to_string(offset);
+                             if(type == range_walk and offset != LONG_MIN)
+                              return std::to_string(offset);
                              std::stringstream ss;
                              ss << (offsets.empty()? std::to_string(offset): "{" + offsets + "}");
                              return ss.str();
@@ -2006,11 +2011,9 @@ class Json {
         Json::iter_jn       build_cache_(Jnode *jn, size_t wsi);
         void                walk_text_offset_(size_t wsi, Jnode *);
         void                walk_search_(size_t wsi, Jnode *);
-        size_t              normalize_(long &offset, Jnode *jn) {   // normalize head/offset/tail
-                             // convert negative idx/offset to true positive
+        size_t              normalize_(long offset, Jnode *jn) const {  // norm. by [jn->chldrn]
                              long children = static_cast<long>(jn->children_().size());
                              if(offset >= 0) return offset > children? children: offset;
-                             if(-offset > children) offset = -children;
                              return children + offset;
                             }
 
@@ -2025,7 +2028,7 @@ class Json {
         bool                string_match_(const Jnode *jn, const WalkStep &, map_jn * ns) const;
         bool                regex_match_(const std::string &val, const WalkStep &, map_jn *) const;
         bool                label_match_(map_jn::iterator jit, const Jnode *jn, long idx,
-                                         const WalkStep & ws, map_jn * ns) const;
+                                         WalkStep & ws, map_jn * ns) const;
         bool                bull_match_(const Jnode *jn, const WalkStep &) const;
         bool                is_unique_(const Jnode & jn, const WalkStep &ws);
         bool                is_duplicate_(const Jnode & jn, const WalkStep &ws);
@@ -2039,6 +2042,9 @@ class Json {
 
         bool                increment_(long wsi);
         long                next_iterable_ws_(long wsi) const;
+        bool                lock_failstops_(void);
+        void                unlock_failstops_(long wsi);
+        bool                failed_stop_(long wsi);
 
         static std::string  empty_lbl_;                         // empty (default) label
     };
@@ -2145,7 +2151,6 @@ Json operator ""_json(const char *c_str, std::size_t len) {
 Json & Json::parse(std::string::const_iterator & jsp, ParseTrailing trail) {
  // parse input string. this is a wrapper for parse_(), where actual parsing occurs
  root() = OBJ{};
- //auto jsp = jstr.begin();                                       // json string pointer
  parse_(root_, jsp);
 
  if(root_.type() == Jnode::Neither)
@@ -2393,7 +2398,7 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 // 2. search lexemes:
 //    <text>SN
 //    - <text>: perform search of the entire node to match the text
-//    - <...> perform forward search, >...< perform search among immediate children
+//    - <..> perform forward search, >..< perform search among immediate children
 //      only
 //    - optional suffix S alters search behavior, see descriptions in the header
 //    - N optional quantifier (must take the last position), could be in the form of:
@@ -2458,8 +2463,6 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  if(it.pv_.back().jit != end_()) return itr;                    // must resolve reference
  // here walk_() returned end(), but it might not be a true end, an increment step is required
  // in order to confirm that it's either a true end; return then incremented reference
- auto & failed_ws = it.walk_path_()[it.pv_.back().wsi];
- if(failed_ws.is_qnt_relative()) return itr;                    // fail due to >..<t/l search
  it.pv_.clear();                                                // here walk_() returned end(), so
  return ++it;                                                   // advance to next, or true end
 }
@@ -2528,7 +2531,7 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
   switch(*si) {
    case ' ': ++si; continue;                                    // space in between lexemes allowed
    case LXM_SUB_OPN:                                            // opening subscript: '['
-         if(not req_label.empty())                              // only search <...> allowed
+         if(not req_label.empty())                              // only search <..> allowed
           throw EXP(Jnode::walk_expect_search_label);           // after [label]:
          ws.emplace_back(extract_lexeme_(si, LXM_SUB_CLS), numeric_offset);
          break;
@@ -2578,7 +2581,7 @@ std::string Json::extract_lexeme_(std::string::const_iterator &si, char closing)
 
 void Json::parse_suffix_(std::string::const_iterator &si,
                          iterator & it, vec_str &req_label) const {
- // parse suffix following a text offset, e.g.: ...>r, ...>d, ...>L and suffix ':' in [..]:<...>
+ // parse suffix following a text offset, e.g.: ..>r, ..>d, ..>L and suffix ':' in [..]:<..>
  if(it.walk_path_().empty())                                    // expect some elements already in
   throw EXP(Jnode::walk_expect_lexeme);                         // walks may start with lexeme only
 
@@ -2676,8 +2679,9 @@ void Json::parse_range(std::string::const_iterator &si, WalkStep & ws, ParseThro
         if(subscript) return;                                   // [{ - text subscript
         ws.heads = ws.offsets = parse_namespace_(si);           // preserve namespace in ws
         ws.offset = LONG_MIN;                                   // indicate NS resolution required
-  case RNG_SPR:                                                 // ':'
-        //if(ws.is_qnt_relative()) ws.head = ws.offset = LONG_MIN;// indicate whole range select [:]
+ case RNG_SPR:                                                  // ':'
+        if(ws.is_qnt_relative() and ws.heads.empty())           // i.e. if >..<l|t, but not {idx}
+         ws.head = ws.offset = LONG_MIN + 1;                    // indicate entire range select [:]
         break;
   default:                                                      // must be numeric
         ws.head = ws.offset = parse_index_(si, throwing);
@@ -2716,7 +2720,7 @@ long Json::parse_index_(std::string::const_iterator &si,
                         ParseThrow throwing, ParseThrow sign_prescribtion) const {
  // validate if string iterator points to a valid integer.
  // parse_index is called from parse_range, which in turn could be called either from
- // parse_quantifier (<>...), or parse_subscript_type_ ([...]) those 2 parsings assume
+ // parse_quantifier (<>...), or parse_subscript_type_ ([..]) those 2 parsings assume
  // different exception behavior:
  //  o parse_quantifier will throw upon failure
  //  o parse_subscript_type_ does not throw, but indicates successful completion by
@@ -2776,6 +2780,8 @@ void Json::parse_subscript_type_(WalkStep & ws) const {
 
 
 
+
+
 //
 //
 // Json::iterator methods
@@ -2818,18 +2824,18 @@ Json::iterator & Json::iterator::walk_(void) {
   if(pv_.empty())
    jnp = & json().root();
   else {
-   if(pv_.back().jit == json().end_())
-    { DBG(json(), 2) show_built_pv_(DOUT(json())); return *this; }
+   if(pv_.back().jit == json().end_()) {
+    if(failed_stop_(i)) break;
+    DBG(json(), 2) show_built_pv_(DOUT(json()));
+    return *this;
+   }
    jnp = &pv_.back().jit->VALUE;
   }
   DBG(json(), 2) show_built_pv_(DOUT(json()));
  }
-
- if(pv_.empty())
-  sn_type_ref_() = jp_->root().type();
- else
-  if(pv_.back().jit != json().end_())
-   sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): jp_->type();
+                                                                // successfully walked all ws
+ lock_failstops_();
+ sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
  DBG(json(), 2) DOUT(json()) << "finished walking" << std::endl;
  return *this;
 }
@@ -2845,28 +2851,28 @@ void Json::iterator::show_built_pv_(std::ostream &out) const {
 
 
 void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {
- DBG(json(), 3) DOUT(json()) << "walking step: [" << wsi << "]" << std::endl;
  // walk a single lexeme
  auto & ws = ws_[wsi];
+ DBG(json(), 3) DOUT(json()) << "walking step: [" << wsi << "]" << std::endl;
  switch(ws.jsearch) {
   case numeric_offset:                                          // [123]
         return walk_numeric_offset_(wsi, jn);
   case text_offset:                                             // [abc]
         return walk_text_offset_(wsi, jn);
-  case zip_namespace:                                           // facilitate <...>z
+  case zip_namespace:                                           // facilitate <..>z
          DBG(json(), 3) DOUT(json()) << "erased namespace: "
                                        << (ws.stripped[0].empty()? "all":
                                            "'" + ws.stripped[0] + "'") << std::endl;
          json().clear_ns(ws.stripped[0]);
          return;
-  case value_of_json:                                           // facilitate <...>v
+  case value_of_json:                                           // facilitate <..>v
          json().jns_[ws.stripped[0]] = *jn;
          DBG(json(), 3) DOUT(json()) << "saved jnode into namespace: '"
                                        << ws.stripped[0] << "': "
                                        << jn->to_string(Jnode::Raw) << std::endl;
          return;
   case key_of_value:
-        if(not ws.stripped[0].empty()) {                        // facilitate <...>k
+        if(not ws.stripped[0].empty()) {                        // facilitate <..>k
          if(pv_.empty()) throw jp_->EXP(Jnode::walk_root_has_no_label);
          auto & parent = pv_.size() == 1? json().root(): pv_[pv_.size()-2].jit->VALUE;
          json().jns_[ws.stripped[0]] = parent.type_ == Jnode::Object?
@@ -2878,6 +2884,12 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {
                                      << json().jns_[ws.stripped[0]] << std::endl;
         }
         return;
+  case fail_stop:                                               // facilitate <..>f
+         if(ws.failstop == nullptr) return;                     // fail stop locked out
+         ws.failstop = jn;
+         DBG(json(), 3)
+          DOUT(json()) << "recorded fail-stop: '" << ws.failstop << std::endl;
+         return;
   default:
         return walk_search_(wsi, jn);                           // facilitate all other <..>/>..<
  }
@@ -2897,11 +2909,12 @@ void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
 
  // [0], [+1], [..:..] etc
  size_t node_size = jn->children_().size();
- size_t offset = ws.offset = normalize_(ws.offset, jn);
+ size_t offset = normalize_(ws.offset, jn);
+ if(ws.type == WalkStep::range_walk) ws.offset = offset;        // ws iterable, require normalizing
  if(offset >= node_size or offset >= normalize_(ws.tail, jn))   // beyond children's size/tail
   return pv_.emplace_back(json().end_(), wsi);
 
- if(ws.type == WalkStep::static_select and jn->is_array())      // [N] on array
+ if(ws.type == WalkStep::static_select and jn->is_array())      // [N] - subscript array
   return pv_.emplace_back(jn->iterator_by_idx_(offset));
 
  auto it = build_cache_(jn, wsi);
@@ -2941,8 +2954,9 @@ Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
 
   found_cache = cache_map.find(skey);
   DBG(json(), 1)
-   DOUT(json()) << "built cache size: " << found_cache->VALUE.front().pv.size() << ", cache status: "
-                << ENUMS(WalkStep::WalkStepType, found_cache->KEY.ws.type) << std::endl;
+   DOUT(json()) << "built cache size: " << found_cache->VALUE.front().pv.size()
+                << ", cache status: " << ENUMS(WalkStep::WalkStepType, found_cache->KEY.ws.type)
+                << std::endl;
  }
  return found_cache->VALUE.front().pv[ws.offset].jit;
 }
@@ -2981,7 +2995,6 @@ void Json::iterator::walk_search_(size_t wsi, Jnode *jn) {
   ws.offset = ws.fetch_from_ns(ws.offsets, json());             // LONG_MIN triggers init from NS
 
  // check range:
- normalize_(ws.offset, jn);                                     // sanitize too low negative values
  size_t offset = ws.load_offset(json());
  size_t tail = ws.load_tail(json());
  if(ws.is_qnt_relative()) {                                     // offset & tail must be signed
@@ -3213,7 +3226,7 @@ bool Json::iterator::regex_match_(const std::string &val, const WalkStep &ws, ma
 
 
 bool Json::iterator::label_match_(map_jn::iterator jit, const Jnode *jn, long idx,
-                                  const WalkStep &ws, map_jn * nsp) const {
+                                  WalkStep &ws, map_jn * nsp) const {
  // return true if instance i of label (l,t) matches, false otherwise
  static map_jn::iterator found;
  if(ws.jsearch == tag_from_ns) {                                // facilitate <..>t / >..<t
@@ -3236,18 +3249,31 @@ bool Json::iterator::label_match_(map_jn::iterator jit, const Jnode *jn, long id
 
  if(ws.jsearch == Label_RE_search)                              // facilitate >..<L
   return regex_match_(jit->KEY, ws, nsp);
-                                                                // >..<: quant. is relative
- long ofs = ws.load_offset(json()), pos = idx - ofs;
- if(pos < 0 or pos >= static_cast<long>(jn->children_().size()))// out of range of jn's children
-  return false;
+                                                                // >..<: quant. is relative here
+ long ws_off = ws.load_offset(json()),
+      jn_size = static_cast<long>(jn->children_().size());
 
- if(jn->is_array())                                             // this only could be >..<t
-  return pos == found->VALUE.num();                             // return position match
-                                                                // it's OBJ only, all ARY processed
- std::advance(jit, -ofs);
+ if(ws.jsearch == tag_from_ns and found->VALUE.is_number()) {   // >..<t is numeric value
+  long idx_val = found->VALUE.num();                            // resolve >..<t value in NS
+  if(idx_val < 0 or idx_val >= jn_size) return false;           // outside of jn's chldren?
+  if(ws_off < -idx_val)                                         // ws_off value too low?
+   ws.head = ws.offset = ws_off = -idx_val;                     // fix too low head/offset values
+  return idx - ws_off == idx_val;                               // return position match
+ }
+                                                                // jn is OBJ, all ARY processed
+ auto found_lbl = jn->children_().find(ws.jsearch == tag_from_ns?
+                                       found->VALUE.val(): ws.stripped.front());
+ if(found_lbl == jn->children_().end()) return false;           // >..<t/l value's not found
+ if(idx == 0) {                                                 // first run:
+  long idx_val = std::distance(jn->children_().begin(), found_lbl);
+  if(ws_off < -idx_val)                                         // offset too low?
+   ws.head = ws.offset = ws_off = -idx_val;                     // fix too low offset
+ }
+ if(idx - ws_off < 0) return false;                             // outside of jn's children
+ std::advance(jit, -ws_off);
  if(ws.jsearch == tag_from_ns)                                  // facilitate >..<t
-  return jit->KEY == found->VALUE.val();                         // OBJ: return label match
- return jit->KEY == ws.stripped.front();
+  return jit->KEY == found->VALUE.val();                        // OBJ: return label match
+ return jit->KEY == ws.stripped.front();                        // facilitate >..<l
 }
 
 
@@ -3401,34 +3427,36 @@ bool Json::iterator::increment_(long wsi) {
 
  ++ws.offset;
  DBG(json(), 2) DOUT(json()) << "next increment: [" << wsi << "] " << ws << std::endl;
+ unlock_failstops_(wsi);
  walk_();
- if(pv_.empty()) return true;                                   // successful walk
- if(pv_.back().jit != json().end_()) return true;               // successful walk
+ if(pv_.empty() or pv_.back().jit != json().end_())
+  return true;                                                  // successful walk
 
- // unsuccessful walk (out of iterations)
  DBG(json(), 2)
   DOUT(json()) << "WalkStep idx from a fruitless walk: " << pv_.back().wsi << std::endl;
  if(wsi < static_cast<long>(pv_.back().wsi)) {                  // it's not my position, plus
   DBG(json(), 2)                                                // it's in less significant place
    DOUT(json()) << "walk [" << pv_.back().wsi << "] is out of iterations" << std::endl;
-  // even if walk_ does not yield a result for a given idx, if walk failed because of
+  // even if walk_ does not yield a result for a given wsi, if walk failed because of
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required to handle irregular JSONs
-  long next_wsi = next_iterable_ws_(walk_path_().size());
+  long next_wsi = next_iterable_ws_(pv_.back().wsi);
   return next_wsi < 0? false: increment_( next_wsi );
  }
 
- wsi = next_iterable_ws_(wsi);
+ wsi = next_iterable_ws_(wsi);                                  // get next more significant wsi
  if(wsi < 0) return false;                                      // out of iteratables
- // here we need to reset the walkstep's offset to the head's value
- ws.offset = ws.type == WalkStep::range_walk and not ws.heads.empty()?  // range quant. dynamic?
-             LONG_MIN: ws.load_head(json());                    // indicate reloading: LONG_MIN
+ // here we need to reload the walkstep's offset with the head's value
+ ws.offset = ws.type == WalkStep::range_walk and not ws.heads.empty()?
+             LONG_MIN: ws.head;
+             // LONG_MIN: indicates delayed (until actual walk) resolution
+             // cannot resolve right now, cause NS might have changed by the next walking this ws
  return increment_(wsi);
 }
 
 
 long Json::iterator::next_iterable_ws_(long wsi) const {
- // get next least significant position (index within walk-path) of iterable offset,
+ // get next more significant position (index within walk-path) of iterable offset,
  // otherwise (whole path non-iterable) return -1
  while(--wsi >= 0)
   if(walk_path_()[wsi].type == WalkStep::range_walk) break;
@@ -3436,6 +3464,40 @@ long Json::iterator::next_iterable_ws_(long wsi) const {
   DOUT(json()) << "iterable walk-step: ["
                << (wsi < 0? "N/A": std::to_string(wsi)) << "]" << std::endl;
  return wsi;
+}
+
+bool Json::iterator::lock_failstops_(void) {
+ // clear all fail stops in all the ws
+ for(auto &ws: walk_path_())
+  if(ws.jsearch == Jsearch::fail_stop) ws.failstop = nullptr;
+ return true;
+}
+
+
+void Json::iterator::unlock_failstops_(long wsi) {
+ for(; wsi < walk_path_().size(); ++wsi) {
+  auto & ws = walk_path_()[wsi];
+  if(ws.jsearch == Jsearch::fail_stop) ws.failstop = &ws.user_json;
+ }
+}
+
+
+bool Json::iterator::failed_stop_(long wsi) {
+ // check if there's a valid fail stop in the path, if so , trim the pv_ by the failstop
+ for(; wsi>=0; --wsi) {
+  auto & ws = walk_path_()[wsi];
+  if(ws.jsearch != Jsearch::fail_stop) continue;
+  if(ws.failstop == nullptr or ws.failstop == &ws.user_json) continue;
+  DBG(json(), 3)
+   DOUT(json()) << "found fail-stop at [" << wsi << "]: " << ws.failstop << std::endl;
+  for(auto pvi = pv_.begin(); pvi != pv_.end(); ++pvi)
+   if(pvi->jnp == ws.failstop)
+    { pv_.erase(++pvi, pv_.end()); break; }
+  ws.failstop = nullptr;
+  return true;
+ }
+
+ return false;
 }
 
 
