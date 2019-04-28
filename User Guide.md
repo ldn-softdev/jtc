@@ -486,8 +486,8 @@ bash $
 Normally, (without `<>f` lexeme), the above example would dump only 2 records. However, lexeme `<>f` will ensure the entry from
 the walk-step (preceding the lexeme `<>f`) will be "matched" shall the further walk fails
 
-_NOTE, currently there's a caveat: `<>f` is inconsistent with `[-N]` and/or `[^N]` subscript lexemes: the lexeme `<>f` 
-won't be in the effect if the node which it precedes will be "erased" by above mentioned subscripts (in the future releases
+_NOTE, currently there's a caveat: lexeme `<>f` is inconsistent with `[-N]` and/or `[^N]` subscript lexemes: the lexeme `<>f` 
+won't be in the effect if the piror node is "erased" (from the path) by above mentioned subscripts (in the future releases
 this limitation might be lifted)_ 
 
 
