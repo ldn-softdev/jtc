@@ -2043,7 +2043,7 @@ class Json {
         bool                increment_(long wsi);
         long                next_iterable_ws_(long wsi) const;
         bool                lock_failstops_(void);
-        void                unlock_failstops_(long wsi);
+        void                unlock_failstops_(size_t wsi);
         bool                failed_stop_(long wsi);
 
         static std::string  empty_lbl_;                         // empty (default) label
@@ -3474,7 +3474,7 @@ bool Json::iterator::lock_failstops_(void) {
 }
 
 
-void Json::iterator::unlock_failstops_(long wsi) {
+void Json::iterator::unlock_failstops_(size_t wsi) {
  for(; wsi < walk_path_().size(); ++wsi) {
   auto & ws = walk_path_()[wsi];
   if(ws.jsearch == Jsearch::fail_stop) ws.failstop = &ws.user_json;
