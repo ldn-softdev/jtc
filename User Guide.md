@@ -1,7 +1,7 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.65_, being updated)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.65_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -474,7 +474,7 @@ bash $
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
 
 ##### Fail-stop directive -f
-Say, we want to list a `mobile` phone for all entries in the address book, and for those records which do not have mobiles,
+Say, we want to list a first `mobile` phone from all entries in the address book, and for those records which do not have mobiles,
 list then entire phone record:
 ```
 bash $ <ab.json jtc -w'[0][:][phone]<>f[type]:<mobile>[-1]' -r
