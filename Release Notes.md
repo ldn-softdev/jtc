@@ -1,8 +1,23 @@
 
 ## `jtc` Release Notes
-_Release Notes for `jtc` v.1.64_
+_Release Notes for `jtc` v.1.65_
 
-a very small and quick update:
+#### New features:
+- added `<>f` (fail-stop) directive: the directive "remembers" the currently walked JSON node (path) and shall the further walking 
+fail, instead of proceeding to the next iteration, will stop and "recall" the node/path 
+
+#### Improvements, changes, fixes:
+- relative offsets with range quantifiers (`>..<t:` and `>..<l:`) now interprets default "head value" not as '0' but rather as 
+'the beginning of the _JSON iterable_; - that extends use-cases base (i.e before, to address prior range entries user must know the
+number of prior entries to be able to address, which is rarely the case)
+- for search type `>..<t`, when a value in the NS represents a _JSON number_, index operation now applied onto both types 
+of _JSON iterables_ - arrays and objects (before it was applied to arrays only, and for objects, label match was performed, 
+which, for _JSON objects_ used to duplicate `>..<l` functionality)
+- improved walk-step iteration logic (eliminated redundant walk-step in some cases - a cosmetic issue from functionality point of view)
+***
+
+
+_Release Notes for `jtc` v.1.64_
 #### New features:
 - added an option `-zz` to display JSON size only - it'll skip displaying JSON (unlike `-z` that will display JSON first
 and then the size).
