@@ -8,7 +8,7 @@ fail, instead of proceeding to the next iteration, will stop and "recall" the no
 
 #### Improvements, changes, fixes:
 - relative offsets with range quantifiers (`>..<t:` and `>..<l:`) now interprets default "head value" not as '0' but rather as 
-'the beginning of the _JSON iterable_; - that extends use-cases base (i.e before, to address prior range entries user must know the
+'the beginning of the _JSON iterable_' - that extends use-cases base (i.e before, to address prior range entries user must know the
 number of prior entries to be able to address, which is rarely the case)
 - for search type `>..<t`, when a value in the NS represents a _JSON number_, index operation now applied onto both types 
 of _JSON iterables_ - arrays and objects (before it was applied to arrays only, and for objects, label match was performed, 
