@@ -21,6 +21,8 @@
      * [RE genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
+     * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)] 
+ (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
@@ -551,6 +553,7 @@ bash $
 _JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
 
 
+#### Search quantifiers with relative offset semantic 
 There are two search lexemes where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
 Those are non-recursive searches will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
 to address only one single label or index, there could not be any other, e.g. this JSON:
