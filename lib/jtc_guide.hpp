@@ -97,7 +97,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      Q: match all non-qunique (duplicate) elements, every match is stored in the namespace
 
    Following suffixes define lexemes as directives (which do not perform any search):
-     v: saves the most recent/found JSON value into a namespace
+     v: saves the most recent/found (or user-defined) JSON value into a namespace
      k: instructs to treat the most recent/found label/index (if exists) as a value (thus a
         label/index along can be updated/extracted programmatically), if a lexeme value is
         non-empty then also saves found label/index into the given namespace

@@ -361,11 +361,12 @@
 #define DBG_ALT_INDENT " "                                      // alternative prefix
 #define DBG_SUFFIX ", "                                         // default debug's suffix
 #define DBG_PROMPT(X) DBG().prompt(__func__, X+1)
+#define DBG_PMT(X) DBG().prompt(__func__, X+1)
 #define NDBG 9999
 // NDBG definition is just insanely low debug severity - to be used when certain
 // debugs needed to be suppressed
 
-// below definition let check whether '__dbg_propagate__()' method is present or not:
+// below definition let checking whether '__dbg_propagate__()' method is present or not:
 template<typename T>
 constexpr auto __is_dbg_propagatable__(int)
                 -> decltype(std::declval<T>().__dbg_propagate__(0), bool())
