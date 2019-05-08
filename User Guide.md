@@ -526,7 +526,7 @@ Thus, we need to build a single path, which will find the `name`, then inspect s
 We can do it in steps:
 1. let's get to the `name`s first and memorize those:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<name>v' 
+bash $ <ab.json jtc -x'[0][:][name]<person>v' 
 "John"
 "Ivan"
 "Jane"
@@ -534,7 +534,7 @@ bash $
 ```
 2. Now let's inspect sibling `children` records:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]' 
+bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]' 
 [
    "Olivia"
 ]
@@ -547,7 +547,7 @@ bash $
 ```
 3. so far so good, but we need to engage _fail_stop_ to facilitate the requirement to classify those records as `true` / `false`:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]<cn:false>f[0]<cn:true>f' 
+bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>f' 
 "Olivia"
 []
 "Robert"
@@ -557,7 +557,7 @@ bash $
 - otherwise (i.e. upon a successful walk - addressing a first child `[0]`) the namespace `cn` will be overwritten with `true` value
 4. finally, we need to interpolate preserved namespaces for our final / required output:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]<cn:false>f[0]<cn:true>f' -T'{ "{name}": {cn} }' -r
+bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>f' -T'{"{person}":{cn}}' -r
 { "John": true }
 { "Ivan": false }
 { "Jane": true }
