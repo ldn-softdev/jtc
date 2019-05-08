@@ -1,7 +1,7 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.65_)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.66_, being updated)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -18,6 +18,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkzf`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+     * [Fail-stop directive (`<..>f`)](https://github.com/ldn-softdev/jtc/blob/master/fail-stop-directive)     
      * [RE genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-auto-genenerated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -428,7 +429,7 @@ with the currently walked JSON elements:
   can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key (label/index) into
   the corresponding namespace
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
-  *  f: fail-stop: if walking lexemes past the fail-stop directive fails, instead of progressing to the
+  * `f`: fail-stop: if walking lexemes past the fail-stop directive fails, instead of progressing to the
         next iteration, a lexeme immediately preceeding the fail-stop will be matched
 
 Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
@@ -474,22 +475,95 @@ bash $
 ```
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
 
-##### Fail-stop directive -f
-Say, we want to list a first `mobile` phone from all entries in the address book, and for those records which do not have mobiles,
-list then entire phone record:
+##### Fail-stop directive
+All the lexemes in the _walk-path_ are bound by logical `AND` - only if all succeed then the path is successfully walked (and printed
+or regarded for a respective operation). The _fail-stop_ directive make possible to introduce `OR` logic into the _walk-path_. 
+Let's break it down:
+
+Say, we want to list all `mobile` phone records (let's do it along with names of phone holders):
 ```
-bash $ <ab.json jtc -w'[0][:][phone]<>f[type]:<mobile>[-1]' -r
+bash $ <ab.json jtc -x'[0][:]' -y'[name]' -y'[phone]<mobile>[-1]' -r
+"John"
 { "number": "112-555-1234", "type": "mobile" }
+"Ivan"
 { "number": "223-283-0372", "type": "mobile" }
-[ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
+"Jane"
 bash $ 
 ```
-Normally, (without `<>f` lexeme), the above example would dump only 2 records. However, lexeme `<>f` will ensure the entry from
-the walk-step (preceding the lexeme `<>f`) will be "matched" shall the further walk fails
+As it appears, `Jane` has no mobile phone, but then our requirement is enhanced: for those who do not have a `mobile`, let's list
+the first available phone from the records (there a `<>f` directive comes to a rescue):
+```
+bash $ <ab.json jtc -x'[0][:]' -y'[name]' -y'[phone][0]<>f[-1]<mobile>[-1]' -r
+"John"
+{ "number": "112-555-1234", "type": "mobile" }
+"Ivan"
+{ "number": "223-283-0372", "type": "mobile" }
+"Jane"
+{ "number": "358-303-0373", "type": "office" }
+bash $ 
+```
+as the path is walked, as soon `<>f` directive is faced, it _memorizes_ the currently walked path and will _recall_ it shall
+further walking fail
+- there, we resolve the first entry in the `phone` records and memorize it's path location (`[phone][0]<>f`)
+- then step back up and look for a `mobile` type of the record (`[-1]<mobile>`), then:
+     * if it's found, we step back up (`[-1]`) to finish walking and disply the whole record
+     * if not found (i.e. walking indeed fails), a fail-stop is engaged and preserved location is recalled and printed
 
-_NOTE, currently there's a caveat: lexeme `<>f` is inconsistent with `[-N]` and/or `[^N]` subscript lexemes: the lexeme `<>f` 
-won't be in the effect if the piror node is "erased" (from the path) by above mentioned subscripts (in the future releases
-this limitation might be lifted)_ 
+A _walk-path_ may contain multiple _fail-stops_, only the respective fail-stop will be engaged (more specific one and closest 
+one to the failing point)
+
+The _fail_stop_ directive, (as well as `<..>v`) may carry a value (namespace), which will be populated with the currently walked
+JSON element (for later interpolation), and, as well as `<..>v`, the _fail_stop_ is also allowed setting up custom JSON values 
+(when used in the format: `<namespace:JSON_value>f`)
+
+###### Here's another example sporting _fail-stops_ using namespaces and interpolation:
+Say we want to list from the address book  all the record holders and indicate whether they have children or not in this format 
+`{ "Name": true/false }`
+
+Thus, we need to build a single path, which will find the `name`, then inspect sibling `children` records and transform it into
+`true` if there at least 1 child, or `false` otherwise:
+
+We can do it in steps:
+1. let's get to the `name` first and memorize those:
+```
+bash $ <ab.json jtc -x'[0][:][name]<name>v' 
+"John"
+"Ivan"
+"Jane"
+bash $ 
+```
+2. Now let's inspect sibling `children` records:
+```
+bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]' 
+[
+   "Olivia"
+]
+[]
+[
+   "Robert",
+   "Lila"
+]
+bash $ 
+```
+3. so far so good, but we need to engage _fail_stop_ to facilitate the requirement to represent to classify those records as 
+`true` / `false`:
+```
+bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]<cn:false>f[0]<cn:true>f' 
+"Olivia"
+[]
+"Robert"
+bash $ 
+```
+- there namespace `cn` will be populated first with `false` and will stay put shall further walking fails.
+- otherwise (i.e. upon a successful walk - addressing a first child `[0]`) the namespace `cn` will be overwritten with `true` value
+4. finally, we need to interpolate preserved namespaces for our final / required output:
+```
+bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]<cn:false>f[0]<cn:true>f' -T'{ "{name}": {cn} }' -r
+{ "John": true }
+{ "Ivan": false }
+{ "Jane": true }
+bash $ 
+```
 
 
 #### RE genenerated namespaces
