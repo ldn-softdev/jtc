@@ -1,5 +1,35 @@
 
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.66_
+
+#### New features:
+- no new features, stability and improvements update 
+
+#### Improvements, changes, fixes:
+- fail-stop directive `<..>f` now is fully compatible and operational with any other walk lexemes, all prior limitations are lifted
+(before it was limited by usage with `[-N]`, `[^N]` subscripts) and also now it may take an argument as a namespace (where a 
+fail-stop'ed JSON will go upon engaging the lexeme)
+- Extended directives `<..>v` and `<..>f` - if it's given in the format like `<name:json>v`, then `json` is put into the namespace 
+`name` ignoring currently walked JSON element - that presents an ability to store in the namespace custom JSON values;
+`json` value must be a valid JSON though
+- template behavior is finalized:
+   * when template fails (i.e. its interpolation does not result in a valid JSON), then it's not engaged (source JSON is used instead), 
+   except when the interpolation occurs for the shell evaluation - there template is used as it was given: in shell evaluation
+   a template parameter it's indistinguishable from the cli, thus user must ensure a valid template interpolation
+   * fixed/improved templates interpolation in shell evaluation (before only the last memorized item was interpolating)
+   * lifted restriction on shell return result (if it's good one and not a shell error, or empty one) - if the result of a shell
+   evaluation is not a valid JSON, then it's promoted to the _JSON string_ (before the result must always be a valid JSON)
+   * fixed namespaces in shell interpolation with trailing options (e.g.: `jtc -eu ... \; -u...`) - now the namespace is tracked
+   from the trailing option (before the namespace was tracked from the `-w` option, which in that syntax acts as the destination,
+   which was illogical)
+   * when performing a shell interpolation (whether a simple or an extended version - with trailed options) templating occurs during 
+   expansion of shell cli itself, thus option -T has no effect here and entirely ignored
+
+_all the behaviors and use-cases (and those coverd in the [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)) are completely UT'ed_
+
+***
+
+
 _Release Notes for `jtc` v.1.65_
 
 #### New features:
