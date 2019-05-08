@@ -1546,9 +1546,10 @@ Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - the cli is also subjected for namespace and walked elements interpolation before it gets shell evaluated
 - the cli in argument do not require any additional escaping (except those which would normally be required by shell)
 - if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: ` \| `
-- returned result of a shell evaluation still must be a valid JSON
-- failed or empty results of the shell evaluations are ignored (JSON entry wont be updated/inserted, 
-rather proceed to the next walked entry for another update attempt)
+- returned result of a shell evaluation must be either a valid JSON, or non-empty and non-error then it's
+promoted to _JSON string_ value
+- failed (those returning non-zero exit code) or empty results of the shell evaluations are ignored 
+(JSON entry wont be updated/inserted, rather proceed to the next walked entry for another update attempt)
 
 
 ### Mixed use of arguments for `-i`, `-u`, `-c` 
