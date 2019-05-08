@@ -545,8 +545,7 @@ bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]'
 ]
 bash $ 
 ```
-3. so far so good, but we need to engage _fail_stop_ to facilitate the requirement to represent to classify those records as 
-`true` / `false`:
+3. so far so good, but we need to engage _fail_stop_ to facilitate the requirement to classify those records as `true` / `false`:
 ```
 bash $ <ab.json jtc -x'[0][:][name]<name>v [-1][children]<cn:false>f[0]<cn:true>f' 
 "Olivia"
