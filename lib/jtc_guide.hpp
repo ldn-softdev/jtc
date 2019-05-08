@@ -103,7 +103,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         non-empty then also saves found label/index into the given namespace
      z: erase namespace pointed by lexeme value; if the lexeme is empty, erase entire namespace
      f: fail-stop: if walking lexemes past the fail-stop fails, instead of progressing to the
-        next iteration, a lexeme immediately preceeding the fail-stop will be matched
+        next iteration, a lexeme resolved JSON node (and path) at the fail-stop will be restored
 
    N: an integer quantifier specifying search match instance/range, comes in following variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within

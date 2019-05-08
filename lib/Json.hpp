@@ -1671,7 +1671,7 @@ class Json {
         bool                must_lexeme_be_empty(void) const
                              { return jsearch AMONG(null_match, atomic_match, object_match,
                                                     indexable_match, collection_match,
-                                                    end_node_match, wide_match, fail_stop);}
+                                                    end_node_match, wide_match);}
         long                load_head(const Json &j) const
                              { return heads.empty()? head: fetch_from_ns(heads, j); }
         long                load_tail(const Json &j) const
@@ -2634,7 +2634,7 @@ void Json::parse_suffix_(std::string::const_iterator &si,
  Jsearch sfx = search_suffix_(*si);                             // see if a search suffix valid
  if(sfx < end_of_lexemes) {
   back_ws.jsearch = sfx;                                        // set suffix for given walkstep
-  if(sfx == json_match or sfx == value_of_json)                 // need to process user_json
+  if(sfx AMONG(json_match, value_of_json, fail_stop))           // need to process user_json
    parse_user_json_(back_ws);
   else
    if(sfx AMONG(Regex_search, Label_RE_search, Digital_regex))
@@ -2662,6 +2662,7 @@ void Json::parse_user_json_(WalkStep &ws) const {
   case json_match:
         json_ptr = ws.stripped.front().c_str();
         break;
+  case fail_stop:
   case value_of_json:
         json_start = ws.stripped.front().find(":");
         if(json_start == std::string::npos) return;
@@ -2912,18 +2913,28 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
   case text_offset:                                             // [abc]
         return walk_text_offset_(wsi, jn);
   case zip_namespace:                                           // facilitate <..>z
-         DBG(json(), 3) DOUT(json()) << "erased namespace: "
-                                       << (ws.stripped[0].empty()? "all":
-                                           "'" + ws.stripped[0] + "'") << std::endl;
-         json().clear_ns(ws.stripped[0]);
+        DBG(json(), 3) DOUT(json()) << "erased namespace: "
+                                    << (ws.stripped[0].empty()? "all":
+                                         "'" + ws.stripped[0] + "'") << std::endl;
+        json().clear_ns(ws.stripped[0]);
+        return;
+  case fail_stop:                                               // facilitate <..>f
+        if(not ws.fs_path.empty() and ws.fs_path.back().jit == json().end_()) {
+         DBG(json(), 3) DOUT(json()) << "fail-stop [" << wsi << "] locked out" << std::endl;
          return;
+        }
+        ws.fs_path = pv_;
+        DBG(json(), 3) DOUT(json()) << "recorded fail-stop: [" << wsi << "]" << std::endl;
+        json().jns_[ws.stripped[0]] = ws.user_json.type() == Jnode::Neither?
+                                       *jn: ws.user_json;
+        if(ws.stripped[0].empty()) break;
   case value_of_json:                                           // facilitate <..>v
-         json().jns_[ws.stripped[0]] = ws.user_json.type() == Jnode::Neither?
-                                        *jn: ws.user_json;
-         DBG(json(), 3) DOUT(json()) << "saved jnode into namespace: '"
-                                       << ws.stripped[0] << "': "
-                                       << jn->to_string(Jnode::Raw) << std::endl;
-         return;
+        json().jns_[ws.stripped[0]] = ws.user_json.type() == Jnode::Neither?
+                                       *jn: ws.user_json;
+        DBG(json(), 3) DOUT(json()) << "saved jnode into namespace: '"
+                                    << ws.stripped[0] << "': "
+                                    << jn->to_string(Jnode::Raw) << std::endl;
+        return;
   case key_of_value:
         if(not ws.stripped[0].empty()) {                        // facilitate <..>k
          if(pv_.empty()) throw jp_->EXP(Jnode::walk_root_has_no_label);
@@ -2937,14 +2948,6 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
                                      << json().jns_[ws.stripped[0]] << std::endl;
         }
         return;
-  case fail_stop:                                               // facilitate <..>f
-        if(not ws.fs_path.empty() and ws.fs_path.back().jit == json().end_()) {
-         DBG(json(), 3) DOUT(json()) << "fail-stop [" << wsi << "] locked out" << std::endl;
-         return;
-        }
-        ws.fs_path = pv_;
-         DBG(json(), 3) DOUT(json()) << "recorded fail-stop: [" << wsi << "]" << std::endl;
-         return;
   default:
         return walk_search_(wsi, jn);                           // facilitate all others: <..>/>..<
  }

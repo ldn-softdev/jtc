@@ -204,9 +204,10 @@ class Jtc {
     void                merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode);
     void                update_jsons_(Json::iterator &dst, Json::iterator src);
     bool                processed_by_cli_(Json::iterator &it);
-    bool                execute_cli_(Json &update, Json::iterator &jit);
-    string              reconcile_ui_(Json::iterator &jit);
+    bool                execute_cli_(Json &update, Json::iterator &jit, const Json::map_jn &ns);
+    string              reconcile_ui_(Json::iterator &jit, const Json::map_jn &ns);
     void                parse_params_(char option);
+    void                extend_itr_(    Json::iterator);
     void                extend_itr_(map_json &, const Json::map_jn &, Json::iterator);
     void                build_path_(Jnode &jpath, Json::iterator &jit);
     Json                interpolate_(StringOvr, const Json::map_jn &, Json::iterator &,
@@ -585,7 +586,7 @@ int Jtc::demux_opt(void) {
  // demultiplex functional options, execute once
  for(char opt: STR(OPT_CMP)STR(OPT_INS)STR(OPT_UPD)STR(OPT_SWP)STR(OPT_PRG)STR(OPT_WLK)) {
   if(opt == '\0' or opt_[opt].hits() == 0) continue;
-  DBG(1) DOUT() << "option: " << opt << ", hits: " << opt_[opt].hits() << endl;
+  DBG(1) DOUT() << "option: '-" << opt << "', hits: " << opt_[opt].hits() << endl;
 
   switch(opt) {
    case CHR(OPT_CMP): return compare_jsons();                   // will print result
@@ -724,7 +725,7 @@ void Jtc::insert_by_iterator(Json::iterator &it, size_t group) {
         << " became invalid due to prior operations, skipping" << endl;
   else {
    if(ecli_) {
-    is_cli_success = execute_cli_(jexc_[0], isrc_[key_]);      // cli resulted in a valid json
+    is_cli_success = execute_cli_(jexc_[0], isrc_[key_], wns_[&isrc_[key_]]);
     if(is_cli_success) isrc_[key_] = jexc_[0].walk();
    }
    if(is_cli_success)
@@ -825,8 +826,8 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t group) {
         << " became invalid due to prior operations, skipping" << endl;
   else {                                                        // isrc_ is valid, or jsrc[key_]
    if(ecli_) {                                                  // -e with trailing -u
-    is_cli_success = execute_cli_(jexc_[0], isrc_[key_]);       // cli resulted in a valid json
-    if(is_cli_success) isrc_[key_] = jexc_[0].walk();
+    is_cli_success = execute_cli_(jexc_[0], isrc_[key_], wns_[&isrc_[key_]]);
+    if(is_cli_success) isrc_[key_] = jexc_[0].walk();           // put root's itr for the next line
    }
    if(is_cli_success)
     update_jsons_(it, jsrc_.empty()? isrc_[key_]: jsrc_[key_].walk());
@@ -1243,12 +1244,11 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
 
 
 bool Jtc::processed_by_cli_(Json::iterator &it) {
- // if -e given, just execute cli
- // return true if -e given alone, false otherwise
+ // if -e given alone -  just execute cli, return true if -e given alone and executed,
+ // return false otherwise: -e not given, or given but not alone; don't execute if so
  if(ecli_ == false or not isrc_.empty()) return false;          // no -e, or isrc has trailing opt.
 
- DBG().severity(jexc_[0]);
- if(execute_cli_(jexc_[0], it) == true) {                       // cli resulted in a valid json
+ if(execute_cli_(jexc_[0], it, wns_[&it]) == true) {            // cli resulted in a valid json
   typedef void (Jtc::*op_ptr)(Json::iterator &, Json::iterator);
   static op_ptr op_json[2] = {&Jtc::update_jsons_, &Jtc::merge_jsons_};
   (this->*op_json[subscriber_ == &Jtc::insert_by_iterator])(it, jexc_[0].walk());
@@ -1258,28 +1258,37 @@ bool Jtc::processed_by_cli_(Json::iterator &it) {
 
 
 
-bool Jtc::execute_cli_(Json &json, Json::iterator &jit) {
- // execute cli in -i/u option (interpolating src_jnode if required) and parse the result into json
- sh_.system( reconcile_ui_(jit) );
+bool Jtc::execute_cli_(Json &json, Json::iterator &jit, const Json::map_jn &ns) {
+ // execute cli in -i/u option (interpolating jit if required) and parse the result into json
+ sh_.system( reconcile_ui_(jit, ns) );
  if(sh_.rc() != 0)
   { cerr << "error: shell returned error (" << sh_.rc() << ")" << endl; return false; }
  if(sh_.stdout().empty())
   { DBG(1) DOUT() << "shell returned empty result, not updating" << endl; return false; }
 
- json.parse(sh_.stdout());
+ DBG().severity(json);
+ try { json.parse(sh_.stdout()); }
+ catch(Json::stdException & e) {                                // promote output to JSON string
+  string out = json.inquote_str(sh_.stdout());                  // inquote all occurrences of ["\]
+  out = regex_replace(out, regex{R"(\r)"}, R"(\r)");
+  out = regex_replace(out, regex{R"(\n)"}, R"(\n)");
+  if(out.compare(out.size()-2, 2, R"(\n)") == 0)                // erase possibly trailing \n
+   out.erase(out.size()-2);
+  json.parse("\"" + out + "\"");
+ }
  return true;
 }
 
 
 
-string Jtc::reconcile_ui_(Json::iterator &jit) {
+string Jtc::reconcile_ui_(Json::iterator &jit, const Json::map_jn &ns) {
  // reconcile here options -i, or -u. or interpolate a static json string
  stringstream is;                                               // is: interpolation stream
  size_t opt_idx = 0;
  string dlm;
  for(const auto & opt_param: opt_[cr_.opt_ui()]) {              // reconcile here all -u/-i options
   if(++opt_idx >= cr_.opt_e_found()) break;
-  Json ij = interpolate_(opt_param, json_.ns(), jit);
+  Json ij = interpolate_(opt_param, ns, jit);
   is << dlm << quote_str(ij.type() == Jnode::Neither?
                          opt_param: ij.to_string(Jnode::Raw));  // quote argument
   dlm = ' ';
@@ -1297,11 +1306,11 @@ void Jtc::parse_params_(char option) {
  // also, parse a mix or arguments, i.e. -i<static> -i<walk-path>,
  // use jexc_[0] as a storage for <static> json and fill out isrc from walking the former.
  // if there's a template provided, apply interpolation
- //size_t key = 0;
  map_json tmp;                                                  // interpolated templates (if any)
  if(ecli_)                                                      // -e detected
   for(size_t i = cr_.opt_e_found(); cr_.opt_ui() and i <= opt_[cr_.opt_ui()].hits(); ++i)
-   extend_itr_(tmp, json_.ns(), json_.walk(opt_[cr_.opt_ui()].str(i), Json::keep_cache));
+   extend_itr_(json_.walk(opt_[cr_.opt_ui()].str(i), Json::keep_cache));
+   // the loop conditions make this call only if trailing options (-u/-i) are present
  else
   for(auto & arg: opt_[option])
    try {
@@ -1327,6 +1336,20 @@ void Jtc::parse_params_(char option) {
   DOUT() << "option '-" << option << "': total jsons: " << jsrc_.size()
          << ", total iterators: " << isrc_.size() << endl;
  opt_[CHR(OPT_TMP)].reset();
+}
+
+
+
+void Jtc::extend_itr_(Json::iterator jit) {
+ // extend jit till end, and interpolate all templates (if any) NS put into and lock wns_
+ while( jit != jit.end() ) {                                // extend all iterators until end
+  isrc_[isrc_.size()] = jit;
+  auto & jit_ref = isrc_.rbegin()->VALUE;
+  wns_[&jit_ref] = json_.ns();
+  ++jit;
+ }
+ DBG(2) DOUT() << "walk's name-space locked exclusively for trailing options" << endl;
+ wns_[nullptr];                                              // lock wns exclusively for trailing
 }
 
 
@@ -1450,7 +1473,8 @@ string Jtc::interpolate_tmp_(const string &tmp, const Json::map_jn &ns) {
 void Jtc::walk_interleaved_(void) {
  // collect all walks (-w/-i/-u) and feed one by one to the subscriber
  json_.clear_ns();
- wns_.clear();
+ if(wns_.count(nullptr) == 0)                                   // if not locked for trailed opt
+  wns_.clear();
  deque<walk_deq> wpi;
 
  for(const auto &walk_str: opt_[CHR(OPT_WLK)]) {                // process all -w arguments
@@ -1464,7 +1488,8 @@ void Jtc::walk_interleaved_(void) {
   auto & wi = wpi.back();                                       // wi: deque<Json::iterators>
   if(wi.back() != wi.back().end())
    while(true) {                                                // extend all iterators until end
-    wns_[&wi.back()] = json_.ns();                              // preserve walked namespace
+    if(wns_.count(nullptr) == 0)                                // if wns_ is not locked,
+     wns_[&wi.back()] = json_.ns();                             // preserve walked namespace
     wi.push_back(wi.back());                                    // make new copy (next instance)
     ++wi.back();                                                // and iterate
     if(wi.back() == wi.back().end()) break;
