@@ -1954,7 +1954,7 @@ bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -J -w'<json>R'
 ]
 bash $ 
 ```
-option `-J` also implicitly imposes `-j` thus it's safely could be used even with a single JSON at the input with the same effect. 
+option `-J` also implicitly imposes `-j` thus it could be used safely even with a single JSON at the input with the same effect. 
 Though, when walking multiple input JSONs, each of the option would have its own effect, this example clarifies:
 ```
 bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -aj
