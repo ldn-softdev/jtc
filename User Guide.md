@@ -1,7 +1,7 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.66_, being updated)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.66_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
