@@ -503,8 +503,8 @@ bash $ <ab.json jtc -x'[0][:]' -y'[name]' -y'[phone][0]<>f[-1]<mobile>[-1]' -r
 bash $ 
 ```
 as the path is walked, as soon `<>f` directive is faced, it _memorizes_ the currently walked path and will _recall_ it shall
-further walking fail
-- there, we resolve the first entry in the `phone` records and memorize it's path location (`[phone][0]<>f`)
+further walking fail, there
+- we resolve the first entry in the `phone` records and memorize it's path location (`[phone][0]<>f`)
 - then step back up and look for a `mobile` type of the record (`[-1]<mobile>`), then:
      * if it's found, we step back up (`[-1]`) to finish walking and disply the whole record
      * if not found (i.e. walking indeed fails), a fail-stop is engaged and preserved location is recalled and printed
