@@ -46,7 +46,7 @@
      * [Updating labels](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#updating-labels)
    * [Insert, Update with move (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-   * [Mixed use of arguments without `-e` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-without--e)
+   * [Mixed use of arguments for `-i`, `-u`, `-c` (`<JSON>, <walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-for--i--u--c)
    * [Mixed use of arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixed-use-of-arguments-with--e)
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
@@ -1551,7 +1551,7 @@ Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 rather proceed to the next walked entry for another update attempt)
 
 
-### Mixed use of arguments without `-e`
+### Mixed use of arguments for `-i`, `-u`, `-c` 
 options `-c`, `-u`, `-i` allow two kinds of their arguments:
 1. static JSONs (i.e., `<file>`, `<JSON>`)
 2. walk-path (i.e., `<walk-path>`)
