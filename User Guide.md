@@ -475,6 +475,13 @@ bash $
 ```
 When the directive lexeme `<>k` is used w/o a value (like shown) then no saving in the namespaces occurs.
 
+The directive `<..>v` allows user setting up custom JSON values (in lieu of currently walked JSON's) - if the directive's
+value is given in the format:
+- `<name:JSON_value>v`
+
+then upon walking such syntax a user's `JSON_value` will be preserved in the namespace `name`
+
+
 ##### Fail-stop directive
 All the lexemes in the _walk-path_ are bound by logical `AND` - only if all succeed then the path is successfully walked (and printed
 or regarded for a respective operation). The _fail-stop_ directive make possible to introduce `OR` logic into the _walk-path_. 
