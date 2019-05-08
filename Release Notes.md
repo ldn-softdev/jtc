@@ -9,9 +9,9 @@ _Release Notes for `jtc` v.1.66_
 - fail-stop directive `<..>f` now is fully compatible and operational with any other walk lexemes, all prior limitations are lifted
 (before it was limited by usage with `[-N]`, `[^N]` subscripts) and also now it may take an argument as a namespace (where a 
 fail-stop'ed JSON will go upon engaging the lexeme)
-- Extended directives `<..>v` and `<..>f` - if it's given in the format like `<name:json>v`, then `json` is put into the namespace 
-`name` ignoring currently walked JSON element - that presents an ability to store in the namespace custom JSON values;
-`json` value must be a valid JSON though
+- Extended directives `<..>v` and `<..>f` - if it's given in the format like `<name:json_value>v`, then `json_value` is put
+into the namespace `name` ignoring currently walked JSON element - that allows setting up in the namespace custom JSON values;
+`json_value` value must be a valid JSON though
 - template behavior is finalized:
    * when template fails (i.e. its interpolation does not result in a valid JSON), then it's not engaged (source JSON is used instead), 
    except when the interpolation occurs for the shell evaluation - there template is used as it was given: in shell evaluation
@@ -25,7 +25,8 @@ fail-stop'ed JSON will go upon engaging the lexeme)
    * when performing a shell interpolation (whether a simple or an extended version - with trailed options) templating occurs during 
    expansion of shell cli itself, thus option -T has no effect here and entirely ignored
 
-_all the behaviors and use-cases (and those coverd in the [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)) are completely UT'ed_
+_all the behaviors and use-cases (and those coverd in the 
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)) are completely UT'ed_
 
 ***
 
