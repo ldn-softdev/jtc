@@ -524,7 +524,7 @@ Thus, we need to build a single path, which will find the `name`, then inspect s
 `true` if there at least 1 child, or `false` otherwise:
 
 We can do it in steps:
-1. let's get to the `name` first and memorize those:
+1. let's get to the `name`s first and memorize those:
 ```
 bash $ <ab.json jtc -x'[0][:][name]<name>v' 
 "John"
