@@ -19,7 +19,7 @@
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkzf`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
      * [Fail-stop directive (`<..>f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-stop-directive)     
-     * [RE genenerated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-genenerated-namespaces)
+     * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic)
@@ -572,7 +572,7 @@ bash $
 ```
 
 
-#### RE genenerated namespaces
+#### RE generated namespaces
 RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first subgroup,
@@ -2206,8 +2206,6 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<
 bash $ 
 ```
 it's just a reverse action.
-
-
 
 
 
