@@ -601,7 +601,7 @@ bash $ echo "$JSN" | jtc -w'<name>l:[-1]' -p
 ]
 bash $ 
 ```
-But what if we want to walk them instead of purging (e.g., for reason of template - interpolating the entries at the same time)?
+But what if we want to walk them instead of purging (e.g., for reason of template-interpolating the entries at the same time)?
 The prior solution would require piping it to the next `jtc` cli, however, it's possible to achieve the same using this simple query:
 ```
 bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F'
