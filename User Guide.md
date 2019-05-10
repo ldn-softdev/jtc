@@ -1625,8 +1625,98 @@ bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/
 bash $ 
 ```
 
-This time `jtc` recieved at the input just `{}`: obviously `<<<{}` was interpolated by shell `jtc` got that, thus, we have to
-quote it:
+It did not work, because `jtc` recieved at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell 
+`jtc` got that, thus, we have to quote it:
+```
+bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/<<<{}' \; -dd
+.read_inputs(), reading json from <stdin>
+..demux_opt(), option: '-u', hits: 3
+.parse_params_(), option '-u': total jsons: 0, total iterators: 0
+..walk(), walk string: '[:]'
+..walk(), dump of completed lexemes:
+..walk(), [0]: WalkStep.. search_type():"numeric_offset", lexeme:"[:]", ws_type():"range_walk", ofst():"0", range():"[:]", label():"N/A", json():"N/A"
+..walk(), initial walk: successful match
+..walk_interleaved_(), multi-walk: true
+..walk_interleaved_(), walk-path instances: 1:
+..walk_interleaved_(), instance: 0, iterators: 3
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E s\/(...).*\/\1\/<<<Olivia'
+..system(), executing cmd 'sed \-E s\/(...).*\/\1\/<<<Olivia'
+sh: -c: line 0: syntax error near unexpected token `('
+sh: -c: line 0: `sed \-E s\/(...).*\/\1\/<<<Olivia'
+..system(), return 512: ''
+error: shell returned error (512)
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E s\/(...).*\/\1\/<<<Robert'
+..system(), executing cmd 'sed \-E s\/(...).*\/\1\/<<<Robert'
+sh: -c: line 0: syntax error near unexpected token `('
+sh: -c: line 0: `sed \-E s\/(...).*\/\1\/<<<Robert'
+..system(), return 512: ''
+error: shell returned error (512)
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E s\/(...).*\/\1\/<<<Lila'
+..system(), executing cmd 'sed \-E s\/(...).*\/\1\/<<<Lila'
+sh: -c: line 0: syntax error near unexpected token `('
+sh: -c: line 0: `sed \-E s\/(...).*\/\1\/<<<Lila'
+..system(), return 512: ''
+error: shell returned error (512)
+.write_json(), outputting json to <stdout>
+[
+   "Olivia",
+   "Robert",
+   "Lila"
+]
+bash $ 
+
+```
+Now it did not work, because `jtc` received `sed`'s argument without single quotations (again those have been eaten by bash 
+before pasing to `jtc` - that is something `jtc` is unable to control - shell arguments evaluation of its arguments). Thus, 
+let's double quote it now:
+
+```
+bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E '"s/(...).*/\1/"<<<{}' \; -dd
+.read_inputs(), reading json from <stdin>
+..demux_opt(), option: '-u', hits: 3
+.parse_params_(), option '-u': total jsons: 0, total iterators: 0
+..walk(), walk string: '[:]'
+..walk(), dump of completed lexemes:
+..walk(), [0]: WalkStep.. search_type():"numeric_offset", lexeme:"[:]", ws_type():"range_walk", ofst():"0", range():"[:]", label():"N/A", json():"N/A"
+..walk(), initial walk: successful match
+..walk_interleaved_(), multi-walk: true
+..walk_interleaved_(), walk-path instances: 1:
+..walk_interleaved_(), instance: 0, iterators: 3
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E "s/(...).*/\1/"<<<Olivia'
+..system(), executing cmd 'sed \-E "s/(...).*/\1/"<<<Olivia'
+..system(), return 0: 'Oli
+'
+..walk(), walk string: ''
+..walk(), dump of completed lexemes:
+..walk(), invalidated search cache
+..walk(), initial walk: successful match
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E "s/(...).*/\1/"<<<Robert'
+..system(), executing cmd 'sed \-E "s/(...).*/\1/"<<<Robert'
+..system(), return 0: 'Rob
+'
+..walk(), walk string: ''
+..walk(), dump of completed lexemes:
+..walk(), invalidated search cache
+..walk(), initial walk: successful match
+..reconcile_ui_(), interpolated & quoted string: 'sed \-E "s/(...).*/\1/"<<<Lila'
+..system(), executing cmd 'sed \-E "s/(...).*/\1/"<<<Lila'
+..system(), return 0: 'Lil
+'
+..walk(), walk string: ''
+..walk(), dump of completed lexemes:
+..walk(), invalidated search cache
+..walk(), initial walk: successful match
+.write_json(), outputting json to <stdout>
+[
+   "Oli",
+   "Rob",
+   "Lil"
+]
+bash $ 
+```
+Now it worked!
+
+
 
 
 ### Mixed use of arguments for `-i`, `-u`, `-c` 
