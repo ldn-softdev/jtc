@@ -590,7 +590,7 @@ bash $ echo "$JSN" | jtc
 ]
 bash $ 
 ```
-How do we list only those records whidh don't have `name` and skip those which do? Well, one obvious solution then would be
+How do we list only those records which don't have `name` and skip those which do? Well, one obvious solution then would be
 to walk all those entries, which do have `name` labels and purge them:
 ```
 bash $ echo "$JSN" | jtc -w'<name>l:[-1]' -p
@@ -601,8 +601,8 @@ bash $ echo "$JSN" | jtc -w'<name>l:[-1]' -p
 ]
 bash $ 
 ```
-But what if we want to walk them, instead of purging (e.g., for reason of template - interpolating the entries at the same time?).
-The prior solution would require piping it to the next `jtc` cli. However, it's possible to achieve the same using these directives:
+But what if we want to walk them instead of purging (e.g., for reason of template - interpolating the entries at the same time)?
+The prior solution would require piping it to the next `jtc` cli, however, it's possible to achieve the same using this simple query:
 ```
 bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F'
 {
@@ -610,6 +610,18 @@ bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F'
 }
 bash $ 
 ```
+Without `<>F` directive, the walk would look like:
+bash $ echo "$JSN" | jtc -w'[:]<>f[name]'
+```
+"server"
+{
+   "ip": "1.1.1.100"
+}
+"printer"
+bash $ 
+```
+Thus, `<>F` skips those (successfully) matched entries, leaving only one which fails - that's the one which we need in this query 
+(the record(s) which does not have `name` in it)
 
 
 #### RE generated namespaces
