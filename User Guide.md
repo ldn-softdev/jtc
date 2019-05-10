@@ -611,8 +611,8 @@ bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F'
 bash $ 
 ```
 Without `<>F` directive, the walk would look like:
-bash $ echo "$JSN" | jtc -w'[:]<>f[name]'
 ```
+bash $ echo "$JSN" | jtc -w'[:]<>f[name]'
 "server"
 {
    "ip": "1.1.1.100"
