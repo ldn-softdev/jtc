@@ -18,7 +18,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkzf`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
-     * [Fail-stop directive (`<..>f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-stop-directive)     
+     * [Fail-stop and Forward directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-stop-and-Forward-directives)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -482,7 +482,7 @@ value is given in the format:
 then upon walking such syntax a user's `JSON_value` will be preserved in the namespace `name`
 
 
-##### Fail-stop directive
+##### Fail-stop and Forward directives
 All the lexemes in the _walk-path_ are bound by logical `AND` - only if all succeed then the path is successfully walked (and printed
 or regarded for a respective operation). The _fail-stop_ directive make possible to introduce `OR` logic into the _walk-path_. 
 Let's break it down:
@@ -568,6 +568,46 @@ bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:tru
 { "John": true }
 { "Ivan": false }
 { "Jane": true }
+bash $ 
+```
+
+Now, let's consider a following example. Say, we have a following JSON:
+```
+bash $ JSN=$(echo '[ { "ip": "1.1.1.1", "name": "server" }, { "ip": "1.1.1.100" }, { "ip": "1.1.1.2", "name": "printer" } ]')
+bash $ echo "$JSN" | jtc 
+[
+   {
+      "ip": "1.1.1.1",
+      "name": "server"
+   },
+   {
+      "ip": "1.1.1.100"
+   },
+   {
+      "ip": "1.1.1.2",
+      "name": "printer"
+   }
+]
+bash $ 
+```
+How do we list only those records whidh don't have `name` and skip those which do? Well, one obvious solution then would be
+to walk all those entries, which do have `name` labels and purge them:
+```
+bash $ echo "$JSN" | jtc -w'<name>l:[-1]' -p
+[
+   {
+      "ip": "1.1.1.100"
+   }
+]
+bash $ 
+```
+But what if we want to walk them, instead of purging (e.g., for reason of template - interpolating the entries at the same time?).
+The prior solution would require piping it to the next `jtc` cli. However, it's possible to achieve the same using these directives:
+```
+bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F'
+{
+   "ip": "1.1.1.100"
+}
 bash $ 
 ```
 
