@@ -14,7 +14,8 @@ queries to handle with ease - see [User Guide](https://github.com/ldn-softdev/jt
 quite lame implementation of symbol quoting in prior versions might break some corner cli syntax, thus,
 
 _NOTE: if you use `jtc` with `-e` option, please check that it still works before migrating to the new version.
-It might require a bit of tinkering of an old [cli syntax](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)_
+It might require a bit of tinkering of an old
+[cli syntax](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)_
 
 _Also, the cli chars quotation is tuned to be used with *`bash`* shell, however for compatibility with all others the entire cli
 could just quoted_
