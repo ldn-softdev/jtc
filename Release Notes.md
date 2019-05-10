@@ -1,5 +1,26 @@
 
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.67_
+
+#### New features:
+- added `<>F` directive - upon walking this one (which is predicated by successful walk of all prior steps) makes walking to proceed 
+to the next iteration without producing a match or a fail-stop; the lexeme is supposed to be only the last lexeme in the walk path
+(all further walk lexeme will be discarded) and is meant to be used with (after) `<>f` lexeme. Both lexemes make negative match 
+queries to handle with ease - see [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)) for examples
+
+#### Improvements, changes, fixes:
+- binary search lexeme `<>b` now may be empty, semantically it's equal to `<any>b` (the latter form is deprecated)
+- drastically improved characters quotations and interpolation for shell evaluation parameters (i.e.: `-e -u ... \;`). Unfortunately,
+quite lame implementation of symbol quoting in prior versions might break some corner cli syntax, thus,
+
+_NOTE: if you use `jtc` with `-e` option, please check that it still works before migrating to the new version.
+It might require a bit of tinkering of an old [cli syntax](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)_
+
+_Also, the cli chars quotation is tuned to be used with *`bash`* shell, however for compatibility with all others the entire cli
+could just quoted_
+***
+
+
 _Release Notes for `jtc` v.1.66_
 
 #### New features:
