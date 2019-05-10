@@ -402,7 +402,8 @@ there are following suffixes to control search behavior:
   * `R`: the lexeme is a search RE, only _JSON string_ values searched
   * `d`: fully matches _JSON number_
   * `D`: the lexeme is an RE, only _JSON numerical_ values searched
-  * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, or `<any>b`
+  * `b`: matches _JSON boolean_ value, the lexeme must be spelled as `<true>b`, `<false>b`, `<>b`, or `<any>b` - last 2 forms
+  are the same
   * `n`: matches _JSON null_ value, the lexeme value must be empty:`<>n`
   * `l`: fully matches _JSON label_
   * `L`: the lexeme is a search RE, only _JSON labels_ searched
