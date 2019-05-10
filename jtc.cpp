@@ -12,7 +12,7 @@
 using namespace std;
 
 
-#define VERSION "1.66"
+#define VERSION "1.67"
 
 
 // option definitions
@@ -211,7 +211,8 @@ class Jtc {
     void                extend_itr_(map_json &, const Json::map_jn &, Json::iterator);
     void                build_path_(Jnode &jpath, Json::iterator &jit);
     Json                interpolate_(StringOvr, const Json::map_jn &, Json::iterator &,
-                                     Json::ParseTrailing = Json::relaxed_trailing);
+                                     Json::ParseTrailing = Json::relaxed_trailing,
+                                     bool parse = true);
     string              interpolate_tmp_(const string &, const Json::map_jn &);
     void                walk_interleaved_(void);
     void                process_walk_iterators_(deque<walk_deq> &walk_iterators);
@@ -1288,14 +1289,13 @@ string Jtc::reconcile_ui_(Json::iterator &jit, const Json::map_jn &ns) {
  string dlm;
  for(const auto & opt_param: opt_[cr_.opt_ui()]) {              // reconcile here all -u/-i options
   if(++opt_idx >= cr_.opt_e_found()) break;
-  Json ij = interpolate_(opt_param, ns, jit);
-  is << dlm << quote_str(ij.type() == Jnode::Neither?
-                         opt_param: ij.to_string(Jnode::Raw));  // quote argument
+  is << dlm << opt_param;
   dlm = ' ';
  }
 
- DBG(1) DOUT() << "interpolated & quoted string: '" << is.str() << "'" << endl;
- return is.str();
+ Json ij = interpolate_(is.str(), ns, jit, Json::relaxed_trailing, false);
+ DBG(1) DOUT() << "interpolated & quoted string: '" << quote_str(ij.str()) << "'" << endl;
+ return quote_str(ij.str());
 }
 
 
@@ -1389,7 +1389,7 @@ void Jtc::build_path_(Jnode &jpath, Json::iterator &jit) {
 
 
 Json Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns,
-                        Json::iterator &jit, Json::ParseTrailing pt) {
+                        Json::iterator &jit, Json::ParseTrailing pt, bool parse) {
  // wrapper for interpolate_tmp_, including the empty case
  // designed behavior:
  //  o Template (tmp) may or may not contain interpolations e.g.: `true` or  `{{..}}`
@@ -1397,6 +1397,8 @@ Json Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns,
  //  o a successful interpolation results in a valid JSON
  //  o thus: returned result is JSON (invalid interpolation indicated by returning Json with
  //    Jtype::Neither)
+ //  o user might not desire the interpolated value to undergo JSON parsing, then
+ //    the indication of that is passed via parameter and result returned as a JSON string
  Jnode jpath{ARY{}};
 
  if(not interpolate_tmp_(tmp, {pair<string, Jnode>(PATH_STR, {})}).empty()) {
@@ -1417,9 +1419,11 @@ Json Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns,
 
  Json rjv;                                                       // return json value
  DBG().severity(rjv);
- try { rjv.parse(tmp, pt); }
- catch(Json::stdException & e) { rjv.root().type() = Jnode::Neither; }
-
+ if(parse)
+  try { rjv.parse(tmp, pt); }
+  catch(Json::stdException & e) { rjv.root().type() = Jnode::Neither; }
+ else
+  rjv = move(STR{tmp});
  return rjv;
 }
 
@@ -1615,12 +1619,26 @@ void Jtc::location_(string::const_iterator &jbegin) {
 
 
 string quote_str(const string &src) {
+ // quote src: quote chars (which due to be quoted) outside of literals only
  string quoted;
- if(src == "|") return src;
+ bool outside_literal = true;
+ short backslash_seen = 0;
  for(auto chr: src) {
-  if(not isalnum(chr)) quoted += '\\';
-  if(chr AMONG('<', '>')) quoted.pop_back();
+  if(not backslash_seen)
+   if(chr == '\\') backslash_seen = 1;
+
+  if(chr AMONG('\'', '"'))
+   { if(not backslash_seen) outside_literal ^= true; }
+  else                                                          // not ' or "
+   if(outside_literal) {
+    if(not isalnum(chr)) quoted += '\\';
+    if(strchr("~`#$&*()\\|{};<>?!. \t", chr) != nullptr)        // don't quote those bash specials
+     quoted.pop_back();
+   }
   quoted += chr;
+
+  if(backslash_seen)
+    { if(++backslash_seen > 2) backslash_seen = 0; }
  }
  return quoted;
 }

@@ -1380,6 +1380,7 @@ class Json {
                 key_of_value,   /* directive: treat key (label/index) as a value (and save) */ \
                 zip_namespace,  /* directive: erase namespace */ \
                 fail_stop,      /* directive: stop at the preserved point when ws fails */ \
+                Forward_itr,    /* directive: proceed to the next iteration (w/o fail-stops) */ \
                 /*user_specific,  directive: user-specific callback */ \
                 end_of_lexemes, \
                 text_offset,    /* in addition to search, these two used for subscript offsets */ \
@@ -1659,13 +1660,13 @@ class Json {
                              { return not is_subscript(); }
         bool                is_directive(void) const {
                              return jsearch AMONG(key_of_value, value_of_json,
-                                                    zip_namespace, fail_stop);
+                                                    zip_namespace, fail_stop, Forward_itr);
                             }
-        bool                is_search_suffix(void) const
+        bool                is_search_lexeme(void) const
                              { return not is_directive(); }
         bool                is_lexeme_required(void) const
                              { return jsearch AMONG(Regex_search, digital_match, Digital_regex,
-                                                    boolean_match, Label_RE_search, json_match,
+                                                    Label_RE_search, json_match,
                                                     search_from_ns, tag_from_ns, query_unique,
                                                     Query_duplicate, value_of_json); }
         bool                must_lexeme_be_empty(void) const
@@ -2489,12 +2490,12 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
 
  it.walk_();
  if(it.pv_.empty() or it.pv_.back().jit != end_()) {
-  DBG(0) DOUT() << "successful match from the initial walk" << std::endl;
+  DBG(0) DOUT() << "initial walk: successful match" << std::endl;
   return itr;                                                   // must resolve reference
  }
  // here walk_() returned end(), but it might not be a true end, an increment step is required
  // in order to confirm that it's either a true end; return then incremented reference
- DBG(0) DOUT() << "initial walk was unsuccessful, requires iteration" << std::endl;
+ DBG(0) DOUT() << "initial walk requires iteration" << std::endl;
  it.pv_.clear();                                                // here walk_() returned end(), so
  return ++it;                                                   // advance to next, or true end
 }
@@ -2555,7 +2556,8 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
  vec_str req_label;                                             // would hold stripped [label]:
 
  for(auto si = wstr.begin(); si != wstr.end();) {               // si: input string iterator
-  DBG(1) {
+   if(not ws.empty() and ws.back().jsearch == Forward_itr) break;
+   DBG(1) {
    DOUT() << "walked string: " << wstr << std::endl;
    DOUT() << DBG_PROMPT(1) << "parsing here: "
           << std::string(utf8_adjusted(0, wstr, si-wstr.begin()), '-') << ">|" << std::endl;
@@ -2634,7 +2636,7 @@ void Json::parse_suffix_(std::string::const_iterator &si,
  Jsearch sfx = search_suffix_(*si);                             // see if a search suffix valid
  if(sfx < end_of_lexemes) {
   back_ws.jsearch = sfx;                                        // set suffix for given walkstep
-  if(sfx AMONG(json_match, value_of_json, fail_stop))           // need to process user_json
+  if(sfx AMONG(json_match, value_of_json, fail_stop, Forward_itr))  // process user_json
    parse_user_json_(back_ws);
   else
    if(sfx AMONG(Regex_search, Label_RE_search, Digital_regex))
@@ -2663,6 +2665,7 @@ void Json::parse_user_json_(WalkStep &ws) const {
         json_ptr = ws.stripped.front().c_str();
         break;
   case fail_stop:
+  case Forward_itr:
   case value_of_json:
         json_start = ws.stripped.front().find(":");
         if(json_start == std::string::npos) return;
@@ -2927,7 +2930,10 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
         DBG(json(), 3) DOUT(json()) << "recorded fail-stop: [" << wsi << "]" << std::endl;
         json().jns_[ws.stripped[0]] = ws.user_json.type() == Jnode::Neither?
                                        *jn: ws.user_json;
-        if(ws.stripped[0].empty()) break;
+        if(ws.stripped[0].empty()) break;                       // otherwise record custom JSON
+  case Forward_itr:                                             // facilitate <..>F
+        if(ws.jsearch == Forward_itr)                           // could be fail_stop, hence chkn'
+         pv_.emplace_back(json().end_(), true);
   case value_of_json:                                           // facilitate <..>v
         json().jns_[ws.stripped[0]] = ws.user_json.type() == Jnode::Neither?
                                        *jn: ws.user_json;
@@ -3340,9 +3346,8 @@ bool Json::iterator::bull_match_(const Jnode *jn, const WalkStep &ws) const {
  switch(ws.jsearch) {
   case boolean_match:
         return jn->is_bool() and
-               (ws.stripped.front() == STR_ANY or (jn->bul()?
-                                                   ws.stripped.front() == STR_TRUE:
-                                                   ws.stripped.front() == STR_FALSE));
+               (ws.stripped.front() == STR_ANY or ws.stripped.empty() or
+                (jn->bul()? ws.stripped.front() == STR_TRUE: ws.stripped.front() == STR_FALSE));
   case null_match:
         return jn->is_null();
   default:                                                      // should never reach here.
@@ -3529,6 +3534,7 @@ long Json::iterator::next_iterable_ws_(long wsi) const {
 bool Json::iterator::failed_stop_(long wsi) {
  // check if there's a valid fail stop in the path (only first found FS should be checked?)
  auto & ws = walk_path_()[wsi];
+ if(ws.jsearch == Forward_itr) return false;
  if(ws.type == WalkStep::range_walk) {
   if(ws.is_subscript()) return false;                           // failed subscript: dont engage FS
   if(ws.offset > ws.head) return false;                         // ws is search

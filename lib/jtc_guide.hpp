@@ -74,8 +74,9 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      R: same as r, but expression in braces is a Regex (regex search applied)
      d: match a number (i.e. searches numeric JSON values only)
      D: same as d, but expression in braces is a Regex (value is treated as a string value here)
-     b: match a boolean (i.e. searching only boolean values), true/false/any must be fully spelled
-        e.g.: '<true>b', '<any>b'
+     b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully 
+        spelled, while 'any' match could be either spelled or indicated via empty lexeme,
+        e.g.: '<true>b', '<any>b', '<>b'
      n: match null values only, the content within the encasement must be empty and e.g.: '><n'
      l: apply exact match while searching object labels only
      L: same as l, but expression in braces is a Regex (regex search applied)
