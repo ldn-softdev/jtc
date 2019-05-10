@@ -1667,7 +1667,7 @@ bash $
 
 ```
 Now it did not work, because `jtc` received `sed`'s argument without single quotations (again those have been eaten by bash 
-before pasing to `jtc` - that is something `jtc` is unable to control - shell arguments evaluation of its arguments). Thus, 
+before pasing to `jtc` -  something `jtc` is unable to control - shell arguments evaluation of its arguments). Thus, 
 let's double quote it now:
 
 ```
