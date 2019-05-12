@@ -554,7 +554,7 @@ bash $
 ```
 3. so far so good, but we need to engage _fail_stop_ to facilitate the requirement to classify those records as `true` / `false`:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>f' 
+bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>v' 
 "Olivia"
 []
 "Robert"
@@ -564,7 +564,7 @@ bash $
 - otherwise (i.e. upon a successful walk - addressing a first child `[0]`) the namespace `cn` will be overwritten with `true` value
 4. finally, we need to interpolate preserved namespaces for our final / required output:
 ```
-bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>f' -T'{"{person}":{cn}}' -r
+bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:true>v' -T'{"{person}":{cn}}' -r
 { "John": true }
 { "Ivan": false }
 { "Jane": true }
