@@ -1625,7 +1625,7 @@ bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/
 bash $ 
 ```
 
-It did not work, because `jtc` recieved at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell 
+It did not work, because `jtc` recieved at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell -  
 `jtc` got that, thus, we have to quote it:
 ```
 bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/<<<{}' \; -dd
@@ -1716,6 +1716,16 @@ bash $
 ```
 Now it worked!
 
+Actually the whole cli could have been quoted like this:
+```
+bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu 'sed -E "s/(...).*/\1/"<<<{};'
+[
+   "Oli",
+   "Rob",
+   "Lil"
+]
+bash $
+```
 
 
 
