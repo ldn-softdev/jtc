@@ -1716,7 +1716,7 @@ bash $
 ```
 Now it worked!
 
-Actually the whole cli could have been quoted like this:
+Actually, the whole cli could have been quoted like this:
 ```
 bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu 'sed -E "s/(...).*/\1/"<<<{};'
 [
