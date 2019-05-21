@@ -1805,7 +1805,7 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 ###### _D._
 | Update JSON with the transformed JSON elements via shell cli: |
 |:-:|
-| `<file.json jtc -w<dst_wlk> -e -u<cli>` |
+| `<file.json jtc -w<dst_wlk> -e -u <cli> \;` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
 interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces here is also populated while
 walking `dst_wlk`.
@@ -1813,7 +1813,7 @@ walking `dst_wlk`.
 ###### _E._
 | Update JSON from some locations of the transformed JSON via shell cli: |
 |:-:|
-| `<file.json jtc -w<dst_wlk> -e -u<cli> -u<src_wlk>` |
+| `<file.json jtc -w<dst_wlk> -e -u <cli> \; -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walking shell-evaluated `cli`. 
 `cli` here is subjected for interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces
 here is also populated while walking `dst_wlk`.
