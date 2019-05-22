@@ -1,5 +1,25 @@
 
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.68_
+
+#### New features:
+- directive `<..>F` is liberated: now it can be a non-trailing one (explanations in the 
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md))
+- extended walking use-cases for `<..>f`: the lexeme also will act upon failed iterable subscripts too (before it used to 
+engage on failing atomic values only), plus walking continues past `<..>F` directive if the latter is present - in such 
+case the failing domain is only covered within `<>f` ... `<>F` lexemes
+- interpolation with stripping (`{}`) now extended to _JSON iterables_ (`[..]` and `{..}`), allows extending _JSON iterables_
+during interpolation (before `{}` was stripping only _JSON strings_ only)
+
+#### Improvements, changes, fixes:
+- improved interleaved walking relevance (removed directives out of considerations when relating walks)
+- improved quotation for shell cli interpolated values (fixed issue when unexpected quoting might occur in literals 
+followed quoting character present in the latter)
+- fixed recursive interpolation (when the interpolated JSON value accidentally may undergo interpolation over again)
+- fixed a corner case usage for `<..>f` directive with ranged lexemes when it could have caused an infinite loop
+***
+
+
 _Release Notes for `jtc` v.1.67_
 
 #### New features:
