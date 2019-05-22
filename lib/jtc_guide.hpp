@@ -68,13 +68,13 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzf], each one 
+   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzf], each one
      altering the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex search applied)
      d: match a number (i.e. searches numeric JSON values only)
      D: same as d, but expression in braces is a Regex (value is treated as a string value here)
-     b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully 
+     b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully
         spelled, while 'any' match could be either spelled or indicated via empty lexeme,
         e.g.: '<true>b', '<any>b', '<>b'
      n: match null values only, the content within the encasement must be empty and e.g.: '><n'
@@ -104,7 +104,10 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         non-empty then also saves found label/index into the given namespace
      z: erase namespace pointed by lexeme value; if the lexeme is empty, erase entire namespace
      f: fail-stop: if walking lexemes past the fail-stop fails, instead of progressing to the
-        next iteration, a lexeme resolved JSON node (and path) at the fail-stop will be restored
+        next iteration, a lexeme resolved JSON node (and path) at the fail-stop will be restored;
+        when used together with `F` directive, the walking continues past `F` directive
+     F: forward to the next iteration: when the directive is reached, the current walk is skipped
+        and silently proceeds to the next iteration
 
    N: an integer quantifier specifying search match instance/range, comes in following variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within

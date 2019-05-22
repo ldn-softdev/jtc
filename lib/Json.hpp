@@ -625,6 +625,8 @@ class Jnode {
                 walk_root_has_no_label, \
                 walk_non_existant_namespace, \
                 walk_non_numeric_namespace, \
+                walk_range_between_f_F_directives, \
+                walk_meaningless_directive, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
@@ -1662,7 +1664,7 @@ class Json {
                              return jsearch AMONG(key_of_value, value_of_json,
                                                     zip_namespace, fail_stop, Forward_itr);
                             }
-        bool                is_search_lexeme(void) const
+        bool                is_not_directive(void) const
                              { return not is_directive(); }
         bool                is_lexeme_required(void) const
                              { return jsearch AMONG(Regex_search, digital_match, Digital_regex,
@@ -1704,19 +1706,18 @@ class Json {
         WalkStepType        type{static_select};
         vec_str             stripped;
                             // stripped[0] -> a stripped lexeme (required)
-                            // stripped[1] -> attached label match (optional)
+                            // stripped[1] -> attached label match - optional (i.e.: [label]:)
         std::regex          re;                                 // RE for R/L/D suffixes
         Jnode               user_json{Jnode::Neither};          // Json for <>j, or <>v assignment
         path_vector         fs_path;
-        // fs_path implementation is somewhat tricky:
         // fail-stops require maintaining disabled (locked) and enabled (unlocked) states:
-        // when locking occurs - lock_failstops_ (going backwards) up until 1st range ws found
-        // when unlocking occurs - unlock_failstops_ (going forward) up until 1st range ws found
+        // when locking event occurs - lock (going backwards) all up until 1st range ws found
+        // when unlocking event occurs - unlock (going forward) up until 1st range ws found
         // 0. initialized in enabled / unlocked state
-        // 1. if walking fails: lock_failstops_ staring from the failed ws
+        // 1. if walking fails: lock fail-stops staring from the failed ws
         // 2. unlocking occurs when any of ws (range type) is getting incremented
         // 3. failed stop is getting engaged only when walk fails, but not when the walk fails
-        //    due to incremented range-type ws
+        //    due to incremented range-type ws (offset-counter must be above head)
 
         // Below definitions only for COUTABLE interface
         const char *        search_type() const
@@ -1729,7 +1730,6 @@ class Json {
         const char *        ws_type(void) const
                              { return jsearch == text_offset? "N/A": ENUMS(WalkStepType, type); }
         std::string         range() const {
-                             if(jsearch == text_offset) return "N/A";
                              if(type != range_walk) return "N/A";
                              std::stringstream ss;
                              ss << '[' << (heads.empty()?
@@ -2025,6 +2025,7 @@ class Json {
         void                walk_text_offset_(size_t wsi, Jnode *);
         void                walk_search_(size_t wsi, Jnode *);
         size_t              normalize_(long offset, Jnode *jn) const {  // norm. by [jn->chldrn]
+                             if(jn->is_atomic()) return offset;
                              long children = static_cast<long>(jn->children_().size());
                              if(offset >= 0) return offset > children? children: offset;
                              return children + offset < 0? 0: children + offset;
@@ -2076,7 +2077,7 @@ class Json {
                                ws.fs_path.clear();
                              }
                             }
-        bool                failed_stop_(long wsi);
+        long                failed_stop_(long wsi);
 
         static std::string  empty_lbl_;                         // empty (default) label
     };
@@ -2476,11 +2477,18 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  compile_walk_(wstr, it);
  it.pv_.reserve(it.walk_path_().size());                        // iter's performance optimization
 
- DBG(0) {
-  DOUT() << "dump of completed lexemes:" << std::endl;
-  size_t i = 0;
-  for(const auto &ws: it.walk_path_())
-   DOUT() << DBG_PROMPT(0) << '[' << i++ << "]: " << ws << std::endl;
+ bool fs_seen_ = false;
+ bool range_seen = false;
+ DBG(0) DOUT() << "dump of completed lexemes:" << std::endl;
+ size_t i = 0;
+ for(const auto &ws: it.walk_path_()) {
+  DBG(0) DOUT() << '[' << i++ << "]: " << ws << std::endl;
+  if(ws.jsearch == fail_stop) fs_seen_ = true;
+  if(fs_seen_ and ws.type == WalkStep::range_walk) range_seen = true;
+  if(ws.jsearch == Forward_itr) {
+   if(range_seen) throw EXP(Jnode::walk_range_between_f_F_directives);
+   if(not fs_seen_) throw EXP(Jnode::walk_meaningless_directive);
+  }
  }
 
  if(action == invalidate) {                                     // talking a conservative approach:
@@ -2556,7 +2564,6 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
  vec_str req_label;                                             // would hold stripped [label]:
 
  for(auto si = wstr.begin(); si != wstr.end();) {               // si: input string iterator
-   if(not ws.empty() and ws.back().jsearch == Forward_itr) break;
    DBG(1) {
    DOUT() << "walked string: " << wstr << std::endl;
    DOUT() << DBG_PROMPT(1) << "parsing here: "
@@ -2816,7 +2823,7 @@ void Json::parse_subscript_type_(WalkStep & ws) const {
  // separates numerical subscripts (e.g. [1]) from textual's (e.g. [ 1])
  // numerical offsets are: [2], [-1], [+3], [3:], [3:1], [-5:-1], [+3:5], [:], [:-1]
  // parse_subscript_type_ is run after all lexemes are parsed
- DBG(1) DOUT() << "incomplete: " << ws << std::endl;
+ DBG(2) DOUT() << "incomplete: " << ws << std::endl;
 
  if(ws.is_search()) {                                           // it's a search lexeme's walkstep
   if(ws.stripped.size() == 2)                                   // there's an attached label scope
@@ -2875,20 +2882,27 @@ size_t Json::iterator::walk_(void) {
  Jnode * jnp = & json().root();
  pv_.clear();                                                   // path-vector being built
 
- size_t i;
- for(i = 0; i < ws_.size(); ++i) {
+ for(size_t i = 0; i < ws_.size(); ++i) {
   walk_step_(i, jnp);                                           // walkStep builds up a path-vector
-  if(pv_.empty())
-   jnp = & json().root();
-  else {                                                        // pv_ is non-empty
-   if(pv_.back().jit == json().end_()) {                        // and walk_step failed
-    DBG(json(), 2) show_built_pv_(DOUT(json()));
-    if(failed_stop_(i)) { lock_failstops_(i); break; }          // possibly engage <>f lexeme
-    return i;
-   }
-   jnp = &pv_.back().jit->VALUE;
-  }
   DBG(json(), 2) show_built_pv_(DOUT(json()));
+  if(pv_.empty())
+   { jnp = & json().root(); continue; }                         // empty pv_ is a valid path: root
+  if(pv_.back().jit != json().end_())
+   { jnp = &pv_.back().jit->VALUE; continue; }                  // continue walking then
+                                                                // walk_step failed (end_ returned)
+  long fs_wsi = failed_stop_(i);
+  if(fs_wsi < 0) return i;                                      // no fail_stop, return failed wsi
+                                                                // engaging <..>f
+  size_t j = i;
+  while(++j < ws_.size())                                       // check for <..>F presence
+   if(ws_[j].jsearch == Forward_itr) { ++j; break; }
+  if(j >= ws_.size() )                                          // <..>F not found, or it's a tail
+   { lock_failstops_(i); break; }                               // thus, produce a fail-stop
+  DBG(json(), 3) DOUT(json()) << "found " << ENUMS(Json::Jsearch, Json::Forward_itr)
+                              << " at [" << j - 1 << "], skipping over" << std::endl;
+  pv_ = ws_[fs_wsi].fs_path;                                    // else - skip over to cont. walk
+  jnp = pv_.empty()? &json().root(): &pv_.back().jit->VALUE;
+  i = --j;
  }
                                                                 // successfully walked all ws
  sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
@@ -3511,6 +3525,7 @@ bool Json::iterator::increment_(long wsi) {
  wsi = next_iterable_ws_(wsi);                                  // get next more significant wsi
  if(wsi < 0) return false;                                      // out of iteratables
  // here we need to reload the walkstep's offset with the head's value
+ DBG(json(), 3) DOUT(json()) << "head-initializing offset [" << wsi << "]" << std::endl;
  ws.offset = ws.type == WalkStep::range_walk and not ws.heads.empty()?
              LONG_MIN: ws.head;
              // LONG_MIN: indicates delayed (until actual walk) resolution
@@ -3531,27 +3546,26 @@ long Json::iterator::next_iterable_ws_(long wsi) const {
 }
 
 
-bool Json::iterator::failed_stop_(long wsi) {
- // check if there's a valid fail stop in the path (only first found FS should be checked?)
+long Json::iterator::failed_stop_(long wsi) {
+ // check if there's a valid fail stop in the path (only first found FS should be checked)
  auto & ws = walk_path_()[wsi];
- if(ws.jsearch == Forward_itr) return false;
- if(ws.type == WalkStep::range_walk) {
-  if(ws.is_subscript()) return false;                           // failed subscript: dont engage FS
-  if(ws.offset > ws.head) return false;                         // ws is search
- }
+ if(ws.jsearch == Forward_itr) return -1;                       // it's this trigger right now
+ if(ws.type == WalkStep::range_walk)
+  if(ws.offset > ws.head) return -1;                            // ws is search
 
  for(; wsi >= 0; --wsi) {                                       // going backwards
   auto & ws = walk_path_()[wsi];
   if(ws.jsearch != Jsearch::fail_stop) continue;
-  if(not ws.fs_path.empty() and ws.fs_path.back().jit == json().end_())
-   return false;                                                // check only 1st found one
+  if(not ws.fs_path.empty() and
+     ws.fs_path.back().jit == json().end_())                    // fail-stop is locked out
+   return -1;                                                   // check only 1st found one
   DBG(json(), 3)
-   DOUT(json()) << "found fail-stop at [" << wsi << "], restoring path " << std::endl;
+   DOUT(json()) << "found fail-stop at [" << wsi << "], restoring path" << std::endl;
   pv_ = ws.fs_path;
-  return true;
+  return wsi;
  }
 
- return false;
+ return -1;
 }
 
 
