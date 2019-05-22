@@ -1512,19 +1512,20 @@ string Jtc::interpolate_tmp_(string tmp, const Json::map_jn &ns) {
 // 4. among actual iterators, select first in the relevant group, give it to the subscriber
 //    and remove it from the wpi
 // 5. repeat until entire wpi is empty
+// typedef deque<Json::iterator> walk_deq;
 
 void Jtc::walk_interleaved_(void) {
  // collect all walks (-w/-i/-u) and feed one by one to the subscriber
  json_.clear_ns();
  bool wns_unlocked = wns_.count(nullptr) == 0;                  // un/locked for trailing op
  if(wns_unlocked) wns_.clear();
- deque<walk_deq> wpi;
+ deque<walk_deq> wpi;                                           // wpi holds queues of iterators
 
  for(const auto &walk_str: opt_[CHR(OPT_WLK)]) {                // process all -w arguments
   wpi.push_back( {json_.walk(walk_str.find_first_not_of(" ") == string::npos?
                               "[^0]": walk_str, Json::keep_cache)} );
   if(opt_[CHR(OPT_SEQ)] and wpi.size() > 1) {                   // -n and multiple -w given
-   wpi.front().push_back( move(wpi.back().front()) );           // move iterator to front wpi
+   wpi.front().push_back( move(wpi.back().front()) );           // move queue to front wpi
    wpi.pop_back();                                              // drop last instance
   }
 

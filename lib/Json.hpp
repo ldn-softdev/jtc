@@ -625,7 +625,7 @@ class Jnode {
                 walk_root_has_no_label, \
                 walk_non_existant_namespace, \
                 walk_non_numeric_namespace, \
-                walk_range_between_f_F_directives, \
+                walk_range_past_f_directive, \
                 walk_meaningless_directive, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
@@ -2477,19 +2477,9 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  compile_walk_(wstr, it);
  it.pv_.reserve(it.walk_path_().size());                        // iter's performance optimization
 
- bool fs_seen_ = false;
- bool range_seen = false;
  DBG(0) DOUT() << "dump of completed lexemes:" << std::endl;
- size_t i = 0;
- for(const auto &ws: it.walk_path_()) {
-  DBG(0) DOUT() << '[' << i++ << "]: " << ws << std::endl;
-  if(ws.jsearch == fail_stop) fs_seen_ = true;
-  if(fs_seen_ and ws.type == WalkStep::range_walk) range_seen = true;
-  if(ws.jsearch == Forward_itr) {
-   if(range_seen) throw EXP(Jnode::walk_range_between_f_F_directives);
-   if(not fs_seen_) throw EXP(Jnode::walk_meaningless_directive);
-  }
- }
+ for(size_t i = 0; i < it.walk_path_().size(); ++i)
+  DBG(0) DOUT() << '[' << i << "]: " << it.walk_path_()[i] << std::endl;
 
  if(action == invalidate) {                                     // talking a conservative approach:
   clear_cache();                                                // user must specify "keep" himself
@@ -3522,15 +3512,15 @@ bool Json::iterator::increment_(long wsi) {
   return next_wsi < 0? false: increment_( next_wsi );
  }
 
- wsi = next_iterable_ws_(wsi);                                  // get next more significant wsi
- if(wsi < 0) return false;                                      // out of iteratables
+ long next_wsi = next_iterable_ws_(wsi);                        // get next more significant wsi
+ if(next_wsi < 0) return false;                                 // out of iteratables
  // here we need to reload the walkstep's offset with the head's value
- DBG(json(), 3) DOUT(json()) << "head-initializing offset [" << wsi << "]" << std::endl;
  ws.offset = ws.type == WalkStep::range_walk and not ws.heads.empty()?
              LONG_MIN: ws.head;
              // LONG_MIN: indicates delayed (until actual walk) resolution
              // cannot resolve right now, cause NS might have changed by the next walking this ws
- return increment_(wsi);
+ DBG(json(), 3) DOUT(json()) << "head-initialized offset [" << wsi << "]" << std::endl;
+ return increment_(next_wsi);
 }
 
 
@@ -3548,20 +3538,26 @@ long Json::iterator::next_iterable_ws_(long wsi) const {
 
 long Json::iterator::failed_stop_(long wsi) {
  // check if there's a valid fail stop in the path (only first found FS should be checked)
- auto & ws = walk_path_()[wsi];
+ // assert pv_.back().jit == json().end_()
+ const auto & ws = walk_path_()[wsi];
  if(ws.jsearch == Forward_itr) return -1;                       // it's this trigger right now
- if(ws.type == WalkStep::range_walk)
-  if(ws.offset > ws.head) return -1;                            // ws is search
+ if(ws.type == WalkStep::range_walk) {                          // ws is a range search
+  const auto & j =  pv_.size() >= 2?                            // j here is a failing node
+                     pv_[pv_.size()-2].jit->VALUE.value(): json().root();
+  if(j.is_iterable() and ws.offset >= j.children()) return -1;  // iterable is failing counter here
+  if(ws.offset > ws.head) return -1;                            // non-iterables was processed once
+ }
 
  for(; wsi >= 0; --wsi) {                                       // going backwards
-  auto & ws = walk_path_()[wsi];
+  const auto & ws = walk_path_()[wsi];
+  if(ws.jsearch == Jsearch::Forward_itr) return -1;
   if(ws.jsearch != Jsearch::fail_stop) continue;
   if(not ws.fs_path.empty() and
      ws.fs_path.back().jit == json().end_())                    // fail-stop is locked out
    return -1;                                                   // check only 1st found one
-  DBG(json(), 3)
-   DOUT(json()) << "found fail-stop at [" << wsi << "], restoring path" << std::endl;
   pv_ = ws.fs_path;
+  DBG(json(), 3)
+   { DOUT(json()) << "found [" << wsi << "], restoring "; show_built_pv_(DOUT(json())); }
   return wsi;
  }
 
