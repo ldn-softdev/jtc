@@ -3,7 +3,7 @@
 _Release Notes for `jtc` v.1.68_
 
 #### New features:
-- directive `<..>F` is liberated: now it can be a non-trailing one (explanations in the 
+- directive `<..>F` is liberated: now it can be not the last one (explanations in the 
 [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md))
 - extended walking use-cases for `<..>f`: the lexeme also will act upon failed iterable subscripts too (before it used to 
 engage on failing atomic values only), plus walking continues past `<..>F` directive if the latter is present - in such 
