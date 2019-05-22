@@ -3544,7 +3544,7 @@ long Json::iterator::failed_stop_(long wsi) {
  if(ws.type == WalkStep::range_walk) {                          // ws is a range search
   const auto & j =  pv_.size() >= 2?                            // j here is a failing node
                      pv_[pv_.size()-2].jit->VALUE.value(): json().root();
-  if(j.is_iterable() and 
+  if(j.is_iterable() and
      ws.offset >= static_cast<long>(j.children())) return -1;   // iterable is failing counter here
   if(ws.offset > ws.head) return -1;                            // non-iterables was processed once
  }
