@@ -1,7 +1,7 @@
 
 
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.68_, being updated)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.68_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -1949,8 +1949,8 @@ The difference between single `{}` and double `{{}}` notations:
 - a single notation `{..}` interpolate _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
   `blah`. Thus, it makes sense to use this interpolation inside double quotations (the interpolated value still has to be a valid JSON)
-  * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped - it allows extending arrays
-  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped - it allows extending objects
+  * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped (allows extending arrays)
+  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped (it allows extending objects)
 
 A string interpolation w/o outer quotes is handy when required altering an existing string, here's example of altering JSON label:
 ```
@@ -2025,6 +2025,8 @@ When interpolating the second record, the interpolation in fact, would result in
 (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid JSON. 
 However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
 without failures.
+
+All the same applies for when interpolating _JSON objects_.
 
 
 ### Search quantifiers interpolation
