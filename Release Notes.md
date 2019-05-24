@@ -4,7 +4,7 @@ _Release Notes for `jtc` v.1.68_
 
 #### New features:
 - directive `<..>F` is liberated: now it can be not the last one (explanations in the 
-[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md))
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-stop-and-forward-directives))
 - extended walking use-cases for `<..>f`: the lexeme also will act upon failed iterable subscripts too (before it used to 
 engage on failing atomic values only), plus walking continues past `<..>F` directive if the latter is present - in such 
 case the failing domain is only covered within `<>f` ... `<>F` lexemes
