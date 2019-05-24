@@ -52,6 +52,7 @@
 4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
+   * [Interpolation types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-types)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
@@ -1935,15 +1936,21 @@ bash $
 ## Interpolation
 Interpolation may occur either for argument undergoing
 [shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-(`-e` in insert/update operations), or for template arguments (`-T`).
+(`-e` in insert/update operations), or for template arguments (`-T`) in walk/update/insert operations.
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
 - if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
-- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the relevant namespace.
-The difference between single `{}` and double `{{}}` notation: upon interpolation of single notation when _JSON string_ is interpolated
-then outer quote marks are dropped (other JSON elements interpolated w/o any change); when double notation is getting interpolated
-then no exemption made - all JSON elements interpolated without any changes.
+- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the given namespace
+
+### Interpolation types
+The difference between single `{}` and double `{{}}` notations: 
+- double notation `{{..}}` interpolate JSON elements exactly, so it's always a safe type
+- a single notation `{..}` interpolate _JSON strings_, _JSON arrays_, _JSON objects_ differently:
+  * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
+  `blah`. Thus, it makes sense to use this interpolation inside double quotations (the interpolated value still has to be a valid JSON)
+  * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped - it allows extending arrays
+  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped - it allows extending objects
 
 A string interpolation w/o outer quotes is handy when required altering an existing string, here's example of altering JSON label:
 ```
@@ -1971,6 +1978,54 @@ bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'
 }
 bash $ 
 ```
+
+An array interpolation using single notation `{..}` is handy when there's a need to extend an array during
+interpolation. 
+There's an special case though - template-extending an empty array. Let's consider a following example:
+```
+bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
+bash $ jtc <<<$JSN
+[
+   {
+      "Func": "x + y",
+      "args": [
+         123
+      ]
+   },
+   {
+      "Func": "a * b",
+      "args": []
+   }
+]
+bash $ 
+```
+And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
+```
+bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]' 
+[
+   {
+      "Func": "x + y",
+      "args": [
+         123,
+         "x",
+         "y"
+      ]
+   },
+   {
+      "Func": "a * b",
+      "args": [
+         "a",
+         "b"
+      ]
+   }
+]
+bash $ 
+```
+When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
+(`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid JSON. 
+However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
+without failures.
+
 
 ### Search quantifiers interpolation
 Also interpolation may occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
