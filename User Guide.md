@@ -17,7 +17,7 @@
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
-     * [Directives and Namespaces (`vkzf`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+     * [Directives and Namespaces (`vkzfF`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
      * [Fail-stop and Forward directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-stop-and-Forward-directives)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
@@ -424,15 +424,20 @@ there are following suffixes to control search behavior:
 #### Directives and Namespaces
 there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certain actions
 with the currently walked JSON elements:
+
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
-  can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key (label/index) into
-  the corresponding namespace
+         can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key 
+         (label/index) into the corresponding namespace
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
-  * `f`: fail-stop: if walking lexemes past the fail-stop directive fails, instead of progressing to the
-        next iteration, a lexeme immediately preceeding the fail-stop will be matched
+  * `f`: fail-stop: if lexeme walking **past the fail-stop** fails, instead of progressing to the next iteration
+         (a typical behavior), the lexeme immediately preceeding the fail-stop will be matched; walking (of the same walk-path)
+         may continue for the failed path if `<>F` directive is present (past the failing point) from the walk lexeme following
+         `<>F` directive
+  * `F`: forward to the next iteration: when the directive is reached, the currently walked path is skipped and 
+         silently proceeds to the next walk iteration; `<>F` directives only make sense to use in pairs with `<>f`
 
-Thus a _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
+A _namespace_ is a container within `jtc`, which allows storing JSON elements programmatically while walking JSON.
 Stored in namespaces values could be reused later in the same or different walk-paths and 
 [interpolated](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation) in 
 [templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
