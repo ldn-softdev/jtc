@@ -1950,7 +1950,7 @@ The difference between single `{}` and double `{{}}` notations:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
   `blah`. Thus, it makes sense to use this interpolation inside double quotations (the interpolated value still has to be a valid JSON)
   * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped (allows extending arrays)
-  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped (it allows extending objects)
+  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped (allows extending objects)
 
 A string interpolation w/o outer quotes is handy when required altering an existing string, here's example of altering JSON label:
 ```
