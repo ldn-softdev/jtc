@@ -422,7 +422,7 @@ there are following suffixes to control search behavior:
 
 
 #### Directives and Namespaces
-there are a few of lexemes, that look like search, though they do not perform any matching, rather they apply certain actions
+there are few lexemes that look like search, though they do not perform any matching, rather they apply certain actions
 with the currently walked JSON elements:
 
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme
