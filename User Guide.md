@@ -624,6 +624,19 @@ Thus, `<>F` skips those (successfully) matched entries, leaving only one which f
 (the record(s) which does not have `name` in it)
 
 
+Now, what if in the example above (one with `<>F` directive) we want to process *failed* JSON further, say, to display ip only, 
+w/o object itself? That is easily achievable - walking of the *failed* path continues past the `<>F` directive:
+```
+bash $ echo "$JSN" | jtc -w'[:]<>f[name]<>F [ip]'
+"1.1.1.100"
+bash $
+```
+So, the walking (for the failed, second entry) would be like this:
+- upon walking `[name]` lexeme, path would fail (the second record does not have one), so the path vector would be reinstated 
+to the exact value when it was right before `<>f` directive (which is the second entry itself)
+- then walking continues past the next `<>F` directive, which is `[ip]`
+
+
 #### RE generated namespaces
 RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
 - `$0` is auto-generated for an entire RE match,
