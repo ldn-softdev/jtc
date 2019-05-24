@@ -576,7 +576,7 @@ bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<cn:false>f[0]<cn:tru
 bash $ 
 ```
 
-Now, let's consider a following example. Say, we have a following JSON:
+Now, let's consider another example. Say, we have a following JSON:
 ```
 bash $ JSN=$(echo '[ { "ip": "1.1.1.1", "name": "server" }, { "ip": "1.1.1.100" }, { "ip": "1.1.1.2", "name": "printer" } ]')
 bash $ echo "$JSN" | jtc 
