@@ -416,8 +416,8 @@ there are following suffixes to control search behavior:
   * `j`: matches specified JSON value, the lexeme must be a valid JSON, e.g.: `<[]>j` - finds an empty JSON array
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
   * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`  
-  * `q`: matches only unique JSON values; stores the matched elemetns in the namespace 
-  * `Q`: matches only repeatitive (duplicate) JSON values; stores the matched elemetns in the namespace
+  * `q`: matches only unique JSON values; stores the matched elements in the namespace 
+  * `Q`: matches only repetitive (duplicate) JSON values; stores the matched elements in the namespace
 
 \- as one can see, capitalization of either of suffixes `r`, `l`, `d` promotes the respective search to the RE search
 
@@ -432,7 +432,7 @@ with the currently walked JSON elements:
          (label/index) into the corresponding namespace
   * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erase entire namespace
   * `f`: fail-stop: if lexeme walking **past the fail-stop** fails, instead of progressing to the next iteration
-         (a typical behavior), the lexeme immediately preceeding the fail-stop will be matched; walking (of the same walk-path)
+         (a typical behavior), the lexeme immediately preceding the fail-stop will be matched; walking (of the same walk-path)
          may continue for the failed path if `<>F` directive is present (past the failing point) from the walk lexeme following
          `<>F` directive
   * `F`: forward to the next iteration: when the directive is reached, the currently walked path is skipped and 
@@ -519,7 +519,7 @@ as the path is walked, as soon `<>f` directive is faced, it _memorizes_ the curr
 further walking fail, there
 - we resolve the first entry in the `phone` records and memorize it's path location (`[phone][0]<>f`)
 - then step back up and look for a `mobile` type of the record (`[-1]<mobile>`), then:
-     * if it's found, we step back up (`[-1]`) to finish walking and disply the whole record
+     * if it's found, we step back up (`[-1]`) to finish walking and display the whole record
      * if not found (i.e. walking indeed fails), a fail-stop is engaged and preserved location is recalled and printed
 
 A _walk-path_ may contain multiple _fail-stops_, only the respective fail-stop will be engaged (more specific one and closest 
@@ -660,9 +660,9 @@ bash $
 
 
 #### Path namespaces
-There are also couple resrved namespaces to acqure a current JSON path:
+There are also couple reserved namespaces to acquire a current JSON path:
 - `$PATH`: that namespace contains a JSON array describing path to the currently selected element
-- `$path`: this is a strigified represenation of the path
+- `$path`: this is a stringified representation of the path
 Here are both demonstrated:
 ```
 bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
@@ -671,7 +671,7 @@ bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
 "Directory_0_address_state"
 bash $ 
 ```
-to play safe with the templates, always surrond them with single quotes (to dodge shell interpolation)
+to play safe with the templates, always surround them with single quotes (to dodge shell interpolation)
 
 
 
@@ -1616,7 +1616,7 @@ Once options `-e` and `-i`,`-u` used together, following rules must be observed:
 - cli arguments sequence following option `-i`,`-u` must be terminated with escaped semicolon: `\;`
 - the cli is also subjected for namespace / walk interpolation before it gets shell evaluated
 - the cli in argument do not require any additional escaping (except those which would normally be required by bash shell)
-- if pipeing in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
+- if piping in the cli is required then pipe symbol itself needs to be escaped and spelled standalone: `\|`
 - returned result of a shell evaluation must be either a valid JSON, or non-empty and non-error, then it's
 promoted to a _JSON string_ value
 - failed (those returning non-zero exit code) or empty results of the shell evaluations are ignored 
@@ -1644,7 +1644,7 @@ bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/
 bash $ 
 ```
 
-It did not work, because `jtc` recieved at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell -  
+It did not work, because `jtc` received at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell -  
 `jtc` got that, thus, we have to quote it:
 ```
 bash $ <ab.json jtc -w'<children>l:[:]' -j | jtc -w[:] -eu sed -E 's/(...).*/\1/<<<{}' \; -dd
@@ -1686,7 +1686,7 @@ bash $
 
 ```
 Now it did not work, because `jtc` received `sed`'s argument without single quotations (again those have been eaten by bash 
-before pasing to `jtc` -  something `jtc` is unable to control - shell arguments evaluation of its arguments). Thus, 
+before passing to `jtc` -  something `jtc` is unable to control - shell arguments evaluation of its arguments). Thus, 
 let's double quote it now:
 
 ```
@@ -1768,8 +1768,8 @@ will be processed in a consecutive order, one by one (i.e. interleaving occurs o
 options `-u`, `-i` when used together with `-e` also allow specifying multiple instances of the option usage:
 1. first option occurrence must prove a shell cli line, terminated with `;`
 2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation.
-Thus, in the case if mixed option arguments usage is detected (together with `-e`), then the semantic of the jtc arguments would be
-like this (e.g., for option `-u`):
+Thus, in the case if mixed option arguments usage is detected (together with `-e`), then the semantic of the `jtc` arguments would
+be like this (e.g., for option `-u`):
 ```
 jtc  -w'<dst>' -e -u <shell cli ...> \; -u'<src>' 
 ```
@@ -2067,7 +2067,7 @@ bash $
 ```
 
 3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e. addresses the first parent of the `item` value) which is
-the root of th input json:
+the root of the input JSON:
 ```
 bash $ echo $J | jtc -w'[item]<idx>v[-1]'
 {
@@ -2149,7 +2149,7 @@ Explanations:
 namespace `val`; option `-p` turns _insert_ operation into _move_
 - `-T'{ "phone number": "+1 {val}" }'` after each walk (in `-i`) a template interpolations occurs here - a new JSON entry is generated
 from the template and namespace `val` and the new entry is then used for insertion into the respective destination walk (`-w`).
-Thus using templates it becomes easy to transmutate existing JSON into a new one.
+Thus using templates it becomes easy to transmute existing JSON into a new one.
 
 
 ## Processing multiple input JSONs
@@ -2458,8 +2458,6 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<
 bash $ 
 ```
 it's just a reverse action.
-
-
 
 
 
