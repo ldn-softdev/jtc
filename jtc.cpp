@@ -13,7 +13,7 @@
 using namespace std;
 
 
-#define VERSION "1.68"
+#define VERSION "1.69"
 
 
 // option definitions
@@ -108,8 +108,9 @@ class CommonResource {
  public:
     Getopt &            opt(void) { return opt_; };
     size_t              opt_e_found(void) { return opt_e_found_; }  // used for recompile once
-    char                opt_ui(void){  return opt_ui_; };           // -i or -u for recompile
-    const string &      istr(void){  return istr_; };
+    char                opt_ui(void) {  return opt_ui_; };          // -i or -u for recompile
+    Json::map_jn &      gns(void) {  return gns_; };
+    const string &      istr(void) {  return istr_; };
     Json &              json(void) { return gj_; };
 
     void                parse_opt(int argc, char *argv[]);
@@ -125,6 +126,7 @@ class CommonResource {
     char                opt_ui_{NULL_CHR};                      // either -i or -u for recompile
     bool                ji_{false};                             // '-j' imposed?
     Json                gj_{ ARY{} };                           // global json
+    Json::map_jn        gns_;                                   // global namespaces
 
     bool                is_recompile_required_(int argc, char *argv[]);
     void                recompile_args_(v_string &args, v_string &new_args);
@@ -172,6 +174,7 @@ class Jtc {
                          cr_{cr}, opt_{cr.opt()} {
                          ecli_ = opt_[CHR(OPT_EXE)].hits() > 0; // flag used by -i/-u options
                          merge_ = opt_[CHR(OPT_MDF)].hits() > 0;// flag used by -i/-u options
+                         is_multi_temp_ = opt_[CHR(OPT_TMP)].size() > 2 and not opt_[CHR(OPT_SEQ)];
                          json_.tab(abs(opt_[CHR(OPT_IND)]))
                               .raw(opt_[CHR(OPT_RAW)])
                               .quote_solidus(opt_[CHR(OPT_QUT)].hits() % 2 == 1);
@@ -239,6 +242,8 @@ class Jtc {
     map_jit             isrc_;                                  // walk iterators in params -i, -u
     map_ns              wns_;                                   // namespaces for walked (-w) paths
     set<string>         c2a_;                                   // converted to arrays
+    map<size_t, string> tpw_;                                   // template per walk (id)
+    bool                is_multi_temp_;                         // multiple -t and no -n?
     bool                is_multi_walk_{false};                  // multiple -w or single iterable?
     bool                convert_req_{false};                    // used in output_by_iterator
     bool                ecli_{false};                           // -e status for insert/update
@@ -265,7 +270,7 @@ string quote_str(const string &src);
 
 
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
 
  CommonResource cr;
  REVEAL(cr, opt)
@@ -899,15 +904,28 @@ int Jtc::walk_json(void) {
 
 
 void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
- // prints json element from given iterator
+ // prints json element from given iterator (used by -w)
  // in case of -j option: collect into provided json container rather than print
  Json tmp;
- tmp.type() = Jnode::Neither;
- DBG().severity(tmp);
+ DBG().severity(tmp.type(Jnode::Neither));
 
  if(opt_[CHR(OPT_TMP)].hits() >= 1) {                           // -T given
-  tmp = interpolate_(opt_[CHR(OPT_TMP)].str(key_ + 1), wns_[&wi], wi);
-  if(++key_  >= opt_[CHR(OPT_TMP)].size() - 1) key_ = 0;        // -1: adjust b/c of opt_'s default
+  for(const auto & ns: wns_[&wi])                               // aggregate namespaces from walks
+   cr_.gns()[ns.KEY] = move(ns.VALUE);
+  // templating per walk occurs only once:
+  // if multiple interleaved walks and multiple templates, then relate each template per walk-path
+  // in all other cases - templates are round-robin applied onto each walk iteration
+  if(is_multi_temp_ and opt_[CHR(OPT_WLK)].size() > 2) {        // >2: more than one '-w' given
+   if(tpw_.count(wi.walk_id()) == 0) {                          // relate interleaved walks to tmp
+    auto & r = tpw_[wi.walk_id()];
+    r = tpw_.size() < opt_[CHR(OPT_TMP)].size()? opt_[CHR(OPT_TMP)].str(tpw_.size()): "";
+   }
+   tmp = interpolate_(tpw_[wi.walk_id()], cr_.gns(), wi);
+  }
+  else {                                                        // round-robin
+   tmp = interpolate_(opt_[CHR(OPT_TMP)].str(key_ + 1), cr_.gns(), wi); //wns_[&wi]
+   if(++key_  >= opt_[CHR(OPT_TMP)].size() - 1) key_ = 0;       // -1: adjust b/c of opt_'s default
+  }
  }
 
  typedef void (Jtc::*jd_ptr)(Json::iterator &, size_t, const Json &);
@@ -990,8 +1008,8 @@ void Jtc::console_output_(Json::iterator &wi, size_t group, const Json &jtmp_ref
 
  if(opt_[CHR(OPT_LBL)] and sr.has_label())                      // -l given
   { cout << '"' << sr.label() << "\": ";  unquote = false; }    // then print label (if present)
- if(unquote and sr.is_string())
-  cout << json_.unquote_str(sr.str()) << endl;                  // don't try collapsing it into
+ if(unquote and sr.is_string())                                 // don't try collapsing it into
+  { if(not sr.str().empty()) cout << json_.unquote_str(sr.str()) << endl; }
  else {
   if(inquote) cout << '"' << json_.inquote_str(sr.to_string(Jnode::Raw)) << '"' << endl;
   else cout << sr << endl;                                      // a single operation!
@@ -1320,7 +1338,7 @@ void Jtc::parse_params_(char option) {
  map_json tmp;                                                  // interpolated templates (if any)
  if(ecli_)                                                      // -e detected
   for(size_t i = cr_.opt_e_found(); cr_.opt_ui() and i <= opt_[cr_.opt_ui()].hits(); ++i)
-   extend_itr_(json_.walk(opt_[cr_.opt_ui()].str(i), Json::keep_cache));
+   extend_itr_( json_.walk(opt_[cr_.opt_ui()].str(i), Json::keep_cache) );
    // the loop conditions make this call only if trailing options (-u/-i) are present
  else
   for(auto & arg: opt_[option])
@@ -1352,7 +1370,10 @@ void Jtc::parse_params_(char option) {
 
 
 void Jtc::extend_itr_(Json::iterator jit) {
- // extend jit till end, and interpolate all templates (if any) NS put into and lock wns_
+ // extend jit till end, lock wns_ for trailing options exclusively
+ // this version facilitates sources when -e is given and there're trailing options (sources),
+ // e.g.: -e -i <cli...> \; -i<src_walk_1> -i<src_walk_2> etc
+ // no templating is done here (-T ignored), as interpolation will occur during shell evaluation
  while( jit != jit.end() ) {                                    // extend all iterators until end
   isrc_[isrc_.size()] = jit;
   auto & jit_ref = isrc_.rbegin()->VALUE;
@@ -1366,7 +1387,9 @@ void Jtc::extend_itr_(Json::iterator jit) {
 
 
 void Jtc::extend_itr_(map_json &tmp, const Json::map_jn &ns, Json::iterator jit) {
- // extend jit till end, and interpolate all templates (if any)
+ // extend jit till end and interpolate all templates (if any)
+ // this version facilitates collection of iterators for all -u/i/c options
+ // all present -T options will be attempted and all successful ops will be collected
  while( jit != jit.end() ) {                                    // extend all iterators until end
   isrc_[isrc_.size()] = jit;
 
@@ -1435,7 +1458,7 @@ Json Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns,
   rjv = move(STR{tmp});
  else                                                           // json parse resulted template
   try { rjv.parse(tmp, parse_type); }
-  catch(Json::stdException & e) { rjv.root().type() = Jnode::Neither; }
+  catch(Json::stdException & e) { rjv.root().type(Jnode::Neither); }
  return rjv;
 }
 
@@ -1522,6 +1545,7 @@ void Jtc::walk_interleaved_(void) {
  deque<walk_deq> wpi;                                           // wpi holds queues of iterators
 
  for(const auto &walk_str: opt_[CHR(OPT_WLK)]) {                // process all -w arguments
+  json_.clear_ns();
   wpi.push_back( {json_.walk(walk_str.find_first_not_of(" ") == string::npos?
                               "[^0]": walk_str, Json::keep_cache)} );
   if(opt_[CHR(OPT_SEQ)] and wpi.size() > 1) {                   // -n and multiple -w given

@@ -625,8 +625,6 @@ class Jnode {
                 walk_root_has_no_label, \
                 walk_non_existant_namespace, \
                 walk_non_numeric_namespace, \
-                walk_range_past_f_directive, \
-                walk_meaningless_directive, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
@@ -729,7 +727,7 @@ class Jnode {
                         }
 
     Jtype               type(void) const { return value().type_; }
-    Jtype &             type(void) { return value().type_; }
+    Jnode &             type(Jtype x) { value().type_ = x; return *this; }
     bool                is_object(void) const { return type() == Object; }
     bool                is_array(void) const { return type() == Array; }
     bool                is_string(void) const { return type() == String; }
@@ -1438,7 +1436,7 @@ class Json {
     std::string         inquote_str(const std::string & str) const
                          { std::string src{str}; return inquote_str(std::move(src)); }
     Jnode::Jtype        type(void) const { return root().type(); }
-    Jnode::Jtype &      type(void) { return root().type(); }
+    Json &              type(Jnode::Jtype x) { root().type(x); return *this; }
     bool                is_object(void) const { return root().is_object(); }
     bool                is_array(void) const { return root().is_array(); }
     bool                is_string(void) const { return root().is_string(); }
@@ -1529,7 +1527,7 @@ class Json {
                         ep_;                                    // exception pointer
     const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
     const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
-    map_jn              jns_;                                   // jnode name space
+    map_jn              jns_;                                   // jnode namespace
     const Jnode *       ujn_ptr_;                               // for is_unique_()
     const Jnode *       djn_ptr_;                               // for is_duplicate_()
 
@@ -1804,6 +1802,7 @@ class Json {
                              swap(l.ws_, r.ws_);
                              swap(l.jp_, r.jp_);
                              swap(l.pv_, r.pv_);
+                             swap(l.wid_, r.wid_);
                              swap(l.sn_.parent_type(), r.sn_.parent_type());// supernode requires
                             }                                   // swapping of type_ values only
 
@@ -1875,9 +1874,10 @@ class Json {
         // end of Super node definition
 
      public:
-                            iterator(void) = default;           // DC
+                            iterator(void):                     // DC
+                             wid_{Json::iterator::walk_cnt_++} {}
                             iterator(const iterator &it):       // CC
-                             ws_(it.ws_), pv_(it.pv_), jp_(it.jp_) {
+                             ws_(it.ws_), pv_(it.pv_), jp_(it.jp_), wid_(it.wid_) {
                              sn_.type_ = it.sn_.type_;
                             }
                             iterator(iterator &&it) {           // MC
@@ -1967,6 +1967,7 @@ class Json {
         // work with walk steps:
         const std::vector<WalkStep> &
                             walks(void) const { return ws_; }
+        size_t              walk_id(void) const { return wid_; }
         size_t              walk_size(void) const { return ws_.size(); }
         long                counter(size_t position) const {
                              if(position >= ws_.size()) throw jp_->EXP(Jnode::walk_bad_position);
@@ -1995,13 +1996,15 @@ class Json {
         Json &              json(void) const { return *jp_; }
 
      protected:
-                            iterator(Json *ptr): jp_{ptr} {};
-                            iterator(const iter_jn & it)        // used to return end() iterator
+                            iterator(Json *ptr):                // C. used by walk()
+                             jp_{ptr}, wid_{Json::iterator::walk_cnt_++} {};
+                            iterator(const iter_jn & it)        // to return end() iterator only!
                              { pv_.emplace_back(it, true); }
 
       std::vector<WalkStep> ws_;                                // walk state vector (walk path)
         path_vector         pv_;                                // path_vector (result of walking)
         Json *              jp_;                                // json pointer (for json().end())
+        size_t              wid_;                               // unique walk-id
         SuperJnode          sn_{Jnode::Neither};                // super node type_ holds parent's
 
      private:
@@ -2035,7 +2038,6 @@ class Json {
                              return offset > children? children:
                                     -offset > children? -children: offset;
                             }
-
         void                research_(Jnode *jn, size_t wsi,
                                       std::vector<Json::CacheEntry> *, SearchCacheKey *);
         bool                re_search_(Jnode *jn, WalkStep &, const char *lbl, long &instance,
@@ -2080,6 +2082,7 @@ class Json {
         long                failed_stop_(long wsi);
 
         static std::string  empty_lbl_;                         // empty (default) label
+        static size_t       walk_cnt_;                          // walk-counter to generate walk-id
     };
     //
     // end of walk Iterator's definition
@@ -2466,11 +2469,11 @@ char Json::skip_blanks_(std::string::const_iterator & jsp) {
 
 
 std::string Json::iterator::empty_lbl_;
-
+size_t Json::iterator::walk_cnt_{0};
 
 Json::iterator Json::walk(const std::string & wstr, CacheState action) {
- // return Json::iterator to the first element pointed by the walk string.
- // otherwise end-iterator returned
+ // Json iterator factory: returns Json::iterator to the first element pointed
+ //                        by the walk string, otherwise end-iterator returned
  DBG(0) DOUT() << "walk string: '" << wstr << "'" << std::endl;
 
  iterator it = this, &itr = it;                                 // itr - for return by reference

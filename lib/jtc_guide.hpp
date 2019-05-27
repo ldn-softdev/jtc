@@ -68,7 +68,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
      strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzf], each one
+   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzfF], each one
      altering the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex search applied)
@@ -82,7 +82,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      L: same as l, but expression in braces is a Regex (regex search applied)
      a: match any atomic JSON value (string, numeric, boolean, null); the content within the
         encasements must be empty ('<>a')
-     o: match any object JSON value (i.e. '{..}'); the lexeme's content must be emtpty
+     o: match any object JSON value (i.e. '{..}'); the lexeme's content must be empty
      i: match any array (indexable) JSON value (i.e. '[..]'); the content within the encasement
         must be empty
      c: match either arrays or objects; the content within the encasement must be empty
@@ -95,7 +95,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
      t: match a label/index value previously saved in a namespace by directives '<..>k', '<..>v',
         the lexeme must points to the namespace, which should be JSON string or numeric type only
      q: match only unique JSON elements, every match is stored in the namespace
-     Q: match all non-qunique (duplicate) elements, every match is stored in the namespace
+     Q: match all non-unique (duplicate) elements, every match is stored in the namespace
 
    Following suffixes define lexemes as directives (which do not perform any search):
      v: saves the most recent/found (or user-defined) JSON value into a namespace
@@ -117,19 +117,19 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
        encounter of "a text", 4th, 5th and so on until all matches found
      n:n - once ':' is sighted within a quantifier, then it specifies a range; the range
        quantifiers follow the same notation as subscript's range; the indices in quantifiers
-       typically cannot go negative, with exceptoins for search types '>..<t' and '>..<l' (see
+       typically cannot go negative, with exceptions for search types '>..<t' and '>..<l' (see
        full user guide for explanation and use cases)
 
    - following lexemes suffixes must stay empty ('<>', '><'): [naoicew]
    - these lexeme suffixes cannot be empty: [RdDbLjstqQv]
-   - all others might be be either empty or carry some value: [rlkz]
+   - all others might be be either empty or carry some value: [rlkzfF]
 
 All lexeme types allow specifying inner brackets, however, the closing one has to be quoted with
 the preceding backslash, e.g.: '[case[0\]]' - specifies an offset lexeme to the label "case[0]";
 '<tag<a\>>' - denotes a search lexeme for the text "tag<a>"
 
 Spaces *between* lexemes are allowed and ignored; for the subscript lexemes even a more generic
-rule is in play: if a subscirpt lexeme violates any of the described above rules and does not
+rule is in play: if a subscript lexeme violates any of the described above rules and does not
 represent a valid offset, then it's treated as a textual type of offset; e.g.: '[ 1]' and '[1 ]'
 are in fact respective textual offsets (labels) " 1" and "1 " rather than a numerical offset 1;
 '[^-3]', '[+-2]', are also examples of textual subscripts
@@ -465,10 +465,6 @@ capitalize all parent names in our JSON:
 * for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
 )";
 }
-
-
-
-
 
 
 
