@@ -6,15 +6,17 @@ _Release Notes for `jtc` v.1.69_
 - no new features, mostly improved behavior for namespaces and templating
 
 #### Improvements, changes, fixes:
-- namespaces in case of *multiple interleaved walks* (`-w`) respect now the correct order of iterations (before namespaces
-were reflecting only a correct order from the last walk-path `-w`)
-- template behavior for *interleaved walks* only (i.e. when templateing (`-T`) is used for walks only,
+- namespaces, in case of *multiple interleaved walks* (`-w`), respect now the correct order of iterations (before namespaces
+were reflecting only a correct order from the last given walk-path `-w`)
+- template behavior for *interleaved walks* only (i.e. when templating (`-T`) is used for walks only,
 not with `-i`, `-u`) is enhanced:
    * if *multiple* templates are given, then each template corresponds/attributes to each relevant walk (`-w`)
-   * in all other cases (one template multiple walks, one walk multiple templates, multiple walks and multiple templates but sequential, 
-   non-interleaved - `-n` processing) then templates are getting applied as before - in a round-robin fashion
+   * in all other cases (one template multiple walks, one walk multiple templates, multiple walks and multiple templates but
+   sequential / non-interleaved processing - `-n` ) then templates are getting applied as before - in a round-robin fashion
 - when unquoting (`-qq`) is used on an empty string (`""`) then resulting blank line is not printed
 ***
+
+
 
 
 _Release Notes for `jtc` v.1.68_
