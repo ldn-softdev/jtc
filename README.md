@@ -323,7 +323,7 @@ or address a parent(s). A full list of all types of subscripts supported by `jtc
 - `[]` - addresses/selects an empty text label:
 ```
 bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[]'
-"empty lablel"
+"empty label"
 ```
 - `[text]` - addresses/selects a JSON value by label `text`:
 ```
@@ -336,7 +336,7 @@ bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[label]'
 bash $ echo '{ "": "empty label", "label": "non-empty" }' | jtc -w'[1]'
 "non-empty"
 ```
-- `[-n]` - a negative offset let addressing parent(s) of the currently selected json element. `[-1]` will address immediate parent,
+- `[-n]` - a negative offset let addressing parent(s) of the currently selected JSON element. `[-1]` will address immediate parent,
 [-2] parent of a parent, etc:
 ```
 bash $ echo '[ { "": "empty label", "label": "non-empty" } ]' | jtc -w'<non-empty> [-1]'
@@ -355,7 +355,7 @@ bash $ echo '[ { "": "empty label", "label": "non-empty" } ]' | jtc -w'<non-empt
    "label": "non-empty"
 }
 ```
-- `[+n]` - numerical offset prepended with `+` will select all json elements in the iterable (array/object) starting off the
+- `[+n]` - numerical offset prepended with `+` will select all JSON elements in the iterable (array/object) starting off the
 index `n` up till the end:
 ```
 bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[+3]'
@@ -363,7 +363,7 @@ bash $ echo '[ 0, 1, 2, 3, 4, 5]' | jtc -w'[+3]'
 4
 5
 ```
-- `[N:N]` - range select, allows selecting flexibly any slice of the json elements in the iterable. The first index denotes
+- `[N:N]` - range select, allows selecting flexibly any slice of the JSON elements in the iterable. The first index denotes
 beginning of the range/slice, the last one denotes the end index exclusively (i.e. not including the element denoted by
 the last index itself)
   * `N` - positive `N` (could be prepended with '+') denotes an offset select _from the beginning_ of the iterable:
@@ -685,10 +685,10 @@ bash $
 for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/Json.hpp)
 
 ## jtc vs jq:
-`jtc` was "inspired" by the complexity of jq interface, aiming to provide a user interface which could be undertood easily.
+`jtc` was "inspired" by the complexity of jq interface, aiming to provide a user interface which could be understood easily.
 ### 1. tool positioning:
  - `jq` is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
- - `jtc` is a unixy utility confining its functionality (like most unix utilities do) only to operations with the data model only.
+ - `jtc` is a unix utility confining its functionality (like most unix utilities do) only to operations with the data model only.
  The rest is out-tasked to unix cli tooling
 
 `jtc` is never meant to surpass `jq` in capabilities (due to confining its operations only to the domain of its data model and
@@ -710,7 +710,7 @@ performing one operation with the input data at a time), however, it offers a po
 
 ### 4. programming model
  - `jq` is written in _C_, which drags all intrinsic problems the language has dated its creation
- - `jtc` is written in idiomatic _c++14_ using STL only. Main json engine/library does not have a single `new` operator,
+ - `jtc` is written in idiomatic _c++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
  nor it has a single naked pointer acting as a resource handler/owner, thus` jtc` is free of memory related bugs/issues
  (at least one class of the issues is off the table) - STL guaranty.
 
@@ -739,5 +739,7 @@ bash $
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
+
+
 
 
