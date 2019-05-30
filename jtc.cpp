@@ -13,7 +13,7 @@
 using namespace std;
 
 
-#define VERSION "1.69"
+#define VERSION "1.70"
 
 
 // option definitions
@@ -56,7 +56,7 @@ using namespace std;
 #define DQTE_CHR '"'
 #define SPCE_CHR ' '
 
-#define INTRP_VAL "{}"                                          // interpolate value
+#define ITRP_BRC "{}"                                          // interpolate encasement
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
 #define SIZE_PFX "size: "
@@ -94,6 +94,8 @@ ENUM(ReturnCodes, RETURN_CODES)
 #define DBG_WIDTH 67                                            // max print len upon parser's dbg
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
+#define OPN first                                               // range semantic
+#define CLS second                                              // instead of first/second
 
 typedef vector<string> v_string;
 
@@ -1467,49 +1469,50 @@ Json Jtc::interpolate_(StringOvr tmp, const Json::map_jn &ns,
 string Jtc::interpolate_tmp_(string tmp, const Json::map_jn &ns) {
  // - interpolate template (tmp) from the namespace (ns),
  // - avoid recursive interpolation within already interpolated values
- // return an empty string if no interpolation occurs (tmp not altered)
- vector<string> open{{INTRP_VAL[0]}, string(2,INTRP_VAL[0])};   // [ "{", "{{" ]
- vector<string> clsd{{INTRP_VAL[1]}, string(2,INTRP_VAL[1])};   // [ "}", "}}" ]
- bool empty_rpl{false};
- vector<pair<size_t, size_t>> ir;                               // ir: interpolated range
+ // - return empty string if no interpolation occurs (tmp not altered)
+ static vector<pair<string, string>> ibv                        // interpolation braces vector
+  { {string(2,ITRP_BRC[0]), string(2,ITRP_BRC[1])}, {{ITRP_BRC[0]}, {ITRP_BRC[1]}} };
+ bool empty_rpl{false};                                         // empty replacement flag
+ vector<pair<size_t, size_t>> ir;                               // ir: interpolated ranges
 
- while(not open.empty()) {                                      // interpolate {{..}}, then {..}
+ for(const auto &br: ibv) {                                     // interpolate {{..}}, then {..}
   for(const auto & ins: ns) {                                   // go by every element in NS
-   string sv, sk = open.back() + ins.KEY + clsd.back();         // sk: searched key
+   string fv, sk = br.OPN + ins.KEY + br.CLS;                   // sk: search key, fv: found value
    for(size_t ip = tmp.find(sk);                                // go by found sk (namespaces)
               ip != string::npos;                               // ip: interpolating position
-              ip = tmp.find(sk, ip + sv.size())) {
+              ip = tmp.find(sk, ip + fv.size()), fv.clear()) {
     string dlm;
-    sv.clear();
-    if(open.size() > 1)                                         // i.e. {{..}} interpolation
-     sv = ins.VALUE.to_string(Jnode::Raw);                      // sv: json literal as it is
+    if(br.OPN.size() > 1)                                       // i.e. {{..}} interpolation
+     fv = ins.VALUE.to_string(Jnode::Raw);                      // fv: json literal as it is
     else                                                        // {..} interpolation
      switch(ins.VALUE.type()) {
       case Jnode::String:
-            sv = ins.VALUE.str();                               // interpolate w/o "" quotes
+            fv = ins.VALUE.str();                               // interpolate w/o "" quotes
             break;
       case Jnode::Array:
             for(auto const &j: ins.VALUE)                       // strip [ .. ]
-             { sv += dlm + j.to_string(Jnode::Raw); dlm = ", "; }
-            if(sv.empty()) { empty_rpl = true; sv = ILL_UTF8; } // indicate replacement required
+             { fv += dlm + j.to_string(Jnode::Raw); dlm = ", "; }
+            if(fv.empty()) { empty_rpl = true; fv = ILL_UTF8; } // indicate replacement required
             break;
       case Jnode::Object:
             for(auto const &j: ins.VALUE)                       // strip { .. }
-             { sv += dlm + "\"" + j.label() + "\": " + j.to_string(Jnode::Raw); dlm = ", "; }
-            if(sv.empty()) { empty_rpl = true; sv = ILL_UTF8; } // indicate replacement required
+             { fv += dlm + "\"" + j.label() + "\": " + j.to_string(Jnode::Raw); dlm = ", "; }
+            if(fv.empty()) { empty_rpl = true; fv = ILL_UTF8; } // indicate replacement required
             break;
       default:
-            sv = ins.VALUE.to_string(Jnode::Raw);
+            fv = ins.VALUE.to_string(Jnode::Raw);
      }
-    if( any_of(ir.begin(), ir.end(),
-               [ip](const auto &p){ return p.first <= ip and ip < p.second;}) ) continue;
-    tmp.replace(ip, sk.size(), sv);                             // interpolate!
-    ir.emplace_back(ip, ip + sv.size());                        // record interpolated range
+    if( any_of(ir.begin(), ir.end(),                            // check if already interpolated
+               [ip](const auto &p){ return ip >= p.OPN and ip < p.CLS;}) ) continue;
+    tmp.replace(ip, sk.size(), fv);                             // interpolate!
+    for(auto &r: ir)                                            // adjust ranges
+     if(ip < r.OPN)                                             // if newly found before existing
+      { r.OPN += fv.size() - sk.size(); r.CLS += fv.size() - sk.size(); }
+    ir.emplace_back(ip, ip + fv.size());                        // record interpolated range
    }
   }
-  open.pop_back();
-  clsd.pop_back();
  }
+
  if(ir.empty()) tmp.clear();                                    // interpolation fails entirely
  return empty_rpl?
          regex_replace(tmp, regex{ILL_UTF8 "(?:\\s*,){0,1}|(?:,\\s*){0,1}" ILL_UTF8}, ""):

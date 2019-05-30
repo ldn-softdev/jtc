@@ -2983,10 +2983,10 @@ void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
  size_t offset = normalize_(ws.offset, jn);
  if(ws.type == WalkStep::range_walk) ws.offset = offset;        // ws iterable, require normalizing
  if(offset >= node_size or offset >= normalize_(ws.tail, jn))   // beyond children's size/tail
-  return pv_.emplace_back(json().end_(), true);
+  { pv_.emplace_back(json().end_(), true); return; }
 
  if(ws.type == WalkStep::static_select and jn->is_array())      // [N] - subscript array
-  return pv_.emplace_back(jn->iterator_by_idx_(offset));
+  { pv_.emplace_back(jn->iterator_by_idx_(offset)); return; }
 
  auto it = build_cache_(jn, wsi);
 
@@ -3070,11 +3070,11 @@ void Json::iterator::walk_search_(size_t wsi, Jnode *jn) {
  size_t tail = ws.load_tail(json());
  if(ws.is_qnt_relative()) {                                     // offset & tail must be signed
   if(re_normalize_(ws.load_offset(json()), jn) >= re_normalize_(ws.load_tail(json()), jn))
-   return pv_.emplace_back(json().end_(), true);
+   { pv_.emplace_back(json().end_(), true); return; }
  }
  else
   if(offset >= tail)                                            // counted beyond tail
-   return pv_.emplace_back(json().end_(), true);                // return |nothing found|
+   { pv_.emplace_back(json().end_(), true); return; }           // return |nothing found|
 
  // engage cache-less search:
  if(ws.is_cacheless())
@@ -3100,7 +3100,7 @@ void Json::iterator::walk_search_(size_t wsi, Jnode *jn) {
  // find cached entry (if exist in the cache):
  if(offset >= found_cache->VALUE.size()) {                      // offset outside of cache:
   DBG(json(), 1) DOUT(json()) << "no cached instance found"<< std::endl;
-  return pv_.emplace_back(json().end_(), true);                 // return global end()
+   { pv_.emplace_back(json().end_(), true); return; }           // return global end()
  }
  DBG(json(), 1) DOUT(json()) << "found cached idx " << offset << std::endl;
  for(const auto &path: found_cache->VALUE[offset].pv)           // otherwise augment the path
@@ -3131,7 +3131,7 @@ void Json::iterator::research_(Jnode *jn, size_t wsi,
 
  if(not found) {                                                // entire Jnode was searched
   if(vpv == nullptr)                                            // indicate |nothing found|
-   return pv_.emplace_back(json().end_(), true);                // for cacheless search type
+   { pv_.emplace_back(json().end_(), true); return; }           // for cacheless search type
   // indication that cache is complete (entire Jnode was searched) is stored in the SearchCacheKey:
   skey->ws.type = WalkStep::cache_complete;                     // indicate cache completed
   auto nvp = move(*vpv);                                        // move/preserve the cache
