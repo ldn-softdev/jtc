@@ -1,5 +1,16 @@
-
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.70_
+
+#### New features:
+- no new features, quick stability update
+
+#### Improvements, changes, fixes:
+- updated code base to make c++17 compatible
+- fixed template interpolation bug, where sometimes it might fail
+- dropped macOS 32-bit binary, as Apple depricates 32-bit support past Mojave
+***
+
+
 _Release Notes for `jtc` v.1.69_
 
 #### New features:
@@ -15,8 +26,6 @@ not with `-i`, `-u`) is enhanced:
    sequential / non-interleaved processing - `-n` ) then templates are getting applied as before - in a round-robin fashion
 - when unquoting (`-qq`) is used on an empty string (`""`) then resulting blank line is not printed
 ***
-
-
 
 
 _Release Notes for `jtc` v.1.68_
