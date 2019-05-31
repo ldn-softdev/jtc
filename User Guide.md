@@ -53,7 +53,7 @@
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
-   * [Multiple teamplates and interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-teamplates-and-interleaved-walks)
+   * [Multiple templates and interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-teamplates-and-interleaved-walks)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
@@ -2057,7 +2057,7 @@ bash $
 That is a correct result (though might not reflect what possibly was intended), let review the result:
 1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
 thus the resulting template is _invalid JSON_) hence source walk is used / printed
-2. unon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
+2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
 (template is a _valid JSON_ here)
 3. in the third line, the result is albeit also correct, but might be not the expected one - upon next _interleaved_ walk, the 
 namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
@@ -2069,7 +2069,7 @@ Going by the notion of the provided template, apparently, the expected result we
 each own child. That way, for example, `Ivan` should not be even listed (he has no children), `John`'s record should appear only
 once and `Jane` should have 2 records (she has 2 kids).
 
-The situation could be esily rectified if for each walk we use own template and assign a dummy one for the first one: 
+The situation could be easily rectified if for each walk we use own template and assign a dummy one for the first one: 
 ```
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
 ""
@@ -2081,7 +2081,7 @@ bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T
 bash $ 
 ```
 Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
-those annoying empty _JSON stirngs_ `""`? Those will be gone if `-qq` option is thrown in:
+those annoying empty _JSON strings_ `""`? Those will be gone if `-qq` option is thrown in:
 ```
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
 { "Parent": "John", "child": "Olivia" }
@@ -2171,7 +2171,7 @@ bash $
 Template, an argument to `-T` is a literal JSON optionally containing tokens for
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
 insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template (`-T`) is given
-then it's a template (after interpolation) will be used for the operations, not the source walk (unless the resultng template is
+then it's a template (after interpolation) will be used for the operations, not the source walk (unless the resulting template is
 invalid JSON, in such case the source walk will be used).
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
@@ -2224,7 +2224,7 @@ namespace `val`; option `-p` turns _insert_ operation into _move_
 JSON entry is generated from the template and namespace `val` and the new entry is then used for insertion into the respective
 destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON into a new one.
 
-### Multiple teamplates and interleaved walks
+### Multiple templates and interleaved walks
 When multiple templates given (with walking operations only) and walks are _interleaved_ (i.e. more than one `-w` present and
 `-n` is not used) then templates pertain to each walk. In all other cases templates are applied in a round-robin fashion.
 
@@ -2258,7 +2258,7 @@ bash $ echo [1,2,3,4,5,6,7,8,9,10] | jtc -w[:] -T'""' -T{} -T'""' -qq
 8
 bash $ 
 ```
-- i.e. in the above example printed every 3rd element from source JSON starting from the 2nd one.
+\- i.e. in the above example printed every 3rd element from source JSON starting from the 2nd one.
 
 ## Processing multiple input JSONs
 Normally `jtc` would process only a single input JSON if multiple input JSONs given - the fist JSON will be processed and the 
@@ -2566,6 +2566,8 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<
 bash $ 
 ```
 it's just a reverse action.
+
+
 
 
 
