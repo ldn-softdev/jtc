@@ -1,6 +1,3 @@
-
-
-
 # [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.70_, being updated)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
@@ -53,8 +50,10 @@
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
    * [Interpolation types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-types)
+   * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
+   * [Multiple teamplates and interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-teamplates-and-interleaved-walks)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
@@ -262,6 +261,15 @@ bash $ echo '"3.14"' | jtc -qq
 3.14
 bash $
 ```
+
+When unquoting an empty _JSON string_ (`""`) the resulted blank lines are not even printed:
+```
+bash $ echo '[null, "", true]' | jtc -w[:] -qq
+null
+true
+bash $ 
+```
+
 NOTE: _the option notation `-qq` will not engulf a single notation `-q`, if both behaviors are required then both variants have
 to be specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_
 
@@ -1940,7 +1948,7 @@ bash $
 ## Interpolation
 Interpolation may occur either for argument undergoing
 [shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-(`-e` in insert/update operations), or for template arguments (`-T`) in walk/update/insert operations.
+(`-e` + insert/update operation), or for template arguments (`-T`) in walk/update/insert/compare operations.
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
@@ -2025,12 +2033,72 @@ bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[
 ]
 bash $ 
 ```
+
 When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
 (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid JSON. 
 However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
 without failures.
 
 All the same applies for when interpolating _JSON objects_.
+
+### Namespaces with interleaved walks
+When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_), 
+they populate namespaces in the order the walks appear:
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
+"John"
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Ivan", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+That is a correct result (though might not reflect what possibly was intended), let review the result:
+1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
+thus the resulting template is _invalid JSON_) hence source walk is used / printed
+2. unon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
+(template is a _valid JSON_ here)
+3. in the third line, the result is albeit also correct, but might be not the expected one - upon next _interleaved_ walk, the 
+namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
+4. _etc._
+
+By now it should be clear why such result.
+
+Going by the notion of the provided template, apparently, the expected result were to have all records pairs for each person with 
+each own child. That way, for example, `Ivan` should not be even listed (he has no children), `John`'s record should appear only
+once and `Jane` should have 2 records (she has 2 kids).
+
+The situation could be esily rectified if for each walk we use own template and assign a dummy one for the first one: 
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
+""
+{ "Parent": "John", "child": "Olivia" }
+""
+""
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
+those annoying empty _JSON stirngs_ `""`? Those will be gone if `-qq` option is thrown in:
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+\- that's a neat (though [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)) trick
+
+Yet, the same could have been achieved even a simpler way:
+```
+bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
 
 
 ### Search quantifiers interpolation
@@ -2100,10 +2168,11 @@ bash $
 
 
 ## Templates
-Template is a literal JSON containing tokens for
+Template, an argument to `-T` is a literal JSON optionally containing tokens for
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
-insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template(s) is given
-then it's a template (after interpolation) will be used for the operation, not the source walk.
+insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template (`-T`) is given
+then it's a template (after interpolation) will be used for the operations, not the source walk (unless the resultng template is
+invalid JSON, in such case the source walk will be used).
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
 ```
@@ -2116,7 +2185,7 @@ bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
 bash $ 
 ```
 
-For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation itself and
+For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
 never from `-w`. The namespaces resulting from walking `-w` and any of operations (`-i`, `-u`, `-c`) do not intersect or clash,
 as operation parameters walking (often referred as source walk) and template interpolation always occurs before starting walking `-w`
 (and generally, namespaces for `-w` and source walks even reside in different containers).
@@ -2151,10 +2220,45 @@ Explanations:
 - `-w'[0][0]<phone>l[:]'` - that's our destination which we will be updating (i.e. all phone records in the first `Directory` entry)
 - `-pi'[0][0]<number>l:<val>v'` - we'll walk (synchronously with `-w`) all the `number` records and memorize number values in the
 namespace `val`; option `-p` turns _insert_ operation into _move_
-- `-T'{ "phone number": "+1 {val}" }'` after each walk (in `-i`) a template interpolations occurs here - a new JSON entry is generated
-from the template and namespace `val` and the new entry is then used for insertion into the respective destination walk (`-w`).
-Thus using templates it becomes easy to transmute existing JSON into a new one.
+- `-T'{ "phone number": "+1 {val}" }'` after each walk argument in `-i`, a template interpolations occurs here - a new 
+JSON entry is generated from the template and namespace `val` and the new entry is then used for insertion into the respective
+destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON into a new one.
 
+### Multiple teamplates and interleaved walks
+When multiple templates given (with walking operations only) and walks are _interleaved_ (i.e. more than one `-w` present and
+`-n` is not used) then templates pertain to each walk. In all other cases templates are applied in a round-robin fashion.
+
+Compare:
+```
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -r
+{ "Person": "John" }
+{ "Age": 25 }
+{ "Person": "Ivan" }
+{ "Age": 31 }
+{ "Person": "Jane" }
+{ "Age": 25 }
+bash $ 
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rn
+{ "Person": "John" }
+{ "Age": "Ivan" }
+{ "Person": "Jane" }
+{ "Age": 25 }
+{ "Person": 31 }
+{ "Age": 25 }
+bash $ 
+```
+The mess in the bottom example is explained by `-n` usage: walks no longer interleaved (i.e. they are sequential) and templates now 
+not pertaining to walks, but rather applied round-robin
+
+One handy use-case of multiple round-robin templates would be this case:
+```
+bash $ echo [1,2,3,4,5,6,7,8,9,10] | jtc -w[:] -T'""' -T{} -T'""' -qq
+2
+5
+8
+bash $ 
+```
+- i.e. in the above example printed every 3rd element from source JSON starting from the 2nd one.
 
 ## Processing multiple input JSONs
 Normally `jtc` would process only a single input JSON if multiple input JSONs given - the fist JSON will be processed and the 
