@@ -6,7 +6,7 @@ _Release Notes for `jtc` v.1.70_
 
 #### Improvements, changes, fixes:
 - updated code base to make `c++17` compatible
-- fixed (and UT'ed) a peculiar template interpolation bug, where sometimes it might not work as expected
+- fixed (and UT'ed) a peculiar template interpolation bug, where sometimes namespace interpolation might not work as expected
 - dropped macOS 32-bit binary, as Apple deprecates 32-bit support past Mojave
 ***
 
