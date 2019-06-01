@@ -1769,7 +1769,8 @@ options `-c`, `-u`, `-i` allow two kinds of their arguments:
 ```
 jtc -u file.json -u'[Root][:]'`
 ```
-then all subsequent `<walk-path>` apply onto the first argument (here `file.json`). 
+then all subsequent `<walk-path>` apply onto the first argument (here `file.json`).
+
 \- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
 
 That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: _all specified `<walk-path>`
