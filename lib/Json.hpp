@@ -2332,20 +2332,21 @@ void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
  node.type_ = classify_jnode_(jsp);
 
  DBG(4) {                                                       // print currently parsed point
-  const char* pfx{"parsing point"};
+  static const std::string pfx{"parsing point"};
   std::string str = jsp.str(DBG_WIDTH);
-  if(utf8_adjusted(0, str) > (DBG_WIDTH-sizeof(pfx))) {
-   if(jsp.is_buffer())
-    { str = str.erase(byte_offset(str, DBG_WIDTH - sizeof(pfx) - 3)); str += "..."; }
+  if(utf8_adjusted(0, str) > (DBG_WIDTH - pfx.size())) {
+   if(jsp.is_buffer()) {
+    str = str.erase(byte_offset(str, DBG_WIDTH - pfx.size() - 3)); str += "...";
+   }
    else
-    { str = str.erase(0, byte_offset(str, 3 + sizeof(pfx))); str = "..." + str; }
+    { str = str.erase(0, byte_offset(str, 3 + pfx.size())); str = "..." + str; }
   }
   for(auto &c: str) {
    if(c AMONG(CHR_EOL, CHR_RTRN)) c = '|';                     // replace \r \n with |
    if(c > 0 and c < ' ') c = ' ';
   }
-  DOUT() << (jsp.is_stream()? std::string(""): pfx + std::string(" ->"))
-         << str << (jsp.is_stream()? std::string("<- ") + pfx: std::string("")) << std::endl;
+  DOUT() << (jsp.is_stream()? std::string(""): pfx + " ->")
+         << str << (jsp.is_stream()? "<- " + pfx: std::string("")) << std::endl;
  }
 
  if(node.is_neither()) return;
@@ -3915,17 +3916,17 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 
 
 size_t Json::byte_offset(const std::string &jsrc, size_t utf8_offset) {
- // count unicode (wide) chars offset (utf8_offset) from the beginning of the byte-string
+ // returns number of bytes from beginning of string (jsrc) poited by utf8_offset (offset in UTF8) 
  size_t chr_offset{0};
 
- for(auto c: jsrc) {
+ for(char c: jsrc) {
   if(utf8_offset == 0) return chr_offset;
   if(c >= 0)                                                    // ascii char (0x0xxxxxxx)
    { --utf8_offset; ++chr_offset; continue; }
-  if((c & 0x40) == 0)                                           // non-initial byte (0x10xxxxxx)
+  if((c & 0x40) == 0)                                           // either byte 2,3,4 (0x10xxxxxx)
    { ++chr_offset; continue; }
   --utf8_offset;                                                // initial8 byte (0x11xxxxxx)
-  while((c & 0x80) > 0)
+  while((c & 0x40) > 0)
    { ++chr_offset; c <<= 1; }                                   // skip leading bits eg: 0x1110xxxx
  }
 

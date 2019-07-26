@@ -81,14 +81,13 @@ class Streamstr {
     bool                is_buffer(void) const { return mod_ != stream; }
     bool                is_buffer_cin(void) const { return mod_ == buffer_cin; }
     bool                is_buffer_file(void) const { return mod_ == buffer_file; }
-    const std::string & filename(void) const { return *cf_; }
+    const std::string & filename(void) const { return cf_; }
 
     void                source_file(const std::string &fn) {
                          fn_.push_back(fn);
                          if(is_buffer_cin())
                           { mod_ = buffer_file; buf_.clear(); }
-                         if(cf_ == nullptr)
-                          cf_ = &fn_.front();
+                         if(cf_.empty()) cf_ = fn_.front();
                         }
     template<typename... Args>
     void                source_file(const std::string &first, Args... rest)
@@ -109,7 +108,7 @@ class Streamstr {
                          mod_ = m;
                          buf_.clear();
                          fn_.clear();
-                         cf_ = nullptr;
+                         cf_.clear();
                          cnt_ = 0;
                          hb_.reset();
                          hb_.reserve(cbs);
@@ -127,7 +126,7 @@ class Streamstr {
     Strmod              mod_;
     std::string         buf_;
 std::deque<std::string> fn_;                                    // source file names container                        ;
-    const std::string * cf_{nullptr};                           // file being read;
+    std::string         cf_;                                    // file being read;
     size_t              cnt_{0};                                // offset from beginning of stream
 
  private:
@@ -230,13 +229,13 @@ void Streamstr::ss_init_(const_iterator &it) {
   return;
  }
                                                                 // mod_ == buffer
- buf_ = std::string{
-         std::istream_iterator<char>(fn_.empty()?
+ buf_ = std::string{                                            // read file/stdin into buffer
+         std::istream_iterator<char>(is_buffer_cin()?
           std::cin >> std::noskipws:
           std::ifstream{fn_.front().c_str(), std::ifstream::in} >> std::noskipws),
          std::istream_iterator<char>{}};
  if(is_buffer_file()) {
-  cf_ = &fn_.front();
+  cf_ = fn_.front();
   fn_.pop_front();
  }
  DBG(0) DOUT() << "read file: " << (is_buffer_file()? filename():"<stdin>")
