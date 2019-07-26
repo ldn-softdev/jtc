@@ -2163,7 +2163,7 @@ class Json {
                              }
                             }
         void                unlock_fs_domain(long wsi) {        // unlock all FS domains
-                             for(++wsi; wsi < walk_path_().size(); ++wsi)
+                             for(++wsi; wsi < static_cast<long>(walk_path_().size()); ++wsi)
                               walk_path_()[wsi].locked = false;
                             }
         long                failed_stop_(long wsi);
@@ -3050,7 +3050,7 @@ bool Json::iterator::incremented(void) {
   return false;                                                 // don't attempt incrementing end()
 
  long wsi = 0;                                                  // find LS increment
- for(bool fs_seen = false; wsi < walk_path_().size(); ++wsi) {
+ for(bool fs_seen = false; wsi < static_cast<long>(walk_path_().size()); ++wsi) {
   const auto & ws = walk_path_()[ wsi ];
   if(ws.is_locked()) continue;                                  // ignore locked out domains
   if(ws.jsearch == Jsearch::fail_stop) { fs_seen = true; continue; }
@@ -3164,7 +3164,8 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
         maybe_nsave_(ws, jn);
         return;
   case user_handler:                                            // facilitate <..>u#
-        if(not jp_->is_engaged(lexeme_callback) or ws.offset >= jp_->uws_callbacks().size())
+        if(not jp_->is_engaged(lexeme_callback) 
+           or ws.offset >= static_cast<long>(jp_->uws_callbacks().size()))
          throw jp_->EXP(Jnode::walk_callback_not_engaged);
         if(not jp_->uws_callbacks()[ws.offset](ws.stripped[0], *this))
          pv_.emplace_back(json().end_(), true);

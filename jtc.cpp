@@ -868,7 +868,7 @@ bool Jtc::advance_to_next_src(long i) {
  }
  if(jits_.is_valid())                                           // jits_ resolved
   { wcur_ = idx(); return true; }
- if(i == wcur_)                                                 // multiwalk: no more valid itr/src
+ if(i == static_cast<long>(wcur_))                              // multiwalk: no more valid itr/src
   { jits_ = Json::iterator{}; return false; }                   // fail operation
  return advance_to_next_src(idx() + 1 >= jc_size? 0: idx() + 1); // return next src itr
 }
