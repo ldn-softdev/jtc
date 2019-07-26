@@ -2,13 +2,13 @@
 _Release Notes for `jtc` v.1.71_ (being updated)
 
 #### New features:
-- new lexeme: `<..>u` - user evaluation of the current walk-path via shell cli - walking will continue if cli return 0 (success) 
+- new lexeme: `<..>u` - user evaluation of the current walk-path via shell cli - walking will continue if cli return `0` (success) 
 and fails otherwise. The cli in the lexeme is subjected for interpolation
 - full support of `if` ... `else` walk branching via pairing `f` and `F` lexemes:
-   ... `<>f` {if path does not fail, then skip it} `<>F` {otherwise execute this path} ...
-   ... `<>f` {if path does not fail, then end walking} `><F` {otherwise execute this path} ...
-   ... `<>f` {if path does not fail, then end walking} `><F` `<>F` # otherwise skip it (i.e. skip the failed path)
-- `jtc` now supports STREAMed type of read - engaged with `-a` and selected `<stdin>`; so `jtc` could be used in between pipes
+   - ... `<>f` {if path does not fail, then skip it} `<>F` {otherwise execute this path} ...
+   - ... `<>f` {if path does not fail, then end walking} `><F` {otherwise execute this path} ...
+   - ... `<>f` {if path does not fail, then end walking} `><F` `<>F` # otherwise skip it (i.e. skip the failed path)
+- `jtc` now supports _STREAMED_ type of read, engaged with `-a` and selected `<stdin>`; so `jtc` could be used in between pipes
 allowing transforming JSONS "on the fly": `... | jtc -a ... | ...`
 - multiple files could be fed to `jtc` now (before it used to accept only one input file)
 
