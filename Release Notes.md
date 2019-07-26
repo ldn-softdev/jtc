@@ -1,4 +1,41 @@
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.71_ (being updated)
+
+#### New features:
+- new lexeme: `<..>u` - user evaluation of the current walk-path via shell cli - walking will continue if cli return 0 (success) 
+and fails otherwise. The cli in the lexeme is subjected for interpolation
+- full support of `if` ... `else` walk branching via pairing `f` and `F` lexemes:
+   ... `<>f` {if path does not fail, then skip it} `<>F` {otherwise execute this path} ...
+   ... `<>f` {if path does not fail, then end walking} `><F` {otherwise execute this path} ...
+   ... `<>f` {if path does not fail, then end walking} `><F` `<>F` # otherwise skip it (i.e. skip the failed path)
+- `jtc` now supports STREAMed type of read - engaged with `-a` and selected `<stdin>`; so `jtc` could be used in between pipes
+allowing transforming JSONS "on the fly": `... | jtc -a ... | ...`
+- multiple files could be fed to `jtc` now (before it used to accept only one input file)
+
+#### Improvements, changes, fixes:
+- search lexemes and some directives (`naoicewvkfF`) now can write currently walked JSON values into the namespaces, e.g.: `<var>a`, 
+  though `<var:"lbl">k` directive supports only JSON string types (understandably, labels could be represented only as JSON strings); 
+  thus a walk path previously written as `<>a<var>v` now could be collapsed into `<var>a`
+- extend `<..>j` search lexeme, allowing the lexeme value to be a _templated_ JSON, e.g.: `<{ "{lbl}": {{val}} }>j`; however, it makes
+the search lexeme `j` a _dynamic type_ when used with interpolation template (unlike one with a _static_ JSON), therefore, like
+all dynamic lexemes it is an exempt for caching, hence it's prone to exponential decay noticeable upon big recursive searches - be aware
+when building a query for huge input JSONs
+- for insert/update operations (`-i`, `-u`), destination walks' (`-w`) are related now to the soruce walk of operations (in 
+`-i`, `-u`) and so are their namespaces; now it becomes possible to make an insert/update based on the cross references from the 
+destination walks using namespaces
+- swap option `-s` now accept any number of walk _pairs_ to be swapped (before it was only swapping first 2 specified), e.g.: 
+`jtc -s -w<1_swap_with_next> -w<1_swap_with_prior> -w<2_swap_with_next> -w<2_swap_with_prior> ...`
+- extended option `-l`: once given as `-ll` - if the record does not have a label (i.e. it's a root, or inside an array) **and** the 
+record is the _JSON object_, then it takes the (first) label from the object and its value and uses as a labeled record
+(allows stripping templated values with labels), e.g.: `jtc ... -T'{"label": {{value}} }' -ll` lets interpolated template to be treated
+as the value with the label rather than as a JSON object
+- option `-p` is enhanced to work with cases of mixed args, eg: `jtc ... -u<static> -u<walk> -p` before it wasn't in use, but now
+it will purge all walked _destinations_ - it's done in order to facilitate a cross-referenced purging (so here `-u`/`-i` is just
+a dummy operation only providing ability to cross-reference purge points)
+- fixed auto-generated REGEX namespaces to be properly pertained per walk when cached 
+***
+
+
 _Release Notes for `jtc` v.1.70_
 
 #### New features:
