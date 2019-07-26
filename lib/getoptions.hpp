@@ -122,8 +122,8 @@
  *       here applies to the variadic standalone argument too)
  *
  * Original order of options in user cli could be recovered using either via
- * Getopt\s order(idx) call, whose idx refers to the position of an option in cli
- * (zero based index), or via Option's order(count) call (count here is option's
+ * Getopt\s ordinal(idx) call, whose idx refers to the position of an option in cli
+ * (zero based index), or via Option's ordinal(count) call (count here is option's
  * count, which is starts from 1 (minding always present default value)
  *
  */
@@ -220,9 +220,9 @@ class Option {
                         // default value)
     size_t              hits(void) const { return order_.size()-1; }
                         // hits: the number of times given option was given (boolean/parametric)
-    size_t              order(long i = -1) const
+    size_t              ordinal(long i = -1) const
                          { return order_[mod_(order_.size(), i)]; }
-                        // order() let options to back trace their original position
+                        // ordinal() let options to backtrace their original position (zero based)
                         // in the user cli (i.e. recover the order of options)
                         // argument i == 0 refers to the default value and is unused
     const char *        c_str(int i = -1) const
@@ -252,7 +252,7 @@ class Option {
     vec_string          val_{1};                                // values set by user
                         // place for the default value is always reserved, it might be unset
                         // - if val_.front() is empty, then the default value was never bound
-    std::vector<size_t> order_{0};                              // record order of the option
+    std::vector<size_t> order_{0};                              // ordinal# record of the option
     std::string         name_;                                  // name of the opt's parameter
     std::string         desc_;                                  // opt/arg description
     Getopt *            go_{nullptr};                           // pointer back to GetOpt
@@ -336,7 +336,7 @@ class Getopt {
         Option::OptType     type(void) const { return go_->om_.at(opt_).type(); }
         const std::string & name(void) const { return go_->om_.at(opt_).name(); }
         const std::string & desc(void) const { return go_->om_.at(opt_).desc(); }
-        size_t              order() const { return go_->om_.at(opt_).order(); }
+        size_t              ordinal() const { return go_->om_.at(opt_).ordinal(count()); }
         size_t              hits(void) const { return go_->om_.at(opt_).hits(); }
         const char *        c_str(void) const { return option().c_str(count()); }
         const std::string & str(void) const{ return option().str(count()); }
@@ -409,8 +409,8 @@ class Getopt {
                          { for(auto &om: om_) om.second.reset(); ov_.clear(); return *this; }
     bool                defined(char opt) const { return om_.count(opt) == 1; }
     std::vector<OptionsOrdered> &
-                        order(void) { return ov_; }
-    OptionsOrdered &    order(size_t idx) { return ov_[idx]; }
+                        ordinal(void) { return ov_; }
+    OptionsOrdered &    ordinal(size_t idx) { return ov_[idx]; }
 
     EXCEPTIONS(ThrowReason)
 
@@ -436,7 +436,6 @@ class Getopt {
                         ov_;                                    // in the order they come
 
  private:
-    //void                update_order_(short option_id);
     void                parseInputArgs_(int argc, char *argv[], const std::string &fmt);
     void                processStandalone_(int argc, char *argv[]);
     void                usagePrintOptions_(std::stringstream &, int indent);

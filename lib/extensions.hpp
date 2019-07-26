@@ -191,7 +191,7 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 }
 
 #define AMONG(first, rest...) \
-    ==std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
+    == std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
 
 
 

@@ -39,9 +39,9 @@ a. Subscript lexemes: enclosed into square braces '[', ']', their meaning depend
    - [n]: plain numerical offset selects indexed element within an iterable (an iterable is either
      a JSON array or an object), e.g.: '[1]' - selects a 2nd child of an array (or an object) node
      (all indices and quantifiers in walk-path are zero based); in the above JSON, the element
-     "false" will be selected (i.e. value true)
-   - [-n]: a negative numerical offset, backs off n levels up the JSON tree (from given node);
-     e.g.: a path like '[0][0][-2]' gigs 2 levels down the JSON tree and then selects back the
+     by label "false" will be selected (i.e. value 'true'')
+   - [-n]: a negative numerical offset, backs off n levels up the JSON tree (from a given node);
+     e.g.: a path like '[0][0][-2]' digs 2 levels down the JSON tree and then selects back the
      root node (i.e. ascends 2 levels/tiers up)
    - [^n] numerical offsets with preceding circumflex do a similar thing as negative offsets, but
      instead descends from the root; e.g.: following walk-paths results are equal: '[0][1]',
@@ -56,44 +56,46 @@ a. Subscript lexemes: enclosed into square braces '[', ']', their meaning depend
    Some notations may duplicate each other, e.g.:
      '[+0]' and '[:]', or '[+2]' and '[2:]' have the same effect
 
-b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a textual search
-   under given JSON tree point; following notation forms are possible:
+b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a recursive (or a
+   non-recursive) search under a given JSON tree point; following notation forms are possible:
    '<txt>', '<txt>S', '<txt>N', '<txt>SN'
    and the respective non-recursive search lexeme forms:
    '>txt<', '>txt<S', '>txt<N', '>txt<SN'
    where txt - is any text to search for, S - is an optional one letter suffix, N - is an optional
    quantifier, which comes in several variants
-   - if a lexeme is given using '<..>' encasement, then a *recursive* search off the current JSON
-     node is applied, otherwise (i.e. '>..<' encasement given) - a *non-recursive* search is
+   - if a lexeme is given using '<..>' encasement, then a *recursive* search applied off the
+     current JSON node, otherwise (i.e. '>..<' encasement given) - a *non-recursive* search is
      performed among immediate JSON node's children only
    - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
-     strings values only, it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzfF], each one
-     altering the search in the following way:
+     strings values only - it's a default behavior, which could be altered with an optional suffix
+   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzfFu], each one
+      altering the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
-     R: same as r, but expression in braces is a Regex (regex search applied)
-     d: match a number (i.e. searches numeric JSON values only)
-     D: same as d, but expression in braces is a Regex (value is treated as a string value here)
+     R: same as r, but expression in braces is a Regex (regex match applied)
+     d: match a specific number (i.e. searches numeric JSON values only)
+     D: same as d, but expression in braces is a Regex (the value is treated as a string here)
      b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully
         spelled, while 'any' match could be either spelled or indicated via empty lexeme,
         e.g.: '<true>b', '<any>b', '<>b'
-     n: match null values only, the content within the encasement must be empty and e.g.: '><n'
-     l: apply exact match while searching object labels only
-     L: same as l, but expression in braces is a Regex (regex search applied)
+     n: match null values only, the content within the encasement may be empty, e.g.: '><n'
+     l: apply exact match while searching objects' labels only
+     L: same as l, but expression in braces is a Regex (a regex match applied)
      a: match any atomic JSON value (string, numeric, boolean, null); the content within the
-        encasements must be empty ('<>a')
-     o: match any object JSON value (i.e. '{..}'); the lexeme's content must be empty
+        encasements may be empty (e.g.: '<>a')
+     o: match any object JSON value (i.e. '{..}'); the lexeme's content may be empty
      i: match any array (indexable) JSON value (i.e. '[..]'); the content within the encasement
-        must be empty
-     c: match either arrays or objects; the content within the encasement must be empty
+        may be empty
+     c: match either arrays or objects; the content within the encasement may be empty
      e: end-node match (matches leaves only) - matches either of: atomic, {}, []
      w: wide range match - matches any JSON value (atomic, objects, arrays)
      j: match user specific JSON value, the content within the encasement should be a valid
-        literal JSON value, e.g.: '<{ "pi": 3.14 }>j' - will find given JSON object
-     s: match a JSON value previously stored in a namespace by directives '<..>k', '<..>v', the
-        lexeme content points to the namespace
-     t: match a label/index value previously saved in a namespace by directives '<..>k', '<..>v',
-        the lexeme must points to the namespace, which should be JSON string or numeric type only
+        literal JSON value, e.g.: '<{ "pi": 3.14 }>j' - will find given JSON object; it's also
+        possible to specify a templated JSON, e.g.: '<{ "{lbl}": {{val}} }>j' to match JSON
+        dynamically based on the current namespace values
+     s: match a JSON value previously stored in a namespace, the lexeme content points to the
+        namespace
+     t: match a label/index value previously saved in a namespace, the lexeme must points to the
+        namespace, which should be JSON string or numeric type only
      q: match only unique JSON elements, every match is stored in the namespace
      Q: match all non-unique (duplicate) elements, every match is stored in the namespace
 
@@ -103,26 +105,33 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         label/index along can be updated/extracted programmatically), if a lexeme value is
         non-empty then also saves found label/index into the given namespace
      z: erase namespace pointed by lexeme value; if the lexeme is empty, erase entire namespace
-     f: fail-stop: if walking lexemes past the fail-stop fails, instead of progressing to the
-        next iteration, a lexeme resolved JSON node (and path) at the fail-stop will be restored;
-        when used together with `F` directive, the walking continues past `F` directive
-     F: forward to the next iteration: when the directive is reached, the current walk is skipped
-        and silently proceeds to the next iteration
+     f: fail-stop (or fork): if walking lexemes past the fail-stop fails, instead of progressing
+        to the next iteration, a lexeme resolved JSON node (and path) at the fail-stop point will
+        be restored; when used together with `F` directive, the walking may either continues past
+        `F` directive, or stop at F directive
+     F: when spelled as '<>F' then upon walking instructs to skip to the next iteration; if
+        spelled as '><F' then instructs to stop walking (despite present further path); usage of
+        the lexeme is only meaningful when paired with `f` lexeme
+     u: validate currently walked JSON value via shell evaluation: if upon a shell evaluation the
+        value 0 (success) returned then walk continues past '<..>u' lexeme, otherwise walk fails
 
    N: an integer quantifier specifying search match instance/range, comes in following variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
-       the JSON tree (off a given search point); quantifiers, as well as numerical subscripts are
-       zero based
+       a JSON tree (off a given search point); all quantifiers, as well as numerical subscripts
+       are zero based
      +n - collects all matched encounters staring from index n, e.g.: '<a text>+2' will match 3rd
        encounter of "a text", 4th, 5th and so on until all matches found
      n:n - once ':' is sighted within a quantifier, then it specifies a range; the range
-       quantifiers follow the same notation as subscript's range; the indices in quantifiers
-       typically cannot go negative, with exceptions for search types '>..<t' and '>..<l' (see
-       full user guide for explanation and use cases)
+       quantifiers follow the same notation/rules as subscript's range
 
-   - following lexemes suffixes must stay empty ('<>', '><'): [naoicew]
-   - these lexeme suffixes cannot be empty: [RdDbLjstqQv]
-   - all others might be be either empty or carry some value: [rlkzfF]
+   - the indices in quantifiers typically cannot go negative, with exceptions for search types
+     '>..<t' and '>..<l', where they signify a relative offset, so that it's possible to select
+     siblings of the found matches (see full user guide for explanation and use cases)
+   - following lexemes suffixes may stay empty ('<>', '><'): [naoicew], however, once a value is
+     given then it saves current JSON into a namespace; e.g., a walk-path: '<>i<array>v' could be
+     collapsed into '<array>i'
+   - these lexeme suffixes cannot be empty: [RdDbLjstqQv] and require some (respective) content
+   - all other lexemes [rlkzfF] might be be either empty or carry some value
 
 All lexeme types allow specifying inner brackets, however, the closing one has to be quoted with
 the preceding backslash, e.g.: '[case[0\]]' - specifies an offset lexeme to the label "case[0]";
@@ -134,12 +143,12 @@ represent a valid offset, then it's treated as a textual type of offset; e.g.: '
 are in fact respective textual offsets (labels) " 1" and "1 " rather than a numerical offset 1;
 '[^-3]', '[+-2]', are also examples of textual subscripts
 
-There're cases when JSON values have to be searched where they attached only to a specific label,
-a following lexeme syntax facilitates such case: '[a label]:<some text>' - in that example
-"some text" will be searched (and matched) only among JSON values which are attached to the label
-"a label"; in that notation all suffixes (and quantifiers) are allowed except 'l', 'L' and 't',
-e.g.: '[age]:<25>j:' matches all JSON numerical values 25, where it's attached to the label "age"
-only
+There're cases when JSON values have to be searched where they attached only to a specific label
+(a.k.a. scoped search), a following lexeme syntax facilitates such case: '[a label]:<some text>'
+- in that example "some text" will be searched (and matched) only among JSON values which are
+attached to the label "a label"; in that notation all suffixes (and quantifiers) are allowed
+except 'l', 'L' and 't', e.g.: '[age]:<25>j:' matches all JSON numerical values 25, where it's
+attached to the label "age" only
 )";
 }
 
@@ -179,8 +188,8 @@ options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
  - when used together with  option -)" STR(OPT_EXE)
    R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; in such
-   case the parameter is subjected for shell evaluation, but before than an interpolation occurs
-   (see notes on interpolation); the interpolated entry is completely escaped, thus does not
+   case the parameter is subjected a for shell evaluation, but before that an interpolation occurs
+   (see notes on the interpolation); the interpolated entry is completely escaped, thus does not
    require any additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be
    quoted or escaped; terminate the cli line with trailing semicolon (which has to be escaped): \;
 
@@ -196,7 +205,7 @@ option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"
            R"(: toggles "merge" semantic instead of overwrite when updating;
  - due to a variety of combinations of sources -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
    R"( and destination -)" STR(OPT_WLK) R"(, the number of various
-   operation possibilities is big, therefore it's best to track is in the following table:
+   operation possibilities is big, therefore it's easier to track it in the following table:
 
  * insert operation (-)" STR(OPT_INS) R"() without merge usage examples:
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
@@ -249,9 +258,10 @@ interpolation:
  - interpolation may occur when using templates (-)" STR(OPT_TMP)
    R"(), or in shell cli argument; the notation for
    an interpolation is expressed in by tokens like {name}, or {{name}}. In the latter notation
-   form the token gets interpolated from the namespace pointed by token 'name' - the JSON element
-   (in the namespace) being interpolated is preserved; in the former notation form, if JSON is a
-   string, then outer quotation marks are dropped
+   form the token gets interpolated from the namespace pointed by the token 'name' - the JSON
+   element (in the namespace) being interpolated is preserved; in the former notation format, if
+   JSON is a string, then outer quotation marks are dropped, if it's a JSON array or object, then
+   the respective encasements ('[', ']', or '{}'.'}') are dropped, so the user must specify those
  - if an empty token is given (e.g.: {}, {{}}), then the interpolation of the currently selected
    JSON element occurs (same interpolation rules apply)
 )";
@@ -457,6 +467,37 @@ capitalize all parent names in our JSON:
              ],
              "city": "Chicago",
              "parent": "ANNA JOHNSON"
+          }
+       ]
+    }
+
+
+- to add a child "Victoria" into each record, but as the first child use update operation with
+templating:
+    jtc -)" STR(OPT_WLK) R"('<children>)" STR(OPT_LBL) R"(:' -)" STR(OPT_UPD) R"('<children>)"
+    STR(OPT_LBL) R"(:' -)" STR(OPT_TMP) R"('["Victoria", {}]' example.json
+    {
+       "Relation": [
+          {
+             "Y-chromosome": true,
+             "age": 31,
+             "children": [
+                "Victoria",
+                "Sophia",
+                "Olivia",
+                "James"
+             ],
+             "city": "New York",
+             "parent": "Jane Smith"
+          },
+          {
+             "age": 28,
+             "children": [
+                "Victoria",
+                "John"
+             ],
+             "city": "Chicago",
+             "parent": "Anna Johnson"
           }
        ]
     }

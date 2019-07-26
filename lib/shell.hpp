@@ -62,7 +62,7 @@ Shell & Shell::system(const std::string &cmd, const std::string &mode) {
  if(fh == nullptr)
   throw EXP(could_not_popen_file_handle);
  out_.clear();
- 
+
  DBG(0) DOUT() << "executing cmd '" << cmd << "'" << std::endl;
 
  while(fgets(buf_.data(), buf_.size(), fh) != nullptr)
