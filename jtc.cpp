@@ -313,12 +313,12 @@ int main(int argc, char *argv[]) {
                         " undergo a shell evaluation; see -" STR(OPT_GDE) " for more info");
  opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON"
                         " to stdout)");
- opt[CHR(OPT_GDE)].desc("explain walk path syntax, usage notes and examples");
+ opt[CHR(OPT_GDE)].desc("mini USER-GUIDE: explain walk path syntax, usage notes, some examples");
  opt[CHR(OPT_IND)].desc("indent for pretty printing").bind("3").name("indent");
  opt[CHR(OPT_INS)].desc("insert either a static JSON, or pointed by a walk-path; see with -"
                         STR(OPT_GDE) " for more").name("f|j|w");
  opt[CHR(OPT_JAL)].desc("wrap all processed JSONs into an array (option -"
-                        STR(OPT_ALL) " assumed, streaming cancelled)");
+                        STR(OPT_ALL) " assumed, buffered read imposed)");
  opt[CHR(OPT_JSN)].desc("wrap walked JSON elements into a JSON array (-" STR(OPT_JSN) STR(OPT_JSN)
                         " wrap into a JSON object)");
  opt[CHR(OPT_LBL)].desc("print labels (if present) for walked JSON; together with -"
