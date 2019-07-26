@@ -1,5 +1,5 @@
 ## `jtc` Release Notes
-_Release Notes for `jtc` v.1.71_ (being updated)
+_Release Notes for `jtc` v.1.71_
 
 #### New features:
 - new lexeme: `<..>u` - user evaluation of the current walk-path via shell cli - walking will continue if cli return `0` (success) 
