@@ -3,7 +3,7 @@ _Release Notes for `jtc` v.1.71_
 
 #### New features:
 - new lexeme: `<..>u` - user evaluation of the current walk-path via shell cli - walking will continue if cli return `0` (success) 
-and fails otherwise. The cli in the lexeme is subjected for interpolation
+and fails otherwise. The cli in the lexeme is subjected for namespaces interpolation
 - full support of `if` ... `else` walk branching via pairing `f` and `F` lexemes:
    - ... `<>f` {if path does not fail, then skip it} `<>F` {otherwise execute this path} ...
    - ... `<>f` {if path does not fail, then end walking} `><F` {otherwise execute this path} ...
