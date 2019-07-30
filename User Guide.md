@@ -508,7 +508,7 @@ Stored in the namespace values could be reused later in the same or different wa
 [templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
 for a shell evaluation.
 
-##### dynamic lookup using directives `-v` and `-k`
+##### Dynamic lookup using directives `-v` and `-k`
 Say, we have a following JSON:
 ```
 bash $ <<<'{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' jtc
@@ -594,7 +594,7 @@ The _fail_stop_ directive, (as well as `<..>v`) may carry a value (namespace), w
 JSON element (for later interpolation), and, as well as `<..>v`, the _fail_stop_ is also allowed setting up custom JSON values 
 (when used in the format: `<namespace:JSON_value>f`)
 
-###### Here's another example sporting _fail-stops_ using namespaces and interpolation:
+##### Here's another example sporting _fail-stops_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
 this format 
 `{ "Name has children": true/false }`
@@ -1889,25 +1889,25 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 ### Summary of modes of operations
 `jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all possibilities:
 
-###### _A._ 
+##### _A._ 
 | Update JSON from other locations of the same JSON: |
 |:-:|
 | `<file.json jtc -w<dst_wlk> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` 
 
-###### _B._
+##### _B._
 | Update JSON with a static JSON (either from file, or a spelled literally): |
 |:-:|
 | `<file.json jtc -w<dst_wlk> -u<static.json>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static.json` (a file, or a literal JSON)
 
-###### _C._
+##### _C._
 | Update JSON from some locations from a static JSON (either from file, or a spelled literally): |
 |:-:|
 | `<file.json jtc -w<dst_wlk> -u<static.json> -u<src_wlk>` |
 - destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static.json`
 
-###### _D._
+##### _D._
 | Update JSON with the transformed JSON elements via shell cli: |
 |:-:|
 | `<file.json jtc -w<dst_wlk> -e -u <cli> \;` |
@@ -1915,7 +1915,7 @@ In case if only a single option instance (`-u`/`-i`) is used, then both the sour
 interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself. The namespaces here is also populated while
 walking `dst_wlk`.
 
-###### _E._
+##### _E._
 | Update JSON from some locations of the transformed JSON via shell cli: |
 |:-:|
 | `<file.json jtc -w<dst_wlk> -e -u <cli> \; -u<src_wlk>` |
