@@ -26,7 +26,7 @@
    * [Walking multiple paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-paths)
      * [Sequential walk processing (`-n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing)
      * [Displaying walks with labels (`-l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-walks-with-labels)
-     * [Wrapping resulted walks to JSON (`-j, -jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json)
+     * [Wrapping resulted walks to JSON array (`-j, -jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array)
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
      * [Wrapping walked entries into JSON object](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-json-object)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
@@ -999,7 +999,7 @@ bash $
 )
 
 
-#### Wrapping resulted walks to JSON
+#### Wrapping resulted walks to JSON array
 `-j` does a quite simple thing - it wraps all walked entries back into a _JSON array_, however predicated by `-l` and `-n` options
 the result will vary:
 - `-j` without `-l` will just arrange walked entries into a JSON array:
