@@ -53,11 +53,13 @@
    * [Interpolation types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-types)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
+   * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
    * [Multiple templates and interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
+   * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
 8. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
    * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
@@ -1875,7 +1877,9 @@ multiple walk-path may be given
 That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: in any case _all specified 
 `<walk-path>` arguments will be processed in a consecutive order, one by one (i.e. interleaving never occurs)_.
 
-(Also, see [operations with cross referencing]())
+(Also, see 
+[operations with cross referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+)
 
 
 ### Use of mixed arguments with `-e`
@@ -2278,11 +2282,117 @@ respective label. I.e., even if the value in the namespace is numerical value `0
 in the searched JSON node
 
 
+### Cross-referenced lookups
+One use-case that namespaces facilitate quite neatly, is when insert/update/purge/compare operation refer to different JSONs 
+(i.e. in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
+types of operations) but one requires a referene from another.
+
+Say, we have 2 JSONs:
+1. `main.json`:
+```
+bash $ <main.json jtc
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+2. `id.json`:
+```
+bash $ <id.json jtc
+[
+   {
+      "id": 3,
+      "title": "Smoke on the Water"
+   },
+   {
+      "id": 1,
+      "title": "The Winner Takes It All"
+   },
+   {
+      "id": 2,
+      "title": "The Show Must Go On"
+   }
+]
+bash $ 
+```
+
+The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.
+The way to do it: first walk `main.json` finding and memorizing (each) `rec` value and then, walk up to the `song` entry 
+(so that will be a destination pointer, where song needs to be inserted).
+The insert operation (`-i`) here, would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
+insert respective `title`:
+```
+bash $ <main.json jtc -w'[:][rec]<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]'
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": [
+         "The Winner Takes It All"
+      ]
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": [
+         "Smoke on the Water"
+      ]
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": [
+         "The Show Must Go On"
+      ]
+   }
+]
+bash $ 
+```
+
+For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is walked first). When dst. walk 
+finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
+when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. The rest should be obvious
+by now.
+
+
+`jtc` does not have a "walk" argument for `-p` (purge) operations (`-p` is a standalone option, when it's used only with `-w`
+it will purge every resulted/walked entry), so how to facilitate a cross-referenced purge then? (i.e. when purging ids are located
+in a different file)  
+The trick is to use a dummy `-u`/`-i` operation and apply `-p`. When cli is given in this notation:
+`<<<dst.json jtc -w... -u <src.json> -u... -p`, purging will be applied to walked destinations, but only predicated by a successful 
+source walk:
+```
+bash $ <main.json jtc -w'[:][rec]<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
+[
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+
+
 ## Templates
 Template, an argument to `-T` is a literal JSON optionally containing tokens for
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
 insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template (`-T`) is given
-then it's a template (after interpolation) will be used for the operations, not the source walk (unless the resulting template is
+then it's a template value (after interpolation) will be used for the operations, not the source walk (unless the resulting template is
 invalid JSON, in such case the source walk will be used).
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
@@ -2297,11 +2407,16 @@ bash $
 ```
 
 For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
-never from `-w`. The namespaces resulting from walking `-w` and any of operations (`-i`, `-u`, `-c`) do not intersect or clash,
-as operation parameters walking (often referred as source walk) and template interpolation always occurs before starting walking `-w`
-(and generally, namespaces for `-w` and source walks even reside in different containers).
+never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with sourc walks in operations (`-i`, `-u`, `-c`)
+\- that way 
+[cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+ are possible.
+Logically, for each destination walk (`-w`) there will be a respective subsequent source walk (e.g.: `-c<src-walk>`), thus source walk
+may utilize the namespaces pupulated during destination walk (`-w`). Template-interpolation will be attempted only once source walk is
+successful
 
-Below is an example of updating the phone records for the first entry in the `Directory`:
+Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
+altering the `phone` label at the same time via template):
 ```
 bash $ <ab.json jtc -w'[0][0]<phone>l'
 [
@@ -2314,7 +2429,7 @@ bash $ <ab.json jtc -w'[0][0]<phone>l'
       "type": "mobile"
    }
 ]
-bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<val>v' -T'{ "phone number": "+1 {val}" }' | jtc -w'[0][0]<phone>l'
+bash $ <<<$(<ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<val>v' -T'{ "phone number": "+1 {val}" }') jtc -w'[0][0]<phone>l'
 [
    {
       "phone number": "+1 112-555-1234",
@@ -2329,15 +2444,16 @@ bash $
 ```
 Explanations:
 - `-w'[0][0]<phone>l[:]'` - that's our destination which we will be updating (i.e. all phone records in the first `Directory` entry)
-- `-pi'[0][0]<number>l:<val>v'` - we'll walk (synchronously with `-w`) all the `number` records and memorize number values in the
+- `-pi'[0][0]<number>l:<val>v'` - we'll walk (synchronously with `-w`) all the `number` records and memorize `number` values in the
 namespace `val`; option `-p` turns _insert_ operation into _move_
-- `-T'{ "phone number": "+1 {val}" }'` after each walk argument in `-i`, a template interpolations occurs here - a new 
+- `-T'{ "phone number": "+1 {val}" }'` after each source walk argument in `-i`, a template interpolations occurs - a new 
 JSON entry is generated from the template and namespace `val` and the new entry is then used for insertion into the respective
 destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON into a new one.
 
+
 ### Multiple templates and interleaved walks
 When multiple templates given (with walking operations only) and walks are _interleaved_ (i.e. more than one `-w` present and
-`-n` is not used) then templates pertain to each walk. In all other cases templates are applied in a round-robin fashion.
+`-n` is not used) then templates are pertain to each walk. In all other cases templates are applied in a round-robin fashion.
 
 Compare:
 ```
@@ -2361,7 +2477,8 @@ bash $
 The mess in the bottom example is explained by `-n` usage: walks no longer interleaved (i.e. they are sequential) and templates now 
 not pertaining to walks, but rather applied round-robin
 
-One handy use-case of multiple round-robin templates would be this case:
+
+One handy use-case of multiple round-robin templates would be this example:
 ```
 bash $ echo [1,2,3,4,5,6,7,8,9,10] | jtc -w[:] -T'""' -T{} -T'""' -qq
 2
@@ -2371,57 +2488,56 @@ bash $
 ```
 \- i.e. in the above example printed every 3rd element from source JSON starting from the 2nd one.
 
+
 ## Processing multiple input JSONs
-Normally `jtc` would process only a single input JSON if multiple input JSONs given - the fist JSON will be processed and the 
+Normally `jtc` would process only a single input JSON. If multiple input JSONs given - the fist JSON will be processed and the 
 rest of the inputs will be silently ignored:
 ```
-bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc
-[
-   "1st json"
-]
+bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -r
+[ "1st json" ]
 bash $ 
 ```
 Couple options allow altering the behavior and process all the input JSONs:
 
+
 ### Process all input JSONs
 Option `-a` instructs to process all the input JSONS:
 ```
-bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -a
-[
-   "1st json"
-]
-{
-   "2nd": "json"
-}
+bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
+[ "1st json" ]
+{ "2nd": "json" }
 "3rd json"
 bash $ 
 ```
 \- respected processing (of all given options) will occur for all of the input JSONs:
 ```
-bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -a -w'<json>R'
+bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "1st json"
 "json"
+notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
 "3rd json"
 bash $ 
 ```
-All the input JSONs will be processed as long they are valid - processing will stops upon the parsing failure:
+All the input JSONs will be processed as long they are valid - processing will stops upon parsing failure:
 ```
-bash $ echo '[ "1st json" ] { "2nd": json" } "3rd json"' | jtc -ad
+bash $ <<<'[ "1st json" ] { "2nd": json" } "3rd json"' jtc -ad
 .read_inputs(), reading json from <stdin>
 .write_json(), outputting json to <stdout>
 [
    "1st json"
 ]
-.parsejson(), exception locus: { "2nd": json" } "3rd json"|
-.location_(), exception spot: --------->| (offset: 9)
+.parsejson(), exception locus: [ "1st json" ] { "2nd": j
+.location_(), exception spot: ------------------------>| (offset: 24)
 jtc json exception: expected_json_value
 bash $ 
 ```
 
 ### Wrap all processed JSONs
-option `-J` let wrapping all processed inputs into JSON array (option `-J` assumes option `-a`, no need giving both):
+option `-J` let wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
 ```
-bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -J -w'<json>R'
+bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -J -w'<json>R'
+notice: option -J cancels streaming input
+notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
 [
    "1st json",
    "json",
@@ -2429,10 +2545,10 @@ bash $ echo '[ "1st json" ] { "2nd": "json" } "3rd json"' | jtc -J -w'<json>R'
 ]
 bash $ 
 ```
-option `-J` also implicitly imposes `-j` thus it could be used safely even with a single JSON at the input with the same effect. 
+option `-J` also implicitly imposes `-j` thus it could be used safely even with a single JSON at the input with the same effect.  
 Though, when walking multiple input JSONs, each of the option would have its own effect, this example clarifies:
 ```
-bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -aj
+bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
 [
    "John",
    "Ivan",
@@ -2444,7 +2560,7 @@ bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -aj
    "Jane"
 ]
 bash $ 
-bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -J
+bash $ jtc -w'[0][:][name]' -J ab.json ab.json
 [
    "John",
    "Ivan",
@@ -2454,7 +2570,7 @@ bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -J
    "Jane"
 ]
 bash $ 
-bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -Jj
+bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 [
    [
       "John",
@@ -2469,6 +2585,79 @@ bash $ cat ab.json ab.json | jtc -w'[0][:][name]' -Jj
 ]
 bash $ 
 ```
+
+_Note: `jtc` supports unlimited number of files that can be supplied as standalone arguments (after all options given). When 
+multiple input files are given, options `-a` is assumed_
+
+
+### Buffered vs Streamed read
+`jtc` may read inputs 2 ways:
+- _**buffered read**_
+- _**streamed read**_
+
+In the _buffered read_ mode (which is default), entire file (or `<stdin>`) input is read into memory and only then JSON parsing is
+attempted (with all subsequent due processing).  
+In the _streamed read_ mode JSON parsing begins immeadiately as the the first character is read.
+
+The _streamed read_ is activated when:
+- option `-a` given *AND* input source is `<stdin>`  
+- option `-J` overrides _streamed read_ (reverting to _buffered_): _streamed read_ might be endless, while option `-J` assumes a finite
+number of inputs to be processed and then displayed
+
+From the JSON result point of view there's no difference between _buffered_ and _streamed_ reads - the result will be 100% consistent
+across those types of reads. However, _streamed read_ finds its application when streamed data are there (typically would be
+a network-based streaming)
+
+We can see the difference in the parsing when debugging jtc:
+\- in a _buffered read_ mode, the debug will show the _parsing point_ with data after:
+```
+bash $ <ab.json jtc -dddddd 
+.read_inputs(), reading json from <stdin>
+......parse_(), parsing point ->{|  "Directory": [|    {|       "name": "John",|       "ag...
+......parse_(), parsing point ->"Directory": [|    {|       "name": "John",|       "age": ...
+......parse_(), parsing point ->[|    {|       "name": "John",|       "age": 25,|       "a...
+......parse_(), parsing point ->{|       "name": "John",|       "age": 25,|       "address...
+...
+```
+\- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
+```
+bash $ <ab.json jtc -dddddd -a
+.read_inputs(), reading json from <stdin>
+..ss_init_(), initializing: stream
+......parse_(), {<- parsing point
+......parse_(), {|  "<- parsing point
+......parse_(), {|  "Directory": [<- parsing point
+......parse_(), {|  "Directory": [|    {<- parsing point
+...
+```
+
+Here's an example of how _streamed read_ works in jtc:
+```
+|                       Screen 1                       |                       Screen 2                       |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| bash $ nc -lk localhost 3000 | jtc -ra               | bash $ <ab.json jtc -w'<address>l:' | nc localhost   |
+| { "city": "New York", "postal code": 10012, "state": | 3000                                                 |
+| "NY", "street address": "599 Lafayette St" }         | bash $ <ab.json jtc -w'<name>l:' -w'<name>l:[-1]     |
+| { "city": "Seattle", "postal code": 98104, "state":  | [phone]' | nc localhost 3000                         | 
+| "WA", "street address": "5423 Madison St" }          | bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]'   |
+| { "city": "Denver", "postal code": 80206, "state":   | -T'{"Parent":{{N}}, "progeny": {{}} }' | nc localhost|
+| "CO", "street address": "6213 E Colfax Ave" }        | 3000                                                 |
+| "John"                                               | bash $                                               |
+| [ { "number": "112-555-1234", "type": "mobile" }, {  |                                                      |
+| "number": "113-123-2368", "type": "mobile" } ]       |                                                      |
+| "Ivan"                                               |                                                      |
+| [ { "number": "273-923-6483", "type": "home" }, {    |                                                      |
+| "number": "223-283-0372", "type": "mobile" } ]       |                                                      |
+| "Jane"                                               |                                                      |
+| [ { "number": "358-303-0373", "type": "office" }, {  |                                                      |
+| "number": "333-638-0238", "type": "home" } ]         |                                                      |
+| { "Parent": "John", "progeny": [ "Olivia" ] }        |                                                      |
+| { "Parent": "Ivan", "progeny": [] }                  |                                                      |
+| { "Parent": "Jane", "progeny": [ "Robert", "Lila" ] }|                                                      |
+|                                                      |                                                      |
+```
+ 
+
 
 
 ## More Examples
