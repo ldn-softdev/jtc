@@ -2631,7 +2631,7 @@ bash $ <ab.json jtc -dddddd -a
 ...
 ```
 
-Here's an example of how _streamed read_ works in jtc:
+Here's an example of how _streamed read_ works in `jtc`:
 ```
 |                       Screen 1                       |                       Screen 2                       |
 | ---------------------------------------------------- | ---------------------------------------------------- |
@@ -2658,7 +2658,10 @@ Here's an example of how _streamed read_ works in jtc:
 |                                                      |                                                      |
 ```
  
+In the `Screen 1`, `jtc` listens to the stream data coming from `netcat` utility and process-prints (in a compact format) all
+the input JSONs. It will stop once `<stdin>` is closed, but `netcat` is run using `-k` option, which means _endlessly_.
 
+In the `Screen 2`, we sent to netcat a few walks (JSONs), that `netcat` relayed to its counterpart in the `Screen1` 
 
 
 ## More Examples
