@@ -15,7 +15,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRdDbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives and Namespaces (`vkzfFu`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
-     * [_Fail-safe_ and _Forward-Stop_ directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
+     * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -557,7 +557,7 @@ currently walked JSON) - if the lexeme's value is given in the format:
 then upon walking such syntax a user's `JSON_value` will be preserved in the namespace `name`
 
 
-#### _Fail-safe and _Forward-Stop_ directives
+#### Fail-safe and Forward-Stop directives
 All the lexemes in the _walk-path_ are bound by logical `AND` - only if all succeed then the path is successfully walked (and printed
 or regarded for a respective operation). The _fail-safe_ and _Forward-Stop_ directives make possible to introduce branching logic 
 into the _walk-path_.  
