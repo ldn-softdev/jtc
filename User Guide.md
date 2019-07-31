@@ -457,12 +457,13 @@ cacheing is required, both recursive and non-recursive) and thus all subsequent 
 Though, there are cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e. when
 resolution of the search is dependent on the _namespace_ value.  
 Here's the list of such search types:
-  * `q`,`Q`: those lexemes refer (internally) to _namespace_ when performing search and hence not cacheable
-  * recursive `<..>s`,`<..>t`: those lexemes using _namespace_ when performing search and hence not cacheable
+  * `q`,`Q`: the lexemes refer (internally) to _namespaces_ when performing search and hence not cacheable
+  * recursive `<..>s`,`<..>t`: those lexemes using _namespaces_ when performing search and hence not cacheable
   * [non-recursive](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
   search lexemes with 
   [relative quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic) 
-  \- `>..<l{n}`, `>..<t{n}`: the quantifier might refer to the _namespace_, rendering that type of search non-cacheable
+  \- `>..<lN`, `>..<tN`: these lexems simply do not require cacheing - they are not exposed to exponential decay; 
+  note, lexemes `<>lN`, `<>tN` are using regular quantifiers semantic (i.e. match instance) and therefore a subjected for cacheing 
   * JSON match when lexeme is a template, e.g.: `<{"label": {{val}} }>j`: template typically requires _namespace_ for interpolation
   and hence also non-cacheable (though `j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j`)
 
@@ -2030,16 +2031,21 @@ jtc json exception: walk_root_has_no_label
 bash $ 
 ```
 
-
 ## Interpolation
-Interpolation may occur either for argument undergoing
+Interpolation may occur in following cases:
+- for template arguments (`-T ...`) in walk/update/insert/compare type of operations
+- for the argument undergoing a
 [shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-(`-e` + insert/update operation), or for template arguments (`-T`) in walk/update/insert/compare operations.
+(`-e` + insert/update operation, e.g.: `-eu ... \;`),
+- in the lexeme `<..>u` applying a shell evaluation on its content
+- in the lexeme `<..>j` where lexeme content is expressed as a template
+- for any search lexeme where a quantifier is expressed through interpolation, e.g.: `<>a{N}`
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
-- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from currently walked JSON element
-- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the given namespace
+- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from the last walked JSON element
+- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the respective namespace
+
 
 ### Interpolation types
 The difference between single `{}` and double `{{}}` notations: 
@@ -2050,13 +2056,13 @@ The difference between single `{}` and double `{{}}` notations:
   * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped (allows extending arrays)
   * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped (allows extending objects)
 
-A string interpolation w/o outer quotes is handy when required altering an existing string, here's example of altering JSON label:
+A string interpolation w/o outer quotes is handy when it's required altering an existing string, here's example of altering JSON label:
 ```
-bash $ echo '{ "label": "value" }' | jtc 
+bash $ <<<'{ "label": "value" }' jtc
 {
    "label": "value"
 }
-bash $ echo '{ "label": "value" }' | jtc -w'<label>l<>k' -u'<label>l<lbl>k' -T'"new {lbl}"'
+bash $ <<<'{ "label": "value" }' jtc -w'<label>l<>k' -u'<label>l<L>k' -T'"new {L}"'
 {
    "new label": "value"
 }
@@ -2064,12 +2070,13 @@ bash $
 ```
 Here's an illustration when double braces are handier (e.g., swapping around labels and values):
 ```
-bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc
+bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
+bash $ <<<$JSN jtc
 {
    "pi": 3.14,
    "type": "irrational"
 }
-bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'{ "{val}": {{key}} }' -p
+bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
 {
    "3.14": "pi",
    "irrational": "type"
@@ -2077,12 +2084,12 @@ bash $ echo '{ "pi": 3.14, "type": "irrational" }' | jtc -i'[:]<key>k<val>v' -T'
 bash $ 
 ```
 
-An array interpolation using single notation `{..}` is handy when there's a need to extend an array during
+An array interpolation using a single brace notation `{..}` is handy when there's a need extending the array _during_
 interpolation. 
-There's an special case though - template-extending an empty array. Let's consider a following example:
+There's a special case though - template-extending of an empty array. Let's consider a following example:
 ```
 bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
-bash $ jtc <<<$JSN
+bash $ <<<$JSN jtc
 [
    {
       "Func": "x + y",
@@ -2099,7 +2106,7 @@ bash $
 ```
 And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
 ```
-bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]' 
+bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
 [
    {
       "Func": "x + y",
@@ -2121,11 +2128,12 @@ bash $
 ```
 
 When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
-(`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid JSON. 
-However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
-without failures.
+initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid
+JSON. However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
+without producing failures.
 
 All the same applies for when interpolating _JSON objects_.
+
 
 ### Namespaces with interleaved walks
 When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_), 
@@ -2142,14 +2150,14 @@ bash $
 ```
 That is a correct result (though might not reflect what possibly was intended), let review the result:
 1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
-thus the resulting template is _invalid JSON_) hence source walk is used / printed
+thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
 2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
 (template is a _valid JSON_ here)
-3. in the third line, the result is albeit also correct, but might be not the expected one - upon next _interleaved_ walk, the 
+3. in the third line, the result is also correct, albeit might be not the expected one - upon next _interleaved_ walk, the 
 namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
 4. _etc._
 
-By now it should be clear why such result.
+By now it should be clear why is such result.
 
 Going by the notion of the provided template, apparently, the expected result were to have all records pairs for each person with 
 each own child. That way, for example, `Ivan` should not be even listed (he has no children), `John`'s record should appear only
@@ -2175,9 +2183,9 @@ bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T
 { "Parent": "Jane", "child": "Lila" }
 bash $ 
 ```
-\- that's a neat (though [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)) trick
+\- that's a neat, though [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
 
-Yet, the same could have been achieved even a simpler way:
+Yet, the same could have been achieved even a simpler way (using just one walk):
 ```
 bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
 { "Parent": "John", "child": "Olivia" }
@@ -2188,10 +2196,11 @@ bash $
 
 
 ### Search quantifiers interpolation
-Also interpolation may occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
+Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
 index value stored `item`:
 ```
-bash $ echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }' | jtc 
+bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
+bash $ <<<$JSN jtc
 {
    "item": 2,
    "list": {
@@ -2204,7 +2213,7 @@ bash $
 ```
 To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
 ```
-bash $ echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }' | jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
 "milk": 0.90
 bash $ 
 ```
@@ -2212,22 +2221,20 @@ It should be quite easy to read/understand such walk path (predicated one is fam
 how the walk-path works in a slow-mo:
 1. `[item]` selects the value by label `item`:
 ```
-bash $ J=$(echo '{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }')
-bash $ echo $J | jtc -w'[item]'
+bash $ <<<$JSN jtc -w'[item]'
 2
 bash $ 
 ```
 2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
 ```
-bash $ echo $J | jtc -w'[item]<idx>v'
+bash $ <<<$JSN jtc -w'[item]<idx>v'
 2
 bash $ 
 ```
-
 3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e. addresses the first parent of the `item` value) which is
 the root of the input JSON:
 ```
-bash $ echo $J | jtc -w'[item]<idx>v[-1]'
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
 {
    "item": 2,
    "list": {
@@ -2240,7 +2247,7 @@ bash $
 ```
 4. `[list]` selects the object value by label `list`:
 ```
-bash $ echo $J | jtc -w'[item]<idx>v[-1][list]'
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
 {
    "bread": 1.20,
    "cheese": 2.90,
@@ -2251,6 +2258,20 @@ bash $
 5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
 (which is `2`) gives us the required value.
 
+_Alternatively_, the same ask is achievable using a slightly differnt query:
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
+"milk": 0.90
+bash $ 
+```
+- `>idx<t` lexeme here will utilize namespace `idx` to find the offset (index).
+
+There's a subtle difference how the lexeme `t` will treats and uses referred namespace:
+- in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
+respective label. I.e., even if the value in the namespace is numerical value `0`, it will seearch for a label `"0"` instead
+- in `>..<t` notation, if the namespace holds a literal (i.e. a _JSON string_) value, then the lexeme will try matching the label
+(as expected);  however, if the namespace holds a numerical value(_JSON number_), then the value is used as a direct offset
+in the searched JSON node
 
 
 ## Templates
