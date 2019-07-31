@@ -2635,25 +2635,26 @@ Here's an example of how _streamed read_ works in jtc:
 ```
 |                       Screen 1                       |                       Screen 2                       |
 | ---------------------------------------------------- | ---------------------------------------------------- |
-| bash $ nc -lk localhost 3000 | jtc -ra               | bash $ <ab.json jtc -w'<address>l:' | nc localhost   |
-| { "city": "New York", "postal code": 10012, "state": | 3000                                                 |
-| "NY", "street address": "599 Lafayette St" }         | bash $ <ab.json jtc -w'<name>l:' -w'<name>l:[-1]     |
-| { "city": "Seattle", "postal code": 98104, "state":  | [phone]' | nc localhost 3000                         | 
-| "WA", "street address": "5423 Madison St" }          | bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]'   |
-| { "city": "Denver", "postal code": 80206, "state":   | -T'{"Parent":{{N}}, "progeny": {{}} }' | nc localhost|
-| "CO", "street address": "6213 E Colfax Ave" }        | 3000                                                 |
+| bash $ nc -lk localhost 3000 | jtc -ra               | bash $ <ab.json jtc -w'<address>l:' | nc localhost 3 |
+| { "city": "New York", "postal code": 10012, "state": | 000                                                  |
+| "NY", "street address": "599 Lafayette St" }         | bash $ <ab.json jtc -w'<name>l:' -w'<name>l:[-1][pho |
+| { "city": "Seattle", "postal code": 98104, "state":  | ne]' | nc localhost 3000                             | 
+| "WA", "street address": "5423 Madison St" }          | bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' - |
+| { "city": "Denver", "postal code": 80206, "state": " | T'{"Parent":{{N}}, "progeny": {{}} }' | nc localhost |
+| CO", "street address": "6213 E Colfax Ave" }         | 3000                                                 |
 | "John"                                               | bash $                                               |
 | [ { "number": "112-555-1234", "type": "mobile" }, {  |                                                      |
 | "number": "113-123-2368", "type": "mobile" } ]       |                                                      |
 | "Ivan"                                               |                                                      |
-| [ { "number": "273-923-6483", "type": "home" }, {    |                                                      |
-| "number": "223-283-0372", "type": "mobile" } ]       |                                                      |
+| [ { "number": "273-923-6483", "type": "home" }, { "n |                                                      |
+| umber": "223-283-0372", "type": "mobile" } ]         |                                                      |
 | "Jane"                                               |                                                      |
 | [ { "number": "358-303-0373", "type": "office" }, {  |                                                      |
 | "number": "333-638-0238", "type": "home" } ]         |                                                      |
 | { "Parent": "John", "progeny": [ "Olivia" ] }        |                                                      |
 | { "Parent": "Ivan", "progeny": [] }                  |                                                      |
-| { "Parent": "Jane", "progeny": [ "Robert", "Lila" ] }|                                                      |
+| { "Parent": "Jane", "progeny": [ "Robert", "Lila" ]  |                                                      |
+| }                                                    |                                                      |
 |                                                      |                                                      |
 ```
  
