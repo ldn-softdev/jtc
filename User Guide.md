@@ -1401,13 +1401,13 @@ How does `jtc` know which argument is supplied? The disambiguation path is like 
 2. `<JSON>` string is assumed and attempted to be parsed. If JSON parsing fails, then
 3. `<walk-path>` is assumed and parsed - if that fails too, a short exception message is displayed (`walk_expect_lexeme`)
 
-_An attention is required when passing a `<walk-path>` type argument: some walk-paths look exactly like JSON, e.g:
-`[0]` - this is both a valid JSON array (made of single numeric value `0`) and a valid walk-path (addressing a first element
+_Attention is required when passing a `<walk-path>` type argument: some walk-paths look exactly like JSON, e.g:
+`[0]` - this is both a valid JSON array (made of a single numeric value `0`) and a valid walk-path (addressing the first element
 in an iterable), hence such argument will be treated as JSON.  
 To pass it as a walk-path, modify it to a range-type of walk, e.g.: `[0:1]` - that is still a valid walk-path (selecting only the
 first element) but is invalid JSON.  
 Alternatively, add a trailing space at the end of the walk-lexeme: `[0] ` - then the argument will be treated as a walk-path (in 
-`-i`, `-u` arguments the `<JSON>` is expected to have no trailing white spaces)_
+`-i`, `-u` arguments the `<JSON>` argument is expected to have no trailing white spaces)_
 
 
 #### Destination driven insertion
@@ -2043,7 +2043,7 @@ Interpolation may occur in following cases:
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
-- if the content under braces is empty (`{}`, `{{}}`) then interpolation happens from the last walked JSON element
+- if the content under braces is empty (`{}`, `{{}}`) then the last walked JSON element is getting interpolated
 - if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the respective namespace
 
 
@@ -2053,8 +2053,10 @@ The difference between single `{}` and double `{{}}` notations:
 - a single notation `{..}` interpolate _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
   `blah`. Thus, it makes sense to use this interpolation inside double quotations (the interpolated value still has to be a valid JSON)
-  * when interpolating _JSON array, then enclosing brackets `[`, `]` are dropped (allows extending arrays)
-  * when interpolating _JSON object, then enclosing braces `{`, `}` are dropped (allows extending objects)
+  * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
+  will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided - `-T'[ {} ]'`
+  * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
+  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided - `-T{ {} }`
 
 A string interpolation w/o outer quotes is handy when it's required altering an existing string, here's example of altering JSON label:
 ```
@@ -2183,7 +2185,7 @@ bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T
 { "Parent": "Jane", "child": "Lila" }
 bash $ 
 ```
-\- that's a neat, though [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
+\- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
 
 Yet, the same could have been achieved even a simpler way (using just one walk):
 ```
@@ -2258,7 +2260,7 @@ bash $
 5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
 (which is `2`) gives us the required value.
 
-_Alternatively_, the same ask is achievable using a slightly differnt query:
+_Alternatively_, the same ask could be achieved using a slightly differnt query:
 ```
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
@@ -2266,11 +2268,11 @@ bash $
 ```
 - `>idx<t` lexeme here will utilize namespace `idx` to find the offset (index).
 
-There's a subtle difference how the lexeme `t` will treats and uses referred namespace:
+There's a subtle difference how the lexeme `t` treats and uses referred namespace:
 - in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
 respective label. I.e., even if the value in the namespace is numerical value `0`, it will seearch for a label `"0"` instead
 - in `>..<t` notation, if the namespace holds a literal (i.e. a _JSON string_) value, then the lexeme will try matching the label
-(as expected);  however, if the namespace holds a numerical value(_JSON number_), then the value is used as a direct offset
+(as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
 in the searched JSON node
 
 
