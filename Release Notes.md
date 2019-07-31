@@ -20,7 +20,7 @@ allowing transforming JSONS "on the fly": `... | jtc -a ... | ...`
 the search lexeme `j` a _dynamic type_ when used with interpolation template (unlike one with a _static_ JSON), therefore, like
 all dynamic lexemes it is an exempt for caching, hence it's prone to exponential decay noticeable upon big recursive searches - be aware
 when building a query for huge input JSONs
-- for insert/update operations (`-i`, `-u`), destination walks' (`-w`) are related now to the soruce walk of operations (in 
+- for insert/update operations (`-i`, `-u`), destination walks' (`-w`) are related now to the source walk of operations (in 
 `-i`, `-u`) and so are their namespaces; now it becomes possible to make an insert/update based on the cross references from the 
 destination walks using namespaces
 - swap option `-s` now accept any number of walk _pairs_ to be swapped (before it was only swapping first 2 specified), e.g.: 
