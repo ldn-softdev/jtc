@@ -443,12 +443,14 @@ This is the list of suffixes to control search behavior:
 Some search lexemes (and
 [directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
 ) require their content to be set and be non-empty (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`q`,`Q`,`v`,`u`), otherwise an exception 
-`walk_empty_lexeme` will be thrown  
+`walk_empty_lexeme` will be thrown
+
 Some lexemes might be left empty, but they cary a semantic of an empty search (`r`,`l`,`b`), e.g.: `<>` (same as `<>r`) - will match
-an empty _JSON string_, `<>l` - will match an entry with the empty _JSON label_  
-The rest of lexemes (search and directives - `n`,`a`,`o`,`i`,`c`,`e`,`w`,`k`,`f`,`F`) also might be left empty, however, if lexeme is
-non-empty, then it specifies a namespace where the value (result of a match) will be stored, e.g.: `<array>i` - upon a match 
-will preserve found _JSON array_ in the namespace `array`
+an empty _JSON string_, `<>l` - will match an entry with the empty _JSON label_
+
+The rest of the lexemes (search and directives - `n`,`a`,`o`,`i`,`c`,`e`,`w`,`k`,`f`,`F`) also might be left empty, however,
+if the lexeme is non-empty, then it specifies a namespace where the value (result of a match) will be stored,
+e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the namespace `array`
 
 ##### Cached Search
 `jtc` is super efficient searching recursively even huge JSONs structures - normally no exponential search decay will be observed
