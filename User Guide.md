@@ -1,3 +1,4 @@
+
 # [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v1.71_ being updated)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
@@ -466,7 +467,7 @@ Here's the list of such search types:
   * [non-recursive](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
   search lexemes with 
   [relative quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic) 
-  \- `>..<lN`, `>..<tN`: these lexems simply do not require cacheing - they are not exposed to exponential decay; 
+  \- `>..<lN`, `>..<tN`: these lexemes simply do not require cacheing - they are not exposed to exponential decay; 
   note, lexemes `<>lN`, `<>tN` are using regular quantifiers semantic (i.e., match instance) and therefore a subjected for cacheing 
   * JSON match when lexeme is a template, e.g.: `<{"label": {{val}} }>j`: template typically requires _namespace_ for interpolation
   and hence also non-cacheable (though `j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j`)
@@ -551,7 +552,7 @@ bash $
 ```
 When the directive lexeme `<>k` is given w/o a value (like shown) then no saving in the namespaces occurs.
 
-The lexeme `<..>v` (and all others which allow namespaces - `naoicewkfF`) allow setting up a custom JSON value (in lieu of
+The lexeme `<..>v` (and all others which allow _namespaces_ - `naoicewkfF`) allow setting up a custom JSON value (in lieu of
 currently walked JSON) - if the lexeme's value is given in the format:  
 - `<name:JSON_value>v`  
 then upon walking such syntax a user's `JSON_value` will be preserved in the namespace `name`
@@ -1389,7 +1390,7 @@ There are 3 different flavors of insertion arguments:
 - `-i <file>` - JSON being inserted is read from the file
 - `-i <JSON>` - the argument itself a JSON string
 - `-i <walk-path>` - the argument is a walk-path in the input JSON
-all 3 flavours of of insert arguments could be mixed and used together (with some limitation, covered in 
+all 3 flavors of of insert arguments could be mixed and used together (with some limitation, covered in 
 [use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) section)
 )  
 If option arguments types are **not** mixed, then for the first two cases (`<file>` and `<JSON>`) source of the operation are external
@@ -1413,7 +1414,7 @@ Alternatively, add a trailing space at the end of the walk-lexeme: `[0] ` - then
 
 #### Destination driven insertion
 The destination insertion point(s) (`-w`) controls how insertion is done:
-- if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single poin location - then 
+- if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single point location - then 
 all the supplied sources are attempted to get inserted into a single destination location:
 ```
 bash $ <ab.json jtc -w'<children>l:' -lr
@@ -1484,7 +1485,7 @@ as follows from the table:
 - insertion cannot occur into the atomic JSON elements
 - when inserting into array, whole JSON element is getting inserted (no array expansion occurs)
 - labeled elements inserted as JSON objects
-- when inserting objects into object, upon label clashing the destination's label is preversed (source's ignored)
+- when inserting objects into object, upon label clashing the destination's label is preserved (source's ignored)
 
 #### Insertion matrix with merging
 One might wonder: if insertion of an array into another array happens without merging arrays, how to achieve then merged result upon
@@ -1845,9 +1846,21 @@ bash $
 ```
 Now it worked!
 
-Actually, the whole cli could have been quoted like this:
+Actually, the whole _cli_ could have been coded like this:
 ```
 bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{} sed -E "s/(...).*/\1/";' 
+[
+   "Oli",
+   "Rob",
+   "Lil"
+]
+bash $ 
+```
+Of course, the above way of solving the ask is entirely academic - it's always best to avoid using _shell cli_ evaluation and 
+default to it only as a last resort.  
+A much better (efficient) way achieving the same ask would be to use RE and template interpolation:
+```
+bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w'<(...)>R:' -T'"{$1}"' -j
 [
    "Oli",
    "Rob",
@@ -1867,7 +1880,7 @@ options `-c`, `-u`, `-i` allow two *kinds* of their arguments:
 jtc -u file.json -u'[Root][:]'`
 ```
 then all `<walk-path>` arguments (here `[Root][:]`) apply onto the static argument (here `file.json`).
-\- When both kinds of arguments are used together, then only one (the first) staitc JSON argument is accepted, while 
+\- When both kinds of arguments are used together, then only one (the first) static JSON argument is accepted, while 
 multiple walk-path may be given
 \- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
 
@@ -1917,24 +1930,24 @@ In case if only a single option instance (`-eu`/`-ei`) is used, then both the so
 ### Summary of modes of operations
 `jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all the options:
 
-##### _A. Update JSON from other locations of the same JSON:_  
+##### 1. _Update JSON from other locations of the same JSON:_  
 `<file.json jtc -w<dst_wlk> -u<src_wlk>`  
 \- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` of the same file (JSON) 
 
-##### _B. Update JSON with a static JSON (either from file, or a spelled literally):_
+##### 2. _Update JSON with a static JSON (either from file, or a spelled literally):_
 `<file.json jtc -w<dst_wlk> -u<static_json>`  
 \- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static_json` (a file, or a literal JSON)
 
-##### _C. Update JSON from some locations of a static JSON (either from file, or a spelled literally):_
+##### 3. _Update JSON from some locations of a static JSON (either from file, or a spelled literally):_
 `<file.json jtc -w<dst_wlk> -u<static_json> -u<src_wlk>`  
 \- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static_json`
 
-##### _D. Update JSON with the transformed JSON elements via shell cli:_
+##### 4. _Update JSON with the transformed JSON elements via shell cli:_
 `<file.json jtc -w<dst_wlk> -eu <cli> \;`  
 \- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
 interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself.
 
-##### _E. Update JSON from some locations of the transformed JSON via shell cli:_
+##### 5. _Update JSON from some locations of the transformed JSON via shell cli:_
 `<file.json jtc -w<dst_wlk> -e -u <cli> \; -u<src_wlk>`  
 \- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluated `cli`. `cli` here is subjected for 
 interpolation from namespaces and/or JSON elements pointed by `src_wlk` walking `file.json`.
@@ -2263,7 +2276,7 @@ bash $
 5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
 (which is `2`) gives us the required value.
 
-_Alternatively_, the same ask could be achieved using a slightly differnt query:
+_Alternatively_, the same ask could be achieved using a slightly different query:
 ```
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
@@ -2273,7 +2286,7 @@ bash $
 
 There's a subtle difference how the lexeme `t` treats and uses referred namespace:
 - in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
-respective label. I.e., even if the value in the namespace is numerical value `0`, it will seearch for a label `"0"` instead
+respective label. I.e., even if the value in the namespace is numerical value `0`, it will search for a label `"0"` instead
 - in `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try matching the label
 (as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
 in the searched JSON node
@@ -2282,7 +2295,7 @@ in the searched JSON node
 ### Cross-referenced lookups
 One use-case that namespaces facilitate quite neatly, is when insert/update/purge/compare operation refer to different JSONs 
 (i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
-types of operations) but one requires a referene from another.
+types of operations) but one requires a reference from another.
 
 Say, we have 2 JSONs:
 1. `main.json`:
@@ -2404,12 +2417,12 @@ bash $
 ```
 
 For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
-never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with sourc walks in operations (`-i`, `-u`, `-c`)
+never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with source walks in operations (`-i`, `-u`, `-c`)
 \- that way 
 [cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
  are possible.
 Logically, for each destination walk (`-w`) there will be a respective subsequent source walk (e.g.: `-c<src-walk>`), thus source walk
-may utilize the namespaces pupulated during destination walk (`-w`). Template-interpolation will be attempted only once source walk is
+may utilize the namespaces populated during destination walk (`-w`). Template-interpolation will be attempted only once source walk is
 successful
 
 Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
@@ -2594,7 +2607,7 @@ multiple input files are given, options `-a` is assumed_
 
 In the _buffered read_ mode (which is default), entire file (or `<stdin>`) input is read into memory and only then JSON parsing is
 attempted (with all subsequent due processing).  
-In the _streamed read_ mode JSON parsing begins immeadiately as the the first character is read (so, no memory wasted to hold input JSON).
+In the _streamed read_ mode JSON parsing begins immediately as the the first character is read (so, no memory wasted to hold input JSON).
 
 The _streamed read_ is activated when:
 - option `-a` given *AND* input source is `<stdin>`  
@@ -2658,7 +2671,7 @@ Here's an example of how _streamed read_ works in `jtc`:
 In the `Screen 1`, `jtc` listens to the stream data coming from `netcat` utility and process-prints (in a compact format) all
 the input JSONs. It will stop once `<stdin>` is closed, but `netcat` is run using `-k` option, which means _endlessly_.
 
-In the `Screen 2`, `jtc` sends to netcat a few walks (JSONs), that `netcat` relays to its counterpart in the `Screen1`.
+In the `Screen 2`, `jtc` sends to `netcat` a few walks (JSONs), which `netcat` relays to its counterpart in the `Screen1`.
 
 
 ## More Examples
@@ -2867,7 +2880,6 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<
 bash $ 
 ```
 it's just a reverse action.
-
 
 
 
