@@ -12,12 +12,12 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
     * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
-2. [Quickstart guide](https://github.com/ldn-softdev/jtc#quickstart-guide)
+2. [Quick-start guide](https://github.com/ldn-softdev/jtc#quick-start-guide)
     * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing-list-all-urls)
     * [dump all bookmark names](https://github.com/ldn-softdev/jtc#2-dump-all-bookmark-names-from-the-work-folder)
     * [dump all URL's names](https://github.com/ldn-softdev/jtc#3-dump-all-urls-names)
     * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
-    * [Subscripts (offsets) and Searches explained](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
+    * [Subscripts (offsets) and Searches explained](https://github.com/ldn-softdev/jtc#5-subscripts-offsets-and-searches-explained)
     * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#6-debugability--json-validation)
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
@@ -35,7 +35,7 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
   - insert/updates operations optionally may undergo _shell cli_ evaluation
   - features namespaces and templates
   - supports streaming mode of operation
-  - written entirely in C++14, no dependencies (STL only, ideomatic C++, no memory leaks)
+  - written entirely in C++14, no dependencies (STL only, idiomatic C++, no memory leaks)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
@@ -84,7 +84,7 @@ For **Linux** you'd have to compile using this line:
 See the latest [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
 
-## Quickstart guide:
+## Quick-start guide:
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
 
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
@@ -145,7 +145,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 ```
 
 
-### 1. let's start with a simple thing: list all URLs:
+### 1. let's start with a simple thing - list all URLs:
 ```
 bash $ jtc -w'<url>l:' Bookmarks
 "https://www.nytimes.com/"
@@ -154,7 +154,12 @@ bash $ jtc -w'<url>l:' Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
-let's have a look at the walk-path `<url>l:`:
+The walk-path (an argument of `-w`) is a combination of lexemes. There are only 2 types of lexemes:
+1. subscript lexemes -  enclosed in `[`,`]`
+2. search lexemes - enclosed in `<`,`>`
+\- the walk-paths may contain any number of lexemes
+
+let's take a look at the walk-path `<url>l:`:
 - search lexemes are enclosed in angular brackets `<`, `>` - that style provides a **recursive search**
 - suffix `l` instructs to search among **labels** only
 - quantifier `:` instructs to find **all occurrences**, such quantifiers makes a path *iterable*
@@ -168,19 +173,16 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 ```
 here the walk path `<Work>[-1][children][:][name]` is made of following lexemes (spaces separating lexemes are optional):
 
-a. `<Work>`: find within a JSON tree the **first** occurence where the **JSON string** value is matching `"Work"` exactly
-
+a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly
 b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)
-
 c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)
-
 d. `[:]`: select an **each node** in the array
-
 e. `[name]`: select/address a node whose label is `"name"`
+
 - subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
   * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
-  * slice/range offsets, expressed as `[N:N]` let selecting any slice/range of element in the array/object (any of `N` coudl be
+  * slice/range offsets, expressed as `[N:N]` let selecting any slice/range of element in the array/object (any of `N` could be
   omitted in that notation)
   * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
 given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) - such notation is equivalent
@@ -305,6 +307,27 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 
 
 ### 5. Subscripts (offsets) and Searches explained
+In short:
+- Subscript lexemes (`[..]`) facilitate:
+    - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
+    from the root (toward leaves)
+    - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves)
+    - select ranges and slices of JSON elements in JSON iterables
+- Search lexemes (`<..>`, `>..<`) facilitate:
+    - recursive (`<..>`) and non-recursive (`>..<`) matches
+    - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
+    search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs, 
+    unique, duplicates, etc.
+    - there're also optional quantifiers to lexemes (must take the last position, after the suffix if one present) - let selecting
+    match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`; if no quantifier present `0` 
+    is assumed - first match)
+- subscript lexemes could be joined with search lexemes over ':' to facilitate _scoped search_, e.g.: `[id]:<value>` is a single
+   lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e. `"id": "value"`
+- Directives: there are a few suffixes which turn a search lexeme into a directive:
+    - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
+    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform _shell cli_ evaluation
+    - couple directives (`<>f` and `<>F`) facilitate also walk branching
+
 Refer to 
 [`jtc` User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
 for the detailed explanation of the subscripts, search lexemes and directives.
@@ -312,7 +335,7 @@ for the detailed explanation of the subscripts, search lexemes and directives.
 ### 6. Debugability / JSON validation
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced (currently debug depth may go
 as deep as 7: `-ddddddd`).
-Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating a faling JSON:
+Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating a failing JSON:
 ```
 bash $ <addressbook-sampe.json jtc 
 jtc json exception: expected_json_value
@@ -509,7 +532,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  - `jtc` is a unix utility confining its functionality to operation types with its data model only (as per unix ideology). `jtc`
  performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained
 
-**jq** is non-ideomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
+**jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks and learning **jq**'s DSL for _ad hoc_ type of tasks 
 is an overkill (that purpose is best facilitated by
 [GPL](https://en.wikipedia.org/wiki/General-purpose_language)
@@ -519,9 +542,9 @@ The number of asks on the
 to facilitate even simple queries for **jq** is huge - that's the proof in itself that for many people feasibility of attaining theirs 
 asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
-`jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embedds" the ask right into the
+`jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embeds" the ask right into the
 walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
-one at a time, provides an immediate visual feedback and let comming up with the desired result quite quickly.
+one at a time, provides an immediate visual feedback and let coming up with the desired result quite quickly.
 
 ### learning curve:
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
@@ -547,6 +570,7 @@ one at a time, provides an immediate visual feedback and let comming up with the
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
+
 
 
 
