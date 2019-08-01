@@ -310,9 +310,10 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 In short:
 - Subscript lexemes (`[..]`) facilitate:
     - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
-    from the root (toward leaves)
-    - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves)
-    - select ranges and slices of JSON elements in _JSON iterables_
+    from the root (toward leaves), e.g.: `[2]`, `[id]` 
+    - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves),
+    e.g.:  `[-1]` (tier offset from the walked element), `[^2]` (tier offset from the root)
+    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1]` 
 - Search lexemes (`<..>`, `>..<`) facilitate:
     - recursive (`<..>`) and non-recursive (`>..<`) matches
     - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
