@@ -312,7 +312,7 @@ In short:
     - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
     from the root (toward leaves)
     - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves)
-    - select ranges and slices of JSON elements in JSON iterables
+    - select ranges and slices of JSON elements in _JSON iterables_
 - Search lexemes (`<..>`, `>..<`) facilitate:
     - recursive (`<..>`) and non-recursive (`>..<`) matches
     - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
