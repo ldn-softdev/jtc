@@ -506,7 +506,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 
 ### utility ideology:
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
- - `jtc` is a unix utility confining its functionality to operations types with its data model only (as per unix ideology). `jtc`
+ - `jtc` is a unix utility confining its functionality to operation types with its data model only (as per unix ideology). `jtc`
  performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained
 
 **jq** is non-ideomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
