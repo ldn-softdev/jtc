@@ -13,7 +13,7 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
     * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
 2. [Quick-start guide](https://github.com/ldn-softdev/jtc#quick-start-guide)
-    * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing-list-all-urls)
+    * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing---list-all-urls)
     * [dump all bookmark names](https://github.com/ldn-softdev/jtc#2-dump-all-bookmark-names-from-the-work-folder)
     * [dump all URL's names](https://github.com/ldn-softdev/jtc#3-dump-all-urls-names)
     * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
