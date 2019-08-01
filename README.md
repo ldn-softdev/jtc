@@ -514,9 +514,10 @@ Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks
 is an overkill (that purpose is best facilitated by
 [GPL](https://en.wikipedia.org/wiki/General-purpose_language)
 ).  
-The number of asks on a [stackoverflow](https://stackoverflow.com/) to facilitate even simple queries for **jq** is huge - 
-that's the proof in itself that for many people feasibility of attaining theirs asks with **jq** is a way too low, hence they default to 
-posting their questions on the forum.
+The number of asks on the
+[stackoverflow](https://stackoverflow.com/) 
+to facilitate even simple queries for **jq** is huge - that's the proof in itself that for many people feasibility of attaining theirs 
+asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
 `jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embedds" the ask right into the
 walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
@@ -527,9 +528,7 @@ one at a time, provides an immediate visual feedback and let comming up with the
  **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
  lots of time on stackoverflow and similar forums
  - `jtc` on the other hand employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
- each type though has several variants) which is easy to grasp. Also, building the walk-path a lexeme-by-lexeme and observing an 
- immediate result facilitates a very high feasibility of attaining the desired result
- 
+ each type though has several variants) which is easy to grasp.
 
 ### handling irregular JSONs:
  - **jq**: handling irregular JSONs for **jq** is not a challenge, building a query is! The more irregularities you need
