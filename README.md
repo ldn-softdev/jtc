@@ -506,28 +506,29 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 
 ### utility ideology:
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
- - `jtc` is a unix utility confining its functionality to operations types with its data model only (as per unix ideology). `jtc` performs
- one operation at a time and if successive operations required, then _cli_ to be daisy-chained
+ - `jtc` is a unix utility confining its functionality to operations types with its data model only (as per unix ideology). `jtc`
+ performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained
 
 **jq** is non-ideomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
-Most of the requests (if not all) to manipulate JSON are _ad hoc_ type of tasks and learning **jq**'s DSL for _ad hoc_ tasks 
+Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks and learning **jq**'s DSL for _ad hoc_ type of tasks 
 is an overkill (that purpose is best facilitated by
 [GPL](https://en.wikipedia.org/wiki/General-purpose_language)
 ).  
-The number of asks on a [stackoverflow](https://stackoverflow.com/) to facilitate even simple queries in **jq** is huge - that's the proof 
-in itself that for many people feasibility of attaining theirs asks with JSON is a way too low, hence they default to 
+The number of asks on a [stackoverflow](https://stackoverflow.com/) to facilitate even simple queries for **jq** is huge - 
+that's the proof in itself that for many people feasibility of attaining theirs asks with **jq** is a way too low, hence they default to 
 posting their questions on the forum.
 
-`jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept of "embedding" the ask right into the
-walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, one at a time, provides an immediate visual feedback and let comming up with the desired result quite quickly.
+`jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embedds" the ask right into the
+walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
+one at a time, provides an immediate visual feedback and let comming up with the desired result quite quickly.
 
 ### learning curve:
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
- **jq**'s language, which will take some time. Coming up with the complex queries requires being an expert in **jq**, or spending 
+ **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
  lots of time on stackoverflow and similar forums
  - `jtc` on the other hand employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
- each type having several variants) which is easy to grasp. Also, building the walk-path a lexeme-by-lexeme and observing an immediate
- result facilitates a very high feasibility of attaining the desired result
+ each type though has several variants) which is easy to grasp. Also, building the walk-path a lexeme-by-lexeme and observing an 
+ immediate result facilitates a very high feasibility of attaining the desired result
  
 
 ### handling irregular JSONs:
