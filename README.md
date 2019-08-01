@@ -509,7 +509,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
  - `jtc` is a unix utility confining its functionality to operations types with its data model only (as per unix ideology). `jtc` performs
  one operation at a time and if successive operations required, then _cli_ to be daisy-chained
 
-**jq** is a non-ideomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
+**jq** is non-ideomatic in a _unix way_, e.g., one can write a program in **jq** DSL which even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSON are _ad hoc_ type of tasks and learning **jq**'s DSL for _ad hoc_ tasks 
 is an overkill (that purpose is best facilitated by
 [GPL](https://en.wikipedia.org/wiki/General-purpose_language)
