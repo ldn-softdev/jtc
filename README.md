@@ -325,7 +325,7 @@ In short:
    lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e. `"id": "value"`
 - Directives: there are a few suffixes which turn a search lexeme into a directive:
     - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
-    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform _shell cli_ evaluation
+    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation
     - couple directives (`<>f` and `<>F`) facilitate also walk branching
 
 Refer to 
