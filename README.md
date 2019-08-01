@@ -34,7 +34,7 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
   - fast and efficient processing very large JSON files (built-in search cache)
   - insert/updates operations optionally may undergo _shell cli_ evaluation
   - features namespaces and templates
-  - supports streaming mode of operation
+  - supports buffered and streamed mode of read operations
   - written entirely in C++14, no dependencies (STL only, idiomatic C++, no memory leaks)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
