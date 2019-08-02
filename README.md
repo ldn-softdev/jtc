@@ -536,8 +536,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 **jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
 is an overkill (that purpose is best facilitated with
-[GPL](https://en.wikipedia.org/wiki/General-purpose_language)
-).  
+[GPL](https://en.wikipedia.org/wiki/General-purpose_language)).  
 The number of asks on the
 [stackoverflow](https://stackoverflow.com/) 
 to facilitate even simple queries for **jq** is huge - that's the proof in itself that for many people feasibility of attaining their 
@@ -564,7 +563,7 @@ one at a time, provides an immediate visual feedback and let coming up with the 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _C++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
- nor it has a single naked pointer acting as a resource handler/owner, thus` jtc` is guaranteed to be **free of memory leaks** 
+ nor it has a single naked pointer acting as a resource holder/owner, thus` jtc` is guaranteed to be **free of memory leaks** 
  (at least one class of the problems is off the table) - STL guaranty.
 
 
