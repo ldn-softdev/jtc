@@ -40,7 +40,7 @@ matches the number of provided walks (`-w`), otherwise _round-robin_ template ap
 - put a hard cutoff on a too deep recursion shall any unforeseen case (while walking) occurs in the future;
 the same enhancement has fixed a case of too deep recursion (with subsequent stack overflow) for a corner case of lexeme `<>F`
 usage occurring in processing really huge JSONs only
-- the message _notice: option -J cancels streaming input_ is printed now only when `-a` + `<stdin>` were selected explicitly together
+- the message "_notice: option -J cancels streaming input_" is printed now only when `-a` + `<stdin>` were selected explicitly together
 with `-J` (and not when `-a` is implicitly imposed upon `-J`)
 - fixed parsing debug (offset for a _streamed_ read now shows a correct value - from the beginning of a stream, instead of
 the beginning of an internal circular buffer, other read debugs (_buffered_, _cin_) are unaffected)
