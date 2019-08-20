@@ -85,7 +85,7 @@ class Streamstr {
 
     void                source_file(const std::string &fn) {
                          fn_.push_back(fn);
-                         if(is_buffer_cin())
+                         if(not is_buffer_file())
                           { mod_ = buffer_file; buf_.clear(); }
                          if(cf_.empty()) cf_ = fn_.front();
                         }
@@ -103,12 +103,11 @@ class Streamstr {
     const_iterator      begin(void);
     const_iterator      end(void);
 
+    size_t              stream_size(void) const { return cnt_; }
     std::string         str(void) const { return hb_.str(); }
     void                reset(Strmod m, size_t cbs = HB_SIZE) {
                          mod_ = m;
                          buf_.clear();
-                         fn_.clear();
-                         cf_.clear();
                          cnt_ = 0;
                          hb_.reset();
                          hb_.reserve(cbs);
@@ -145,8 +144,8 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
     friend long         distance(const const_iterator & l, const const_iterator & r) {
                          using std::distance;
                          return l.is_stream()?
-                                 (r.cnt_ - r.rwd_) - (l.cnt_ - l.rwd_):
-                                 (r.pos_ - r.rwd_) - (l.pos_ - l.rwd_);
+                                 (r.cnt_ - r.rwd_) - (l.cnt_ - l.rwd_):     // stream
+                                 (r.pos_ - r.rwd_) - (l.pos_ - l.rwd_);     // buffer
                         }
  public:
                         const_iterator(void) = default;
@@ -161,7 +160,8 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
     bool                is_files_last(void) const               // facing current file's last char?
                          { return is_buffer_file() and pos_ - rwd_ == ssp_->buf_.size() - 1; }
     std::string         str(size_t len = -1) const;
-    size_t              offset(void) const { return cnt_ - rwd_; }
+    size_t              char_read(void) const { return cnt_; }
+    size_t              offset(void) const { return char_read() - rwd_; }
 
     const char &        operator*(void);
     const char *        operator->(void)
@@ -219,8 +219,8 @@ Streamstr::const_iterator Streamstr::end(void) {
 
 
 void Streamstr::ss_init_(const_iterator &it) {
- if(not buf_.empty()) return;                                   // already init'ed
  DBG(0) DOUT() << "initializing: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
+ if(not buf_.empty()) return;                                   // already init'ed
                                                                 // mod == stream
  if(mod_ == stream) {
   std::cin >> std::noskipws;
@@ -228,17 +228,34 @@ void Streamstr::ss_init_(const_iterator &it) {
   ++it;
   return;
  }
-                                                                // mod_ == buffer
- buf_ = std::string{                                            // read file/stdin into buffer
-         std::istream_iterator<char>(is_buffer_cin()?
-          std::cin >> std::noskipws:
-          std::ifstream{fn_.front().c_str(), std::ifstream::in} >> std::noskipws),
-         std::istream_iterator<char>{}};
- if(is_buffer_file()) {
-  cf_ = fn_.front();
-  fn_.pop_front();
+ // this is C++ idiomatic way to read cin/file, unfortunately it's 2-3 times slower
+ //buf_ = std::string{                                            // read file/stdin into buffer
+ //        std::istream_iterator<char>(is_buffer_cin()?
+ //         std::cin >> std::noskipws:
+ //         std::ifstream{fn_.front().c_str(), std::ifstream::in} >> std::noskipws),
+ //        std::istream_iterator<char>{}};
+
+ if(is_buffer_cin()) {                                          // buffer_cin
+  // reason for not reading cin through ifstream("/dev/stdin") - it will render code non-portable
+  GUARD(std::cin.tie, std::cin.tie)
+  std::cin.tie(nullptr);                                        // speedup cin
+  buf_ = std::string{std::istream_iterator<char>(std::cin >> std::noskipws),
+                     std::istream_iterator<char>{}};
  }
- DBG(0) DOUT() << "read file: " << (is_buffer_file()? filename():"<stdin>")
+ else                                                           // buffer_file
+  do {
+   std::ifstream fin(fn_.front().c_str(), std::ios::in);
+   if(fin) {
+    fin.seekg(0, std::ios::end);
+    buf_.resize(fin.tellg());
+    fin.seekg(0, std::ios::beg);
+    fin.read(&buf_[0], buf_.size());
+    cf_ = fn_.front();
+   }
+   fn_.pop_front();
+  } while(buf_.empty() and not fn_.empty());
+
+ DBG(0) DOUT() << "read file: " << (is_buffer_cin()? "<stdin>":filename())
                << " (" << buf_.size() << " bytes)" << std::endl;
 }
 
@@ -279,7 +296,6 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
   if(not std::cin.good()) { pos_ = static_cast<size_t>(-2); return *this; }
   char c;
   std::cin.read(&c, 1);
-  if(not std::cin.good()) { pos_ = static_cast<size_t>(-2); return *this; }
   ssp_->hb_.push_back(c);
   ssp_->buf_.front() = c;
   pos_ = 0;

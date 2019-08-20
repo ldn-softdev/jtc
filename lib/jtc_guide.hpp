@@ -72,11 +72,13 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
       altering the search in the following way:
      r: apply exact match (default, may be omitted) while searching JSON string values only
      R: same as r, but expression in braces is a Regex (regex match applied)
+     P: match any string, equals '<.*>R' but faster and let saving the value in a namespace
      d: match a specific number (i.e. searches numeric JSON values only)
      D: same as d, but expression in braces is a Regex (the value is treated as a string here)
+     N: numerical match, same as '<.*>D' but faster and let saving the value in a namespace
      b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully
-        spelled, while 'any' match could be either spelled or indicated via empty lexeme,
-        e.g.: '<true>b', '<any>b', '<>b'
+        spelled, while any other (including empty) lexeme content will memorize the boolean value
+        in the respective namespace, e.g.: '<true>b', '<false>b', '<>b', '<Bool>b'
      n: match null values only, the content within the encasement may be empty, e.g.: '><n'
      l: apply exact match while searching objects' labels only
      L: same as l, but expression in braces is a Regex (a regex match applied)
@@ -177,12 +179,12 @@ options -)" STR(OPT_JSN) R"( and -)" STR(OPT_LBL) R"( usage:
 mutually exclusive options:
  - options -)" STR(OPT_CMP) R"( -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)"
    STR(OPT_SWP) R"(, -)" STR(OPT_PRG)
-   R"( normally are mutually exclusive; if found together, only one type
+   R"( normally are mutually exclusive; if sighted together, only one type
    will be executed (selected in the priority of the listed order); though there's one case usage
    of -)" STR(OPT_PRG) R"( together with options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
    R"( (facilitating move semantic), see notes below
 
-options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( usage with -)" STR(OPT_EXE) R"(:
+options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( when used with -)" STR(OPT_EXE) R"(:
  - the options accept one parameter which may be treated differently: initially a file name
    assumed; if the file is not found, then the parameter is treated as a JSON and its parsing is
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
@@ -263,7 +265,7 @@ interpolation:
    JSON is a string, then outer quotation marks are dropped, if it's a JSON array or object, then
    the respective encasements ('[', ']', or '{}'.'}') are dropped, so the user must specify those
  - if an empty token is given (e.g.: {}, {{}}), then the interpolation of the currently selected
-   JSON element occurs (same interpolation rules apply)
+   (walked) JSON element occurs (same interpolation rules apply)
 )";
 }
 
@@ -506,6 +508,8 @@ templating:
 * for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
 )";
 }
+
+
 
 
 

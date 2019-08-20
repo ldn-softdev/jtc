@@ -290,6 +290,7 @@
 #include <type_traits>
 #include <exception>
 #include <sys/time.h>
+#include <climits>
 #include "macrolib.h"
 #include "extensions.hpp"
 
@@ -362,7 +363,7 @@
 #define DBG_SUFFIX ", "                                         // default debug's suffix
 #define DBG_PROMPT(X) DBG().prompt(__func__, X+1)
 #define DBG_PMT(X) DBG().prompt(__func__, X+1)
-#define NDBG 9999
+#define NDBG SHRT_MAX/2
 // NDBG definition is just insanely low debug severity - to be used when certain
 // debugs needed to be suppressed
 

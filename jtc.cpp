@@ -14,7 +14,7 @@
 using namespace std;
 
 
-#define VERSION "1.71"
+#define VERSION "1.72"
 
 
 // option definitions
@@ -60,6 +60,7 @@ using namespace std;
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
 #define SIZE_PFX "size: "
+#define WLK_HPFX "$?"
 
 #include "lib/jtc_guide.hpp"
 
@@ -106,6 +107,19 @@ class CommonResource {
  // the class facilitates -J option and global namespace:
  // caters user opt (which is copied to each Jtc instance), input string
  // and json for jsonization of all processed/walked jsons
+
+    typedef ptrdiff_t signed_size_t;
+
+    struct Multiwalk {
+        // a trivial class to pair up the walk multiplier and the first index to display:
+        // only each factor'th walk will be displayed after offset's
+                            Multiwalk(void) = default;
+                            Multiwalk(size_t x1, signed_size_t x2):    // emplacement
+                             factor{x1}, offset{x2} { }
+        size_t              factor;                             // display every factor'th walk
+        signed_size_t       offset;                             // starting from offset (0 based)
+    };
+
  public:
     int                 rc(void) const { return rc_; }
     void                rc(int rc) { rc_ = rc; }
@@ -115,28 +129,31 @@ class CommonResource {
     Json::map_jn &      global_ns(void) {  return gns_; };      // access to global namespaces
     Streamstr &         iss(void) {  return iss_; };            // access to stream class
     Json &              global_json(void) { return gjns_; };    // access to global JSON (-J)
+    auto &              wm(void) { return wm_; };
 
     void                parse_opt(int argc, char *argv[]);
     Streamstr &         read_inputs(void);
     void                jsonize(Json jout);
 
  private:
-    int                 rc_{RC_OK};
-    Getopt              opt_;                                   // user options
-    Streamstr           iss_;                                   // input Streamstr
-    size_t              opt_e_found_{0};                        // used for recompile once -e found
-    char                opt_ui_{NULL_CHR};                      // either -i or -u for recompile
-    bool                jimp_{false};                           // '-j' imposed?
-    Json                gjns_{ ARY{} };                         // global json (facilitates -J)
-    Json::map_jn        gns_;                                   // global namespaces
-
     bool                is_recompile_required_(int argc, char *argv[]);
     void                recompile_args_(v_string &args, v_string &new_args);
     void                parse_rebuilt_(v_string & new_args);
     void                convert_xyw_(void);
+    bool                is_x_factor_(const char *str, signed_size_t * recursive = nullptr);
+
+    Json                gjns_{ ARY{} };                         // global json (facilitates -J)
+    Json::map_jn        gns_;                                   // global namespaces
+    Streamstr           iss_;                                   // input Streamstr
+    Getopt              opt_;                                   // user options
+    vector<Multiwalk>   wm_;                                    // walk factor: facilitate -xN/M
+    int                 rc_{RC_OK};
+    size_t              opt_e_found_{0};                        // used for recompile once -e found
+    char                opt_ui_{NULL_CHR};                      // either -i or -u for recompile
+    bool                aimp_{false};                           // '-a' imposed?
+    bool                jimp_{false};                           // '-j' imposed?
 
  public:
-
     DEBUGGABLE(iss_, gjns_)
 };
 
@@ -146,8 +163,8 @@ class CommonResource {
 
 class Jtc {
     struct BoundJit {
-        // a trivial class to bind destination walks (-w) with source walks (-i/u/c)
-        // and respective name-spaces
+     // a trivial class to pair up destination walks (-w) with source walks (-i/u/c)
+     // and respective name-spaces
                             BoundJit(void) = default;
                             BoundJit(Json::iterator d, Json::iterator s):   // for emplacement
                              dst{d}, src{s}, ns{src.json().ns()} {}
@@ -156,10 +173,22 @@ class Jtc {
         Json::map_jn        ns;                                 // NS from respective -i/u/c iters.
     };
 
+    struct Grouping {
+     // facilitates a pair of group/counter values, used in jsonized_output_ary_
+                            Grouping(void) = default;
+                            Grouping(size_t x1, size_t x2):     // emplacement
+                             group{x1}, counter{x2} { }
+        bool                operator>(const Grouping &rhs)
+                             { return group > rhs.group and counter > rhs.counter; }
+        size_t              group{0};
+        size_t              counter{0};
+    };
+
+    typedef ptrdiff_t signed_size_t;
     typedef vector<Json::iterator> vec_jit;
     typedef vector<BoundJit> vec_bjit;
     typedef deque<Json::iterator> deq_jit;
-    typedef void (Jtc::*mptr)(Json::iterator &wi, size_t group);
+    typedef void (Jtc::*mptr)(Json::iterator &wi, Grouping grp);
     typedef map<size_t, Json> map_json;
     typedef map<size_t, Json::iterator> map_jit;
     typedef vector<size_t> vec_wlk;
@@ -170,10 +199,10 @@ class Jtc {
                 overwrite   /* clashing labels of merged objects overwritten */
     ENUM(MergeObj, MERGEOBJ)
 
-    #define JITSRC          /* type of source for source iterator */\
-                src_input, \
-                src_jexec, \
-                src_optarg
+    #define JITSRC          /* type of source for iterations in -i/u/c operation*/\
+                src_input,  /* source is input JSON: `jinp_`: -u<walk> walks input JSON here*/\
+                src_jexec,  /* source is in `jexc_`: 1) -eu ... \; 2) -u<STATIC> -u<walk> */\
+                src_optarg  /* source is in `jsrc_`: when -u<STATIC>, i.e., w/o walks is used*/
     ENUMSTR(Jitsrc, JITSRC)
 
 
@@ -182,11 +211,13 @@ class Jtc {
                         Jtc(CommonResource & cr): cr_{cr}, opt_{cr.opt()} {
                          ecli_ = opt_[CHR(OPT_EXE)].hits() > 0; // flag used by -i/-u options
                          merge_ = opt_[CHR(OPT_MDF)].hits() > 0;// flag used by -i/-u options
-                         is_multi_temp_ = opt_[CHR(OPT_TMP)].size() > 2 and not opt_[CHR(OPT_SEQ)];
-
+                         is_tmp_per_walk_ = opt_[CHR(OPT_TMP)].hits() > 1 and
+                                            opt_[CHR(OPT_SEQ)].hits() < 2 and
+                                            opt_[CHR(OPT_TMP)].hits() == opt_[CHR(OPT_WLK)].hits();
                          jinp_.tab(abs(opt_[CHR(OPT_IND)]))     // prepare json_
                               .raw(opt_[CHR(OPT_RAW)])
                               .quote_solidus(opt_[CHR(OPT_QUT)].hits() % 2 == 1);
+
                          jinp_.callback(GLAMBDA(shell_callback_)).engage_callbacks();
                          jexc_.type(Jnode::Neither);
                         }
@@ -204,14 +235,16 @@ class Jtc {
     void                compare_jsons(void);
     void                compare_bingings(void);
     void                upsert_json(char op);
-    void                collect_itr_bindings(Json::iterator &it, size_t group);
-    void                update_by_iterator(Json::iterator &it, size_t group);
-    bool                advance_to_next_src(long i = -1);
+    void                collect_itr_bindings(Json::iterator &it, Grouping = {0,0});
+    void                update_by_iterator(Json::iterator &it, Grouping = {0,0});
+    bool                advance_to_next_src(signed_size_t i = -1);
     void                apply_src_walks(char op);
     void                purge_json(void);
     void                swap_json(void);
     void                walk_json(void);
-    void                output_by_iterator(Json::iterator &wi, size_t);
+    void                output_by_iterator(Json::iterator &wi, Grouping = {0, 0});
+    void                output_by_iterator(Json::iterator &&wi, Grouping grp = {0, 0})
+                         { output_by_iterator(wi, grp); }
 
  private:
     void                location_(Streamstr::const_iterator & start);
@@ -229,20 +262,20 @@ class Jtc {
     bool                remove_others_(set<const Jnode*> &ws, Jnode &jn);
     vec_jit             collect_walks_(const string &walk_path);
     void                walk_interleaved_(void);
+    void                update_wlk_history_(Json::iterator &);
     void                process_walk_iterators_(deque<deq_jit> &walk_iterators);
-    size_t              build_front_grid_(vector<vector<long>> &, const deque<deq_jit> &);
-    void                process_offsets_(deque<deq_jit> &, vector<vector<long>> &,
+    size_t              build_front_grid_(vector<vector<signed_size_t>> &, const deque<deq_jit> &);
+    void                process_offsets_(deque<deq_jit> &, vector<vector<signed_size_t>> &,
                                          size_t, vector<size_t> &);
-    void                console_output_(Json::iterator &, size_t group, Json &jref);
-    void                jsonized_output_(Json::iterator &, size_t group, Json &jref);
-    void                jsonized_output_obj_(Json::iterator &, size_t group, Json &jref);
-    void                jsonized_output_ary_(Json::iterator &, size_t group, Json &jref);
+    void                console_output_(Json::iterator &, Json &jref, Grouping unused);
+    void                jsonized_output_(Json::iterator &, Json &jref, Grouping unused);
+    void                jsonized_output_obj_(Json::iterator &, Json &jref, Grouping);
+    void                jsonized_output_ary_(Json::iterator &, Json &jref, Grouping);
     void                merge_ns_(Json::map_jn &to, const Json::map_jn &from)
                          { for(auto & ns: from) to[ns.KEY] = ns.VALUE; }
-
-    // reminder:
-    //typedef std::function<bool(const std::string &, const Jnode &)> uws_callback;
     bool                shell_callback_(const std::string &lxm, Json::iterator jit) {
+     // reminder:
+     //typedef std::function<bool(const std::string &, const Jnode &)> uws_callback;
                          Json tmp;
                          DBG().increment(+2, tmp, -2);
                          tmp = Json::interpolate(lxm, jit, jit.json().ns(), Json::dont_parse);
@@ -250,33 +283,36 @@ class Jtc {
                          return sh_.rc() == 0;
                         }
 
+    // private member types:
     CommonResource &    cr_;
     Getopt              opt_;
 
     Json                jinp_;                                  // input JSON for jtc
     Json                jout_;                                  // json output (-j, -jj)
     Json                jexc_;                                  // json for -e (or mixed args use)
-    // jexc_ is used to facilitates sources of -e[iuc] arguments and -[iuc] for mixed arguments
-    // usage, e.g: -i<json> -i<wlk1> -i<wlk2> ... (in both use-cases only 1 json source allowed)
+     // jexc_ is used to facilitates sources of -e[iuc] arguments and -[iuc] for mixed arguments
+     // usage, e.g: -i<json> -i<wlk1> -i<wlk2> ... (in both use-cases only 1 json source allowed)
     map_json            jsrc_;                                  // static JSONs -iuc (no mixed arg)
-    // jsrc_ facilitates cases when -[iuc] contain json only (no walks), multiple allowed
+     // jsrc_ facilitates cases when -[iuc] contain json only (no walks), multiple allowed
     vec_bjit            psrc_;                                  // binding dst walks with src
     vec_wlk             wsrc_;                                  // enlist all walks in -[iuc]
-    Json::iterator      jits_;                                  // current src iterator
+    Json::iterator      jits_;                                  // current source iterator
     Jitsrc              jitt_{Jitsrc::src_input};               // source of jits_
     size_t              wcur_{0};                               // current walk in wsrc_
     map_ns              wns_;                                   // namespaces for walked (-w) paths
+    Jnode               hwlk_{ARY{STR{""}}};                    // walks history init value
 
     set<string>         c2a_;                                   // used in jsonized_output_obj_()
     map<size_t, string> tpw_;                                   // tmp per walk, output_by_iterator
-    bool                is_multi_temp_;                         // multiple -t and no -n?
+    bool                is_tmp_per_walk_;                       // templates pertain to walks
     bool                is_multi_walk_{false};                  // multiple -w or single iterable?
     bool                convert_req_{false};                    // used in output_by_iterator
     bool                ecli_{false};                           // -e status for insert/update
     bool                merge_{false};                          // -m status for insert/update
     bool                lbl_update_{false};                     // label update operation detected
-    size_t              last_group_{0};                         // used in output_by_iterator
+    Grouping            last_;                                  // used in output_by_iterator
     size_t              key_{0};                                // general purpose counter
+    size_t              wcnt_{0};                               // counts number of walks
     mptr                subscriber_;                            // method ptr for output processor
     Shell               sh_;
 
@@ -372,7 +408,7 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
  DBG().use_ostream(cerr)
       .level(opt[CHR(OPT_DBG)]);
 
- // read json
+ // read json (ready stream buffer, or read file/cin)
  Streamstr::const_iterator jsp = cr.read_inputs().begin();      // global parse pointer
  Streamstr::const_iterator pse;                                 // parsed json end iterator
 
@@ -391,12 +427,12 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
   cr.rc(e.code() + OFF_JSON);
  }
  catch(Json::stdException & e) {
-  DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
+  DBG(1) DOUT() << "exception raised by: " << e.where() << endl;    // might need suppression
   if(e.code() == Jnode::unexpected_end_of_string and jsp.is_stream()) {
    for(;pse.offset() < jsp.offset(); ++pse) if(*pse > ' ') break;
    if(pse.offset() == jsp.offset()) {
     DBG(1) DOUT() << "suppressing exception: blank trails past last parsed json" << endl;
-    exit(cr.rc());
+    exit(cr.rc());                                              // provide normal exit then
    }
   }
   cerr << opt.prog_name() << " json exception: " << e.what() << endl;
@@ -422,7 +458,9 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 // CR PUBLIC methods definitions
 //
 void CommonResource::parse_opt(int argc, char *argv[]) {
- // parse options, if option -e detected, rebuild -u's arguments and parse with rebuilt args
+ // 1. parse options, if option -e detected, rebuild -u/i's arguments and parse with rebuilt args
+ // 2. reinstate -w options from -x/-y
+ // 3. process options dependencies
  v_string args{argv, argv + argc};
 
  if(is_recompile_required_(argc, argv)) {                       // re-compiling required?
@@ -439,6 +477,7 @@ void CommonResource::parse_opt(int argc, char *argv[]) {
 
  if(opt_[CHR(OPT_GDE)].hits() > 0) exit(print_guide());         // -g, print guide
  if(opt_[CHR(OPT_JAL)].hits() > 0) {                            // -J:
+  if(opt_[CHR(OPT_ALL)].hits() == 0) aimp_ = true;              // indicate that -a was imposed
   opt_[CHR(OPT_ALL)].hit();                                     // ensure -a hit unconditionally
   if(opt_[CHR(OPT_JSN)].hits() == 0)                            // if no -j given
    { opt_[CHR(OPT_JSN)].hit(); jimp_ = true; }                  // impose one and remember
@@ -452,24 +491,24 @@ void CommonResource::parse_opt(int argc, char *argv[]) {
 
 
 Streamstr & CommonResource::read_inputs(void) {
+ // initialize `iss` with correct read mode: streamed/cin/buffered
  bool read_from_cin{opt_[0].hits() == 0 or opt_[CHR(OPT_RDT)].hits() > 0}; // no arg, or forced '-'
  DBG(0)
   DOUT() << "reading json from " << (read_from_cin? "<stdin>": "file-arguments:") << endl;
 
  for(int arg = 1; arg <= opt_.arguments(); ++arg) {
-  iss_.source_file(opt_[0].str(arg));
+  iss_.source_file(opt_[0].str(arg));                           // will set read mode to file
   DBG(0) DOUT() << "source file: " << opt_[0].str(arg) << endl;
  }
  if(opt_.arguments() > 1) opt_[CHR(OPT_ALL)].hit();             // impose -a if multiple files
 
- if(read_from_cin) {
-  if(opt_[CHR(OPT_ALL)].hits() > 0 and opt_[CHR(OPT_JAL)].hits() == 0)
+ if(read_from_cin) {                                            // either stream, or buffered
+  if(opt_[CHR(OPT_ALL)].hits() > 0 and opt_[CHR(OPT_JAL)].hits() == 0)  // -a, no -J, stream read
    iss_.reset(Streamstr::stream);
-  else {
-   if(opt_[CHR(OPT_JAL)].hits() > 0)
+  else {                                                        // cin, buffered
+   if(opt_[CHR(OPT_JAL)].hits() > 0 and aimp_ == false)         // -J given and -a wasn't imposed
     cerr << "notice: option -" STR(OPT_JAL) " cancels streaming input" << endl;
-   iss_.source_buffer({istream_iterator<char>(cin >> noskipws),
-                       istream_iterator<char>{}});
+   iss_.reset(Streamstr::buffer_cin);
   }
  }
  return iss_;
@@ -478,7 +517,7 @@ Streamstr & CommonResource::read_inputs(void) {
 
 
 void CommonResource::jsonize(Json jout) {
- // put all walked and non-walked json results into a global json
+ // put all walked json results into a global json
  if(jimp_ and jout.is_iterable()) {                             // -j was imposed
   for(auto &jn: jout) gjns_.push_back(move(jn));                // therefore push one by one
   return;
@@ -493,9 +532,11 @@ void CommonResource::jsonize(Json jout) {
 // CR PRIVATE methods definitions
 //
 bool CommonResource::is_recompile_required_(int argc, char *argv[]) {
- // check if option -e is present in the arguments (if so, re-parsing is required then)
+ // check if option -e is present in the arguments (if so, indicate re-parsing is required)
  opt_.suppress_opterr(true);
- try { opt_.parse(argc, argv); } catch(Getopt::stdException &e) { }
+ try { opt_.parse(argc, argv); }
+ catch(Getopt::stdException &e) { }
+
  bool rr = opt_[CHR(OPT_EXE)];
  opt_.reset().suppress_opterr(false);
  return rr;
@@ -548,7 +589,7 @@ void CommonResource::recompile_args_(v_string & args, v_string &new_args) {
 
 
 void CommonResource::parse_rebuilt_(v_string & new_args) {
- // parse rebuilt arguments
+ // parse rebuilt arguments (after recompilation for -e option)
  char *nargv[new_args.size()];                                  // here, build a new argv
  for(size_t i = 0; i < new_args.size(); ++i) {
   nargv[i] = new char[new_args[i].size()+1];
@@ -566,12 +607,14 @@ void CommonResource::parse_rebuilt_(v_string & new_args) {
 
 
 void CommonResource::convert_xyw_(void) {
- // convert -x, -y options into -w
+ // convert -x, -y options into -w:
+ // standalone (isolated) -x and -y also converted to -w
  string last_x, last_y;
  v_string new_w;                                                // record new -w options here
 
  for(auto &option: opt_.ordinal()) {                            // go by options order
   if(option.id() == CHR(OPT_CMN)) {                             // option -x, process it
+   if(is_x_factor_(option.c_str())) continue;
    if(not last_x.empty() and last_y.empty())                    // it's like: -x... -x...
     new_w.push_back(move(last_x));                              // standalone -x is converted to -w
    last_x = move(option.str());
@@ -593,13 +636,37 @@ void CommonResource::convert_xyw_(void) {
 
 
 
+bool CommonResource::is_x_factor_(const char * x_str, signed_size_t * recursive) {
+ // process -xN/N option here: notation -x/N is allowed, all other forms return `false`
+ signed_size_t x1, x2;
+ char *endptr;
+ x1 = strtol(x_str, &endptr, 10);
+
+ if(recursive)                                                  // resolving a second value now
+  { if(*endptr == '\0')
+   { *recursive = x1; return true; } return false; }
+
+ x2 = abs(x1) - 1;
+ if(*endptr == '/' and endptr[1] != '\0')
+  { if(not is_x_factor_(endptr + 1, &x2)) return false; }       // resolve second value here
+ else
+  if(*endptr != '\0') return false;
+
+ wm_.emplace_back(abs(x1), x2);
+ return true;
+}
+
+
+
 //
 // Jtc PUBLIC methods definitions
 //
 void Jtc::parsejson(Streamstr::const_iterator & jsp) {
- // parse read json text via string iterator
+ // parse read json text via Streamstr iterator
  Streamstr::const_iterator jbegin = jsp;                        // for debugs / location_ only
- try { jinp_.parse(jsp, cr_.iss().is_stream()? Json::relaxed_no_trail: Json::relaxed_trailing); }
+
+ try
+  { jinp_.parse(jsp, cr_.iss().is_stream()? Json::relaxed_no_trail: Json::relaxed_trailing); }
  catch(Json::stdException & e) {
   if(e.code() >= Jnode::start_of_json_parsing_exceptions and
      e.code() <= Jnode::end_of_json_parsing_exceptions)
@@ -607,28 +674,19 @@ void Jtc::parsejson(Streamstr::const_iterator & jsp) {
   throw e;
  }
 
- if(jinp_.is_atomic() and opt_[CHR(OPT_WLK)].hits() > 0) {      // atomic json, -w given
-  cerr << "notice: input atomic JSON is non-walkable, ignoring all walk-paths (-"
-           STR(OPT_WLK)")" << endl;
-  opt_[CHR(OPT_WLK)].reset();
- }
- if(opt_[CHR(OPT_WLK)].hits() == 0 and opt_[CHR(OPT_TMP)].hits() >= 1) { // no -w, but -T is given
-  if(jinp_.is_atomic())
-   { jinp_ = ARY{ move(jinp_) }; opt_[CHR(OPT_WLK)] = "[0]"; }
-  else
-  opt_[CHR(OPT_WLK)] = "[^0]";
- }
+ if(opt_[CHR(OPT_WLK)].hits() == 0 and opt_[CHR(OPT_TMP)].hits() >= 1)  // no -w, but -T is given
+  opt_[CHR(OPT_WLK)] = "[^0]";                                  // provide default walk off root
 }
 
 
 
 void Jtc::write_json(Json & json, bool jsonize) {
  // write whole json to output (demultiplexing file and stdout), featuring:
- // inquoting/unquoting json string, putting array into json (-j), printing size to stdout
+ // inquoting/unquoting json string, putting json into array (-j), printing size to stdout
  if(opt_[CHR(OPT_SZE)].hits() > 1)                              // -zz
   { cout << json.size() << endl; return; }
 
- bool write_to_file{opt_[0].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0};  // [0] and -f given
+ bool write_to_file{opt_[0].hits() > 0 and opt_[CHR(OPT_FRC)].hits() > 0};  // args and -f given
  bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given, unquote
  bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
 
@@ -645,7 +703,7 @@ void Jtc::write_json(Json & json, bool jsonize) {
   { cr_.jsonize(move(json)); return; }
 
  ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr};
- ostream & xout = write_to_file? fout: cout;
+ ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
 
  if(unquote and json.is_string())
   { if(not json.str().empty()) xout << json.unquote_str(json.str()) << endl; }
@@ -658,14 +716,14 @@ void Jtc::write_json(Json & json, bool jsonize) {
 
 
 void Jtc::demux_opt(void) {
- // demultiplex functional options, execute once
+ // demultiplex functional options, execute once in order: -[ciuspw]
  for(char opt: STR(OPT_CMP)STR(OPT_INS)STR(OPT_UPD)STR(OPT_SWP)STR(OPT_PRG)STR(OPT_WLK)) {
   if(opt == NULL_CHR or opt_[opt].hits() == 0) continue;
   DBG(1) DOUT() << "option: '-" << opt << "', hits: " << opt_[opt].hits() << endl;
 
   switch(opt) {
-   case CHR(OPT_CMP): return compare_jsons();                   // will print result
-   case CHR(OPT_WLK): return walk_json();                       // will print result
+   case CHR(OPT_CMP): return compare_jsons();                   // will print result itself
+   case CHR(OPT_WLK): return walk_json();                       // will print result itself
    case CHR(OPT_INS):
    case CHR(OPT_UPD): upsert_json(opt); break;
    case CHR(OPT_PRG): purge_json(); break;
@@ -675,20 +733,19 @@ void Jtc::demux_opt(void) {
   break;
  }
 
- // this write will be used only by -i, -u, -p, -s
+ // this write will be used only by -[iups]
  write_json(jinp_);
 }
 
 
 
 void Jtc::compare_jsons() {
- // plug-in compare_by_iterator and let process walks
- bool is_json_atomic = jinp_.is_atomic();
+ // plug-in compare_by_iterator and let process walks (print results)
+ cr_.wm().clear();
  if(opt_[CHR(OPT_WLK)].hits() == 0)                             // no -w?
-  opt_[CHR(OPT_WLK)] = is_json_atomic? "[0]": "[^0]";           // then walk from root
+  opt_[CHR(OPT_WLK)] = "[^0]";                                  // then walk from root
  ready_params_(CHR(OPT_CMP));
 
- if(is_json_atomic) jinp_ = ARY{ move(jinp_) };
  subscriber_ = &Jtc::collect_itr_bindings;
  walk_interleaved_();
  compare_bingings();
@@ -710,7 +767,8 @@ void Jtc::compare_bingings(void) {
   DBG().increment(+2, jv.front(), jv.back(), -2);
 
   vector<set<const Jnode*>> node_set{2};                        // preserved different node ptrs
-  compare_jsons_(jv.front()[lbl[0]], node_set.front(), jv.back()[lbl[1]], node_set.back());
+  compare_jsons_(jv.front()[lbl[0]], node_set.front(),
+                 jv.back() [lbl[1]], node_set.back());
 
   for(size_t i = 0; i < node_set.size(); ++i)
    DBG(1) DOUT() << "found diffs (" << lbl[i]
@@ -725,7 +783,7 @@ void Jtc::compare_bingings(void) {
   for(auto &json: jv) {                                         // output compared jsons
    auto jit = json.walk("[0]");
    if(not jit->empty()) cr_.rc(RC_CMP_NEQ);
-   output_by_iterator(jit, 0);
+   output_by_iterator(jit);
   }
   if(jv.front().front().type() != jv.back().front().type())
    cr_.rc(RC_CMP_NEQ);
@@ -782,30 +840,26 @@ void Jtc::compare_bingings(void) {
 
 
 void Jtc::upsert_json(char op) {
- // plug-in <insert/update>_by_iterator and let process walks
+ // plug-in <insert/update>_by_iterator and let process walks (options -i/-u)
  static mptr upsert_meth[2] = {&Jtc::collect_itr_bindings, &Jtc::update_by_iterator};
- bool is_json_atomic = jinp_.is_atomic();
 
  if(opt_[CHR(OPT_WLK)].hits() == 0)                             // no -w?
-  opt_[CHR(OPT_WLK)] = is_json_atomic? "[0]": "[^0]";           // then walk from root
+  opt_[CHR(OPT_WLK)] = "[^0]";                                  // then walk from root
  ready_params_(op);
 
- if(is_json_atomic) jinp_ = ARY{ move(jinp_) };                 // make it walkable, for operation
  subscriber_ = upsert_meth[op == CHR(OPT_UPD)];
  walk_interleaved_();
  if(ecli_ == false or not wsrc_.empty())                        // no -e, or -e with -i/u
   apply_src_walks(op);
- if(is_json_atomic) jinp_ = move(jinp_[0]);                     // reinstate original json
 
- //f(jitt_ == src_input and opt_[CHR(OPT_PRG)].hits() > 0)       // only work when walk-path is src
  if(opt_[CHR(OPT_PRG)].hits() > 0)                              // only work when walk-path is src
   purge_json();
 }
 
 
 
-void Jtc::collect_itr_bindings(Json::iterator &it, size_t unused) {
- // insert each/all -i processed jsons
+void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
+ // insert each/all -[iu] processed jsons
  if(processed_by_cli_(it)) return;                              // -ei ... \; w/o trailing -i<..>
 
  merge_ns_(cr_.global_ns(), wns_[&it]);                         // syncup global ns
@@ -813,8 +867,9 @@ void Jtc::collect_itr_bindings(Json::iterator &it, size_t unused) {
   merge_ns_(jits_.json().ns(), cr_.global_ns());                // syncup current json source
 
  while(advance_to_next_src()) {
-  DBG(1) DOUT() << "optarg source idx: " << wcur_ << " out of "
-                << (jitt_ == src_optarg? jsrc_.size(): wsrc_.size()) << endl;
+  DBG(1) DOUT() << "optarg idx [" << wcur_ << "] out of "
+                << (jitt_ == src_optarg? jsrc_.size(): wsrc_.size()) << " ("
+                << opt_.ordinal(wsrc_[wcur_]).str() << ")" <<endl;
   psrc_.emplace_back(it, jits_);                                // collect iterator
   if(is_multi_walk_) break;
  }
@@ -822,7 +877,7 @@ void Jtc::collect_itr_bindings(Json::iterator &it, size_t unused) {
 
 
 
-void Jtc::update_by_iterator(Json::iterator &it, size_t unused) {
+void Jtc::update_by_iterator(Json::iterator &it, Grouping unused) {
  // update each/all -u processed jsons
  if(lbl_update_ == false)                                       // not faced label update yet
   lbl_update_ = not it.walks().empty() and it.walks().back().jsearch == Json::key_of_json;
@@ -830,12 +885,12 @@ void Jtc::update_by_iterator(Json::iterator &it, size_t unused) {
   if(not it.is_valid())                                         // verify sanity of dst walks
    { cerr << "error: destination walk became invalid, skipping update" << endl; return; }
 
- collect_itr_bindings(it, 0);
+ collect_itr_bindings(it);
 }
 
 
 
-bool Jtc::advance_to_next_src(long i) {
+bool Jtc::advance_to_next_src(signed_size_t i) {
  // iterate current (valid) walk, or begin iterating next one (if available), may come with:
  //  i = -1      - first non-recursive call
  //  i != wcur_  - must process next src,
@@ -868,7 +923,7 @@ bool Jtc::advance_to_next_src(long i) {
  }
  if(jits_.is_valid())                                           // jits_ resolved
   { wcur_ = idx(); return true; }
- if(i == static_cast<long>(wcur_))                              // multiwalk: no more valid itr/src
+ if(i == static_cast<signed_size_t>(wcur_))                     // multiwalk: no more valid itr/src
   { jits_ = Json::iterator{}; return false; }                   // fail operation
  return advance_to_next_src(idx() + 1 >= jc_size? 0: idx() + 1); // return next src itr
 }
@@ -916,10 +971,10 @@ void Jtc::purge_json(void) {
  if(opt_[CHR(OPT_WLK)].hits() == 0)                             // no -w?
   opt_[CHR(OPT_WLK)] = "[^0]";                                  // then walk from root
 
- if(opt_[CHR(OPT_PRG)].hits() > 1)
+ if(opt_[CHR(OPT_PRG)].hits() > 1)                              // -pp process here
   return crop_out_();
 
- for(auto &wp: opt_[CHR(OPT_WLK)]) {                            // process all walks
+ for(auto &wp: opt_[CHR(OPT_WLK)]) {                            // process all walks -w
   vec_jit ji = collect_walks_(wp);                              // collect all purging points
 
   for(size_t i = 0; i < ji.size(); ++i) {                       // purge all walked instances
@@ -945,7 +1000,7 @@ void Jtc::swap_json(void) {
   size_t max_i = min(swaps[0].size(), swaps[1].size());
   for(size_t i = 0; i < max_i; ++i) {                           // swap only paired walks
    if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid()) {
-    cerr << "fail: walk instance " << i
+    cerr << "error: walk instance " << i
          << " became invalid due to prior operations, skipping" << endl;
     cr_.rc(RC_WP_INV);
     break;
@@ -967,6 +1022,19 @@ void Jtc::walk_json(void) {
  subscriber_ = &Jtc::output_by_iterator;
  walk_interleaved_();
 
+ auto process_x0 = [&](void) {                                  // process -x/-1, if not yet done
+  return any_of(cr_.wm().begin(), cr_.wm().end(),
+                [](auto &x){ return x.factor == 0 and x.offset == -1; }) and
+         none_of(cr_.wm().begin(), cr_.wm().end(),
+                 [&](auto &x) { return x.factor == 0? false:
+                                        (wcnt_ - 1) % x.factor == x.offset % x.factor; }); };
+ if(wcnt_ > 0 and process_x0()) {                               // if there was any output
+  GUARD(cr_.wm()) cr_.wm().clear();                             // do not let factors interfere
+  opt_[CHR(OPT_TMP)].reset();                                   // and so do not templates
+  Json j(hwlk_);                                                // produce a itr out of last walk
+  output_by_iterator(j.walk("[0]"));
+ }
+
  // after walking all paths
  if(opt_[CHR(OPT_JSN)].hits() > 0)                              // -j, jout_ contains the output
    write_json(jout_, false);
@@ -979,34 +1047,49 @@ void Jtc::walk_json(void) {
 
 
 
-void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
+void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
  // prints json element from given iterator (used by -w)
  // in case of -j option: collect into provided json container rather than print
  Json tmp;
- DBG().increment(+2, tmp.type(Jnode::Neither), -2);
+ tmp.type(Jnode::Neither);
+ DBG().increment(+2, tmp, -2);
 
+ wns_[&wi][WLK_HPFX] = move(hwlk_);                             // merge prior hist. into namespace
+ hwlk_.type(Jnode::Neither);
  if(opt_[CHR(OPT_TMP)].hits() >= 1) {                           // -T given, interpolate
   merge_ns_(cr_.global_ns(), wns_[&wi]);
   // if multiple interleaved walks and multiple templates, then relate each template per walk-path
   // in all other cases - templates are round-robin applied onto each walk iteration
-  if(is_multi_temp_ and opt_[CHR(OPT_WLK)].hits() > 1) {        // templates pertain to walks
+  if(is_tmp_per_walk_) {                                        // each template is per walk:
    if(tpw_.count(wi.walk_id()) == 0) {                          // relate interleaved walks to tmp
-    auto & r = tpw_[wi.walk_id()];
+    auto & r = tpw_[wi.walk_id()];                              // create entry first
     r = tpw_.size() < opt_[CHR(OPT_TMP)].size()? opt_[CHR(OPT_TMP)].str(tpw_.size()): "";
    }
    tmp = Json::interpolate(tpw_[wi.walk_id()], wi, cr_.global_ns());
+   hwlk_ = move(ARY{tmp.root()});
   }
   else {                                                        // round-robin (1 templ. or 1 walk)
    tmp = Json::interpolate(opt_[CHR(OPT_TMP)].str(key_ + 1), wi, cr_.global_ns());
+   hwlk_ = move(ARY{tmp.root()});
    if(++key_  >= opt_[CHR(OPT_TMP)].size() - 1) key_ = 0;       // -1: adjust b/c of opt_'s default
   }
  }
+ if(hwlk_.is_neither()) {                                       // templating failed or was none
+  if(wi->has_label()) hwlk_ = move(OBJ{LBL{wi->label(), *wi}}); // preserve also the label if exist
+  else hwlk_ = move(ARY{*wi});
+ }
 
- typedef void (Jtc::*jd_ptr)(Json::iterator &, size_t, Json &);
+ typedef void (Jtc::*jd_ptr)(Json::iterator &, Json &, Grouping);   // demux cout and -j outputs
  static jd_ptr demux_out[2] = {&Jtc::console_output_, &Jtc::jsonized_output_};
-
- (this->*demux_out[opt_[CHR(OPT_JSN)].hits() > 0])(wi, group, tmp);
- last_group_ = group;
+ if(cr_.wm().empty() or                                         // output taking into account
+    any_of(cr_.wm().begin(), cr_.wm().end(),                    // possible -xN/N option
+           [&](auto &x){ return x.factor == 0?
+                                 x.offset == static_cast<signed_size_t>(wcnt_):
+                                 x.offset > static_cast<signed_size_t>(wcnt_)?
+                                  false: wcnt_ % x.factor == x.offset % x.factor; } ))
+  (this->*demux_out[opt_[CHR(OPT_JSN)].hits() > 0])(wi, tmp, grp);
+ last_ = grp;
+ ++wcnt_;
 }
 
 
@@ -1015,11 +1098,11 @@ void Jtc::output_by_iterator(Json::iterator &wi, size_t group) {
 // Jtc PRIVATE methods definitions
 //
 void Jtc::location_(Streamstr::const_iterator &jbegin) {
- // show location of the exception, unicode UTF-8 supported     // don't alter name, it's adjusted!
+ // show locus of the exception, unicode UTF-8 supported        // don't alter name, it's adjusted!
  string jsrc{jbegin.str()};
  const char * pfx = "exception locus: ";
- for(auto &chr: jsrc)
-  chr = chr AMONG(CRTN_CHR, NLNE_CHR)?
+ for(auto &chr: jsrc)                                           // replace non-readable with spaces
+  chr = chr AMONG(CRTN_CHR, NLNE_CHR)?                          // and \n\r with `|`
          '|': static_cast<unsigned char>(chr) < SPCE_CHR? SPCE_CHR: chr;
 
  size_t from_start = Json::utf8_adjusted(0, jsrc, jbegin.is_stream()?
@@ -1038,15 +1121,16 @@ void Jtc::location_(Streamstr::const_iterator &jbegin) {
  }
 
  DOUT() << pfx << jsrc << endl << DBG_PROMPT(0) << "exception spot: "
-        << string(ptr, '-') << ">| (offset: " << from_start << ")" << endl;
+        << string(ptr, '-') << ">| (offset: "
+        << (jbegin.is_stream()? cr_.iss().stream_size() - 1: from_start) << ")" << endl;
 }
 
 
 
 void Jtc::ready_params_(char option) {
- // ready data: jsrc_ (if multiple jsons, no walks), or jexc_ & wsrc_
+ // fill / prepare data: jsrc_ (if multiple jsons, no walks: -u<static> -u<static>),
+ // or jexc_ & wsrc_ (in case like: -eu -u... and -u<static> -u<walk>)
  if(ecli_)                                                      // -e detected
-
   for(size_t i = cr_.opt_e_found(); cr_.opt_ui() and i <= opt_[cr_.opt_ui()].hits(); ++i)
    wsrc_.push_back(opt_[option].ordinal(i + cr_.opt_e_found() + 1));    // +1 to account dflt val.
    // the loop conditions work only if trailing options (-u/-i) are present
@@ -1054,8 +1138,8 @@ void Jtc::ready_params_(char option) {
   for(size_t arg_idx = 1; arg_idx < opt_[option].size(); ++arg_idx)
    try {
     auto & arg = opt_[option].str(arg_idx);
-    string jfile{istream_iterator<char>(ifstream{arg, ifstream::in} >> noskipws),
-                 istream_iterator<char>{}};
+    string jfile {istream_iterator<char>(ifstream{arg, ifstream::in} >> noskipws),
+                  istream_iterator<char>{}};
     DBG().increment(+2, jsrc_[jsrc_.size()], -2);
     DBG(1) DOUT() << "attempting to parse parameter (" << arg << ") as json" << endl;
     jsrc_[jsrc_.size()-1].parse(jfile.empty()? arg: jfile,
@@ -1226,8 +1310,9 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
 
 void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src) {
  // update dst with src, merge jsons with overwrite if -m is given
- if(it_dst.walks().back().jsearch == Json::key_of_json) {       // facilitate '<>k'
-  DBG(2) DOUT() << "label being updated" << endl;
+ if(it_dst.walks().back().jsearch == Json::key_of_json and
+    it_dst.walks().back().stripped[0].empty()) {
+  DBG(2) DOUT() << "label being updated" << endl;               // facilitate '<>k' (empty lexeme)
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }
   if(not it_src->is_string())
@@ -1321,9 +1406,9 @@ void Jtc::crop_out_(void) {
  // output walked elements preserving source json structure
  set<const Jnode*> preserve;
 
- for(auto &wp: opt_[CHR(OPT_WLK)])                              // process all walks
-  for(auto it = jinp_.walk(wp, Json::keep_cache); it != jinp_.end(); ++it)
-   preserve.insert(&it->value());                               // collect all walked elements
+ for(auto &wp: opt_[CHR(OPT_WLK)])                              // process all walks (-w)
+  for(auto &ji: collect_walks_(wp))
+   preserve.insert(&ji->value());
 
  DBG(0) DOUT() << "preserved instances: " << preserve.size() << endl;
  remove_others_(preserve, jinp_.root());
@@ -1361,10 +1446,12 @@ bool Jtc::remove_others_(set<const Jnode*> &ws, Jnode &jn) {
 Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
  // collect all walk iterations from given walk path (used by swap/purge)
  vec_jit walk_itr;
- if(not psrc_.empty()) {                                        // psrc_ is filled when walking
-  //for(auto &pair: psrc_) walk_itr.push_back(move(pair.src));    // -i/u by collect_itr_bindings
+ if(not psrc_.empty()) {                                        // psrc is filled when walked -[ui]
   for(auto &pair: psrc_)
-   walk_itr.push_back(move(jitt_ == src_input? pair.src: pair.dst));    // -i/u by collect_itr_bindings
+   walk_itr.push_back(move(jitt_ == src_input?                  // -[iu] by collect_itr_bindings
+                            pair.src: pair.dst));
+  DBG(0) DOUT() << "source of iterations: '" << ENUMS(Jitsrc, jitt_)
+                << "', instances: " << walk_itr.size() << endl;
   return walk_itr;
  }
 
@@ -1396,7 +1483,6 @@ Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
 // 4. among actual iterators, select first in the relevant group, give it to the subscriber
 //    and remove it from the wpi
 // 5. repeat until entire wpi is empty
-// typedef deque<Json::iterator> deq_jit;
 
 void Jtc::walk_interleaved_(void) {
  // collect all walks (-w/-i/-u) and feed one by one to the subscriber
@@ -1411,16 +1497,16 @@ void Jtc::walk_interleaved_(void) {
    wpi.pop_back();                                              // drop last instance
   }
 
-  auto & wi = wpi.back();                                       // wi: deque<Json::iterators>
-  if(wi.back() != wi.back().end())
-   while(true) {                                                // extend all iterators until end
-    wns_[&wi.back()] = jinp_.ns();                              // preserve walked namespace
-    wi.push_back(wi.back());                                    // make new copy (next instance)
-    ++wi.back();                                                // and iterate
-    if(wi.back() == wi.back().end()) break;
-   }
+  auto & wi = wpi.back();                                       // wi: deque<Json::iterator>
+  if(wi.back() == wi.back().end()) { wi.pop_back(); continue; } // end iterator
+  while(wi.back() != wi.back().end()) {                         // extend all iterators until end
+   update_wlk_history_(wi.back());                               // preserve walked namespace
+   wi.push_back(wi.back());                                     // make new copy (next instance)
+   ++wi.back();                                                 // and iterate
+  }
   wi.pop_back();                                                // remove last (->end()) iterator
  }
+ hwlk_ = move(ARY{STR{""}});                                    // reset hwlk_ to init value
 
  is_multi_walk_ = opt_[CHR(OPT_WLK)].hits() > 1 or              // or else hits == 1 and iterable
                   not(wpi.size() == 1 and not wpi.front().front().is_walkable());
@@ -1436,12 +1522,34 @@ void Jtc::walk_interleaved_(void) {
 }
 
 
+void Jtc::update_wlk_history_(Json::iterator & jit) {
+ // preserve walked namespace, and add auto-ns: `$?`
+ //
+ // there are 4 cases of template interpolations:
+ // 1. in shell_callback_: <...>u
+ // 2. -u<walk> -T... (or -u static.json -u<walk> -T...)
+ // 3. -w<walk> -T...
+ // 4. -e -u ... \;
+ // Only case 3 transform a walked output - the rest are referring to original,
+ // (non-transformed) walks. Thus:
+ // a) when collecting walks (walk_interleaved_), populate each walk's ns with last walk value
+ // b) when walking case 3 (output_by_iterator) - ensure walks are populated from hwlk_, which
+ // now stores result of interpolation
+
+ wns_[&jit] = jinp_.ns();                                       // preserve walked namespace
+ wns_[&jit][WLK_HPFX] = move(hwlk_);                            // add historical namespace
+ hwlk_ = *jit;                                                  // preserve current walk
+ if(jit->has_label()) hwlk_ = move(OBJ{LBL{jit->label(), *jit}});
+ else hwlk_ = move(ARY{*jit});
+}
+
+
 
 void Jtc::process_walk_iterators_(deque<deq_jit> &wpi) {
  // build front iterators offset matrix: wpi may contain empty deque
- vector<vector<long>> fom(wpi.size());                          // front offset matrix
+ vector<vector<signed_size_t>> fom(wpi.size());                 // front offset matrix
 
- size_t longest_walk = build_front_grid_(fom, wpi);
+ size_t longest_walk = build_front_grid_(fom, wpi);             // build FOM here
  vector<size_t> actual_instances;                               // ai: those which not ended yet
  for(size_t idx = 0; idx < fom.size(); ++idx)                   // init non-empty fom indices
   if(not fom[idx].empty()) actual_instances.push_back(idx);
@@ -1451,24 +1559,24 @@ void Jtc::process_walk_iterators_(deque<deq_jit> &wpi) {
 
 
 
-size_t Jtc::build_front_grid_(vector<vector<long>> &fom, const deque<deq_jit> &wpi) {
- // build matrix from front iterator of each walk: using iterator's counter() method
+size_t Jtc::build_front_grid_(vector<vector<signed_size_t>> &fom, const deque<deq_jit> &wpi) {
+ // build matrix from front iterator of each walk (FOM): using iterator's counter() method
  // that way it'll be possible to group relevant walk-paths during output
- size_t longest = 0;
+ size_t longest = 0;                                            // longest row in the fom matrix
  for(size_t idx = 0; idx < wpi.size(); ++idx) {                 // go over all given walk paths -w
   auto & wi = wpi[idx];                                         // set of iterators for -w instance
   if(wi.empty()) continue;                                      // no more iterators in this walk
 
-  DBG(2) DOUT() << "walkpath (-w) instance " << idx;            // go over walk path counters only
+  DBG(3) DOUT() << "walkpath (-w) instance " << idx;            // go over walk path counters only
   string dlm = " front ws_counters matrix: ";                   // of the front iterator's instance
   for(size_t position = 0; position < wi.front().walk_size(); ++position) {
    if(wi.front().walks()[position].is_directive()) continue;
    fom[idx].push_back( wi.front().counter(position) );
-   if(DBG()(2)) DOUT() << dlm << fom[idx].back();
-   dlm = ", ";
+   if(DBG()(2)) { DOUT() << dlm << fom[idx].back(); dlm = ", "; }
   }
+
   if(fom[idx].empty()) fom[idx].push_back( -1 );                // ensure fom filled for: -w'<vv>v'
-  if(DBG()(2)) DOUT() << endl;
+  if(DBG()(3)) DOUT() << endl;
   longest = max(longest, fom[idx].size());
  }
 
@@ -1477,49 +1585,51 @@ size_t Jtc::build_front_grid_(vector<vector<long>> &fom, const deque<deq_jit> &w
 
 
 
-void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<long>> &fom,
-                      size_t longest_walk, vector<size_t> &actuals) {
+void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &fom,
+                           size_t longest_walk, vector<size_t> &actuals) {
  // scans each offset's row (in wpi) and prints actual (non-empty) and relevant elements
- DBG(2) DOUT() << "walking offsets (longest " << longest_walk << ")";
+ DBG(2) DOUT() << "walk offsets (longest " << longest_walk << ")";
 
- int grouping = 0;                                              // group size (of lowest offsets)
+ size_t grouping = 0,                                           // group size (of lowest offsets)
+        lf_counter = -1;                                        // lowest front (ws) counter
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
   map<size_t, size_t> pos_ai, neg_ai;                           // build new actuals in here
-  long lowest_offset = LONG_MAX, cnt = 0;                       // helpers to build new actuals
-  if(DBG()(2)) DOUT() << ", [" << offset << "]:";
+  signed_size_t lowest_offset = LONG_MAX, cnt = 0;              // helpers to build new actuals
+  if(DBG()(2)) DOUT() << "; [" << offset << "]:";
 
   for(auto ai: actuals) {                                       // a.inst. are with lowest offset
-   if(DBG()(2)) DOUT() << " " << ai;
    if(offset >= fom[ai].size() or fom[ai][offset] < 0)          // negative or short actuals offset
     { neg_ai[cnt++] = ai; continue; }                           // collected separately
+   if(DBG()(2)) DOUT() << " " << ai;
    if(fom[ai][offset] < lowest_offset)                          // found a lower counter
     { lowest_offset = fom[ai][offset]; pos_ai.clear(); }        // clear prior found actuals
    if(fom[ai][offset] == lowest_offset)                         // update new actuals
     pos_ai[cnt++] = ai;
   }
+  if(lf_counter == static_cast<size_t>(-1) and not pos_ai.empty())
+   lf_counter = lowest_offset;
 
   actuals.clear();
-  for(long idx = 0; idx < cnt; ++idx)
+  for(signed_size_t idx = 0; idx < cnt; ++idx)
    if(pos_ai.count(idx)) actuals.push_back(pos_ai[idx]);
    else if(neg_ai.count(idx)) actuals.push_back(neg_ai[idx]);
   grouping = actuals.size();                                    // update groping
-  if(grouping == 1) break;                                      // performance optimization
  }
 
  if(DBG()(2)) DOUT() << endl;                                   // close debug line
  if(actuals.empty())                                            // should never be the case
   { wpi.clear(); return; }                                      // in case, avoiding endless loop
  DBG(2) DOUT() << "output instance: " << actuals.front()
-               << ", #lowest offsets: " << grouping <<endl;
- (this->*subscriber_)(wpi[actuals.front()].front(), grouping);
+               << ", #lowest offsets/counter: {" << grouping << ", }" << endl;
+ (this->*subscriber_)(wpi[actuals.front()].front(), {grouping, lf_counter});
  wpi[actuals.front()].pop_front();
 }
 
 
 
-void Jtc::console_output_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
+void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
  // no -j given, print out element pointed by iter wi
- if(opt_[CHR(OPT_SZE)].hits() > 1)
+ if(opt_[CHR(OPT_SZE)].hits() > 1)                              // -zz
   { cout << wi->size() << endl; return; }
 
  Jnode::iterator tl;                                            // to facilitate -ll
@@ -1527,7 +1637,7 @@ void Jtc::console_output_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
  auto & sr = src.is_object() and src.has_children() and opt_[CHR(OPT_LBL)].hits() > 1?
               *(tl = src.begin()): src;
 
- bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given
+ bool unquote{opt_[CHR(OPT_QUT)].hits() >= 2};                  // -qq given, unquote
  bool inquote{opt_[CHR(OPT_RAW)].hits() >= 2};                  // -rr given, inquote
 
  if(opt_[CHR(OPT_LBL)] and sr.has_label())                      // -l given
@@ -1545,17 +1655,17 @@ void Jtc::console_output_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
 
 
 
-void Jtc::jsonized_output_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
+void Jtc::jsonized_output_(Json::iterator &wi, Json &jtmp_ref, Grouping grp) {
  // demux output based on jout_ state: either to ARY or OBJ
- typedef void (Jtc::*jo_ptr)(Json::iterator &, size_t, Json &);
+ typedef void (Jtc::*jo_ptr)(Json::iterator &, Json &, Grouping);
  static jo_ptr jsonize[2] = {&Jtc::jsonized_output_obj_, &Jtc::jsonized_output_ary_};
 
- (this->*jsonize[jout_.is_array()])(wi, group, jtmp_ref);
+ (this->*jsonize[jout_.is_array()])(wi, jtmp_ref, grp);
 }
 
 
 
-void Jtc::jsonized_output_obj_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
+void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
  // if -jj option given, output into jout_ as Object (items w/o label are ignored)
  Jnode::iterator tl;                                            // to facilitate -ll
  auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
@@ -1581,10 +1691,10 @@ void Jtc::jsonized_output_obj_(Json::iterator &wi, size_t group, Json &jtmp_ref)
 
 
 
-void Jtc::jsonized_output_ary_(Json::iterator &wi, size_t group, Json &jtmp_ref) {
+void Jtc::jsonized_output_ary_(Json::iterator &wi, Json &jtmp_ref, Grouping grp) {
  // if -j option given, output into jout_ as Array
- auto create_obj = [&]{ return opt_[CHR(OPT_SEQ)].hits() > 0?
-                                group >= last_group_: group > last_group_; };
+ auto create_obj = [&]{ return opt_[CHR(OPT_SEQ)].hits() == 0?
+                                grp > last_: opt_[CHR(OPT_SEQ)].hits() < 2; };
  Jnode::iterator tl;                                            // to facilitate -ll
  auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
  auto & sr = src.is_object() and src.has_children() and opt_[CHR(OPT_LBL)].hits() > 1?
