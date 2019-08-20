@@ -49,17 +49,19 @@ paths. See below more detailed explanation with examples
 
 ### Linux and MacOS precompiled binaries are available for download
 
-For compiling c++14 (or later) is required:
-  - to compile under MacOS, use cli: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
-  - To compile under Linux, use cli: `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
+For compiling, `c++14` (or later) is required:
+  - to compile under MacOS, use cli:  
+      `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
+  - To compile under Linux, use cli:  
+      `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
 
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-macos-64.v1.72)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-64.v1.72)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-32.v1.72)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-macos-64.v1.72)
+- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-64.v1.72)
+- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-32.v1.72)
 
 
 ### Compile and install instructions:
