@@ -548,7 +548,7 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
  **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
  lots of time on stackoverflow and similar forums
- - `jtc` on the other hand employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
+ - `jtc` employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
  each type though has several variants) which is easy to grasp.
 
 ### handling irregular JSONs:
