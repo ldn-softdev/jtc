@@ -523,8 +523,8 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 
 ## `jtc` vs **jq**:
 `jtc` was _inspired_ by the complexity of **jq** interface (and its 
-[DSL](https://en.wikipedia.org/wiki/Domain-specific_language)
-), aiming to provide a user tool which would let attaining the desired result in a more feasible way
+[DSL](https://en.wikipedia.org/wiki/Domain-specific_language)),
+aiming to provide a user tool which would let attaining the desired result in a more feasible way
 
 ### utility ideology:
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
