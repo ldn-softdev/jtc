@@ -1,4 +1,53 @@
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.72_
+
+#### New features:
+- introduced a new directive `I` which let incrementing/decrementing numerical JSONs preserved in the namespace (and ignore other
+JSON types), e.g.: `<var>I3`, `<var>I-1`. If `var` wasn't defined before, the iteration begins with `0`; 
+however, it's possible to initialize it with other than `0` values - see User Guide
+- introduce an auto-namespace variable `$?` to reference the last processed walk, this facilitates use-cases when converting
+input JSON to `.csv` format; see User Guide for more
+- introduced new lexemes `<..>P`, `<..>N` to match any _JSON strings_ and _JSON numerical_ types respectively. Before, to facilitate the
+same, REGEX lexemes were used: `<.*>R` and `<.*>D` respectively, but new lexemes work faster and allow storing matched values in
+the namespace)
+- Template-interpolation was enhanced with new capability to _jsonize JSON strings_ (containing embedded JSONs) and _stringify JSONs_ - 
+similar to respective options `-qq` and `-rr` but now programmatically. See User Guide for the syntax and examples
+- added a new semantic to `-x` option: `-xN[/M]` notation lets specifying a frequency of walks to be displayed - (every Nth walk) staring 
+from the optional offset `M` (zero based); e.g.: `-x4` - display every _4th_ walk, while `-x4/1` will do the same starting from the
+2nd (index is zero based) walk.
+Also, note a special notation case: `-x0/N` - will display `Nth` (zero based) walk only _once_, this could be abbreviated to `-x/N`; 
+`N` is positive, but also supported `-1` value - to display _the last_ walk
+
+#### Improvements, changes, fixes:
+- improved `-jl` options combination behavior: in some cases it wasn't robust and failed providing the expected result. 
+Plus, introduced a new merge format: `-jlnn` - all clashing values will be aggregated (disrespecting JSON structured grouping vs. as in 
+the case of `-jl`)
+- lifted handling of _atomic JSONs_ - simplified the code allow applying _walk-paths_ now even onto the atomic JSON values
+- extended null-interpolation for _JSON strings_: before it was applied for _JSON arrays_ and _JSON objects_ only). 
+Now, the empty variable interpolation in the string, following either of `,`, `;` will be taken into account,
+e.g.: `-T'"{}, "'` - if `{}` is empty, then result of interpolation will be empty too: `""`
+- improved buffered file read speed (3 times faster) and _stdin_ buffered speed (1.5-2 times faster), improved handling of 
+non-existent/bad file-arguments (when multiple given)
+- enhanced _move_ semantic of `-u`, `-i` operations, so that when used together with `-pp` it also works as expected with those options 
+(before it was only working for `-p` and `-pp` notation was ignored)
+- a last in the walk `k` lexeme (e.g.: `-w'... <>k'`) is only subjected for re-interpretation of the label if it's empty (`<>k`) now;
+the non-empty `<..>k` lexeme then doesn't (the value is preserved in the namespace, so no need to re-interpret it then)
+- _template pertain per walk_ feature used to work only for _interleaved_ walks and `-n` was cancelling it (template then were applied 
+round-robin). Now, even with `-n` (i.e., for sequenced walk processing) templates are also pertained per walks, 
+in the unlikely event when round robin behavior is required `-nn` notation will support it.
+Also, _template pertain per walk_ feature is enhanced to be engaged only when number of _templates_ (`-T`)
+matches the number of provided walks (`-w`), otherwise _round-robin_ template application behavior is engaged.
+- put a hard cutoff on a too deep recursion shall any unforeseen case (while walking) occurs in the future;
+the same enhancement has fixed a case of too deep recursion (with subsequent stack overflow) for a corner case of lexeme `<>F`
+usage occurring in processing really huge JSONs only
+- the message _notice: option -J cancels streaming input_ is printed now only when `-a` + `<stdin>` were selected explicitly together
+with `-J` (and not when `-a` is implicitly imposed upon `-J`)
+- fixed parsing debug (offset for a _streamed_ read now shows a correct value - from the beginning of a stream, instead of
+the beginning of an internal circular buffer, other read debugs (_buffered_, _cin_) are unaffected)
+- fixed empty `<>b` lexeme - it was not working (as documented), now it matches any boolean JSON value (UT'ed) 
+***
+
+
 _Release Notes for `jtc` v.1.71_
 
 #### New features:
