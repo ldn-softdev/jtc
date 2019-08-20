@@ -1,5 +1,3 @@
-
-
 # `jtc` - cli tool to extract, manipulate and transform source JSON
 
 `jtc` stand for: JSON test console, but it's a legacy name, don't get mislead. `jtc` offers a powerful way to select one
@@ -59,9 +57,9 @@ For compiling c++14 (or later) is required:
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.71/jtc-macos-64.v1.71)
-- [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.71/jtc-linux-64.v1.71)
-- [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.71/jtc-linux-32.v1.71)
+- [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-macos-64.v1.72)
+- [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-64.v1.72)
+- [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-32.v1.72)
 
 
 ### Compile and install instructions:
