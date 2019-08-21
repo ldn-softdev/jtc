@@ -1,8 +1,9 @@
 # `jtc` - cli tool to extract, manipulate and transform source JSON
 
-`jtc` stand for: _JSON test console_, but it's a legacy name, don't get mislead. `jtc` offers a powerful way to select one
-or multiple elements from a source JSON and apply various actions on the selected elements at once (wrap selected
-elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare and swap around).
+`jtc` stand for: _JSON test console_, but it's a legacy name, don't get mislead.  
+`jtc` offers a powerful way to select one or multiple elements from a source JSON and apply various actions on the selected elements
+at once (wrap selected elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare,
+transform and swap around).
 
 ### Content:
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
@@ -24,26 +25,26 @@ elements into a new JSON, filter in/out, update elements, insert new elements, r
 ## Short description
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
 
-`jtc` offers following features:
+`jtc` offers following features (a short list of main features):
   - simple user interface allowing applying a bulk of changes in one command
   - featured walk-path interface lets extracting any combination of data from source JSON
-  - extracted data is representable either as it found, or as a complete JSON format
+  - extracted data is representable either as it found, or encapsulated in JSON array/object
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
   - insert/updates operations optionally may undergo _shell cli_ evaluation
-  - features namespaces and templates
+  - features namespaces, interpolation from namespaces and templates 
   - supports buffered and streamed modes of input reads
   - written entirely in C++14, no dependencies (STL only, idiomatic C++, no memory leaks)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-Walk path is a feature easy to understand - it's only made of 2 types of lexemes:
+Walk path feature is easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and **upwards**
   - search lexemes - encased into `<`, `>`: search lexemes facilitate either full match or Regex search.
 
-Both types of lexemes are iterable - subscript let iterating over children of currently addressed node,
+Both types of lexemes are iterable - subscript let iterating over children of currently addressed iterables node (array/object),
 while iterable search lexemes let iterating over all matches for a given search criteria.
-A walk path is made of an arbitrary number of lexemes, while the tool accepts an unlimited number of walk
+A walk path is made of an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 
@@ -564,7 +565,24 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _C++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
  nor it has a single naked pointer acting as a resource holder/owner, thus` jtc` is guaranteed to be **free of memory leaks** 
- (at least one class of the problems is off the table) - STL guaranty.
+ (at least one class of the problems is off the table) - STL guaranty.  
+ Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
+ 
+### performance:
+here's 4+ million node JSON:
+```
+bash $ jtc -zz standard.json 
+4329975
+```
+Table compares similar `jtc` and jq operations (using `TIMEFORMAT="user %U"`):
+
+`jtc` | jq
+---: | :---
+parsing JSON | parsing JSON
+`bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
+` 7091578` | ` 7091578`
+`user 11.195` | `user 24.685`
+
 
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
