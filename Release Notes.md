@@ -8,7 +8,7 @@ however, it's possible to initialize it with other than `0` values - see User Gu
 - introduce an auto-namespace variable `$?` to reference the last processed walk, this facilitates use-cases when converting
 input JSON to `.csv` format; see User Guide for more
 - introduced new lexemes `<..>P`, `<..>N` to match any _JSON strings_ and _JSON numerical_ types respectively. Before, to facilitate the
-same, REGEX lexemes were used: `<.*>R` and `<.*>D` respectively, but new lexemes work faster and allow storing matched values in
+same, REGEX lexemes were used: `<.*>R` and `<.*>D` respectively, but new lexemes work faster and allow capturing matched values in
 the namespace)
 - Template-interpolation was enhanced with new capability to _jsonize JSON strings_ (containing embedded JSONs) and _stringify JSONs_ - 
 similar to respective options `-qq` and `-rr` but now programmatically. See User Guide for the syntax and examples
@@ -276,7 +276,7 @@ _Release Notes for `jtc` v.1.60_
 - added support for JSON templates, option `-T` let specifying template(s); templating work for walking, insert/update/compare operations
 (and when shell-evaluated as well)
 - settled on unified interpolation semantic for templates and shell-evaluation
-- added namespaces (allow storing JSON elements in the named space while walking paths); namespaces are reused in templates and in
+- added namespaces (allow capturing JSON elements in the named space while walking paths); namespaces are reused in templates and in
 walk-paths
 - added new search keys and directives facilitating namespaces: `<..>k`, `<..>v`, `<..>z`, `<..>s`, `<..>t`
   - `<..>k`: save current JSON element's **k**ey (label/index); it also reinterprets label/index as the value
