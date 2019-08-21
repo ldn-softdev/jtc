@@ -12,10 +12,10 @@ same, REGEX lexemes were used: `<.*>R` and `<.*>D` respectively, but new lexemes
 the namespace)
 - Template-interpolation was enhanced with new capability to _jsonize JSON strings_ (containing embedded JSONs) and _stringify JSONs_ - 
 similar to respective options `-qq` and `-rr` but now programmatically. See User Guide for the syntax and examples
-- added a new semantic to `-x` option: `-xN[/M]` notation lets specifying a frequency of walks to be displayed - (every Nth walk) staring 
-from the optional offset `M` (zero based); e.g.: `-x4` - display every _4th_ walk, while `-x4/1` will do the same starting from the
-2nd (index is zero based) walk.
-Also, note a special notation case: `-x0/N` - will display `Nth` (zero based) walk only _once_, this could be abbreviated to `-x/N`; 
+- added a new semantic to `-x` option: `-xn[/N]` notation lets specifying a frequency of walks to be displayed - (every `n`th walk) 
+staring from the optional offset `N` (zero based); e.g.: `-x4` - display every _4th_ walk, while `-x4/1` will do the same starting
+from the 2nd (`N` index is zero based) walk.
+Also, note a special notation case: `-x0/N` - will display `Nth` (zero based) walk only _once_, this could be truncated to `-x/N`; 
 `N` is positive, but also supported `-1` value - to display _the last_ walk
 
 #### Improvements, changes, fixes:
