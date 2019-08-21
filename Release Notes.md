@@ -2,7 +2,7 @@
 _Release Notes for `jtc` v.1.72_
 
 #### New features:
-- introduced a new directive `I` which let incrementing/decrementing numerical JSONs preserved in the namespace (and ignore other
+- introduced a new directive `<>I` which let incrementing/decrementing numerical JSONs preserved in the namespace (and ignore other
 JSON types), e.g.: `<var>I3`, `<var>I-1`. If `var` wasn't defined before, the iteration begins with `0`; 
 however, it's possible to initialize it with other than `0` values - see User Guide
 - introduce an auto-namespace variable `$?` to reference the last processed walk, this facilitates use-cases when converting
