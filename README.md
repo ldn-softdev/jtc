@@ -574,14 +574,14 @@ here's 4+ million node JSON:
 bash $ jtc -zz standard.json 
 4329975
 ```
-Table compares similar `jtc` and jq operations (using `TIMEFORMAT="user %U"`):
+Table compares similar `jtc` and jq operations (using `TIMEFORMAT="user %U sec"`):
 
 `jtc` | jq
 ---: | :---
 parsing JSON | parsing JSON
 `bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
 ` 7091578` | ` 7091578`
-`user 11.195` | `user 24.685`
+`user 11.195 sec` | `user 24.685 sec`
 
 
 
