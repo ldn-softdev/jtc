@@ -272,7 +272,7 @@ class Jtc {
     void                jsonized_output_obj_(Json::iterator &, Json &jref, Grouping);
     void                jsonized_output_ary_(Json::iterator &, Json &jref, Grouping);
     void                merge_ns_(Json::map_jn &to, const Json::map_jn &from)
-                         { for(auto & ns: from) to[ns.KEY] = ns.VALUE; }
+                         { for(const auto & ns: from) to[ns.KEY] = ns.VALUE; }
     bool                shell_callback_(const std::string &lxm, Json::iterator jit) {
      // reminder:
      //typedef std::function<bool(const std::string &, const Jnode &)> uws_callback;
@@ -1054,8 +1054,8 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
  tmp.type(Jnode::Neither);
  DBG().increment(+2, tmp, -2);
 
- wns_[&wi][WLK_HPFX] = move(hwlk_);                             // merge prior hist. into namespace
- hwlk_.type(Jnode::Neither);
+ wns_[&wi][WLK_HPFX] = move(hwlk_[0]);                          // merge prior hist. into namespace
+ hwlk_[0].type(Jnode::Neither);
  if(opt_[CHR(OPT_TMP)].hits() >= 1) {                           // -T given, interpolate
   merge_ns_(cr_.global_ns(), wns_[&wi]);
   // if multiple interleaved walks and multiple templates, then relate each template per walk-path
@@ -1074,7 +1074,7 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
    if(++key_  >= opt_[CHR(OPT_TMP)].size() - 1) key_ = 0;       // -1: adjust b/c of opt_'s default
   }
  }
- if(hwlk_.is_neither()) {                                       // templating failed or was none
+ if(hwlk_[0].is_neither()) {                                    // templating failed or was none
   if(wi->has_label()) hwlk_ = move(OBJ{LBL{wi->label(), *wi}}); // preserve also the label if exist
   else hwlk_ = move(ARY{*wi});
  }
@@ -1537,8 +1537,7 @@ void Jtc::update_wlk_history_(Json::iterator & jit) {
  // now stores result of interpolation
 
  wns_[&jit] = jinp_.ns();                                       // preserve walked namespace
- wns_[&jit][WLK_HPFX] = move(hwlk_);                            // add historical namespace
- hwlk_ = *jit;                                                  // preserve current walk
+ wns_[&jit][WLK_HPFX] = move(hwlk_[0]);                         // add historical namespace
  if(jit->has_label()) hwlk_ = move(OBJ{LBL{jit->label(), *jit}});
  else hwlk_ = move(ARY{*jit});
 }

@@ -772,17 +772,23 @@ class Jnode {
                          return *this;
                         }
 
-    virtual Jnode &     operator[](signed_size_t i) {
+    virtual Jnode &     operator[](long i) {
                          // signed_size_t type is used instead of size_t b/c super node's overload
                          // supports negative offsets
                          if(is_atomic()) throw EXP(type_non_indexable);
                          return iterator_by_idx_(i)->VALUE;
                         }
 
-  virtual const Jnode & operator[](signed_size_t i) const {
+    virtual Jnode &     operator[](int i)
+                         { return operator[](static_cast<signed_size_t>(i)); }
+
+  virtual const Jnode & operator[](long i) const {
                          if(is_atomic()) throw EXP(type_non_indexable);
                          return iterator_by_idx_(i)->VALUE;
                         }
+
+  virtual const Jnode & operator[](int i) const
+                         { return operator[](static_cast<signed_size_t>(i)); }
 
     Jnode &             operator[](const std::string & l) {
                          if(not is_object()) throw EXP(type_non_subscriptable);
@@ -1475,8 +1481,10 @@ class Json {
     bool                has_children(void) const { return root().has_children(); }
     size_t              children(void) const { return root().children(); }
     Json &              clear(void) { root().clear(); return *this; }
-    Jnode &             operator[](signed_size_t i) { return root()[i]; }
-    const Jnode &       operator[](signed_size_t i) const { return root()[i]; }
+    Jnode &             operator[](long i) { return root()[i]; }
+    Jnode &             operator[](int i) { return root()[i]; }
+    const Jnode &       operator[](long i) const { return root()[i]; }
+    const Jnode &       operator[](int i) const { return root()[i]; }
     Jnode &             operator[](const std::string & l) { return root()[l]; }
     const Jnode &       operator[](const std::string & l) const { return root()[l]; }
     Jnode &             front(void) { return root().front(); }
