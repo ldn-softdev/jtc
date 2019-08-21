@@ -59,9 +59,9 @@ For compiling, `c++14` (or later) is required:
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-macos-64.v1.72)
-- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-64.v1.72)
-- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72/jtc-linux-32.v1.72)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.72a/jtc-macos-64.v1.72a)
+- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72a/jtc-linux-64.v1.72a)
+- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.72a/jtc-linux-32.v1.72a)
 
 
 ### Compile and install instructions:
