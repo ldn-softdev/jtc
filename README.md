@@ -569,12 +569,12 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
  
 ### performance:
-here's 4+ million node JSON:
+here's a 4+ million node JSON:
 ```
 bash $ jtc -zz standard.json 
 4329975
 ```
-Table compares similar `jtc` and jq operations (using `TIMEFORMAT="user %U sec"`):
+The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`):
 
 `jtc` | jq
 ---: | :---
