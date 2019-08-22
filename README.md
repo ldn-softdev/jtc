@@ -578,11 +578,11 @@ The table below compares `jtc` and jq performance for similar operations (using 
 
 `jtc` | jq
 ---: | :---
-_**`parsing JSON`**_ | _**`parsing JSON`**_
+_**`parsing JSON:`**_ | _**`parsing JSON:`**_
 `bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
 ` 7091578` | ` 7091578`
 `user 11.195 sec` | `user 24.685 sec`
-_**`removing by key from JSON`**_ | _**`removing by key from JSON`**_
+_**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
 `bash $ time jtc -w'<attributes>l:' -p standard.json \| wc -l` | `bash $ time jq 'walk(if type == "object" then del(.attributes) else . end)' standard.json \| wc -l`
 ` 5573690` | ` 5573690`
 `user 12.334 sec` | `user 39.232 sec`
