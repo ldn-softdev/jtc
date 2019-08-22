@@ -564,8 +564,8 @@ one at a time, provides an immediate visual feedback and let coming up with the 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _C++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
- nor it has a single naked pointer acting as a resource holder/owner, thus` jtc` is guaranteed to be **free of memory leaks** 
- (at least one class of the problems is off the table) - STL guaranty.  
+ nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
+ (at least one class of the problems is off the table) - **STL guaranty**.  
  Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
  
 ### performance:
