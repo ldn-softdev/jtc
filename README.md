@@ -583,9 +583,9 @@ _**`parsing JSON:`**_ | _**`parsing JSON:`**_
 ` 7091578` | ` 7091578`
 `user 11.195 sec` | `user 24.685 sec`
 _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
-`bash $ time jtc -w'<attributes>l:' -p standard.json \| wc -l` | `bash $ time jq 'walk(if type == "object" then del(.attributes) else . end)' standard.json \| wc -l`
+`bash $ time jtc -pw'<attributes>l:' standard.json \| wc -l` | `bash $ time jq 'del(..|.attributes?)' standard.json | wc -l`
 ` 5573690` | ` 5573690`
-`user 12.334 sec` | `user 39.232 sec`
+`user 12.334 sec` | `user 34.873 sec`
 
 
 
