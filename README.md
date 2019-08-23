@@ -581,11 +581,11 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  Handling | `jtc` | **jq** 
  --- | ---: | :---
 Invalid Json: `[ 00 ]` | `<<<'[00]' jtc` | `<<<'[00]' jq -c .`
-Parsing result:  | `jtc json exception: missed_prior_enumeration` | `[0]`
-Precission test | `<<<'[0.99999999999999999]' jtc -r` | `<<<'[0.99999999999999999]' jq -c .`
-Parsing result:  | `[ 0.99999999999999999 ]` | `[1]`
+_Parsing result_ | `jtc json exception: missed_prior_enumeration` | `[0]`
+Precission test: | `<<<'[0.99999999999999999]' jtc -r` | `<<<'[0.99999999999999999]' jq -c .`
+_Parsing result_ | `[ 0.99999999999999999 ]` | `[1]`
 Retaining original format: | `<<<'[0.00001]' jtc -r` | `<<<'[0.00001]' jq -c .`
-Parsing result:  | `[ 0.00001 ]` | `[1e-05]`
+_Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 
 ### performance:
