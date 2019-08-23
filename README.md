@@ -567,7 +567,27 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
  (at least one class of the problems is off the table) - **STL guaranty**.  
  Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
+
+
+### JSON numerical fidelity:
+ - **jq** is not compliant with JSON numerical definition. What jq does, it simply converts a symbolic numerical representation to an 
+ internal binary and keeps it that way. That approach:
+     - is not compliant with JSON definition of the numerical values
+     - it has problems retaining required precision
+     - might change original representation of numericals
+ - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original symbolical format, so it's free of
+ all the above caveats:
  
+ Handling | `jtc` | **jq** 
+ --- | ---: | :---
+Invalid Json: `[ 00 ]` | `<<<'[00]' jtc` | `<<<'[00]' jq -c .`
+Parsing result:  | `jtc json exception: missed_prior_enumeration` | `[0]`
+Precission test | `<<<'[0.99999999999999999]' jtc -r` | `<<<'[0.99999999999999999]' jq -c .`
+Parsing result:  | `[ 0.99999999999999999 ]` | `[1]`
+Retaining original format: | `<<<'[0.00001]' jtc -r` | `<<<'[0.00001]' jq -c .`
+Parsing result:  | `[ 0.00001 ]` | `[1e-05]`
+
+
 ### performance:
 here's a 4+ million node JSON:
 ```
