@@ -58,7 +58,7 @@
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
-   * [Multiple templates and interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks)
+   * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
@@ -2588,9 +2588,12 @@ JSON entry is generated from the template and namespace `val` and the new entry 
 destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON into a new one.
 
 
-### Multiple templates and interleaved walks
-When multiple templates given (with walking operations only) and walks are _interleaved_ (i.e., more than one `-w` present and
-`-n` is not used) then templates are pertain to each walk. In all other cases templates are applied in a round-robin fashion.
+### Multiple templates and walks
+When multiple templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>`) **is matching** the number of templates
+(i.e., more than one walk is present) then templates are pertain per each walk. In all other cases templates are applied in a
+round-robin fashion.  
+In the case when round-robin behavior is required when number of templates and walks matches, use `-nn` notation - it will ensure
+round-robin templates application onto sequential walks
 
 Compare:
 ```
@@ -2604,26 +2607,34 @@ bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}
 bash $ 
 bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rn
 { "Person": "John" }
+{ "Person": "Ivan" }
+{ "Person": "Jane" }
+{ "Age": 25 }
+{ "Age": 31 }
+{ "Age": 25 }
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rnn
+{ "Person": "John" }
 { "Age": "Ivan" }
 { "Person": "Jane" }
 { "Age": 25 }
 { "Person": 31 }
 { "Age": 25 }
 bash $ 
+
 ```
-The mess in the bottom example is explained by `-n` usage: walks no longer interleaved (i.e., they are sequential) and templates now 
-not pertaining to walks, but rather applied round-robin
+The mess in the above's last example is explained by `-nn` usage: templates are forced to apply in the round-robin fashion
 
 
 One handy use-case of multiple round-robin templates would be this example:
 ```
-bash $ echo [1,2,3,4,5,6,7,8,9,10] | jtc -w[:] -T'""' -T{} -T'""' -qq
+bash $ <<<'[1,2,3,4,5,6,7,8,9,10]' jtc -w[:] -T'""' -T{} -T'""' -qq
 2
 5
 8
 bash $ 
 ```
-\- in the above example printed every 3rd element from source JSON starting from the 2nd one.
+\- in the above example printed every 3rd element from source JSON starting from the 2nd one (recall: when unquoting an empty
+JSON string ("") the resulted blank lines are not getting printed).
 
 
 ## Processing multiple input JSONs
