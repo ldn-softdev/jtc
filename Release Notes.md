@@ -1,4 +1,29 @@
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.73_
+
+#### New features:
+- No new features, some enhancements and stability improvements
+
+
+#### Improvements, changes, fixes:
+- lifted _label update_ operation when `-u` is used to update a label (when a walk-path is ending with an empty `...<>k` lexeme): 
+now it's possible to update/rewrite recursively even nested labels w/o failures
+- converted walking (walk iteration) to a non-recursive loop, now walks are virtually endless (i.e. able to walk JSONs of virtually
+ANY size and depth) and not restricted by a depth of a stack
+- `-T` processing for `-i<walk>` and `-u<walk>` operations is enhanced to match the same behavior as for `-w<walk>`:
+templates are interpolated per walks now (if a count of templates and walks matches), or round-robin fashion otherwise
+(before, for some weird reasons *all* templates were applied for each such walk)
+- fixed insertion (`-i`) when the last lexeme of a walk is non-empty `<..>k` then no _label reinterpretation_ occurs
+(so it's consistent now with the same behavior of `-u`)
+- removed support for the empty `<>z` notation form of the lexeme: erasing entire _namespace_ is idiomatically inconsistent with the
+_walk design_ (and might lead to confusion or misunderstanding of the expected behavior), so only non-empty lexemes `<..>z` are 
+supported now (and restricted to)
+- fixed a crash when debugging is on (quite a corner case though)
+- fixed a programmatic error (rarely occurs only in API calls) where Json class would falsely expect `<stdin>` in the event when 
+   parsing constructor throws
+***
+
+
 _Release Notes for `jtc` v.1.72_
 
 #### New features:
