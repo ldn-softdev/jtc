@@ -494,9 +494,9 @@ for the currently walked JSON elements:
          may continue for the failed path if `F` directive is present (past the failing point) from the walk lexeme following
          `F` directive
   * `F`: Forward-Stop: behavior of the directive is dependent on spelling:
-   * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
-   without ending the walk;
-   * `><F` - when the directive is reached, the walk successfully stops for the output processing    
+    * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
+    without ending the walk;
+    * `><F` - when the directive is reached, the walk successfully stops for the output processing    
   * `u`: user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects waling: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
