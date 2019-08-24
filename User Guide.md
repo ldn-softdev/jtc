@@ -19,6 +19,7 @@
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
+     * [Last Walk namespace (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#last-walk-namespace)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
      * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
@@ -814,6 +815,24 @@ bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l-1' -l
 "a": 1
 bash $ 
 ```
+
+#### Last Walk namespace
+Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
+to build up JSON 'historical' records:
+```
+bash $ <<<'["a","b","c"]' jtc -w[:]
+"a"
+"b"
+"c"
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
+[ "a" ]
+[ "a", "b" ]
+[ "a", "b", "c" ]
+```
+When interpolation of $? occurs first time (i.e. there was no prior walk), or when interpolation of $? fails, then the value of this
+namespace is reset to an empty string (`""`).  
+The use of that variable comes handy when converting JSON to a `csv` format.
+
 
 #### Scoped search 
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e., the JSON node
