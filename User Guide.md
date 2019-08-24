@@ -418,8 +418,10 @@ bash $
 This is the list of suffixes to control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ value
   * `R`: the lexeme is a search RE, only _JSON string_ values searched
+  * `P`: matches _any_ string value (like `<.*>R`), the lexeme value might be empty
   * `d`: matches _JSON number_
   * `D`: the lexeme is an RE, only _JSON numerical_ values searched
+  * `N`: matches _any_ JSON numerical value (like `<.*>D`), the lexeme value might be empty
   * `b`: matches _JSON boolean_ value, must be spelled as `<true>b`, `<false>b`, `<>b`, or `<any>b` - the last two are the same
   * `n`: matches _JSON null_ value, the lexeme value may be empty:`<>n`
   * `l`: fully matches _JSON label_
@@ -445,15 +447,15 @@ This is the list of suffixes to control search behavior:
 
 
 Some search lexemes (and
-[directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
-) require their content to be set and be non-empty (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`q`,`Q`,`v`,`u`), otherwise an exception 
+[directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces))
+require their **content to be set and be non-empty* (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`q`,`Q`,`v`,`u`), otherwise an exception 
 `walk_empty_lexeme` will be thrown
 
-Some lexemes might be left empty, but they cary a semantic of an empty search (`r`,`l`,`b`), e.g.: `<>` (same as `<>r`) - will match
+Some lexemes might be left empty, but they cary a semantic of an **empty search** (`r`,`l`,`b`), e.g.: `<>` (same as `<>r`) - will match
 an empty _JSON string_, `<>l` - will match an entry with the empty _JSON label_
 
 The rest of the lexemes (search and directives - `n`,`a`,`o`,`i`,`c`,`e`,`w`,`k`,`f`,`F`) also might be left empty, however,
-if the lexeme is non-empty, then it specifies a namespace where the value (result of a match) will be stored,
+if the lexeme is non-empty, then it **specifies a namespace** where the value (result of a match) will be stored,
 e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the namespace `array`
 
 ##### Cached Search
@@ -464,7 +466,7 @@ Though, there are cases when search could not be _cached_ in principle - when th
 resolution of the search is dependent on the _namespace_ value.  
 Here's the list of such search types:
   * `q`,`Q`: the lexemes refer (internally) to _namespaces_ when performing search and hence not cacheable
-  * recursive `<..>s`,`<..>t`: those lexemes using _namespaces_ when performing search and hence not cacheable
+  * recursive `<..>s`,`<..>t`: those lexemes using _namespaces_ when performing search and hence are not cacheable
   * [non-recursive](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
   search lexemes with 
   [relative quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic) 
@@ -484,9 +486,9 @@ for the currently walked JSON elements:
 
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme (lexeme cannot be empty)
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
-         can be updated/extracted programmatically), if the lexeme's value is non-empty then it also saves a found key 
-         (label/index) into the corresponding namespace
-  * `z`: erases namespace pointed by lexeme value; if lexeme is empty, erases entire namespace
+         can be updated/extracted programmatically), if the lexeme's value is non-empty then it saves a found key 
+         (label/index) into the corresponding namespace and **cancels reinterpretation** of the label as a value
+  * `z`: erases namespace pointed by lexeme value; if lexeme must not be empty
   * `f`: fail-safe: if lexeme walking **past the fail-safe** fails, instead of progressing to the next iteration
          (a normal behavior), the lexeme immediately preceding the fail-safe will be matched; walking (of the same walk-path)
          may continue for the failed path if `F` directive is present (past the failing point) from the walk lexeme following
@@ -495,9 +497,11 @@ for the currently walked JSON elements:
    * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
    without ending the walk;
    * `><F` - when the directive is reached, the walk successfully stops for the output processing    
-   * `u` - user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects waling: if a returned result of the
-   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
-   interpolation
+  * `u`: user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects waling: if a returned result of the
+  shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
+  interpolation
+  * `I`: increment lexeme - if the namespace value pointed by a lexeme is _JSON number_ then it's incremented by the specified offset
+  (e.g. `<var>I-3` will decrement `var` by `3`), if the pointed value is not a _JSON number_ then it's ignored
    
 The use of `F` directive makes only sense paired with `<>f`. Together they cover all cases of walk-paths branching:
   * ... `<>f` {if this path does not fail, then skip it} `<>F` {otherwise walk this path (starting from `<>f` point)} ...
