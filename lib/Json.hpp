@@ -499,6 +499,8 @@
 #define WLK_DPTH 1024 * 16                                      // threshold on recursion depth
 #define DBG_WIDTH 74                                            // max print len upon parser's dbg
 #define ARRAY_LMT 4                                             // #bytes per array's index
+#define SUCCESS -1                                              // some routines use -1 as success
+#define FAIL -2                                                 // some routines use -2 as fail
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
 #define GLAMBDA(FUNC) [this](auto&&... arg) { return FUNC(std::forward<decltype(arg)>(arg)...); }
@@ -558,6 +560,13 @@
 
 
 class Json;
+//
+//                      Jnode class
+//
+//  o facilitates JSON tree itself
+//  o programmatic DSL interface for JSON construction and all access methods
+//  o iteration over JSON (objects/arrays)
+//
 class Jnode {
     friend class Json;
 
@@ -636,7 +645,6 @@ class Jnode {
                 walk_non_existant_namespace, \
                 walk_non_numeric_namespace, \
                 walk_callback_not_engaged, \
-                walk_recursion_too_deep, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
@@ -925,7 +933,7 @@ class Jnode {
     virtual const std::string &
                         label(void) const { throw EXP(label_accessed_not_via_iterator); }
     virtual bool        has_index(void) const { throw EXP(index_accessed_not_via_iterator); }
-    virtual int64_t     index(void) const { throw EXP(index_accessed_not_via_iterator); }
+  virtual signed_size_t index(void) const { throw EXP(index_accessed_not_via_iterator); }
     virtual bool        is_root(void) const { throw EXP(method_accessed_not_via_iterator); }
                         // label() / index() / is_root() supposed to be used by a super
                         // node only (cannot be pure defined, hence throwing)
@@ -1071,7 +1079,7 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                             }
         bool                has_index(void) const
                              { return lbp_ != nullptr and parent_type() == Array; }
-        int64_t             index(void) const {
+        signed_size_t       index(void) const {
                              if(type_ != Array) throw EXP(index_request_for_non_array_enclosed);
                              return std::stoul(lbp_->c_str(), nullptr, 16);
                             }
@@ -1356,10 +1364,11 @@ std::ostream & Jnode::print_iterables_(std::ostream & os, const Jnode & my, sign
 
 
 //
-// Json class:
-//  o wraps Jnode
-//  o provides parsing
-//  o walk-path function and walk-iterators
+//                              Json class:
+//  o wraps Jnode, relaying all Jnode interfaces
+//  o provides parsing of JSON
+//  o walk-path methods and walk-iterator
+//  o class is extensively debuggable
 //
 class Json {
     friend std::ostream & operator<<(std::ostream & os, const Json & my)
@@ -1436,6 +1445,7 @@ class Json {
                         Json(void) = default;
                         Json(const Jnode &jn): root_{jn.value()} { }
                         Json(Jnode &&jn): root_{std::move(jn.value())} { }
+
                         Json(const std::string &str) { parse(str); }
                         Json(const char * c_str) { parse( std::string{c_str} ); }
 
@@ -1459,12 +1469,12 @@ class Json {
                         exception_point(void) { return exp_; }
     class iterator;
     iterator            walk(const std::string & walk_string = "", CacheState = invalidate);
+    std::string         unquote_str(const std::string & src) const;
+    std::string         inquote_str(const std::string & src) const;
 
     // relayed Jnode interface
     std::string         to_string(Jnode::PrettyType pt = Jnode::Pretty) const
                          { return root().to_string(pt); }
-    std::string         unquote_str(const std::string & src) const;
-    std::string         inquote_str(const std::string & src) const;
     Jnode::Jtype        type(void) const { return root().type(); }
     Json &              type(Jnode::Jtype x) { root().type(x); return *this; }
     bool                is_object(void) const { return root().is_object(); }
@@ -1543,7 +1553,7 @@ class Json {
     // anyway every time a new walk is build, thus the end-user must call it only
     // when continue walking iterators (with search iterators) past JSON modification
 
-    //SERDES(root_)                                             // not really needed (so far)
+    //SERDES(root_)                                             // not required (so far)
     DEBUGGABLE()
     EXCEPTIONS(Jnode::ThrowReason)
 
@@ -1558,11 +1568,11 @@ class Json {
     Jnode               root_;                                  // underlying JSON structure
     Streamstr::const_iterator
                         exp_;                                   // exception pointer
-    const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
-    const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
     map_jn              jns_;                                   // jnode namespace
     const Jnode *       ujn_ptr_;                               // for is_unique_()
     const Jnode *       djn_ptr_;                               // for is_duplicate_()
+    const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
+    const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
 
 
  private:
@@ -1587,6 +1597,7 @@ class Json {
     Streamstr::const_iterator &
                         validate_number_(Streamstr::const_iterator & jsp);
 
+    // methods facilitating walk-path feature
     void                compile_walk_(const std::string & wstr, iterator & it) const;
     void                parse_lexemes_(const std::string & wstr, iterator & it) const;
     std::string         extract_lexeme_(std::string::const_iterator &si, char closing) const;
@@ -1598,12 +1609,9 @@ class Json {
     std::string         parse_namespace_(std::string::const_iterator &) const;
     signed_size_t       parse_index_(std::string::const_iterator &,
                                      ParseThrow, ParseThrow = may_be_any) const;
-    Json &              erase_ns_(const std::string &s = "") {  // unlike clear_ns, this one
-                         if(s.empty())                          // does not ever erases NS, rather
-                          for(auto & nsp: jns_)                 // marks existing nodes with
-                           nsp.VALUE.type(Jnode::Neither);      // Jnode::Neither type in the NS
-                         else jns_[s].type(Jnode::Neither);
-                         return *this;
+    Json &              erase_ns_(const std::string &s) {       // unlike clear_ns, this one
+                         jns_[s].type(Jnode::Neither);          // does not ever erases NS, rather
+                         return *this;                          // marks existing nodes as erased
                         }
     static void         build_path_(Jnode &jpath, const Json::iterator &jit);
 
@@ -1620,27 +1628,29 @@ class Json {
         // validation - jit could be invalidated due to a prior JSON manipulation,
         // preserved lbl and jnode addr ensure safe execution of is_nested() and
         // is_valid() methods;
-
                             Itr(void) = default;                // for pv_.resize()
                             Itr(const iter_jn &it):             // for emplacement of good itr
                              jit(it), lbl(it->KEY), jnp(&it->VALUE) {}
                             Itr(const iter_jn &it, bool x):     // for emplacement of end() only!
                              jit(it) {}
 
-        // typedef std::map<std::string, Jnode>::iterator iter_jn;
-        iter_jn             jit;                                // iterator pointing to JSON
+        // reminder:    typedef std::map<std::string, Jnode>::iterator iter_jn;
+        iter_jn             jit;                                // iterator pointing to JSON node
         std::string         lbl;                                // label and node ptr are required
         const Jnode *       jnp{nullptr};                       // for iterator (jit) validation
     };
-    typedef std::vector<Itr> path_vector;                       // used by iterator, CahceEntry
+
+    typedef std::vector<Itr> path_vector;                       // used by iterator and CahceEntry
+
 
     // CacheEntry:
-    // used by SearchCache
+    // - used by SearchCache: preserves a path for a found search (and its current namespace)
     struct CacheEntry {
         // namespace at the given instance of the path, to support its REGEX values
         map_jn                      ns;                         // ns only for given cache entry
         path_vector                 pv;
     };
+
 
     // WalkStep:
     // - used by walk iterator and search cache key
@@ -1655,24 +1665,25 @@ class Json {
             range_walk,         /* [+0], [1:], [4:10], [-5:-1], quantifiers: +0, 3:, 4:10 */ \
             cache_complete      /* this is used in **SearchCacheKey** only */
                                 // Note: there's no negative range for iterable quantifier: no way
-                                // to know upfront the number of hits recursive search'd produce
+                                // to know upfront the number of hits a recursive search'd produce
         ENUMSTR(WalkStepType, WALKSTEPTYPE)
 
                             WalkStep(void) = delete;
                             WalkStep(std::string && l, Jsearch js): // enable emplacement
-                             lexeme(std::move(l)), jsearch(js) {}
+                             jsearch(js), lexeme(std::move(l)) {}
 
-        bool                operator<(const WalkStep &r) const {// only for SearchCacheKey:
+        bool                operator<(const WalkStep &r) const {// used only in SearchCacheKey:
                              if(is_subscript() or r.is_subscript())
                               return jsearch < r.jsearch;
-                             return jsearch != r.jsearch?       // - for caching purpose
-                                    jsearch < r.jsearch:        // quantifiers are not compared
-                                    ( lexeme != r.lexeme?
-                                      lexeme < r.lexeme:
-                                      stripped.back() < r.stripped.back()
-                                    );
+                             return jsearch != r.jsearch?       // for caching purpose
+                                     jsearch < r.jsearch:       // quantifiers are not compared
+                                     ( lexeme != r.lexeme?
+                                        lexeme < r.lexeme:
+                                        stripped.back() < r.stripped.back()
+                                     );
                             }
 
+        // various walk properties
         bool                is_recursive(void) const
                              { return lexeme.front() == LXM_SCH_OPN; }
         bool                is_non_recursive(void) const
@@ -1696,7 +1707,6 @@ class Json {
         bool                is_cacheless(void) const
                              { return is_using_namespace() or is_qnt_relative() or
                                       (jsearch == json_match and user_json.is_neither()); }
-
         bool                is_subscript(void) const
                              { return lexeme.front() == LXM_SUB_OPN; }
         bool                is_search(void) const
@@ -1712,7 +1722,8 @@ class Json {
                              { return jsearch AMONG(Regex_search, digital_match, Digital_regex,
                                                     Label_RE_search, json_match, search_from_ns,
                                                     tag_from_ns, query_unique, Query_duplicate,
-                                                    value_of_json, user_handler, Increment_num); }
+                                                    value_of_json, user_handler, Increment_num,
+                                                    zip_namespace); }
         bool                must_lexeme_be_empty(void) const
                              { return false; }
         bool                is_lexeme_namespace(void) const
@@ -1743,21 +1754,21 @@ class Json {
                             }
         bool                is_locked(void) const { return locked; }
 
-        std::string         lexeme;                             // lexeme w/o suffix and quantifier
-        Jsearch             jsearch;                            // Jsearch type
+        Jsearch             jsearch;                            // Jsearch type (r/R/d/D/n/l/L etc)
+        WalkStepType        type{static_select};                // lexeme's type (static/range/etc)
         signed_size_t       offset{0};                          // current offset
         signed_size_t       head{0};                            // range walk type
         signed_size_t       tail{LONG_MAX};                     // by default - till the end
         std::string         offsets;                            // interpolatable offset
         std::string         heads;                              // interpolatable head
         std::string         tails;                              // interpolatable tail
-        WalkStepType        type{static_select};
-        vec_str             stripped;
-                            // stripped[0] -> a stripped lexeme (required)
-                            // stripped[1] -> attached label match, optional (e.g.: [label]:<..>)
+        std::string         lexeme;                             // lexeme w/o suffix and quantifier
+        vec_str             stripped;                           // stripped lexeme, + optional lbl
+                            // stripped[0]: a stripped lexeme (always present)
+                            // stripped[1]: attached label match (e.g.: [label]:<..>), if required
         std::regex          re;                                 // RE for R/L/D suffixes
-        Jnode               user_json{Jnode::Neither};          // Json for <>j, or <>v assignment
-        path_vector         fs_path;                            // preserved path for FS
+        Jnode               user_json{Jnode::Neither};          // for those allowing storing JSON
+        path_vector         fs_path;                            // preserved path for fail-safe
         bool                locked{false};                      // indicate locked/unlocked state
         // 1. fail_safe (FS) <..>f and Forward_itr (FI) <..>F directives design:
         //  o directives may be found in 2 states: locked and unlocked
@@ -1765,9 +1776,9 @@ class Json {
         //      walking upon failure
         //    - in the locked state FS is disengaged - no action is taken (by directive) and
         //      walking continues past locked directive's domain (either to <end> or to past the
-        //      next <>F/><F directive)
+        //      next <>F / ><F directive)
         //  o when FS directive is in locked, it also locks its entire domain of operation: from
-        //    the FS directive itself up until <end> or to the next <>F/><F directive inclusive
+        //    the FS directive itself up until <end> or to the next <>F / ><F directive inclusive
         //
         // ---- clarification on locking behavior ----
         // is FS locking really required? consider following cases:
@@ -1784,7 +1795,6 @@ class Json {
         //  - locking occurs upon failure within <>f domain (b-c)
         //  - unlocking (of <>f) then must occur when incrementing an iterator prior <>f - (a)
         // ----
-        //
         //  o FS is engaged when failure of walk-steps within the FS domain occurs:
         //    - `failed_stop_(wsi)` - validates FS engagement: starting from WS index (wsi):
         //    0.a. if failed WS is a range (e.g. [:])
@@ -1809,7 +1819,7 @@ class Json {
         //
         // 2. Forward_itr (FI) <..>F/>..<F directive:
         //  o usage of FI directive is limited to be paired with FS only
-        //    (other/standalone usage of FI makes no sense)
+        //    (other/standalone usage of FI makes not much sense)
         //  o behavior depends on the search semantic given:
         //     - <..>F directive instructs to skip silently to the next iteration w/o displaying
         //       the result
@@ -1862,51 +1872,57 @@ class Json {
         COUTABLE(WalkStep, search_type(), lexeme, ws_type(), ofst(), range(), label(), json())
     };
 
+
     // Search Cache Key:
     // - made of jnode pointer and walk step
     struct SearchCacheKey {
-     // Search may occur off any JSON node and in any of WalkSteps, hence a unique
-     // key would be their combination
-     // WalkStep (ws) needs to be preserved (cannot be referenced) as the original
-     // walk path might not even exist, while the cache could be still alive and actual
-
+        // Search may occur off any JSON node and in any of WalkSteps, hence a unique
+        // key would be their combination
+        // WalkStep (ws) needs to be preserved (cannot be referenced) as the original
+        // walk path might not even exist, while the cache could be still alive and actual
                             SearchCacheKey(void) = delete;
                             SearchCacheKey(const Jnode *jp, const WalkStep & w):
                              jnp(jp), ws(w) {}
 
         const Jnode *       json_node(void) const { return jnp; }   // only for COUTABLE
 
-        static bool         cmp(const SearchCacheKey &l, const SearchCacheKey &r)
-                             { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
-
         const Jnode *       jnp;
         WalkStep            ws;
 
+        static bool         cmp(const SearchCacheKey &l, const SearchCacheKey &r)
+                             { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
+
         COUTABLE(SearchCacheKey, json_node(), ws)
     };
-    typedef std::map<SearchCacheKey, std::vector<CacheEntry>, decltype(&SearchCacheKey::cmp)>
+
+    typedef std::map<SearchCacheKey,
+                     std::vector<CacheEntry>,
+                     decltype(&SearchCacheKey::cmp)>
                         SeachCache;
 
+
     struct Stringover {
-     // a trivial std::string wrapper: overrides string holder only if argument is non-empty
-     // utilized by interpolation routines
+        // a trivial std::string wrapper: overrides string holder only if argument is non-empty
+        // utilized by interpolation routines
                             Stringover(void) = default;
-                            Stringover(std::string str): str_{str} {}   // CC with elision
+                            Stringover(std::string str): str_{str} {}   // CC with copy elision
+
+                            operator std::string & (void) { return str_; }
         Stringover &        operator=(const std::string &str)
                              { if(not str.empty()) str_ = str; return *this; }
-                            operator std::string & (void) { return str_; }
      private:
         std::string         str_;
     };
 
+
     // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
     void                parse_subscript_type_(WalkStep & state) const;
 
- public:
-
     static map_jn       dummy_ns;                               // default arg in interpolate()
 
-    //                      walk iterator
+ public:
+
+    //                      walk Json::iterator
     //
     // Json::iterator (a.k.a. walk iterator): needs to be defined in-class to facilitate
     // container storage with the iterator (e.g. walk-based callbacks)
@@ -1924,6 +1940,7 @@ class Json {
      //              indexed levels up in the JSON's tree hierarchy (e.g." [-1] will
      //              address a parent of the dereferenced node, and so on)
         friend Json;
+
         friend void         swap(Json::iterator &l, Json::iterator &r) {
                              using std::swap;                   // enable ADL
                              swap(l.ws_, r.ws_);
@@ -1952,7 +1969,7 @@ class Json {
                                  return lbl_ != &Json::iterator::dummy_lbl_ and
                                         parent_type() == Array;
                                 }
-            int64_t             index(void) const {
+            signed_size_t       index(void) const {
                                  if(type_ != Array)
                                   throw EXP(index_request_for_non_array_enclosed);
                                  return std::stoul(lbl_->c_str(), nullptr, 16);
@@ -2064,7 +2081,7 @@ class Json {
                             }
         bool                is_nested(iterator & it) const;
 
-        // work with path vector:
+        // path vector methods:
         const path_vector & path(void) const { return pv_; }    // path to the element
         const Itr &         operator[](size_t idx) const { return pv_.at(idx); }
         size_t              path_size(void) const { return pv_.size(); }
@@ -2119,7 +2136,7 @@ class Json {
         SuperJnode          sn_{Jnode::Neither};                // super node type_ holds parent's
 
      private:
-        #define SEARCH_TYPE \
+        #define SEARCH_TYPE     /* lexeme type: <..> vs >..< */\
                 recursive, \
                 non_recursive
         ENUMSTR(SearchType, SEARCH_TYPE)
@@ -2171,14 +2188,18 @@ class Json {
         void                purge_ns_(const std::string & pfx);
         void                maybe_nsave_(WalkStep & ws, const Jnode *jn);
 
+        // callbacks interface
         void                lbl_callback_(const char *lbl,
                                           const std::vector<Json::CacheEntry> * = nullptr);
         void                wlk_callback_(const Jnode *);
         void                dmx_callback_(const Jnode *, const char *lbl,
                                           const std::vector<Json::CacheEntry> * = nullptr);
 
-        bool                increment_(signed_size_t wsi, size_t i = 0);
+        // facilitate actual walking (i.e. iterations for walks)
+        signed_size_t       increment_(signed_size_t wsi);
         signed_size_t       next_iterable_ws_(signed_size_t wsi) const;
+
+        // facilitate <>f and <>F lexemes
         void                lock_fs_domain(size_t wsi) {        // lock FS domain till end of FI
                              for(; wsi < walk_path_().size(); ++wsi) { // traversing forward
                               auto & ws = walk_path_()[wsi];
@@ -2209,7 +2230,6 @@ class Json {
     static std::string  interpolate_tmp(std::string templ, const Json &);
 
  private:
-
     // data structures (cache storage and callbacks)
     // cache:
     //      key: made of { WalkStep, *Jnode };
@@ -2223,9 +2243,10 @@ class Json {
     struct WlkCallback {
      // this class facilitates wlk_callback_vec type storage, binding Json::iterator
      // and callback itself together
-     // There are 2 types of callbacks:
+     // There are 3 types of callbacks (this one facilitates 2nd):
      // 1. callback hooked onto the JSON labels (lbl_callback_map)
      // 2. callback hooked onto Json::iterators (wlk_callback_vec)
+     // 3. callback for user lexeme <..>i (uws_callback_vec)
                             WlkCallback(iterator &&itr, std::function<void(const Jnode &)> &&cb):
                              itr{std::move(itr)}, callback(std::move(cb)) {}
         iterator            itr;
@@ -2244,10 +2265,8 @@ class Json {
     uws_callback_vec    ucb_;                                   // WS '<..>u#' callbacks
     bool                ce_{false};                             // callbacks engaged? flag
 
-    std::function<bool(const Jnode &)>
-                            wsu_callback_{nullptr};             // user callback for <..>u
- public:
 
+ public:
 
     #define CALLBACK_TYPE \
                 label_callback, \
@@ -2258,6 +2277,7 @@ class Json {
 
     // user callbacks interface:
     bool                is_engaged(CallbackType ct = any_callback) const {
+                         // check is any or a specific callback is engaged
                          if(ct == label_callback) return ce_ and not lcb_.empty();
                          if(ct == walk_callback) return ce_ and not wcb_.empty();
                          if(ct == lexeme_callback) return ce_ and not ucb_.empty();
@@ -2277,7 +2297,7 @@ class Json {
                          lcb_.emplace(std::move(lbl), std::move(cb));
                          return *this;
                         }
-    Json &              callback(iterator itr,                  // plug-in iter-callback (from walk)
+    Json &              callback(iterator itr,                  // plug-in itr-callback (from walk)
                                  std::function<void(const Jnode &)> &&cb) {
                          if(itr != itr.end())                   // don't plug ended iterators
                           wcb_.emplace_back(std::move(itr), std::move(cb));
@@ -2296,6 +2316,7 @@ const wlk_callback_vec& wlk_callbacks(void) const { return wcb_; }
 const uws_callback_vec& uws_callbacks(void) const { return ucb_; }
 
 };
+
 
 // class static definitions
 STRINGIFY(Json::Jsearch, JS_ENUM)
@@ -2362,7 +2383,7 @@ void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
   static const std::string pfx{"parsing point"};
   std::string str = jsp.str(DBG_WIDTH);
   if(utf8_adjusted(0, str) > (DBG_WIDTH - pfx.size())) {
-   if(jsp.is_buffer())
+   if(jsp.is_buffered())
     { str = str.erase(byte_offset(str, DBG_WIDTH - pfx.size() - 3)); str += "..."; }
    else
     { str = str.erase(0, byte_offset(str, 3 + pfx.size())); str = "..." + str; }
@@ -2371,8 +2392,8 @@ void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
    if(c AMONG(CHR_EOL, CHR_RTRN)) c = '|';                      // replace \r \n with |
    if(c > 0 and c < ' ') c = ' ';
   }
-  DOUT() << (jsp.is_stream()? std::string(""): pfx + " ->")
-         << str << (jsp.is_stream()? "<- " + pfx: std::string("")) << std::endl;
+  DOUT() << (jsp.is_streamed()? std::string(""): pfx + " ->")
+         << str << (jsp.is_streamed()? "<- " + pfx: std::string("")) << std::endl;
  }
 
  if(node.is_neither()) return;
@@ -2553,19 +2574,24 @@ Jnode::Jtype Json::classify_jnode_(Streamstr::const_iterator & jsp) {
   return str.size() == 2 and isdigit(str.back())? Jnode::Number: Jnode::Neither;
  }
 
- static std::string jterm[] = {"true", "false", "null"};
+ #define JTERM JT_true, JT_false, JT_null
+ ENUM(Jterm, JTERM)
+ #undef JTERM
+ const static std::string jterm[] = {"true", "false", "null"};
  size_t sjt;                                                    // selected jterm
- if(*jsp == 't') sjt = 0;
- else if(*jsp == 'f') sjt = 1;
-      else if(*jsp == 'n') sjt = 2;
-           else return Jnode::Neither;
+ switch(*jsp) {
+  case 't': sjt = JT_true; break;
+  case 'f': sjt = JT_false; break;
+  case 'n': sjt = JT_null; break;
+  default: return Jnode::Neither;
+ }
 
- for(size_t i = 1; i < jterm[sjt].size(); ++i) {
+ for(size_t i = 1; i < jterm[sjt].size(); ++i) {                // fully validate jterm
   std::string str = readup_str_(jsp, i + 1);
   if(str.size() != i + 1 or jterm[sjt][i] != str[i]) return Jnode::Neither;
  }
 
- return sjt == 2? Jnode::Null: Jnode::Bool;
+ return sjt == JT_null? Jnode::Null: Jnode::Bool;
 }
 
 
@@ -2586,7 +2612,7 @@ std::string Json::readup_str_(Streamstr::const_iterator & jsp, size_t n) {
  std::string str;
  for(size_t i = 0; i < n; ++i) {
   str += *jsp;
-  if(jsp.is_files_last())                                       // do not advance to next file yet
+  if(jsp.is_last_in_file())                                    // do not advance to next file
    { advance(jsp, -static_cast<signed_size_t>(i)); return str; }
   else
    if(++jsp == jsp.streamstr().end())
@@ -2799,7 +2825,7 @@ std::string Json::extract_lexeme_(std::string::const_iterator &si, char closing)
 
 void Json::parse_suffix_(std::string::const_iterator &si,
                          iterator & it, vec_str &req_label) const {
- // parse suffix following a text offset, e.g.: ..>r, ..>d, ..>L and suffix ':' in [..]:<..>
+ // parse suffix following a text offset, e.g.: ..>r, ..>d, ..>L and spacer ':' in [..]:<..>
  if(it.walk_path_().empty())                                    // expect some elements already in
   throw EXP(Jnode::walk_expect_lexeme);                         // walks may start with lexeme only
 
@@ -3091,10 +3117,10 @@ bool Json::iterator::incremented(void) {
   return false;
  }
 
- bool rv = increment_(wsi);
- while(not pv_.empty() and pv_.back().jit == json().end_() and pv_.back().jnp != nullptr)
-  rv = increment_(wsi);
- return rv;
+ signed_size_t rv = increment_(wsi);
+ while(rv >= 0) rv = increment_(rv);
+
+ return rv == SUCCESS;
 }
 
 
@@ -3123,7 +3149,7 @@ bool Json::iterator::is_valid_(Jnode & jn, size_t idx) const {
 
 size_t Json::iterator::walk_(void) {
  // walk 'ws' structure from the root building a path vector
- // empty pv_ addresses json.root().
+ // empty pv_ addresses json.root()
  sn_type_ref_() = Jnode::Neither;                               // indicate walk is in progress
  json().ujn_ptr_  = json().djn_ptr_ = nullptr;                  // indicate beginning of walk
  Jnode * jnp = & json().root();
@@ -3135,7 +3161,7 @@ size_t Json::iterator::walk_(void) {
   DBG(json(), 2) show_built_pv_(DOUT(json()));
   if(pv_.empty())
    { jnp = & json().root(); continue; }                         // empty pv_ is a valid path: root
-  if(pv_.back().jit != json().end_())                           // walk_step_ not failed,
+  if(pv_.back().jit != json().end_())                           // walk_step_ did not fail,
    { jnp = &pv_.back().jit->VALUE; continue; }                  // continue walking then
 
   // walk_step failed here (pv_.back().jit == json().end_())
@@ -3144,8 +3170,7 @@ size_t Json::iterator::walk_(void) {
     DOUT(json()) << ENUMS(Json::Jsearch, Json::Forward_itr) << " at [" << i << "], "
                  << (ws_[i].is_recursive()? "skipping":"stopping") << std::endl;
    if(ws_[i].is_non_recursive()) { pv_.pop_back(); break; }     // i.e. ><F - "stop" type
-   pv_.back().jnp = &json().root();                             // use as indicator of <>F lexeme
-   return -1;                                                   // exit recursion here
+   return FAIL;
   }
   signed_size_t fs_wsi = failed_stop_(i);                       // check if FS gets locked there
   if(fs_wsi < 0) return i;                                      // no fail_safe, return failing wsi
@@ -3157,7 +3182,7 @@ size_t Json::iterator::walk_(void) {
  sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
  // NOTE: even if pv_ is empty (i.e. root selected), sn_.type_ is filled with the root's type
  //       (instead of Neither), to signify end of walk processing (used in operator*())
- return -1;
+ return SUCCESS;
 }
 
 
@@ -3179,10 +3204,11 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
         return walk_numeric_offset_(wsi, jn);
   case text_offset:                                             // [abc]
         return walk_text_offset_(wsi, jn);
+
+ // below cases process directives
   case zip_namespace:                                           // facilitate <..>z
         DBG(json(), 3) DOUT(json()) << "erased namespace: "
-                                    << (ws.stripped[0].empty()? "all":
-                                         "'" + ws.stripped[0] + "'") << std::endl;
+                                    << ("'" + ws.stripped[0] + "'") << std::endl;
         json().erase_ns_(ws.stripped[0]);
         return;
   case fail_safe:                                               // facilitate <..>f
@@ -3196,14 +3222,14 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
   case key_of_json:
         maybe_nsave_(ws, jn);
         return;
-  case Increment_num: {                                         // facilitate <..>I+/-..
+  case Increment_num: {                                         // facilitate <..>I+/-n
          auto found_ns = json().jns_.find(ws.stripped[0]);
-         if(found_ns == json().jns_.end()) {
+         if(found_ns == json().jns_.end()) {                    // ns is non-existent yet
           json().jns_.emplace(ws.stripped[0], 0);
           found_ns = json().jns_.find(ws.stripped[0]);
          }
-         else
-          if(not found_ns->second.is_number()) return;
+         else                                                   // ns already exists
+          if(not found_ns->second.is_number()) return;          // <..>I processes only numerics
          found_ns->second = found_ns->second.num() + ws.offset;
         }
         return;
@@ -3221,7 +3247,7 @@ void Json::iterator::walk_step_(size_t wsi, Jnode *jn) {        // wsi: walk-ste
 
 
 void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
- // walk a numerical offset, e.g.: [3], [+0], [-1]
+ // walk a numerical offset, e.g.: [3], [+0], [-1], [^2], [:], etc
  auto &ws = ws_[wsi];
 
  if(ws.type == WalkStep::root_select)                           // root offset, e.g.: [^2]
@@ -3258,6 +3284,7 @@ Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
  bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
                     (found_cache->KEY.ws.type != WalkStep::cache_complete and   // not cached yet
                      static_cast<size_t>(ws.offset) >= found_cache->VALUE.front().pv.size());
+
  if(build_cache) {
   DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
   auto & cache = found_cache == cache_map.end()? cache_map[skey]: found_cache->VALUE;
@@ -3283,6 +3310,7 @@ Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
                 << ", cache status: " << ENUMS(WalkStep::WalkStepType, found_cache->KEY.ws.type)
                 << std::endl;
  }
+
  return found_cache->VALUE.front().pv[ws.offset].jit;
 }
 
@@ -3376,7 +3404,7 @@ void Json::iterator::research_(Jnode *jn, size_t wsi,
                     ws.load_tail(json()) -1;                    // cache up to tail
  signed_size_t cache_from = vpv? i - vpv->size(): i;
 
- if(vpv) vpv->resize(vpv->size() + 1);                          // prepare place for 1st pathvector
+ if(vpv) vpv->resize(vpv->size() + 1);                          // placeholder for 1st pathvector
  DBG(json(), 3)
   DOUT(json()) << "instances: " << (i == LONG_MAX - 1? "all": std::to_string(i))
                << ", cache from: " << (cache_from == LONG_MAX - 1? "head to tail":
@@ -3393,6 +3421,7 @@ void Json::iterator::research_(Jnode *jn, size_t wsi,
 
  if(vpv == nullptr)                                             // indicate |nothing found|
   { pv_.emplace_back(json().end_(), true); return; }            // for cacheless search type
+
  // indication that cache is complete (entire Jnode was searched) is stored in the SearchCacheKey:
  skey->ws.type = WalkStep::cache_complete;                      // indicate cache completed
  auto nvp = move(*vpv);                                         // move/preserve the cache
@@ -3721,7 +3750,7 @@ void Json::iterator::maybe_nsave_(WalkStep & ws, const Jnode *jn) {
  // if lexeme is right, save JSON into the namespace
  if(not ws.is_lexeme_namespace() or ws.stripped[0].empty()) return;
 
- if(ws.jsearch == key_of_json and ws.user_json.is_neither()) {  // i.e.: <namespace_only>k
+ if(ws.jsearch == key_of_json and ws.user_json.is_neither()) {  // i.e.: <namespace>k
   if(pv_.empty()) throw jp_->EXP(Jnode::walk_root_has_no_label);
   auto & parent = pv_.size() == 1? json().root(): pv_[pv_.size()-2].jit->VALUE;
   json().jns_[ws.stripped[0]] = parent.type_ == Jnode::Object?
@@ -3932,21 +3961,20 @@ void Json::iterator::dmx_callback_(const Jnode *jn, const char *lbl,
 }
 
 
-bool Json::iterator::increment_(signed_size_t wsi, size_t i) {
+Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
  // increment walk step and re-walk: returns true / false upon successful / unsuccessful walk
- if(i >= WLK_DPTH) throw json().EXP(Jnode::walk_recursion_too_deep);    // covering stack overflow
-
  auto & ws = walk_path_()[ wsi ];
 
- ++ws.offset;
+ ++ws.offset;                                                   // next iteration
  unlock_fs_domain(wsi);
  DBG(json(), 2) DOUT(json()) << "next incremented: [" << wsi << "] " << ws << std::endl;
- size_t failed_wsi = walk_();
- if(pv_.empty() or pv_.back().jit != json().end_())
-  return true;                                                  // successful walk
- if(pv_.back().jnp != nullptr)                                  // it's an <>F lexeme, then exit
-  return false;                                                 // to avoid too deep recursion
 
+ size_t failed_wsi = walk_();
+
+ if(pv_.empty() or pv_.back().jit != json().end_())             // successful walk
+  return SUCCESS;
+ if(failed_wsi == static_cast<size_t>(FAIL))                    // it's an <>F lexeme, then exit
+  return wsi;                                                   // to continue walking
 
  DBG(json(), 2)
   DOUT(json()) << "WalkStep idx from a fruitless walk: " << failed_wsi << std::endl;
@@ -3958,24 +3986,24 @@ bool Json::iterator::increment_(signed_size_t wsi, size_t i) {
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required to handle irregular JSONs
   signed_size_t next_wsi = next_iterable_ws_(failed_wsi);
-  return next_wsi < 0? false: increment_( next_wsi, i + 1);
+  return next_wsi < 0? FAIL: next_wsi;
  }
 
  signed_size_t next_wsi = next_iterable_ws_(wsi);               // get next more significant wsi
- if(next_wsi < 0) return false;                                 // out of iteratables
+ if(next_wsi < 0) return FAIL;                                  // out of iteratables
  // here we need to reload the walkstep's offset with the head's value
  ws.offset = ws.type == WalkStep::range_walk and not ws.heads.empty()?
              LONG_MIN: ws.head;
              // LONG_MIN: indicates delayed (until next actual walk) resolution
              // cannot resolve right now, cause NS might have changed by the next walking this ws
  DBG(json(), 3) DOUT(json()) << "head-initialized offset [" << wsi << "]" << std::endl;
- return increment_(next_wsi, i + 1);
+ return next_wsi;
 }
 
 
 Json::signed_size_t Json::iterator::next_iterable_ws_(signed_size_t wsi) const {
  // get next more significant position (index within walk-path) of iterable offset,
- // otherwise (whole path non-iterable) return -1
+ // otherwise (whole path non-iterable) return -1: end of iteration
  while(--wsi >= 0) {
   auto & ws = walk_path_()[ wsi ];
   if(ws.is_locked()) continue;
@@ -3997,15 +4025,15 @@ Json::signed_size_t Json::iterator::failed_stop_(signed_size_t wsi) {
   const auto & j =  pv_.size() >= 2?                            // j here is a failing json node
                      pv_[pv_.size()-2].jit->VALUE.value(): json().root();
   if(j.is_atomic())                                             // non-iterables was processed once
-   { if(ws.offset > ws.head) return -1; }                       // it's an artifact of fail_safe
+   { if(ws.offset > ws.head) return SUCCESS; }                  // it's an artifact of fail_safe
   else // j is iterable
    if(ws.offset >= static_cast<signed_size_t>(j.children()))
-    return -1;                                                  // iterable is failing counter here
+    return SUCCESS;                                             // iterable is failing counter here
  }
 
  for(; wsi >= 0; --wsi) {                                       // going backwards
   auto & ws = walk_path_()[wsi];
-  if(ws.jsearch == Jsearch::Forward_itr) return -1;             // not FS domain
+  if(ws.jsearch == Jsearch::Forward_itr) return SUCCESS;        // not FS domain
   if(ws.jsearch != Jsearch::fail_safe) continue;                // some other walk-step
   pv_ = ws.fs_path;                                             // restore the path vector
   DBG(json(), 3)
@@ -4014,9 +4042,8 @@ Json::signed_size_t Json::iterator::failed_stop_(signed_size_t wsi) {
   return wsi;
  }
 
- return -1;
+ return SUCCESS;
 }
-
 
 
 size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
@@ -4059,6 +4086,8 @@ size_t Json::byte_offset(const std::string &jsrc, size_t utf8_offset) {
 
 #undef DBG_WIDTH
 #undef ARRAY_LMT
+#undef SUCCESS
+#undef FAIL
 #undef KEY
 #undef VALUE
 #undef GLAMBDA
