@@ -3167,7 +3167,7 @@ Thus use them cautiously when dealing with big JSONs (around or above hundreds o
 
 
 ### Counting with `jtc`
-Counting any number of properties is JSON could be done using exteral `wc` unix utility, e.g. let's count all `number`s in `ab.json`:
+Counting any number of properties is JSON could be done using exteral `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
 ```
 bash $ <ab.json jtc -w'<number>l:' | wc -l
        6
@@ -3191,8 +3191,8 @@ bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
 bash $ 
 ```
 - `<cnt:100>f` will setup a fail-safe point at the same time initializing namespace `cnt` with value `100`
-- `[]` is a walk lexeme which is guaranteed to fail here (there are no empty lables), so it will trigger fail-stop, which will continue
-walking past `<>F` lexeme - that will ensure that initial offset of the `cnt` is set to `100` instead of default `0`
+- `[]` is a walk lexeme which is guaranteed to fail here (there are no empty lables), so, it will trigger a fail-stop, which will
+continue walking past `<>F` lexeme - that will ensure that initial offset of the `cnt` is set to `100` instead of default `0`
 
 
 
