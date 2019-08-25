@@ -29,14 +29,19 @@ _Release Notes for `jtc` v.1.72_
 #### New features:
 - introduced a new directive `<>I` which let incrementing/decrementing numerical JSONs preserved in the namespace (and ignore other
 JSON types), e.g.: `<var>I3`, `<var>I-1`. If `var` wasn't defined before, the iteration begins with `0`; 
-however, it's possible to initialize it with other than `0` values - see User Guide
+however, it's possible to initialize it with other than `0` values - see
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#counting-with-jtc)
 - introduced an auto-namespace variable `$?` to reference the last processed walk, this facilitates use-cases when converting
-input JSON to `.csv` format; see User Guide for more
+input JSON to `.csv` format; see
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
+for more
 - introduced new lexemes `<..>P`, `<..>N` to match any _JSON strings_ and _JSON numerical_ types respectively. Before, to facilitate the
 same, REGEX lexemes were used: `<.*>R` and `<.*>D` respectively, but new lexemes work faster and allow capturing matched values in
 the namespace)
 - Template-interpolation was enhanced with new capability to _jsonize JSON strings_ (containing embedded JSONs) and _stringify JSONs_ - 
-similar to respective options `-qq` and `-rr` but now programmatically. See User Guide for the syntax and examples
+similar to respective options `-qq` and `-rr` but now programmatically. See
+[User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
+for the syntax and examples
 - added a new semantic to `-x` option: `-xn[/N]` notation lets specifying a frequency of walks to be displayed - (every `n`th walk) 
 staring from the optional offset `N` (zero based); e.g.: `-x4` - display every _4th_ walk, while `-x4/1` will do the same starting
 from the 2nd (`N` index is zero based) walk.
