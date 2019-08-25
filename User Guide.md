@@ -3184,7 +3184,7 @@ bash $
 - `-T{cnt}` will interpolate it
 - `-x/-1` will display on the last walk
 
-Say, now we want to count the same phone numbers, but for some reason staring it from `100`:
+Say, now we want to count the same phone numbers, but for some reason staring from `100`:
 ```
 bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
 106
