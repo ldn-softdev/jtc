@@ -138,7 +138,7 @@ jtc json exception: unexpected_end_of_string
 bash $ 
 ```
 \- why? 
-\- it happens because of a _shell interpolation_. Shell treats space (` `) as an argument separator, therefore option `-w`
+\- it happens because of a _shell interpolation_. Shell treats space ('` `') as an argument separator, therefore option `-w`
 ends up only with partial argument, namely with `[4][2][number`, which is an invalid walk.
 
 ---
