@@ -3195,8 +3195,8 @@ bash $
 it's just a reverse action.
 
 **CAUTION:** _be aware that directives `<..>q`, `<..>Q` are dynamic types, which means they are exempted for cacheing,
-implying that on very big JSONs an **exponential decay** will become noticeable. Plus, both directives are quite memory hungry.
-Thus usem cautiosly when dealing with big JSONs (around or above million nodes)
+implying that on very big JSONs an **exponential decay** will become noticeable. Plus, both directives are quite memory hungry.  
+Thus use them cautiously when dealing with big JSONs (around or above hundreds of thousand of nodes)_
 
 
 
