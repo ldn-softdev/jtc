@@ -2363,7 +2363,8 @@ initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2
 JSON. However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
 without producing failures.
 
-All the same applies for when interpolating _JSON objects_.
+All the same applies for when interpolating _JSON objects_ and _JSON strings_. For _JSON objects_ such null-interpolation is aware
+of enumerations occurring over of either of `,` or `;`
 
 
 ### Namespaces with interleaved walks
