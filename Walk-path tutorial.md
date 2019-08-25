@@ -202,7 +202,7 @@ bash $ <<<$ANML jtc
 bash $ 
 ```
 
-That is serious enough reason to select elements in JSON objects by their keys/labels:
+That is a serious enough reason to select elements in JSON objects by their keys/labels:
 ```
 bash $ <<<$ANML jtc -w'[ANDEAN BEAR]'
 "Bono"
