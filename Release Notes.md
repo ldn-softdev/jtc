@@ -48,7 +48,7 @@ Also, note a special notation case: `-x0/N` - will display `Nth` (zero based) wa
 Plus, introduced a new merge format: `-jlnn` - all clashing values will be aggregated (disrespecting JSON structured grouping vs. as in 
 the case of `-jl`)
 - lifted handling of _atomic JSONs_ - simplified the code allow applying _walk-paths_ now even onto the atomic JSON values
-- extended null-interpolation for _JSON strings_: before it was applied for _JSON arrays_ and _JSON objects_ only). 
+- extended null-interpolation to _JSON strings_ as well: before it was applied for _JSON arrays_ and _JSON objects_ only). 
 Now, the empty variable interpolation in the string, following either of `,`, `;` will be taken into account,
 e.g.: `-T'"{}, "'` - if `{}` is empty, then result of interpolation will be empty too: `""`
 - improved buffered file read speed (3 times faster) and _stdin_ buffered speed (1.5-2 times faster), improved handling of 
