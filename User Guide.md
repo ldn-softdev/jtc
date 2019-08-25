@@ -1757,9 +1757,10 @@ Here's the matrix table for update operations with and without merging:
 
 #### Updating labels
 A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
+
 Another function featured by the lexeme is that the label is reinterpreted as a _JSON string_ value, that allows rewriting labels
-using update operation (insert into labels is not possible even semantically) - however, that only applies if `<>k` lexeme is walked
-last.
+using update operation (insert into labels is not possible even semantically). however, that only applies if `<>k` lexeme is the
+last lexeme in the walk-path and if it's empty.
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
 ```
@@ -1841,6 +1842,40 @@ bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'[:]<>k' -y'<>k' -eu '<<<{{
 }
 bash $ 
 ```
+
+**The above caveat is applicable only when label is being updated using _cli evaluation_.**  
+When labels updated without _cli evaluation_ then recursive update is not a problem:
+```
+bash $ <<<$(<ab.json jtc -x'[Directory][0][address]' -y'<L>k<>k' -y'[:]<L>k<>k' -u0 -T'"NEW-{L}"') jtc -w'[Directory][0]'
+{
+   "NEW-address": {
+      "NEW-city": "New York",
+      "NEW-postal code": 10012,
+      "NEW-state": "NY",
+      "NEW-street address": "599 Lafayette St"
+   },
+   "age": 25,
+   "children": [
+      "Olivia"
+   ],
+   "name": "John",
+   "phone": [
+      {
+         "number": "112-555-1234",
+         "type": "mobile"
+      },
+      {
+         "number": "113-123-2368",
+         "type": "mobile"
+      }
+   ],
+   "spouse": "Martha"
+}
+bash $ 
+```
+\- double lexeme notation `<L>k<>k` is required because `<L>k` will only memorize the label in the namespace `L` but will not trigger
+label re-interpretation like a value, while second lexeme (`<>k`) - does.
+
 
 
 ### Insert, Update with move semantic 
