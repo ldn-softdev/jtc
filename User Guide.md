@@ -1362,21 +1362,21 @@ bash $
 - here `children` walked first, because `name` and `number` walks undergo reconciliation (internally) and inserted *after* all options 
 
 #### Controlling displayed walks
-By default all walks (`-w`) will be displayed (unless `jtc` carries any of modification operation like insert/update/swap/purge - then
-the entire JSON will be displayed). However there's a way to control which ones will be displayed - option `-x` is overloaded to provide
+By default all walks (`-w`) will be displayed (unless `jtc` carries any of modification operations like insert/update/swap/purge, then
+the entire JSON will be displayed). However, there's a way to control which ones will be displayed - option `-x` is overloaded to provide
 such capability.
 
 If argument of option `-x` is given in any of notations `-xn`, `-xn/N`, `-x/N` - where `n` and `N` are numbers, then it controls
-a frequency of displaying walks (and does not represent a common portion of a walk-path).  
+a frequency of the displayed walks (and does not represent a common portion of a walk-path).  
 The first number `n` in that notation tells to display every `n`th walk. if `n` is `0` it tells to display `N`th walk once (and in such
-case `0` can be omitted resulting in syntax `-x/N`)
-The second (optional) number `N` tells to begin displaying walks starting from `N`th one (`N` is index and thus is zero based, default
+case `0` - a default value - can be omitted resulting in the syntax `-x/N`)
+The second (optional) number `N` tells to begin displaying walks starting from `N`th one (`N` is an index and thus is zero based, default
 value is `0`).
 
-Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` - in such case the last walk is ensured to be
-displayed
+Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` - in such case _the last walk_ is ensured 
+to be displayed
 
-Say we want to display _every 4th walk_ of the below JSON:
+Say, we want to display _every 4th walk_ of the below JSON:
 ```
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:]
 1
@@ -1406,7 +1406,7 @@ bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
 7
 bash $ 
 ```
-\- reminder: the second number in option is an index and thus is zero based).  
+\- reminder: the second number in the option is an index and thus is zero based.  
 Lets add to the output the very first walk and the last one:
 ```
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2 -x/0 -x/-1
