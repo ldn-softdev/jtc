@@ -59,7 +59,7 @@
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
    * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
-   * [Stringifying JSON, Jsonizing stringified(>{{}}<, >>{{}}<<, <{{}}>, <<{{}}>>) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#strngifying-json-jsonizing-stringified)
+   * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
