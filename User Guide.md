@@ -59,6 +59,7 @@
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+     * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
    * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
    * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
@@ -2554,13 +2555,15 @@ bash $ <id.json jtc
 bash $ 
 ```
 
-The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.
-The way to do it: first walk `main.json` finding and memorizing (each) `rec` value and then, walk up to the `song` entry 
-(so that will be a destination pointer, where song needs to be inserted).
-The insert operation (`-i`) here, would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
+The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.  
+The way to do it:
+- first walk `main.json` finding and memorizing (each) `rec` value 
+- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
+
+The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
 insert respective `title`:
 ```
-bash $ <main.json jtc -w'[:][rec]<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]'
+bash $ <main.json jtc -w'[:][rec]<Record>v[-1][songs]' -mi id.json -i'[id]:<Record>s[-1][title]'
 [
    {
       "name": "Abba",
@@ -2589,18 +2592,21 @@ bash $
 
 For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is walked first). When dst. walk 
 finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
-when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. The rest should be obvious
+when walking its source JSON (`id.json`) with the lexeme `[id]:<Record>s` - that will find a respective `id`. The rest should be obvious
 by now.
 
 
-`jtc` does not have a "walk" argument for `-p` (purge) operations (`-p` is a standalone option, when it's used only with `-w`
-it will purge every resulted/walked entry), so how to facilitate a cross-referenced purge then? (i.e., when purging ids are located
-in a different file)  
-The trick is to use a dummy `-u`/`-i` operation and apply `-p`. When cli is given in this notation:
-`<<<dst.json jtc -w... -u <src.json> -u... -p`, purging will be applied to walked destinations, but only predicated by a successful 
-source walk:
+#### Cross-referenced purge
+`jtc` does not have a "walk" argument for `-p` (purge) operation (`-p` is a standalone option, when it's used only with `-w`
+it will purge every resulted/walked entry).  
+So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
+
+The trick is to use a dummy `-u`/`-i` operation and apply `-p`.  
+When the cli is given in this notation:  
+`<<<dst.json jtc -w... -u <src.json> -u... -p`,  
+purging will be applied to walked destinations, but only predicated by a successful source walk:
 ```
-bash $ <main.json jtc -w'[:][rec]<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
+bash $ <main.json jtc -w'[:][rec]<Record>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Record>s' -p
 [
    {
       "name": "Queen",
@@ -2610,6 +2616,27 @@ bash $ <main.json jtc -w'[:][rec]<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s
 ]
 bash $ 
 ```
+
+The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
+```
+bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' -T'{{Entry}}' -pp
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   }
+]
+bash $ 
+```
+\- memorizing the whole `Entry` is required because update operation w/o the template only replaced records (and purge everything else),
+but that's not the goal - goal is to retain all the entries, hence replacing the updating entries with the template for the entire entry.
+
 
 
 ## Templates
