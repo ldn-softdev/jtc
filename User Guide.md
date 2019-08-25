@@ -68,8 +68,7 @@
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
 8. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
-   * [Generating new JSON (1)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-1)
-   * [Generating new JSON (2)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-new-json-2)
+   * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
      * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
      * [Remove all but duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-all-but-duplicates)
@@ -2988,140 +2987,106 @@ In the `Screen 2`, `jtc` sends to `netcat` a few walks (JSONs), which `netcat` r
 
 
 ## More Examples
-### Generating new JSON (1)
-Say, we need to craft a new JSON out of our address book, extracting only selected (and possibly renamed) fields. This is attainable
-if 3 simple steps:
-1. First let's prepare a template of our new
-JSON:
-```
-bash $ echo '[{"Person":"", "Age":"", "Children":""}]' | jtc >abc.json
-bash $ jtc abc.json
-[
-   {
-      "Age": "",
-      "Children": "",
-      "Person": ""
-   }
-]
-bash $
-```
-2. Now we need to multiply those records, to match number of records in the address book:
-```
-bash $ CNT=$(jtc -w'[Directory][:]' -r ab.json  | wc -l); # just count the number of entries
-bash $ for i in $(seq 2 $CNT); do jtc -f -i'[0:1]' abc.json; done
-bash $ jtc abc.json
-[
-   {
-      "Age": "",
-      "Children": "",
-      "Person": ""
-   },
-   {
-      "Age": "",
-      "Children": "",
-      "Person": ""
-   },
-   {
-      "Age": "",
-      "Children": "",
-      "Person": ""
-   }
-]
-bash $
-```
-in this step:
-- `for` loop is arranged in the sequence from 2 to numbers of records in the `Directory` (`jtc -w'[Directory][:]' -r ab.json  | wc -l`)
-- in each pass, file `abc.json` modified in-place (`-f`) by inserting the first entry from the book (`-i'[0:1]'`)
-into the root (if no `-w` given, root is assumed)
+### Generating CSV from JSON
+`CSV` stands for _comma separated values_, thus to convert a JSON into a `csv` file, it's required dumping all relevant JSON walks
+line by line, while separating JSON values either with `,` or with `;` (`csv` format admits both)
 
-3. Map (via update) required values from the address book (`ab.json`) onto the respective values in the template (`abc.json`):
-```
-bash $ jtc -nw'<Person>l:' -w'<Age>l:' -w'<Children>l:' -u ab.json -u'<name>l:' -u'<age>l:' -u'<children>l:' abc.json
-[
-   {
-      "Age": 25,
-      "Children": [
-         "Olivia"
-      ],
-      "Person": "John"
-   },
-   {
-      "Age": 31,
-      "Children": [],
-      "Person": "Ivan"
-   },
-   {
-      "Age": 25,
-      "Children": [
-         "Robert",
-         "Lila"
-      ],
-      "Person": "Jane"
-   }
-]
-bash $
-```
-NOTE: because all `-u <walk-path>` options (which applied onto `ab.json`, rather than onto `abc.json` in this scenario) are being
-process sequentially, option `-n` was used to ensure sequential execution of all `-w` options too (so that mapping would occur
-onto respective entries).
+There are couple tricks required to do so, but not difficult ones, so, let's walk it.
 
-### Generating new JSON (2)
-The same operations could have been achieved in a different (probably a more concise) way:
-1. purge JSON leaving only required records (namely `name`, `age`, `children`):
+Say, we want to dump into `csv` format following data from the `ab.json`:  
+`name, city, postal code, state, street address`
+
+1. First let's just dump all those entries:
 ```
-bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]'
-[
-   {
-      "age": 25,
-      "children": [
-         "Olivia"
-      ],
-      "name": "John"
-   },
-   {
-      "age": 31,
-      "children": [],
-      "name": "Ivan"
-   },
-   {
-      "age": 25,
-      "children": [
-         "Robert",
-         "Lila"
-      ],
-      "name": "Jane"
-   }
-]
+bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:]
+"John"
+"New York"
+10012
+"NY"
+"599 Lafayette St"
+"Ivan"
+"Seattle"
+98104
+"WA"
+"5423 Madison St"
+"Jane"
+"Denver"
+80206
+"CO"
+"6213 E Colfax Ave"
 bash $ 
 ```
+\- not that difficult
 
-2. update all labels (in 3 successive updates) with required new labels:
+2. then we need to reconcile all the walk into lines, here, `$?` auto-namespace comes handy:
 ```
-bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l' -y'<age>l' -y'<children>l' -pp | jtc -w'[Directory]' | jtc -w'<age>l:<>k' -u'"Age"' | jtc -w'<children>l:<>k' -u'"Children"' | jtc -w'<name>l:<>k' -u'"Person"'
-[
-   {
-      "Age": 25,
-      "Children": [
-         "Olivia"
-      ],
-      "Person": "John"
-   },
-   {
-      "Age": 31,
-      "Children": [],
-      "Person": "Ivan"
-   },
-   {
-      "Age": 25,
-      "Children": [
-         "Robert",
-         "Lila"
-      ],
-      "Person": "Jane"
-   }
-]
+bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -T'"{$?}, {}"'
+"John"
+"John, New York"
+"John, New York, 10012"
+"John, New York, 10012, NY"
+"John, New York, 10012, NY, 599 Lafayette St"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206, CO"
+"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206, CO, 6213 E Colfax Ave"
 bash $ 
 ```
+\- hmmm, but we need such line one per record and not like above
+
+3. To ensure that we reconcile only each record (and not all of them), let's add one more walk which will fail interpolation of '$?'
+in the template (that will reset value of the '$?' back to `""`)
+```
+bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"'
+"John"
+"John, New York"
+"John, New York, 10012"
+"John, New York, 10012, NY"
+"John, New York, 10012, NY, 599 Lafayette St"
+{ "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }
+"Ivan"
+"Ivan, Seattle"
+"Ivan, Seattle, 98104"
+"Ivan, Seattle, 98104, WA"
+"Ivan, Seattle, 98104, WA, 5423 Madison St"
+{ "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }
+"Jane"
+"Jane, Denver"
+"Jane, Denver, 80206"
+"Jane, Denver, 80206, CO"
+"Jane, Denver, 80206, CO, 6213 E Colfax Ave"
+{ "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" }
+bash $ 
+```
+\- that's better, now every 5th walk out of every 6 is what we need.
+
+4. Display only required walks:
+```
+bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"' -x6/4
+"John, New York, 10012, NY, 599 Lafayette St"
+"Ivan, Seattle, 98104, WA, 5423 Madison St"
+"Jane, Denver, 80206, CO, 6213 E Colfax Ave"
+bash $ 
+```
+\- that is our required `CSV` format! Well, almost - every line is still a JSON string, but we can undress it with `-qq` option
+
+5. just a sugar topping: let's add a header line, which could be done using `echo` unix cli:
+```
+bash $ echo -e "name, city, postal, street\n$(<ab.json jtc -x[0][:] -y[name] -y'[address][:]' -y' ' -T'"{$?}, {}"' -x6/4 -qq)"
+name, city, postal, street
+John, New York, 10012, NY, 599 Lafayette St
+Ivan, Seattle, 98104, WA, 5423 Madison St
+Jane, Denver, 80206, CO, 6213 E Colfax Ave
+bash $ 
+```
+DONE.
+
 
 ### Taming duplicates
 Quite very common tasks (and requests) for JSON is to process duplicates. Say, we deal with the following JSON:
