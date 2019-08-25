@@ -1846,7 +1846,7 @@ bash $
 **The above caveat is applicable only when label is being updated using _cli evaluation_.**  
 When labels updated without _cli evaluation_ then recursive update is not a problem:
 ```
-bash $ <<<$(<ab.json jtc -x'[Directory][0][address]' -y'<L>k<>k' -y'[:]<L>k<>k' -u0 -T'"NEW-{L}"') jtc -w'[Directory][0]'
+bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'<L>k<>k' -y'[:]<L>k<>k' -u0 -T'"NEW-{L}"') jtc -w'[Directory][0]'
 {
    "NEW-address": {
       "NEW-city": "New York",
