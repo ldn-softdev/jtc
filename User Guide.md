@@ -74,6 +74,8 @@
      * [Remove all but duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-all-but-duplicates)
      * [Leave only those which have no duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-only-those-which-have-no-duplicates)
      * [Leave all duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-all-duplicates)
+   * [Counting with `jtc`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#counting-with-jtc)
+
 ---
 
 ## Displaying JSON
@@ -3163,6 +3165,34 @@ it's just a reverse action.
 implying that on very big JSONs an **exponential decay** will become noticeable. Plus, both directives are quite memory hungry._  
 Thus use them cautiously when dealing with big JSONs (around or above hundreds of thousand of nodes - subjected to a spec of your machine)
 
+
+### Counting with `jtc`
+Counting any number of properties is JSON could be done using exteral `wc` unix utility, e.g. let's count all `number`s in `ab.json`:
+```
+bash $ <ab.json jtc -w'<number>l:' | wc -l
+       6
+bash $ 
+```
+
+The same is possible to achieve using only `jtc` capability - using `<..>I` lexeme:
+```
+bash $ <ab.json jtc -w'<number>l:<cnt>I1' -T{cnt} -x/-1
+6
+bash $ 
+```
+- `<cnt>I1` will arrange a namespace var `cnt` counting values staring from `0` with increment of `1` upon each walk pass (iteration)
+- `-T{cnt}` will interpolate it
+- `-x/-1` will display on the last walk
+
+Say, now we want to count the same phone numbers, but for some reason staring it from `100`:
+```
+bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
+106
+bash $ 
+```
+- `<cnt:100>f` will setup a fail-safe point at the same time initializing namespace `cnt` with value 100
+- `[]` is a walk lexeme which is guaranteed to fail here (there are no empty lables), so it will trigger fail-stop, which will continue
+walking past `<>F` lexeme - that will ensure that initial offset of the `cnt` is set to `100` instead of default `0`
 
 
 
