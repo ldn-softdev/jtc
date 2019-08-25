@@ -2643,9 +2643,9 @@ There's one more token combination in templates allowing _stringification_ and _
 - `<..>` will try "expanding" a string value into a JSON
 - `>..<` will take a current JSON value and stringify it
 
-The token notation follows the same rule as for `{}`, i.e. single angular bracket notation will result in a "naked" JSON value (i.e.
-without quotation marks, curly braces or square brackets for strings, objects and arrays respectively). While double token notation
-is always a safe type and result of operation while be a complete JSON type.
+The token notation follows the same rule as for regular tokens (`{}`, `{{}}`), i.e. single angular bracket notation will result
+in a "naked" JSON value (i.e. without quotation marks, curly braces or square brackets for strings, objects and arrays
+respectively). While double token notation is always a safe type and result of operation while be a complete JSON type.
 
 This little demo illustrates the tokens usage:
 ```
