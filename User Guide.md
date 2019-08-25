@@ -25,14 +25,16 @@
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
-   * [Walking multiple paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-paths)
+   * [Walking multiple walk-paths](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-multiple-walk-paths)
      * [Sequential walk processing (`-n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing)
      * [Displaying walks with labels (`-l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-walks-with-labels)
      * [Wrapping resulted walks to JSON array (`-j`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array)
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
+     * [Aggregating walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks)
      * [Wrapping walked entries into JSON object (`-jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-json-object)
      * [Extracting labeled value (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-value)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
+     * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
 3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
@@ -976,7 +978,7 @@ to address a parent from leaf: [-4]      [-3]       [-2]      [-1]       [-0]
 ```
 
 
-### Walking multiple paths
+### Walking multiple walk-paths
 `jtc` allows a virtually unlimited number of walk-paths (`-w`), it would be limited only by the max size of the accepted string in
 your shell. Though there are a few tweaks in `jtc` which let harnessing the order of displaying resulted walks. By default `jtc`
 will be displaying resulted successful walks in an _interleaved_ manner, but first, let's take a look at
@@ -1150,6 +1152,31 @@ bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -j
 bash $
 ```
 
+#### Aggregating walks
+the walks also could be aggregated (per label), option `-nn` facilitates the ask:
+```
+bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl -nn
+[
+   {
+      "name": [
+         "John",
+         "Ivan",
+         "Jane"
+      ],
+      "number": [
+         "112-555-1234",
+         "113-123-2368",
+         "273-923-6483",
+         "223-283-0372",
+         "358-303-0373",
+         "333-638-0238"
+      ]
+   }
+]
+bash $ 
+```
+
+
 #### Wrapping walked entries into JSON object
 `-jj` let wrapping walked JSON elements into a _JSON object_. All the elements in JSON object must have labels, thus any walked elements
 which do not have labels (i.e., elements in _JSON array_ and root) will be ignored.
@@ -1282,13 +1309,15 @@ Finally - what's `-TT` in there? It's a dummy template (one which surely fails).
 a single template would apply to both walks (and we don't want our template to apply onto the first walk). So, we'd need to provide 
 a dummy one so that each 
 [template would relate to own walk](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks)
-. If templates fails (and `-TT` surely will) then no interpolation applied and walked iteration result is used as it is.
+. If templates fails (and `-TT` surely does) then no interpolation applied and walked iteration result is used as it is.
 
 
 #### Succinct walk-path syntax
-If you look at the prior example, you may notice that a common part of both walk-paths (`[Directory][:]`) we had to give twice. There's
-a way to express it in more succinct syntax: options `-x` and `-y` allows rearrange walk-paths so that `-x` takes an initial common part
-of the walk-path, where as `-y` would take care of the individuals trailing pars. Thus the same example cold have been written like:
+If you look at the prior example
+([Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing))
+, you may notice that a common part of both walk-paths (`[Directory][:]`) we had to give twice. There's a way to express it in more 
+succinct syntax: options `-x` and `-y` allows rearrange walk-paths so that `-x` takes an initial common part of the walk-path, 
+whereas `-y` would take care of the individuals trailing pars. Thus the same example cold have been written like this:
 ```
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:'
 "John"
@@ -1331,6 +1360,62 @@ bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -w '<children
 bash $
 ```
 - here `children` walked first, because `name` and `number` walks undergo reconciliation (internally) and inserted *after* all options 
+
+#### Controlling displayed walks
+By default all walks (`-w`) will be displayed (unless `jtc` carries any of modification operation like insert/update/swap/purge - then
+the entire JSON will be displayed). However there's a way to control which ones will be displayed - option `-x` is overloaded to provide
+such capability.
+
+If argument of option `-x` is given in any of notations `-xn`, `-xn/N`, `-x/N` - where `n` and `N` are numbers, then it controls
+a frequency of displaying walks (and does not represent a common portion of a walk-path).  
+The first number `n` in that notation tells to display every `n`th walk. if `n` is `0` it tells to display `N`th walk once (and in such
+case `0` can be omitted resulting in syntax `-x/N`)
+The second (optional) number `N` tells to begin displaying walks starting from `N`th one (`N` is index and thus is zero based, default
+value is `0`).
+
+Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` - in such case the last walk is ensured to be
+displayed
+
+Say we want to display _every 4th walk_ of the below JSON:
+```
+bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:]
+1
+2
+3
+4
+5
+6
+7
+8
+9
+bash $ 
+```
+One way to achieve that would be to use templates (the trick is shown in
+[Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
+section), but it's quite impractical. Much easier is to use `-x` option here:
+```
+bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4
+4
+8
+bash $ 
+ ```
+To display _every 4th walk starting from 3rd one_, use this notation:
+```
+bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
+3
+7
+bash $ 
+```
+\- reminder: the second number in option is an index and thus is zero based).  
+Lets add to the output the very first walk and the last one:
+```
+bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2 -x/0 -x/-1
+1
+3
+7
+9
+bash $ 
+```
 
 
 ## Modifying JSON
