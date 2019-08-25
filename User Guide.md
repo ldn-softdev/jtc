@@ -59,6 +59,7 @@
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
    * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
+   * [Stringifying JSON, Jsonizing stringified(>{{}}<, >>{{}}<<, <{{}}>, <<{{}}>>) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#strngifying-json-jsonizing-stringified)
 7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
@@ -2186,7 +2187,7 @@ Interpolation may occur in following cases:
 
 Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
 shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
-- if the content under braces is empty (`{}`, `{{}}`) then the last walked JSON element is getting interpolated
+- if the content under braces is empty (`{}`, `{{}}`) then the currently walked JSON element is getting interpolated
 - if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the respective namespace
 
 
@@ -2199,7 +2200,7 @@ The difference between single `{}` and double `{{}}` notations:
   * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
   will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided - `-T'[ {} ]'`
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
-  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided - `-T{ {} }`
+  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T{ {}, "key": "new" }`
 
 A string interpolation w/o outer quotes is handy when it's required altering an existing string, here's example of altering JSON label:
 ```
@@ -2635,6 +2636,32 @@ bash $
 ```
 \- in the above example printed every 3rd element from source JSON starting from the 2nd one (recall: when unquoting an empty
 JSON string ("") the resulted blank lines are not getting printed).
+
+
+### Stringifying JSON, Jsonizing stringified
+There's one more token combination in templates allowing _stringification_ and _jsonization_ of values:
+- `<..>` will try "expanding" a string value into a JSON
+- `>..<` will take a current JSON value and stringify it
+
+The token notation follows the same rule as for `{}`, i.e. single angular bracket notation will result in a "naked" JSON value (i.e.
+without quotation marks, curly braces or square brackets for strings, objects and arrays respectively). While double token notation
+is always a safe type and result of operation while be a complete JSON type.
+
+This little demo illustrates the tokens usage:
+```
+bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
+"[ \"a\", \"b\" ]"
+```
+\- because a single form of angular token notation was used, the outer quotation marks were necessary for a successful interpolation.
+The same could have been achieved with the template: `-T'>>{{}}<<'`
+
+That was an example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
+```
+bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' | jtc -T'[ <{{}}>, "c"]' -r
+[ "a", "b", "c" ]
+bash $ 
+```
+\- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON array at the same time
 
 
 ## Processing multiple input JSONs
