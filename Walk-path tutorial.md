@@ -9,6 +9,7 @@
    * [Literal subscript (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscript)
    * [Range subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
      * [Default ranges (`[:]`, `[n:]`, `[:n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-ranges)
+       * [Alternative range notation (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#alternative-range-notation)
      * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
      * [Ranges with negative indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
 
@@ -383,6 +384,37 @@ null
 }
 bash $ 
 ```
+##
+##### Alternative range notation
+`[+n]` is the alternative range notation for `[n:]`, they both do exactly the same thing - walk each element in the iterable starting
+from `n`th element:
+```
+bash $ <<<$JSN jtc -w[+3]
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ <<<$JSN jtc -w[3:]
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ 
+```
+Using either of notations is a matter of personal preferrence and has no impact onto the way of walking JSON tree
+
 
 ##
 #### Ranges with positive indices
