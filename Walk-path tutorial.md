@@ -144,8 +144,8 @@ ends up only with partial argument, namely with `[4][2][number`, which is an inv
 ---
 in fact, `jtc` there complains due to a different reason: a second part of a walk (`three]`) is passed to `jtc` as a standalone argument,
 which `jtc` treats as a _filename_. It tries opening and reading it, but because such file does not exist an empty result is returned. 
-However, the empty input is an _invalid JSON_ (by JSON standard) - that why it's a JSON parsing error is given.
-here how walk-path parsing error looks like:
+However, the empty input is an _invalid JSON_ (by JSON standard) - that why it's a JSON parsing error is given.  
+Here how walk-path parsing error looks like:
 ```
 bash $ <<<$JSN jtc -w[4][2][number three] -
 jtc json exception: walk_offset_missing_closure
