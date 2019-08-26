@@ -5,8 +5,12 @@
 
 1. [Walk-path Lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-path-Lexemes)
 2. [Subscripts](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscripts)
-   * [Numerical offset `[n]`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offset)
-   * [Literal subscript `[text]`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscript)
+   * [Numerical offset (`[n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offset)
+   * [Literal subscript (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscript)
+   * [Range subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
+     * [Default ranges (`[:]`, `[n:]`, `[:n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-ranges)
+     * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
+     * [Ranges with negative indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
 
 ---
 
@@ -36,6 +40,7 @@ There are few variants of _subscripts_:
 
 let's start with the most common one - _numerical offset_
 
+##
 ### Numerical offset
 `[n]` - as like in most programming languages, in `jtc` numerical offsets let selecting `n`th instance in the currently selected
 (walked) JSON, staring from `0` (indices are always zero-based):
@@ -103,7 +108,13 @@ bash $ <<<$JSN jtc -w[4][2][0]
 3
 bash $ 
 ```
+##
+_Note_: numerical offset is treated like one only if spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
+as a valid number, otherwise it's treated as a 
+[_literal subscript_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscript).
+E.g.: `[ 0 ]` will address an element with the label `" 0 "`.
 
+##
 ### Literal subscript
 `[text]` - literal subscripts allow addressing (selecting) elements within _JSON objects_ by their key (label)
 
@@ -141,7 +152,7 @@ bash $
 \- it happens because of a _shell interpolation_. Shell treats space ('` `') as an argument separator, therefore option `-w`
 ends up only with partial argument, namely with `[4][2][number`, which is an invalid walk.
 
----
+##
 in fact, `jtc` there complains due to a different reason: a second part of a walk (`three]`) is passed to `jtc` as a standalone argument,
 which `jtc` treats as a _filename_. It tries opening and reading it, but because such file does not exist an empty result is returned. 
 However, the empty input is an _invalid JSON_ (by JSON standard) - that why it's a JSON parsing error is given.  
@@ -151,7 +162,7 @@ bash $ <<<$JSN jtc -w[4][2][number three] -
 jtc json exception: walk_offset_missing_closure
 bash $ 
 ```
----
+##
 
 To escape shell interpolation, either the whole argument must be quoted, or a space symbol (the former varian is preferred, but
 both will work):
@@ -209,6 +220,251 @@ bash $ <<<$ANML jtc -w'[ANDEAN BEAR]'
 "Bono"
 bash $ 
 ```
+##
+There's a curious case, when the label matches a numerical subscript, i.e. consider:
+```
+bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc 
+{
+   "#": "abcde",
+   "0": 12345
+}
+bash $ 
+```
+
+Addressing _JSON root_ with `[0]` will return `"abcde"`:
+```
+bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc -w[0]
+"abcde"
+bash $ 
+````
+- How to get to the value of the label `"0"`? For that we need to use a _non-recursive search_ lexeme (namely, `>0<l`).
+
+##
+### Range subscripts
+`[n:N]` - selects each element in the _iterable_, starting from `n`th index and ending with `N`th - 1, i.e. `N` 
+is the index of the element following the last in the range. Both values `n` and `N` are optional and both could be omited
+
+For those who are familiar with _Python addressing_, grasping this one is easy - it's matches Python's addressing concept entirely.
+
+Range subscript makes the walk-path iterable, i.e. it's like selecting multiple elements with just one _iterable walk_ 
+instead of specifying multiple offsets, compare:
+```
+bash $ <<<$JSN jtc -w[0] -w[1] -w[2]
+"abc"
+false
+null
+bash $ 
+bash $ <<<$JSN jtc -w[0:3]
+"abc"
+false
+null
+bash $ 
+```
+##
+#### Default ranges 
+Either of indices in the _range subscirpt_ `n` or `N` could be missed, then the index in the ommited position takes a _defalut_ value. 
+
+i.e. a _default_ index in the first position means: from the very first value in the _iterable_,  
+while a _default_ index in the second position means: till the last value in the _iterable_
+
+it's quite handy when we need to select only portion of the elements in the iterable either starting form its beginning, or till it's
+last element, because sometimes we might not know upfront a number of elements in the iterable.
+- select 2 elements from the beginning of the _JSON root's_  iterable:
+```
+bash $ <<<$JSN jtc -w[:2]
+"abc"
+false
+bash $ 
+```
+- select _all_ elements staring from 3rd one:
+```
+bash $ <<<$JSN jtc -w[2:]
+null
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ 
+```
+
+
+when both indices are missed `[:]` then each element in the iterable will be selected (_walked_):
+```
+bash $ <<<$JSN jtc -w[:]
+"abc"
+false
+null
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ 
+```
+##
+The _range indices_ (as well as any lexemes) can appear in the walk-path _any number of times_. The above example shows iterating over
+the _top iterable_ (or, the first tier) in JSON tree hierarchy, to iterate over _all_ iterables in the second tier of the JSON tree,
+do this:
+```
+bash $ <<<$JSN jtc -w[:][:]
+3.14
+1
+"two"
+{
+   "three": 3
+}
+bash $ 
+```
+\- an each element in the _top iterable_ will be _walked_ and then attmpted to walk the _children_ of the walked element itself, 
+one by one.
+Because first three elements are not iterable, they will not be shows (they cannot be iterated over):
+```
+bash $ <<<$JSN jtc -w[0][:]
+bash $ 
+```
+
+If you like to see (print) both walks of the top iterable and then each of the iterable at the second tier, then provide two walk paths:
+```
+bash $ <<<$JSN jtc -w[:] -w[:][:]
+"abc"
+false
+null
+{
+   "pi": 3.14
+}
+3.14
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+1
+"two"
+{
+   "three": 3
+}
+bash $ 
+```
+\- Note how `jtc` _iterleaves_ the walks - it puts relevant walkings in a good (relevant) order, rather than dumping results of
+the first walk and then of the second. If one prefers seeing the latter behavior, option `-n` will do the trick, compare:
+```
+bash $ <<<$JSN jtc -w[:] -w[:][:] -n
+"abc"
+false
+null
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+3.14
+1
+"two"
+{
+   "three": 3
+}
+bash $ 
+```
+
+##
+#### Ranges with positive indices
+Positive indices (and `0`) in range notation (`[n:N]`) always refer to the index offset _from the beginning_ of the range (iterable). 
+
+When both `n` and `N` are positive, naturally `N` must be > `n`, if `N` <= `n`, it'll result in a blank output:
+```
+bash $ <<<$JSN jtc -w[2:1]
+bash $ 
+bash $ <<<$JSN jtc -w[2:2]
+bash $ 
+```
+
+Case where `N` = `n` + 1, e.g., `[3:4]` is equal to spelling just a _numerical offset_ alone:
+```
+bash $ <<<$JSN jtc -w[3:4]
+{
+   "pi": 3.14
+}
+bash $ <<<$JSN jtc -w[3]
+{
+   "pi": 3.14
+}
+bash $ 
+```
+
+##
+#### Ranges with negative indices
+A negative index in the _range subscript_ refers to the offset _from the end_ of the iterable. In the range subscripts it's okay to
+mix and match positive and negative indices in any position.
+
+- select _last 3 elements_ from the top array:
+```
+bash $ <<<$JSN jtc -w[-3:]
+null
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ 
+```
+
+- select _all_ elements in the range _from the 2nd_ till the one _before the last one_:
+```
+bash $ <<<$JSN jtc -w[1:-1]
+false
+null
+{
+   "pi": 3.14
+}
+bash $ 
+```
+
+##
+When either of indices is given outside of the _actual range_ of the iterable, `jtc` tolerates it fine re-adjusting respective range
+indices properly to the beginning and the end of actual range of the iterable:
+```
+bash $ <<<$JSN jtc -w[-100:100]
+"abc"
+false
+null
+{
+   "pi": 3.14
+}
+[
+   1,
+   "two",
+   {
+      "three": 3
+   }
+]
+bash $ 
+```
+However, when the range is unknown, it's best to use the notation with the
+[_default range_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-ranges)
+values (i.e, `[:]`) 
 
 
 
@@ -217,8 +473,7 @@ bash $
 
 
 
-
-
+    
 
 
 
