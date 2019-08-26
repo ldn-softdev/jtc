@@ -187,8 +187,9 @@ Bummer! Instead of selecting the name of `ANDEAN BEAR` we got the name of `AMUR 
 **was wrong**.
 
 _JSON standard defines JSON objects as ***unordered set*** of name/value pairs_.
-That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a processing programm.
-Some programms will retain the same order, others will reorder them - it all boils down to the internal implementation specifics.
+That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a processing programm
+(and not by user, like in _JSON arrays_). Some programms will retain the same order, others will reorder them - it all boils
+down to the internal implementation specifics.
 
 `jtc` always rearranges all the elements within the _JSON objects_ by their keys (labels) in  the _alphabetical_ order, 
 thus for `jtc` the above JSON looks like this:
