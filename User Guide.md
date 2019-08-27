@@ -3020,7 +3020,7 @@ bash $
 ```
 \- not that difficult
 
-2. then we need to reconcile all the walk into lines, here, `$?` auto-namespace comes handy:
+2. then we need to reconcile all the walks into lines, here `$?` auto-namespace comes handy:
 ```
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -T'"{$?}, {}"'
 "John"
