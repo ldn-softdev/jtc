@@ -702,15 +702,15 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
 
 Let's recap both addressing schemas (for the given walk in the example) on the same diagram:
 ```
-                                                              etc.
-                                                              [^4]
-to address a parent from the root: [^0]    [^1]   [^2]        [^3]
-                                    |       |      |           |
-                                    v       v      v           v
-                        walk-path: root -> [4] -> [2] -> [number three]
-                                    ^       ^       ^          ^
-                                    |       |       |          |
-  to address a parent from a leaf: [-3]    [-2]    [-1]       [-0]
+                                                           etc.
+                                                           [^4]
+to address a parent from the root: [^0]   [^1]  [^2]       [^3]
+                                    |      |     |          |
+                                    v      v     v          v
+                        walk-path: root > [4] > [2] > [number three]
+                                    ^      ^     ^          ^
+                                    |      |     |          |
+  to address a parent from a leaf: [-3]   [-2]  [-1]       [-0]
                                    [-4]
                                    etc.
 ```
