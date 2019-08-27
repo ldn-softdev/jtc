@@ -637,7 +637,7 @@ to address a parent from root: [^0]    [^1]   [^2]        [^3]
                                 |       |       |          |
 to address a parent from leaf: [-3]    [-2]    [-1]       [-0]
                                [-4]
-                               etc.                         
+                               etc.
 ```
 
 Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's done only for
