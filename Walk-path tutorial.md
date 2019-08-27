@@ -418,7 +418,7 @@ Using either of notations is a matter of personal preferrence and has no impact 
 
 ##
 #### Ranges with positive indices
-Positive indices (and `0`) in range notation (`[n:N]`) always refer to the index offset _from the beginning_ of the range (iterable). 
+Positive indices (and `0`) in the range notation (`[n:N]`) always refer to the index offset _from the beginning_ of the iterable. 
 
 When both `n` and `N` are positive, naturally `N` must be > `n`, if `N` <= `n`, it'll result in a blank output:
 ```
