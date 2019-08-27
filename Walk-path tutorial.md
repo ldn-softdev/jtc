@@ -12,6 +12,9 @@
        * [Alternative range notation (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#alternative-range-notation)
      * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
      * [Ranges with negative indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
+   * [Addressing parents](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-parents)
+     * [Addressing from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md###addressing-from-a-leaf)
+     * [Addressing from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md###addressing-from-the-root)
 
 ---
 
@@ -48,7 +51,7 @@ let's start with the most common one - _numerical offset_
 
 Let's work with this JSON:
 ```
-bash $ JSN='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"three": 3}] ]'
+bash $ JSN='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"number three": 3}] ]'
 bash $ <<<$JSN jtc
 [
    "abc",
@@ -496,16 +499,153 @@ bash $
 ```
 However, when the range is unknown, it's best to use the notation with the
 [_default range_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-range-indices)
-values (i.e, `[:]`) 
+values (i.e., `[:]`) 
+
+##
+### Addressing parents
+One of the nifty features that makes `jtc` very powerful when coming up with queries, is the ability to address parents off the walked
+elements, i.e., those JSON elements higher up in the the JSON hierarchy tree that make the path towards the currently walked element.
+
+There are 2 ways to address parents:
+- `[-n]` will address parent(s) in the path (made of offsets from the _JSON root_ to the currently walked element) offsetting it
+from the currently walked element
+- `[^n]` will do address parent(s) but offsetting it from the JSON _root_
+
+Not sure if the definition abvove is easy to understand, but the concept is, so it's probably much easier to show it with the example.
+Let's see the walk path where we selected the JSON element 3``:
+```
+bash $ <<<$JSN jtc -w'[4][2][number three]'
+3
+bash $ 
+```
+The _**walk path**_ from the _JSON root_ towards the element `3` is **`[4][2][number three]`**.
+
+##
+In fact, every walk at any given step (even when it's expressed via _recursive search_ lexemes) internaly always maintains a 
+representation expressed via _subscript and literal offsets_ only.  
+E.g. the same number `3` could have been selected using a _recursive search_ walk:
+```
+bash $ <<<$JSN jtc -w'<3>d'
+3
+bash $ 
+```
+but internally, the path towards this JSON element would be built as:
+```
+bash $ <<<$JSN jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
+....walk_(), built path vector: 00000004-> 00000002-> number three
+....walk_(), finished walking: with built path vector: 00000004-> 00000002-> number three
+```
+i.e. it still would bve `[4][2][number three]`. That's why `jtc` is known to be a _**`walk-path`**_ based utility.
+
+##
+#### Addressing from a leaf
+Thus, if we list indices for the above walk-path starting from the leaf, it'll be like this:
+```
+Index from the leaf:   3    2  1      0
+walk-path:           (root)[4][2][number three]
+```
+Thus in order to select either of parents, we just need to pick a respective index in the path. E.g.:
+- `[-1]` will address an immediate parent of the value `3` 
+- `[-2]` will address a parent of the parent of the value `3` 
+- `[-3]` wil address the _JSON root_ itself.
+_Note_: `[-0]` will address the value `3` itself, so there's no much of a point to use such addressing, while indices greater _root's 
+(in that example are `[-4]`, `[-5]`, etc will keep addressing the JSON root)_
+Take a look:
+```
+bash $ <<<$JSN jtc -w'[4][2][number three][-1]'
+{
+   "number three": 3
+}
+bash $ <<<$JSN jtc -w'[4][2][number three][-2]'
+[
+   1,
+   "two",
+   {
+      "number three": 3
+   }
+]
+bash $ <<<$JSN jtc -w'[4][2][number three][-3]'
+[
+   "abc",
+   false,
+   null,
+   {
+      "pi": 3.14
+   },
+   [
+      1,
+      "two",
+      {
+         "number three": 3
+      }
+   ]
+]
+bash $ 
+```
+
+##
+#### Addressing from the root
+Now, let's list all the idices for the same walk-path starting from the root:
+```
+Index from the leaf:   0    1  2      3
+walk-path:           (root)[4][2][number three]
+```
+You must get already the idea: the addressig parent off the root take those indices:
+```
+bash $ <<<$JSN jtc -w'[4][2][number three][^0]'
+[
+   "abc",
+   false,
+   null,
+   {
+      "pi": 3.14
+   },
+   [
+      1,
+      "two",
+      {
+         "number three": 3
+      }
+   ]
+]
+bash $ <<<$JSN jtc -w'[4][2][number three][^1]'
+[
+   1,
+   "two",
+   {
+      "number three": 3
+   }
+]
+bash $ <<<$JSN jtc -w'[4][2][number three][^2]'
+{
+   "number three": 3
+}
+bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
+3
+bash $ 
+```
+
+Let's recap both addessing schemasn (for the given walk in the example) on the same diagramm:
+```
+                                                          etc.
+                                                          [^4]
+to address a parent from root: [^0]    [^1]   [^2]        [^3]
+                                |       |      |           |
+                                v       v      v           v
+                    walk-path: root -> [4] -> [2] -> [number trhee]
+                                ^       ^       ^          ^
+                                |       |       |          |
+to address a parent from leaf: [-3]    [-2]    [-1]       [-0]
+                               [-4]
+                               etc.                         
+```
+
+Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's dopne only for
+the instructive purposes) - indeed, we just walked that path from the root, why getting back using _parent addressing_
+instead of stopping it at the required place? Ergo, it makes sence to use parent addressing togerther with (after) _search lexemes_.
 
 
 
-
-
-
-
-
-    
 
 
 
