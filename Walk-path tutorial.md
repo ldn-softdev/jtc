@@ -495,7 +495,7 @@ null
 bash $ 
 ```
 However, when the range is unknown, it's best to use the notation with the
-[_default range_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-ranges)
+[_default range_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-range-indices)
 values (i.e, `[:]`) 
 
 
