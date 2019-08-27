@@ -522,7 +522,7 @@ bash$ cat addressbook-sample.json | sort_ab
 ]
 bash $
 ```
-for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/Json.hpp)
+for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
 
 
 ## `jtc` vs **jq**:
