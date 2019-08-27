@@ -195,6 +195,8 @@ bash $ <<<$JSN jtc -w'[4][2][number three]'
 ```
 ```bash
 bash $ <<<$JSN jtc -w[4][2][number\ three]
+```
+```json
 3
 ```
 
