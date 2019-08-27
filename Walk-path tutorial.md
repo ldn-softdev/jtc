@@ -4,7 +4,7 @@
 `Walk-path` is a way to telling `jtc` how input JSON must be walked. 
 
 1. [Walk-path Lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-path-Lexemes)
-2. [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexeme)
+2. [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes)
    * [Numerical offsets (`[n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
    * [Literal subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
    * [Range subscripts (`[n:N]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
@@ -31,7 +31,7 @@ If upon walking (i.e. applying _lexemes_, a.k.a. _walk-steps_) applying of a lex
 _In order to succeed walking a walk-path, all its lexemes must be walked successfully_
 
 There are only two types of lexemes:
-- [_Subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexeme),
+- [_Subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes),
 enclosed in square brackets `[`, `]`
 - [_Searches_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes),
 enclosed in angular brackets `<`,`>`
