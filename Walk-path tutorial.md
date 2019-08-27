@@ -37,10 +37,10 @@ Though each type comes in several variants.
 
 ## Subscripts
 There are few variants of _subscripts_:
-- _numerical offsets_
-- _textual (literal) subscripts_
-- _range (slice) subscript_
-- _parent selects_
+- [_numerical offsets_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
+- [_literal (textual) subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
+- [_range (slice) subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
+- [_parent selects_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-parents)
 
 let's start with the most common one - _numerical offset_
 
