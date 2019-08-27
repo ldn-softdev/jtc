@@ -595,7 +595,7 @@ i.e. it still would bve `[4][2][number three]`. That's why `jtc` is known to be 
 Thus, if we list indices for the above walk-path starting from the leaf, it'll be like this:
 ```
 Index from the leaf:   3    2  1      0
-walk-path:           (root)[4][2][number three]
+          walk-path: (root)[4][2][number three]
 ```
 Thus in order to select either of parents, we just need to pick a respective index in the path. E.g.:
 - `[-1]` will address an immediate parent of the value `3` 
@@ -649,8 +649,8 @@ bash $ <<<$JSN jtc -w'[4][2][number three][-3]'
 #### Addressing from the root
 Now, let's list all the indices for the same walk-path starting from the root:
 ```
-Index from the leaf:   0    1  2      3
-walk-path:           (root)[4][2][number three]
+Index from the root:   0    1  2      3
+          walk-path: (root)[4][2][number three]
 ```
 You must get already the idea: the addressing parent off the root takes those indices:
 ```bash
@@ -702,17 +702,17 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
 
 Let's recap both addressing schemas (for the given walk in the example) on the same diagram:
 ```
-                                                          etc.
-                                                          [^4]
-to address a parent from root: [^0]    [^1]   [^2]        [^3]
-                                |       |      |           |
-                                v       v      v           v
-                    walk-path: root -> [4] -> [2] -> [number three]
-                                ^       ^       ^          ^
-                                |       |       |          |
-to address a parent from leaf: [-3]    [-2]    [-1]       [-0]
-                               [-4]
-                               etc.
+                                                              etc.
+                                                              [^4]
+to address a parent from the root: [^0]    [^1]   [^2]        [^3]
+                                    |       |      |           |
+                                    v       v      v           v
+                        walk-path: root -> [4] -> [2] -> [number three]
+                                    ^       ^       ^          ^
+                                    |       |       |          |
+  to address a parent from a leaf: [-3]    [-2]    [-1]       [-0]
+                                   [-4]
+                                   etc.
 ```
 
 Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's done only for
