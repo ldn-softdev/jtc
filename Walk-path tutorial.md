@@ -91,7 +91,7 @@ bash $ <<<$JSN jtc -w[4]
 bash $ 
 ```
 
-If the selected element is non-atomic (a.k.a. _iterable_), i.e., _Json array_, or _JSON object_, then you may continule digging
+If the selected element is non-atomic (a.k.a. _iterable_), i.e., _Json array_, or _JSON object_, then you may continue digging
 further the selected (walked) JSON tree:
 
 \- select _5th_ element in _JSON array_ and then _3rd_ one:
@@ -202,8 +202,8 @@ Bummer! Instead of selecting the name of `ANDEAN BEAR` we got the name of `AMUR 
 **was wrong**.
 
 _JSON standard defines JSON objects as ***unordered set*** of name/value pairs_.
-That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a processing programm
-(and not by user, like in _JSON arrays_). Some programms will retain the same order, others will reorder them - it all boils
+That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a processing program
+(and not by user, like in _JSON arrays_). Some programs will retain the same order, others will reorder them - it all boils
 down to the internal implementation specifics.
 
 `jtc` always rearranges all the elements within the _JSON objects_ by their keys (labels) in  the _alphabetical_ order, 
@@ -246,7 +246,7 @@ bash $
 ##
 ### Range subscripts
 `[n:N]` - selects each element in the _iterable_, starting from `n`th index and ending with `N`th - 1, i.e. `N` 
-is the index of the element following the last in the range. Both values `n` and `N` are optional and both could be omited
+is the index of the element following the last in the range. Both values `n` and `N` are optional and both could be omitted
 
 For those who are familiar with _Python addressing_, grasping this one is easy - it's matches Python's addressing concept entirely.
 
@@ -266,7 +266,7 @@ bash $
 ```
 ##
 #### Default range indices 
-Either of indices in the _range subscirpt_ `n` or `N` could be missed, then the index in the ommited position takes a _defalut_ value. 
+Either of indices in the _range subscript_ `n` or `N` could be missed, then the index in the omitted position takes a _default_ value. 
 
 i.e. a _default_ index in the first position means: from the very first value in the _iterable_,  
 while a _default_ index in the second position means: till the last value in the _iterable_
@@ -330,7 +330,7 @@ bash $ <<<$JSN jtc -w[:][:]
 }
 bash $ 
 ```
-\- an each element in the _top iterable_ will be _walked_ and then attmpted to walk the _children_ of the walked element itself, 
+\- an each element in the _top iterable_ will be _walked_ and then attempted to walk the _children_ of the walked element itself, 
 one by one.
 Because first three elements are not iterable, they will not be shows (they cannot be iterated over):
 ```
@@ -362,7 +362,7 @@ null
 }
 bash $ 
 ```
-\- Note how `jtc` _iterleaves_ the walks - it puts relevant walkings in a good (relevant) order, rather than dumping results of
+\- Note how `jtc` _interleaves_ the walks - it puts relevant walkings in a good (relevant) order, rather than dumping results of
 the first walk and then of the second. If one prefers seeing the latter behavior, option `-n` will do the trick, compare:
 ```
 bash $ <<<$JSN jtc -w[:] -w[:][:] -n
@@ -416,7 +416,7 @@ bash $ <<<$JSN jtc -w[3:]
 ]
 bash $ 
 ```
-Using either of notations is a matter of personal preferrence and has no impact onto the way of walking JSON tree
+Using either of notations is a matter of personal preference and has no impact onto the way of walking JSON tree
 
 
 ##
@@ -511,8 +511,8 @@ There are 2 ways to address parents:
 from the currently walked element
 - `[^n]` will do address parent(s) but offsetting it from the JSON _root_
 
-Not sure if the definition abvove is easy to understand, but the concept is, so it's probably much easier to show it with the example.
-Let's see the walk path where we selected the JSON element 3``:
+Not sure if the definition above is easy to understand, but the concept is, so it's probably much easier to show it with the example.  
+Let's see the walk path where we selected the JSON element `3`:
 ```
 bash $ <<<$JSN jtc -w'[4][2][number three]'
 3
@@ -521,7 +521,7 @@ bash $
 The _**walk path**_ from the _JSON root_ towards the element `3` is **`[4][2][number three]`**.
 
 ##
-In fact, every walk at any given step (even when it's expressed via _recursive search_ lexemes) internaly always maintains a 
+In fact, every walk at any given step (even when it's done via _recursive search_ lexemes) internally always maintains a 
 representation expressed via _subscript and literal offsets_ only.  
 E.g. the same number `3` could have been selected using a _recursive search_ walk:
 ```
@@ -585,12 +585,12 @@ bash $
 
 ##
 #### Addressing from the root
-Now, let's list all the idices for the same walk-path starting from the root:
+Now, let's list all the indices for the same walk-path starting from the root:
 ```
 Index from the leaf:   0    1  2      3
 walk-path:           (root)[4][2][number three]
 ```
-You must get already the idea: the addressig parent off the root take those indices:
+You must get already the idea: the addressing parent off the root takes those indices:
 ```
 bash $ <<<$JSN jtc -w'[4][2][number three][^0]'
 [
@@ -625,14 +625,14 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
 bash $ 
 ```
 
-Let's recap both addessing schemasn (for the given walk in the example) on the same diagramm:
+Let's recap both addressing schemas (for the given walk in the example) on the same diagram:
 ```
                                                           etc.
                                                           [^4]
 to address a parent from root: [^0]    [^1]   [^2]        [^3]
                                 |       |      |           |
                                 v       v      v           v
-                    walk-path: root -> [4] -> [2] -> [number trhee]
+                    walk-path: root -> [4] -> [2] -> [number three]
                                 ^       ^       ^          ^
                                 |       |       |          |
 to address a parent from leaf: [-3]    [-2]    [-1]       [-0]
@@ -640,9 +640,10 @@ to address a parent from leaf: [-3]    [-2]    [-1]       [-0]
                                etc.                         
 ```
 
-Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's dopne only for
+Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's done only for
 the instructive purposes) - indeed, we just walked that path from the root, why getting back using _parent addressing_
-instead of stopping it at the required place? Ergo, it makes sence to use parent addressing togerther with (after) _search lexemes_.
+instead of stopping it at the required place? Ergo, it makes sense to use parent addressing together with (after) _search lexemes_.
+
 
 
 
