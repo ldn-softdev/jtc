@@ -836,7 +836,7 @@ bash $ <<<$JSS jtc -w'<>P1:5'
 "five"
 ```
 ##
-As it was mentioned, the quantifier indices may take values from the namespaces. Namespaces will be covered laters, 
+As it was mentioned, the quantifier indices may take values from the namespaces. Namespaces will be covered later, 
 when  _directives_ covered, for now just take it: one way to set a value to the namespace is `<var:value>v`.
 
 So, let's repeat the last example, but now using quantifier indices references in the namespaces:
