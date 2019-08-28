@@ -1,4 +1,5 @@
 
+
 # [`jtc`](https://github.com/ldn-softdev/jtc). Walk-path easy. Tutorial (under construction)
 
 `Walk-path` is a way to telling `jtc` how input JSON must be walked. 
@@ -16,7 +17,10 @@
      * [Addressing from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-from-a-leaf)
      * [Addressing from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-from-the-root)
 3. [Search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes)
-
+   * [String searches (`<>r`, `<>R`, `<>P`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
+   * [Quantifiers](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#quantifiers)
+   * [Recursive vs Non-recursive search](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#recursive-vs-non-recursive-search)
+ 
 ---
 
 ## Walk-path Lexemes
@@ -124,7 +128,7 @@ bash $ <<<$JSN jtc -w[4][2][0]
 ##
 _Note_: numerical offset is treated like one only if spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
 as a valid number, otherwise it's treated as a 
-[_literal subscript_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscript).
+[_literal subscript_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts).
 E.g.: `[ 0 ]` will address an element with the label `" 0 "`.
 
 ##
@@ -725,6 +729,186 @@ instead of stopping it at the required place? Ergo, it makes sense to use parent
 
 
 ## Search lexemes
+Search lexemes allow performing various searches across JSSON tree, there are two major notations for search lexemes:
+ - `<expr>` - performs a _**recursive**_ search of `expr` from the currently selected JSON element
+ - `>expr<` - performs a _**non-recrusive**_ search of `expr` for a currently selected _JSON iterable_
+
+A complete notation for search lexemes (both, recursive and non-recursive), look like this:  
+`<expr>SQ` (`>expr<SQ`), where:
+- `expr` is a content of the lexeme, depending on the _lexeme suffix_, its semantic may vary: it could be either of: 
+   - value to match
+   - Regular Expression to search for
+   - namespace
+   - template
+   - empty
+- `S` is an optional one-letter suffix, which defines the behavior of the lexeme
+- `Q` is a quantifier, whose function generally is analogous to the function of _numerical offset_ and _range subscripts_, but in some
+cases also might vary, as per documentation. the quantifier must also follow the suffix (if one present).
+
+Also, there's a few lexemes that look like _search lexemes_ but in fact they don't perform any type of search, 
+instead they apply a certain action, they are known as _directives_, those are distinguishable from the searches only by the suffix
+
+##
+### String searches
+`r`, `R`, `P` - these are suffixes to perform _JSON string_ searches. Suffix `r` is default and can be omitted:
+- `<text>` - searches for the occurrence of exact match of `text` in the JSON tree (off the currently walked element)
+- `<Regexp>R` - performs an RE search for the _regular expression_ `Regexp`
+- `<>P` - matches any JSON string value (similar to `<.*>R` but faster). The lexeme might be empty or hold the namespace where matched
+value will be stored
+
+Examples:
+- Find an exact string value:
+```bash
+bash $ <<<$JSN jtc -w'<two>'
+```
+```json
+"two"
+```
+
+- Find a string value matching _RE_:
+```bash
+bash $ <<<$JSN jtc -w'<^t>R'
+```
+```json
+"two"
+```
+
+- Find the first _JSON string_ value:
+```bash
+bash $ <<<$JSN jtc -w'<>P'
+```
+```json
+"abc"
+```
+
+##
+### Quantifiers
+By default any search lexeme is going to find only a first match occurrence. That is facilitated by a default quantifier `0`. 
+If there's a need to find any other match instance (or range of instances) a quantifier must be given. 
+
+Quantifiers may be given in following forms:
+- `n` - search will find `n`th match
+- `n:` - search will find all matches starting from `n`th till the last matched one
+- `:N` - search will find all matches starting from the first (index `0`) till `N`th
+- `n:N` - search will find all matches starting from `n`th till `N`th - 1
+- `:` - search will find all matches
+
+Observe following rules applying to all forms of quantifiers:
+1) in any of the above notations indices (`n`, `N`) are zero based  
+2) both indices `n`, `N` must be positive numbers (or `0`). There's one special case where quantifier may go negative,
+it will be discussed later
+3) either or both of indices `n`, `N` may take a form of `{Z}`, where `Z` is a namespace holding a JSON numeric value representing
+an index
+
+Some examples:
+let's work with this JSON:
+```bash
+bash $ JSS='["one", "two", ["three", "four", {"5 to 7": [ "five", "six", "seven"], "second 1": "one"  } ] ]'
+bash $ <<<$JSS jtc
+```
+```json
+[
+   "one",
+   "two",
+   [
+      "three",
+      "four",
+      {
+         "5 to 7": [
+            "five",
+            "six",
+            "seven"
+         ],
+         "second 1": "one"
+      }
+   ]
+]
+```
+
+- among all _JSON strings_ find those from 2nd till 5th inclusive:
+```bash
+bash $ <<<$JSS jtc -w'<>P1:5'
+```
+```json
+"two"
+"three"
+"four"
+"five"
+```
+##
+As it was mentioned, the quantifier indices may take values from the namespaces. Namespaces will be covered laters, 
+when  _directives_ covered, for now just take it: one way to set a value to the namespace is `<var:value>v`.
+
+So, let's repeat the last example, but now using quantifier indices references in the namespaces:
+
+- among all _JSON strings_ find those from 2nd till 5th inclusive:
+```bash
+bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
+```
+```json
+"two"
+"three"
+"four"
+"five"
+```
+##
+
+-find all the string occurrences where letter `e` is present:
+```bash
+bash $ <<<$JSS jtc -w'<e>R:'
+```
+```json
+"one"
+"three"
+"five"
+"seven"
+"one"
+``` 
+
+-find all the occurrences of string `one`:
+```bash
+bash $ <<<$JSS jtc -w'<one>:'
+```
+```json
+"one"
+"one"
+```
+
+##
+### Recursive vs Non-recursive search
+In the last example 2 instances of the string `"one"` were found. That's because a recursive search was applied
+(and hence the entire JSON tree was searched). Sometimes there'a need to perform a non-recursive search, i.e. to look for a match
+only among children of a current _iterable_.
+
+the JSON's root in the example is an _array_, so if we apply a non-recursive search on the root's array, only one match will be found:
+```bash
+bash $ <<<$JSS jtc -w'>one<:'
+```
+```json
+"one"
+```
+
+_NOTE_: the other subtle but a crucial difference is that a _non-recursive_ search_ could be applied only on _JSON iterables_
+(i.e. _arrays_ and _objects_) and it will fail on any other (atomic) types. While a _recursive search_ could be applied onto
+_any_ JSON types (even atomic).  
+The recursive search always begins from checking from the currently selected (walked) entry, that's why it's possible to apply it
+even onto atomic types and match those:
+```bash
+bash $ <<<$JSS jtc -w'[0]<one>'
+```
+```json
+"one"
+```
+
+- that feature of the recursive search comes handy when validating various JSON types (covered later)
+
+
+
+
+
+
+
+
 
 
 
