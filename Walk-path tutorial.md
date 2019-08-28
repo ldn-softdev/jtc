@@ -793,7 +793,7 @@ Quantifiers may be given in following forms:
 - `n:N` - search will find all matches starting from `n`th till `N`th - 1
 - `:` - search will find all matches
 
-Observe following rules applying to all forms of quantifiers:
+Observe following rules applied to all forms of quantifiers:
 1) in any of the above notations indices (`n`, `N`) are zero based  
 2) both indices `n`, `N` must be positive numbers (or `0`). There's one special case where quantifier may go negative,
 it will be discussed later
