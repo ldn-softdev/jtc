@@ -878,7 +878,7 @@ bash $ <<<$JSS jtc -w'<one>:'
 ### Recursive vs Non-recursive search
 In the last example 2 instances of the string `"one"` were found. That's because a recursive search was applied
 (and hence the entire JSON tree was searched). Sometimes there'a need to perform a non-recursive search, i.e. to look for a match
-only among children of a current _iterable_.
+only among immediate children of a current _iterable_.
 
 the JSON's root in the example is an _array_, so if we apply a non-recursive search on the root's array, only one match will be found:
 ```bash
