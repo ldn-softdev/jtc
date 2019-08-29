@@ -857,7 +857,7 @@ bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
 ```
 ##
 
--find all the string occurrences where letter `e` is present:
+- find all the string occurrences where letter `e` is present:
 ```bash
 bash $ <<<$JSS jtc -w'<e>R:'
 ```
@@ -869,7 +869,7 @@ bash $ <<<$JSS jtc -w'<e>R:'
 "one"
 ``` 
 
--find all the occurrences of string `one`:
+- find all the occurrences of string `"one"`:
 ```bash
 bash $ <<<$JSS jtc -w'<one>:'
 ```
