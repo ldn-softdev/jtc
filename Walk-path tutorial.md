@@ -20,6 +20,9 @@
    * [String searches (`<>r`, `<>R`, `<>P`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
    * [Quantifiers](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#quantifiers)
    * [Recursive vs Non-recursive search](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#recursive-vs-non-recursive-search)
+   * [Numerical searches (`<>d`, `<>D`, `<>N`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches)
+   * [Boolean and Null searches (`<>b`, `<>n`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#boolean-and-null-searches)
+   * [Json types searches (`<>P`,`<>N`,`<>a`,`<>o`,`<>i`,`<>c`,`<>e`,`<>w`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
  
 ---
 
@@ -736,10 +739,10 @@ Search lexemes allow performing various searches across JSSON tree, there are tw
 A complete notation for search lexemes (both, recursive and non-recursive), look like this:  
 `<expr>SQ` (`>expr<SQ`), where:
 - `expr` is a content of the lexeme, depending on the _lexeme suffix_, its semantic may vary: it could be either of: 
-   - value to match
-   - Regular Expression to search for
-   - namespace
-   - template
+   - a value to match
+   - a Regular Expression to search for
+   - a namespace (think of a _namespace_ as of a variable which can hold any JSON type/structure)
+   - a template
    - empty
 - `S` is an optional one-letter suffix, which defines the behavior of the lexeme
 - `Q` is a quantifier, whose function generally is analogous to the function of _numerical offset_ and _range subscripts_, but in some
@@ -753,8 +756,8 @@ instead they apply a certain action, they are known as _directives_, those are d
 `r`, `R`, `P` - these are suffixes to perform _JSON string_ searches. Suffix `r` is default and can be omitted:
 - `<text>` - searches for the occurrence of exact match of `text` in the JSON tree (off the currently walked element)
 - `<Regexp>R` - performs an RE search for the _regular expression_ `Regexp`
-- `<>P` - matches any JSON string value (similar to `<.*>R` but faster). The lexeme might be empty or hold the namespace where matched
-value will be stored
+- `<>P`, `<namespace>P` - matches any JSON string value (a.k.a a _JSON string type_ match), similar to `<.*>R` but faster. 
+The lexeme might be empty or hold the `namespace` where matched value will be stored
 
 Examples:
 - Find an exact string value:
@@ -784,9 +787,9 @@ bash $ <<<$JSN jtc -w'<>P'
 ##
 ### Quantifiers
 By default any search lexeme is going to find only a first match occurrence. That is facilitated by a default quantifier `0`. 
-If there's a need to find any other match instance (or range of instances) a quantifier must be given. 
+If there's a need to find any other match instances (or range of instances) a quantifier must be given. 
 
-Quantifiers may be given in following forms:
+Quantifiers may be given in either of following forms:
 - `n` - search will find `n`th match
 - `n:` - search will find all matches starting from `n`th till the last matched one
 - `:N` - search will find all matches starting from the first (index `0`) till `N`th
@@ -796,9 +799,9 @@ Quantifiers may be given in following forms:
 Observe following rules applied to all forms of quantifiers:
 1) in any of the above notations indices (`n`, `N`) are zero based  
 2) both indices `n`, `N` must be positive numbers (or `0`). There's one special case where quantifier may go negative,
-it will be discussed later
+it will be discussed later  
 3) either or both of indices `n`, `N` may take a form of `{Z}`, where `Z` is a namespace holding a JSON numeric value representing
-an index
+an index  
 
 Some examples:
 let's work with this JSON:
@@ -837,7 +840,7 @@ bash $ <<<$JSS jtc -w'<>P1:5'
 ```
 ##
 As it was mentioned, the quantifier indices may take values from the namespaces. Namespaces will be covered later, 
-when  _directives_ covered, for now just take it: one way to set a value to the namespace is `<var:value>v`.
+when _directives_ covered, for now just take it: one way to set a value to the namespace is `<var:value>v`.
 
 So, let's repeat the last example, but now using quantifier indices references in the namespaces:
 
@@ -876,7 +879,7 @@ bash $ <<<$JSS jtc -w'<one>:'
 
 ##
 ### Recursive vs Non-recursive search
-In the last example 2 instances of the string `"one"` were found. That's because a recursive search was applied
+In the last example, 2 instances of the string `"one"` were found. That's because a recursive search was applied
 (and hence the entire JSON tree was searched). Sometimes there'a need to perform a non-recursive search, i.e. to look for a match
 only among immediate children of a current _iterable_.
 
@@ -890,8 +893,9 @@ bash $ <<<$JSS jtc -w'>one<:'
 
 _NOTE_: the other subtle but a crucial difference is that a _non-recursive_ search_ could be applied only on _JSON iterables_
 (i.e. _arrays_ and _objects_) and it will fail on any other (atomic) types. While a _recursive search_ could be applied onto
-_any_ JSON types (even atomic).  
-The recursive search always begins from checking from the currently selected (walked) entry, that's why it's possible to apply it
+_any_ JSON type (even atomic).
+
+The recursive search always begins from checking the currently selected (walked) entry, that's why it's possible to apply it
 even onto atomic types and match those:
 ```bash
 bash $ <<<$JSS jtc -w'[0]<one>'
@@ -902,9 +906,72 @@ bash $ <<<$JSS jtc -w'[0]<one>'
 
 - that feature of the recursive search comes handy when validating various JSON types (covered later)
 
+##
+### Numerical searches
+`d`, `D`, `N` - these are numerical searches suffixes, they share the same relevant semantics as 
+[_string searches_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches):
+- `<number>d` - searches for the occurrence(s) of exact match of a `number` in the JSON tree
+- `<Regexp>D` - performs an RE search for the _regular expression_ `Regexp` among _JSON numericals_
+- `<>N`, `<namespace>N` - matches any JSON numerical value (a.k.a. _JSON numerical type match_), similar to `<.*>D` but faster.
+The lexeme might be empty or hold the `namespace` where matched value will be preserved (upon a match)
 
+```bash
+bash $ <<<$JSN jtc -w'<[13]>D1:'
+```
+```json
+1
+3
+```
+```bash
+bash $ <<<$JSN jtc -w'<3.14>d:'
+```
+```json
+3.14
+```
 
+##
+### Boolean and Null searches
+`b` suffix stands for a _boolean_ match, while `n` is a null match.
 
+bollean lexeme can be given in the following forms:
+- `<>b`, `<namespace>b` - in these forms, the search is performed among _JSON boolean_ values only and matched value will be preserved
+in the `namespace` shall it be present in the lexeme
+- `<true>b`, `<false>b` - when a _JSON boolean_ is spelled as a lexeme parameter, then it's not a _namespace_ reference,
+but rather a spelled boolean value will be matched
+
+```bash
+bash $ <<<$JSN jtc -w'<>b:'
+```
+```json
+false
+```
+
+##
+### Json types searches
+There are quite a handful of lexemes which search and match _JSON types_, in fact there are lexemes to cover _all_ _JSON type matches_
+and even more. Two of those already have been coreved:
+[_string type match_ `<>P`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
+, and
+[_numerical type match_ `<>N`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches).
+The others are:
+- `<>a`: atomic match, will match _any_ of JSON atomic type (_string_, _numerical_, _boolean_, _null_)
+- `<>o`: object match, will match a _JSON object type_ (`{..}`)
+- `<>i`: array (indexable) match, will match a _JSON array type_ (`[..]`)
+- `<>c`: container type match, will match either of _JSON iterable type_ (objects and/or arrays)
+- `<>e`: end node (leaf) match type, will match any of atomic types, or _empty_ contaners (`{}`, `[]`)
+- `<>w`: wide type range match - will match _any_ JSON type/value 
+
+All of those lexemes can stay empty, or hold the _namespace_ which will be filled upon a successful match.
+
+```bash
+bash $ <<<$JSN jtc -w'<>c:' -r
+```
+```json
+[ "abc", false, null, { "pi": 3.14 }, [ 1, "two", { "number three": 3 } ] ]
+{ "pi": 3.14 }
+[ 1, "two", { "number three": 3 } ]
+{ "number three": 3 }
+```
 
 
 
