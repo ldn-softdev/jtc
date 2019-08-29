@@ -802,7 +802,7 @@ Observe following rules applied to all forms of quantifiers:
 2) both indices `n`, `N` must be positive numbers (or `0`). There's one special case where quantifier may go negative,
 it will be discussed later  
 3) either or both of indices `n`, `N` may take a form of `{Z}`, where `Z` is a namespace holding a JSON numeric value representing
-an index  
+an index
 
 Some examples:
 let's work with this JSON:
@@ -934,7 +934,7 @@ bash $ <<<$JSN jtc -w'<3.14>d:'
 ### Boolean and Null searches
 `b` suffix stands for a _boolean_ match, while `n` is a null match.
 
-bollean lexeme can be given in the following forms:
+A boolean lexeme can be given in the following forms:
 - `<>b`, `<namespace>b` - in these forms, the search is performed among _JSON boolean_ values only and matched value will be preserved
 in the `namespace` shall it be present in the lexeme
 - `<true>b`, `<false>b` - when a _JSON boolean_ is spelled as a lexeme parameter, then it's not a _namespace_ reference,
@@ -950,16 +950,16 @@ false
 ##
 ### Json types searches
 There are quite a handful of lexemes which search and match _JSON types_, in fact there are lexemes to cover _all_ _JSON type matches_
-and even more. Two of those already have been coreved:
-[_string type match_ `<>P`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
-, and
-[_numerical type match_ `<>N`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches).
+and even more. Two of those already have been covered:
+[_string type match_ `<>P`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches),
+[_numerical type match_ `<>N`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches),
+[_boolean type match_ `<>b` and _null type match_ `<>n`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#boolean-and-null-searches).
 The others are:
 - `<>a`: atomic match, will match _any_ of JSON atomic type (_string_, _numerical_, _boolean_, _null_)
 - `<>o`: object match, will match a _JSON object type_ (`{..}`)
 - `<>i`: array (indexable) match, will match a _JSON array type_ (`[..]`)
 - `<>c`: container type match, will match either of _JSON iterable type_ (objects and/or arrays)
-- `<>e`: end node (leaf) match type, will match any of atomic types, or _empty_ contaners (`{}`, `[]`)
+- `<>e`: end node (leaf) match type, will match any of atomic types, or _empty_ containers (`{}`, `[]`)
 - `<>w`: wide type range match - will match _any_ JSON type/value 
 
 All of those lexemes can stay empty, or hold the _namespace_ which will be filled upon a successful match.
@@ -977,17 +977,43 @@ bash $ <<<$JSN jtc -rw'<>c:'
 
 ##
 ### Arbitrary Json searches
+lexeme with the suffix `j` can match any arbitrary JSON value:
+```bash
+bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
+```
+```json
+{
+   "pi": 3.14
+}
+```
 
+Even more, the parameter in the `j` lexeme can be a _templated JSON_:
+```bash
+bash $ <<<$JSN jtc -w'[4][2][0] <Nr3>v [^0] <{"pi": {Nr3}.14}>j [pi]'
+```
+```json
+3.14
+```
 
+That was the first complex walk-path shown, so, let's break it down:
+- `'[4][2][0]` will get to the value of `"number three": 3` through _offset subscripts_
+- `<Nr3>v` - _directive_ `v` will memorize the _JSON number_ `3` in the namespace `Nr3`
+- `[^0]` will reset the walk path back to _JSON root_
+- `<{"pi": {Nr3}.14}>j` will first interpolate number `3` from the namespace `Nr3` and then will find recursively
+the resulted JSON (which will be `{"pi": 3.14}`)
+- `[pi]` will address the value in found JSON by the label offset, resulting in the final value `3.14`
 
-
-
-
-
-
-
-
-
+##
+There's another search lexeme suffix - `s` - that one will find a JSON pointed by a _namespace_:
+```bash
+bash $  <<<$JSN jtc -w'<PI:{"pi": 3.14}>v <PI>s'
+```
+```json
+{
+   "pi": 3.14
+}
+bash $ 
+```
 
 
 
