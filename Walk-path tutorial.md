@@ -950,7 +950,7 @@ false
 ##
 ### Json types searches
 There are quite a handful of lexemes which search and match _JSON types_, in fact there are lexemes to cover _all_ _JSON type matches_
-and even more. Two of those already have been covered:
+and even more. Four of those already have been covered:
 [_string type match_ `<>P`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches),
 [_numerical type match_ `<>N`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches),
 [_boolean type match_ `<>b` and _null type match_ `<>n`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#boolean-and-null-searches).
