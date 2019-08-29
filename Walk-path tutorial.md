@@ -14,8 +14,8 @@
      * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
      * [Ranges with negative indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
    * [Addressing parents](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-parents)
-     * [Addressing from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-from-a-leaf)
-     * [Addressing from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-from-the-root)
+     * [Offsetting path from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-a-leaf)
+     * [Offsetting path from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-the-root)
 3. [Search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes)
    * [String searches (`<>r`, `<>R`, `<>P`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
    * [Quantifiers (`n`, `n:`, `:n`, `:`, `n:N`, `{n}`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#quantifiers)
@@ -603,7 +603,7 @@ bash $ <<<$JSN jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
 i.e. it still would bve `[4][2][number three]`. That's why `jtc` is known to be a _**`walk-path`**_ based utility.
 
 ##
-#### Addressing from a leaf
+#### Offsetting path from a leaf
 Thus, if we list indices for the above walk-path starting from the leaf, it'll be like this:
 ```
 Index from the leaf:   3    2  1      0
@@ -658,7 +658,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][-3]'
 ```
 
 ##
-#### Addressing from the root
+#### Offsetting path from the root
 Now, let's list all the indices for the same walk-path starting from the root:
 ```
 Index from the root:   0    1  2      3
