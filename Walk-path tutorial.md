@@ -23,6 +23,7 @@
    * [Numerical searches (`<>d`, `<>D`, `<>N`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches)
    * [Boolean and Null searches (`<>b`, `<>n`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#boolean-and-null-searches)
    * [Json types searches (`<>P`,`<>N`,`<>a`,`<>o`,`<>i`,`<>c`,`<>e`,`<>w`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
+   * [Arbitrary Json searches (`<>j`,`<>s`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#arbitrary-json-searches)
  
 ---
 
@@ -964,7 +965,7 @@ The others are:
 All of those lexemes can stay empty, or hold the _namespace_ which will be filled upon a successful match.
 
 ```bash
-bash $ <<<$JSN jtc -w'<>c:' -r
+bash $ <<<$JSN jtc -rw'<>c:'
 ```
 ```json
 [ "abc", false, null, { "pi": 3.14 }, [ 1, "two", { "number three": 3 } ] ]
@@ -972,6 +973,20 @@ bash $ <<<$JSN jtc -w'<>c:' -r
 [ 1, "two", { "number three": 3 } ]
 { "number three": 3 }
 ```
+
+
+##
+### Arbitrary Json searches
+
+
+
+
+
+
+
+
+
+
 
 
 
