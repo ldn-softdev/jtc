@@ -17,13 +17,14 @@
      * [Offsetting path from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-a-leaf)
      * [Offsetting path from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-the-root)
 3. [Search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes)
-   * [String searches (`<>r`, `<>R`, `<>P`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
+   * [String searches (`<text>r`, `<RE>R`, `<>P`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches)
    * [Quantifiers (`n`, `n:`, `:n`, `:`, `n:N`, `{n}`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#quantifiers)
    * [Recursive vs Non-recursive search (`<..>` vs `>..<`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#recursive-vs-non-recursive-search)
-   * [Numerical searches (`<>d`, `<>D`, `<>N`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches)
+   * [Numerical searches (`<n>d`, `<RE>D`, `<>N`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches)
    * [Boolean and Null searches (`<>b`, `<>n`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#boolean-and-null-searches)
    * [Json types searches (`<>P`,`<>N`,`<>b`,`<>n`,`<>a`,`<>o`,`<>i`,`<>c`,`<>e`,`<>w`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
-   * [Arbitrary Json searches (`<>j`,`<>s`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#arbitrary-json-searches)
+   * [Arbitrary Json searches (`<JSON>j`,`<ns>s`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#arbitrary-json-searches)
+   * [Original and Duplicate searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#original-and-duplicate-searches)
  
 ---
 
@@ -282,6 +283,9 @@ bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc -w[0]
 "abcde"
 ````
 - How to get to the value of the label `"0"`? For that we need to use a _non-recursive search_ lexeme (namely, `>0<l`).
+
+_NOTE_: there's a generic rule for all other types of subscripts: _If parsing of a subscript does not result in either of a type
+(i.e. it's neither a numerical offsets, nor a range subscript, nor addressing parents), then it's treated as a literal subscript.
 
 ##
 ### Range subscripts
@@ -1003,6 +1007,9 @@ That was the first complex walk-path shown, so, let's break it down:
 the resulted JSON (which will be `{"pi": 3.14}`)
 - `[pi]` will address the value in found JSON by the label offset, resulting in the final value `3.14`
 
+Obviously the `j` lexeme cannot be empty or result in an empty lexeme after template interpolation 
+(as the empty space is not a valid JSON, as per spec). 
+
 ##
 There's another search lexeme suffix - `s` - that one will find a JSON pointed by a _namespace_:
 ```bash
@@ -1014,6 +1021,63 @@ bash $  <<<$JSN jtc -w'<PI:{"pi": 3.14}>v <PI>s'
 }
 bash $ 
 ```
+
+The `s` lexeme also cannot be empty (it always must point to some namespace).
+
+##
+### Original and Duplicate searches
+`q` and `Q` lexemes allow finding original (first time seen) and duplicate elements respectively within the selected (walked) JSON tree. 
+The lexemes cannot be empty - they point to a namespace which will be _**overwritten**_ during the search and will be set
+to the found element (original or duplicate) once the match is found.
+
+lexemes search for original or duplicate entries of any JSONs, not necessarily atomic types, here's an example:
+```bash
+bash $ JSD='{"Orig 1": 1, "Orig 2": "two", "list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ]}' 
+bash $ <<<$JSD jtc 
+```
+```json
+{
+   "Orig 1": 1,
+   "Orig 2": "two",
+   "list": [
+      "three",
+      {
+         "dup 1": 1,
+         "dup 2": "two",
+         "second dup 1": 1
+      }
+   ]
+}
+```
+
+Let's see _all_ the original elements in the above JSON:
+```bash
+bash $ <<<$JSD jtc -lrw'<org>q:'
+```
+```json
+{ "Orig 1": 1, "Orig 2": "two", "list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ] }
+"Orig 1": 1
+"Orig 2": "two"
+"list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ]
+"three"
+{ "dup 1": 1, "dup 2": "two", "second dup 1": 1 }
+```
+As you can see there were listed _all_ first seen JSON values (including the root itself)
+
+Now, let's list _all_ the duplicates:
+```bash
+bash $ <<<$JSD jtc -lrw'<dup>Q:'
+```
+```json
+"dup 1": 1
+"dup 2": "two"
+"second dup 1": 1
+```
+
+_CAUTION_: both of the lexemes facilitate their functions by memorizing in the namespace _all_ the original values
+(from walked JSON node), thus both of them are quite memory hungry - keep it in mind when walking huge JSONs
+
+
 
 
 
