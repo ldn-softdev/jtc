@@ -447,7 +447,7 @@ This is the list of suffixes to control search behavior:
   `str`)
   * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
   * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`  
-  * `q`: matches only unique JSON values; lexeme must not be empty - must provide a namespace, where matched elements will be stored 
+  * `q`: matches only original JSON values; lexeme must not be empty - must provide a namespace, where matched elements will be stored 
   * `Q`: matches only repetitive (duplicate) JSON values; lexeme must not be empty - must provide a namespace, where matched
   elements will be stored
 
