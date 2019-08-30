@@ -357,7 +357,7 @@ bash $
 Here, all records (`[+0]`) from the `Directory` have been selected and then in every record all `phone` sub-records selected starting from
 the 2nd entry (`[+1]`)
 
-The same way object elements could be subscripted, here's an example where all address entries staring from the 2nd one are printed,
+The same way object elements could be subscripted, here's an example where all address entries starting from the 2nd one are printed,
 each one stating from the 3rd entry: 
 ```
 bash $ <ab.json jtc -w'[Directory][+1][address][+2]'
@@ -3180,11 +3180,11 @@ bash $ <ab.json jtc -w'<number>l:<cnt>I1' -T{cnt} -x/-1
 6
 bash $ 
 ```
-- `<cnt>I1` will arrange a namespace var `cnt` counting values staring from `0` with increment of `1` upon each walk pass (iteration)
+- `<cnt>I1` will arrange a namespace var `cnt` counting values starting from `0` with increment of `1` upon each walk pass (iteration)
 - `-T{cnt}` will interpolate it
 - `-x/-1` will display on the last walk
 
-Say, now we want to count the same phone numbers, but for some reason staring from `100`:
+Say, now we want to count the same phone numbers, but for some reason starting from `100`:
 ```
 bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
 106
