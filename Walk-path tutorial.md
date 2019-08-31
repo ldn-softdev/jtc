@@ -25,7 +25,10 @@
    * [Json types searches (`<>P`,`<>N`,`<>b`,`<>n`,`<>a`,`<>o`,`<>i`,`<>c`,`<>e`,`<>w`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
    * [Arbitrary Json searches (`<JSON>j`,`<ns>s`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#arbitrary-json-searches)
    * [Original and Duplicate searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#original-and-duplicate-searches)
+   * [Label searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches)
+     * [Non-recurive behavior of label lexemes (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#non-recurive-behavior-of-label-lexemes)
  
+
 ---
 
 ## Walk-path Lexemes
@@ -1076,6 +1079,168 @@ bash $ <<<$JSD jtc -lrw'<dup>Q:'
 
 _CAUTION_: both of the lexemes facilitate their functions by memorizing in the namespace _all_ the original values
 (from walked JSON node), thus both of them are quite memory hungry - keep it in mind when walking huge JSONs
+
+##
+### Label searches
+`l`, `L`, `t` - are suffixes to perform label based searches, they facilitate different kinds of label matching depending on the
+type of a search:
+- `<lbl>l` - finds recursively a JSON value with the label matching `"lbl"` exactly
+- `<RE>L` - finds recursively a JSON value with the label matching a regular expression _RE_
+- `<NS>t` - finds recursively a JSON value matching exactly the JSON string from the _namespace_ `NS`
+- `>lbl<l` - _addresses_ an immediate child in the _JSON object_ with the label `"lbl"`
+- `>RE<L` - _finds_ among immediate children in the JSON object a value with the label matching a regular expression _RE_
+- `>NS<t` - _addresses_ an immediate child in the _JSON object_ with the label from the _namespace_ `NS`,
+or _addresses_ an immediate child in the _JSON iterable_ with the numerical index from the _namespace_ `NS`
+
+First two variants should not require much of a clarification, let's work with the following JSON:
+```bash
+bash $ JSL='{"One": 1, "obj": { "One": true, "Two": 2, "": 3 }, "45": "forty-five"}'
+bash $ <<<$JSL jtc
+```
+```json
+{
+   "45": "forty-five",
+   "One": 1,
+   "obj": {
+      "": 3,
+      "One": true,
+      "Two": 2
+   }
+}
+```
+```bash
+bash $ <<<$JSL jtc -rlw'<[oO]>L:'
+```
+```json
+"One": 1
+"obj": { "": 3, "One": true, "Two": 2 }
+"One": true
+"Two": 2
+bash $ 
+```
+
+##
+`<NS>t` will try matching a label from the specified namespace. The JSON type in the `NS` might be either _JSON string_, 
+or _JSON numeric_, in the latter case, it's automatically converted to a _string value_ and also can match a label expressed as
+a numerical value:
+```bash
+bash $ <<<$JSL jtc -lrw'<idx:45>v <idx>t'
+```
+```json
+"45": "forty-five"
+```
+```bash
+bash $ <<<$JSL jtc -lrw'<idx:"45">v <idx>t'
+```
+```json
+"45": "forty-five"
+```
+All other _JSON types_ in the `NS` will be ignored, such search will always return _false_.
+
+##
+#### Non-recursive behavior of label lexemes
+Normally, a non-recursive search will try matching a value among immediate children of the _JSON iterable_. 
+But for matching a label or index, the actual search (i.e., iterating over children of the iterable) is a superfluous task:  
+indeed, when we want to match a value by a label (in a _JSON object_) or by an index (in a _JSON array_), we should be able 
+just to address them.  
+Thus non-recursive searches `>..<l` and `>..<t` in fact, just address JSON iterables.
+
+While `>..<l` lexeme can match labels in _JSON objects_ only, the lexeme `>..<t` can do both _JSON objects_ and _arrays_:  
+\- if the lexeme's _namespace_ has type _JSON string_, then it will match/address the label (from the namespace) in JSON objects:
+```bash
+bash $ <<<$JSL jtc -lw'<lbl:"One">v [obj]>lbl<t'
+```
+```json
+"One": true
+```
+\- if the lexeme's _namespace_ is set to _JSON numeric_ value, then it will address _JSON iterables_ by the index:
+```bash
+bash $ <<<$JSL jtc -lw'<idx:2">v [obj]>idx<t'
+```
+```json
+"Two": 2
+```
+
+##
+There's another feature of how these lexemes operate. Think of a quantifier instance for the lexemes: 
+any _parsed_ objects will hold only 1 specific label - there cannot be two equal labels among immediate children of the same _JSON object_. 
+
+It's possible to pass to a parser an object which will hold non-unique labels, but JSON RFC ([8259](https://tools.ietf.org/html/rfc8259))
+_**does not define**_ software behavior in that regard. `jtc` in such case retains the first parsed value:
+```bash
+bash $ <<<'{"abc":1, "abc":2}' jtc
+```
+```json
+{
+   "abc": 1
+}
+```
+_NOTE_: holding two non-unique labels would render such _JSON object_ non-addressable: indeed, in the above JSON, 
+if thje object were to hold both values, which value then to select when addressed by the label `"abc"`?
+
+
+Getting back to the quantifiers: _any parsed objects will hold only **one** specific label, and so does array with its indices_. If so,
+the usual semantic of quantifiers in lexemes `>..<l` and `>..>t` is moot then: we know that in the _parsed_ object cannot be a second,
+third, forth (and so on) label, there can be only one. The same applies to arrays: there can be only one unique index in there, thus
+only instance `0` makes sense.
+
+Thus, a usual semantic of quantifier as a _match instance_ (except instance `0`) in these lexemes is meaningless. 
+Therefore it was overloaded with a different and quite handy one: _a quantifier in these non-recursive lexemes allows
+addressing neighbors (sibling) of the matched entry_. I.e., the quantifier here becomes _**relative**_ (to the matched entry)
+and therefore can take a _negative value_ - that is the only case when a quantifier may go negative.
+
+Observe a relative quantifier in action:
+```bash
+bash $ <<<$JSL jtc -w'[obj]'
+```
+```json
+{
+   "": 3,
+   "One": true,
+   "Two": 2
+}
+```
+```bash
+bash $ <<<$JSL jtc -lw'[obj] >One<l'
+```
+```json
+"One": true
+```
+```bash 
+bash $ <<<$JSL jtc -lw'[obj] >One<l-1'
+```
+```json
+"": 3
+```
+```bash
+bash $ <<<$JSL jtc -lw'[obj] >One<l1'
+"Two": 2
+````
+The relative quantifiers though are fully compatible with quantifiers range-notation: 
+```bash
+bash $ <<<$JSL jtc -lw'[obj] >One<l:'
+```
+```json
+"": 3
+"One": true
+"Two": 2
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
