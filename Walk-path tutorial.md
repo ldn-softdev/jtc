@@ -1116,7 +1116,6 @@ bash $ <<<$JSL jtc -rlw'<[oO]>L:'
 "obj": { "": 3, "One": true, "Two": 2 }
 "One": true
 "Two": 2
-bash $ 
 ```
 
 ##
