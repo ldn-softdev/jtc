@@ -27,6 +27,7 @@
    * [Original and Duplicate searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#original-and-duplicate-searches)
    * [Label searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches)
      * [Non-recursive behavior of label lexemes (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#non-recursive-behavior-of-label-lexemes)
+     * [Relative quantifiers (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#relative-quantifiers)
  
 
 ---
@@ -1117,9 +1118,16 @@ bash $ <<<$JSL jtc -rlw'<[oO]>L:'
 "One": true
 "Two": 2
 ```
+```bash
+bash $ <<<$JSL jtc -rlw'<One>l:'
+```
+```json
+"One": 1
+"One": true
+````
 
 ##
-`<NS>t` will try matching a label from the specified namespace. The JSON type in the `NS` might be either _JSON string_, 
+recursive form `<NS>t` will try matching a label from the specified namespace. The JSON type in the `NS` might be either _JSON string_, 
 or _JSON numeric_, in the latter case, it's automatically converted to a _string value_ and also can match a label expressed as
 a numerical value:
 ```bash
@@ -1144,13 +1152,27 @@ indeed, when we want to match a value by a label (in a _JSON object_) or by an i
 just to address them.  
 Thus non-recursive searches `>..<l` and `>..<t` in fact, just address JSON iterables.
 
-While `>..<l` lexeme can match labels in _JSON objects_ only, the lexeme `>..<t` can do both _JSON objects_ and _arrays_:  
-\- if the lexeme's _namespace_ has type _JSON string_, then it will match/address the label (from the namespace) in JSON objects:
+The non-rcursive lexeme `>..<l` can match/address labels in _JSON objects_ only. _**That makes it (with a default quantifier) just
+another variant of a
+[literal subscripts](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)**_.
+The latter lacks one ability - to address labels spelled as numericals: in the above JSON, it won't be possible to address a JSON
+value `"forty-five"` via literal subscript, but using `>..<l` variant it is:
 ```bash
-bash $ <<<$JSL jtc -lw'<lbl:"One">v [obj]>lbl<t'
+bash $ <<<$JSL jtc -rlw'[45]'
+bash $ 
+bash $ <<<$JSL jtc -rlw'>45<l'
 ```
 ```json
-"One": true
+"45": "forty-five"
+```
+
+The lexeme `>..<t` can do both _JSON objects_ and _arrays_:  
+\- if the lexeme's _namespace_ has type _JSON string_, then it will match/address the label (from the namespace) in JSON objects:
+```bash
+bash $ <<<$JSL jtc -lw'<lbl:"45">v >lbl<t'
+```
+```json
+"45": "forty-five"
 ```
 \- if the lexeme's _namespace_ is set to _JSON numeric_ value, then it will address _JSON iterables_ by the index:
 ```bash
@@ -1161,8 +1183,10 @@ bash $ <<<$JSL jtc -lw'<idx:2">v [obj]>idx<t'
 ```
 
 ##
+#### Relative quantifiers
 There's another feature of how these lexemes operate. Think of a quantifier instance for the lexemes: 
-any _parsed_ objects will hold only 1 specific label - there cannot be two equal labels among immediate children of the same _JSON object_. 
+any _parsed_ objects will hold only 1 specific label - there cannot be two equal labels among immediate children 
+of the same _JSON object_. 
 
 It's possible to pass to a parser an object which will hold non-unique labels, but JSON RFC ([8259](https://tools.ietf.org/html/rfc8259))
 _**does not define**_ software behavior in that regard. `jtc` in such case retains the first parsed value:
