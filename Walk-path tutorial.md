@@ -28,6 +28,7 @@
    * [Label searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches)
      * [Non-recursive behavior of label lexemes (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#non-recursive-behavior-of-label-lexemes)
      * [Relative quantifiers (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#relative-quantifiers)
+   * [Scoped searches (`[label]:<..>`, `[label]:>..<`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#scoped-searches)
  
 
 ---
@@ -1253,6 +1254,9 @@ bash $ <<<$JSL jtc -lw'[obj] >One<l:'
 "One": true
 "Two": 2
 ```
+
+##
+### Scoped searches
 
 
 
