@@ -749,7 +749,7 @@ A complete notation for search lexemes (both, recursive and non-recursive), look
 `<expr>SQ` (`>expr<SQ`), where:
 - `expr` is a content of the lexeme, depending on the _lexeme suffix_, its semantic may vary: it could be either of: 
    - a value to match
-   - a Regular Expression to search for
+   - a [Regular Expression](https://en.wikipedia.org/wiki/Regular_expression) to search for
    - a namespace (think of a _namespace_ as of a variable which can hold any JSON type/structure)
    - a template
    - empty
