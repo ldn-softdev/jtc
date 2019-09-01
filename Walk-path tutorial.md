@@ -807,8 +807,8 @@ Quantifiers may be given in either of following forms:
 
 Observe following rules applied to all forms of quantifiers:
 1) in any of the above notations indices (`n`, `N`) are zero based  
-2) both indices `n`, `N` must be positive numbers (or `0`). There's one special case where quantifier may go negative,
-it will be discussed later  
+2) both indices `n`, `N` must be positive numbers (or `0`). There's only one case where quantifier may go negative (see 
+[Relative quantifiers (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#relative-quantifiers))  
 3) either or both of indices `n`, `N` may take a form of `{Z}`, where `Z` is a namespace holding a JSON numeric value representing
 an index
 
