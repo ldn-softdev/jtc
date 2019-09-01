@@ -3195,6 +3195,16 @@ bash $
 continue walking past `<>F` lexeme - that will ensure that initial offset of the `cnt` is set to `100` instead of default `0`
 
 
+Finally, let's count home numbers and mobile numbers separately:
+```
+bash $ <ab.json jtc -x'<phone>l:' -y'<home>:<hn>I1'  -y'<mobile>:<mn>I1' -T'{"total home numbers": {hn}, "total mobile numbers": {mn}}' -x/-1
+{
+   "total home numbers": 2,
+   "total mobile numbers": 3
+}
+bash $ 
+```
+
 
 
 
