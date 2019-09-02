@@ -36,7 +36,7 @@
 ## Walk-path Lexemes
 `Walk-path` is an argument of `-w` option (but not only, other options may also accept `walk-path`s).
 
-`Walk-path` is made of _lexemes_.  
+`Walk-path` is made of _lexemes_ (optionally separated with the white spaces).  
 A _lexeme_ - is an atomic walk-step which `jtc` applies when traversing JSON tree. `jtc` always begins walking of any walk-path
 starting from the _JSON root_.
 
@@ -1257,6 +1257,33 @@ bash $ <<<$JSL jtc -lw'[obj] >One<l:'
 
 ##
 ### Scoped searches
+When you would like to perform a search but only among values under a specific _label_, it's known as a _scoped search_. 
+The syntax for a scoped search is rather symple: a 
+[literal offset](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts) is appeded to the 
+[search lexeme](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes) over colon `:`, 
+e.g.:  
+`[some label]:<search lexeme>`  
+All form of quantifiers and search suffixes are supported except label searches: `l`, `L` and `t` - understandably,
+a label cannot be scoped by a label.
+
+For example:
+```bash
+bash $ <<<$JSL jtc -w'[One]:<org>q:'
+```
+```json
+1
+true
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
