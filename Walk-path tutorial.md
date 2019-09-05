@@ -1473,6 +1473,29 @@ bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
 3
 ```
 
+If the lexeme is _**empty**_ (`<>k`) _AND_ is the last one in the walk-path, then it does not memorize (obviously) the label/index 
+in the namespace, but instead re-interprets the label as the JSON value. That way it become possible to rewrite labels in update (`-u`)
+operations, or re-use it in template interpolation.
+```bash
+bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' 
+```
+```json
+3
+```
+```bash
+bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' -T'{"idx": {{}}}' -r
+```
+```json
+{ "idx": 3 }
+``` 
+The described effect occurs only if the empty `<>k` lexeme appears the last in the walk-path, if the lexeme appears somewhere in the
+middle of the walk-path, the lexeme is completely meaningless in that form and has no effect at all.
+
+
+
+
+
+
 
 
 
