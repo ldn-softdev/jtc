@@ -1468,6 +1468,7 @@ bash $ <<<$JSN jtc
 ```
 ```bash
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
+```
 ```json
 3
 ```
