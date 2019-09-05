@@ -1354,9 +1354,9 @@ of preserving values in the namespace.
 
 ##
 #### Preserve a currently walked value in the namespace
-Directive `<NS>v` preserves currently walked value in the _namespace_ `NS`. 
+The directive `<NS>v` preserves currently walked value in the _namespace_ `NS`. 
 [Many search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
-are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful directive.
+are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful feature.
 
 ```bash
 bash $ <<<$JSN jtc
@@ -1442,7 +1442,7 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 
 ##
 ### Preserve a label of a currently walked
-lexeme `<NS>k` functions pretty much like `<NS>v`, but instead of preserving a JSON value, it'll store in the namespace `NS`
+The directive `<NS>k` functions pretty much like `<NS>v`, but instead of preserving a JSON value, it'll store in the namespace `NS`
 its label (if currently walked element is a child of _JSON object_), or its index (if the currently walked element is a child
 of a _JSON array_):
 
@@ -1467,9 +1467,9 @@ bash $ <<<$JSN jtc
 ]
 ```
 ```bash
-bash $ <<<$JSN jtc -w'<null>j<idx>k' -T'{idx}'
+bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
 ```json
-2
+3
 ```
 
 
