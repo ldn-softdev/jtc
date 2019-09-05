@@ -31,7 +31,8 @@
    * [Scoped searches (`[label]:<..>`, `[label]:>..<`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#scoped-searches)
    * [Regex searches (`<..>R`, `<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
 4. [Directives and Namespaces](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#directives-and-namespaces)
-   * [Preserve current value in the namespace (`<..>v`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-current-value-in-the-namespace)
+   * [Preserve a currently walked value in the namespace (`<..>v`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-a-currently-walked-value-in-the-namespace)
+   * [Preserve a label of a currently walked (`<..>k`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-a-label-of-a-currently-walked)
 
 
 ---
@@ -1352,7 +1353,7 @@ of preserving values in the namespace.
 
 
 ##
-#### Preserve current value in the namespace
+#### Preserve a currently walked value in the namespace
 Directive `<NS>v` preserves currently walked value in the _namespace_ `NS`. 
 [Many search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
 are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful directive.
@@ -1439,9 +1440,37 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 2nd element in the JSON array, b/c all indices are _zero-based_)
 
 
+##
+### Preserve a label of a currently walked
+lexeme `<NS>k` functions pretty much like `<NS>v`, but instead of preserving a JSON value, it'll store in the namespace `NS`
+its label (if currently walked element is a child of _JSON object_), or its index (if the currently walked element is a child
+of a _JSON array_):
 
-
-
+```bash
+bash $ <<<$JSN jtc 
+```
+```json
+[
+   "abc",
+   false,
+   null,
+   {
+      "pi": 3.14
+   },
+   [
+      1,
+      "two",
+      {
+         "number three": 3
+      }
+   ]
+]
+```
+```bash
+bash $ <<<$JSN jtc -w'<null>j<idx>k' -T'{idx}'
+```json
+2
+```
 
 
 
