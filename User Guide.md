@@ -494,7 +494,7 @@ for the currently walked JSON elements:
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
          can be updated/extracted programmatically), if the lexeme's value is non-empty then it saves a found key 
          (label/index) into the corresponding namespace and **cancels reinterpretation** of the label as a value
-  * `z`: erases namespace pointed by lexeme value; if lexeme must not be empty
+  * `z`: erases namespace pointed by lexeme value; the lexeme must not be empty
   * `f`: fail-safe: if lexeme walking **past the fail-safe** fails, instead of progressing to the next iteration
          (a normal behavior), the lexeme immediately preceding the fail-safe will be matched; walking (of the same walk-path)
          may continue for the failed path if `F` directive is present (past the failing point) from the walk lexeme following
