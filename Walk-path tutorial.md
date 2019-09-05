@@ -29,7 +29,10 @@
      * [Non-recursive behavior of label lexemes (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#non-recursive-behavior-of-label-lexemes)
      * [Relative quantifiers (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#relative-quantifiers)
    * [Scoped searches (`[label]:<..>`, `[label]:>..<`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#scoped-searches)
- 
+   * [Regex searches (`<..>R`, `<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
+4. [Directives and Namespaces](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#directives-and-namespaces)
+   * [Preserve current value in the namespace (`<..>v`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-current-value-in-the-namespace)
+
 
 ---
 
@@ -37,7 +40,7 @@
 `Walk-path` is an argument of `-w` option (but not only, other options may also accept `walk-path`s).
 
 `Walk-path` is made of _lexemes_ (optionally separated with the white spaces).  
-A _lexeme_ - is an atomic walk-step which `jtc` applies when traversing JSON tree. `jtc` always begins walking of any walk-path
+A _lexeme_ - is an atomic walk-step that `jtc` applies when traversing JSON tree. `jtc` always begins walking of any walk-path
 starting from the _JSON root_.
 
 If upon walking (i.e. applying _lexemes_, a.k.a. _walk-steps_) applying of a lexeme fails, such walk-path is considered to be empty
@@ -751,10 +754,10 @@ A complete notation for search lexemes (both, recursive and non-recursive), look
 - `expr` is a content of the lexeme, depending on the _lexeme suffix_, its semantic may vary: it could be either of: 
    - a value to match
    - a [Regular Expression](https://en.wikipedia.org/wiki/Regular_expression) to search for
-   - a namespace (think of a _namespace_ as of a variable which can hold any JSON type/structure)
+   - a namespace (think of a _namespace_ as of a variable that can hold any JSON type/structure)
    - a template
    - empty
-- `S` is an optional one-letter suffix, which defines the behavior of the lexeme
+- `S` is an optional one-letter suffix that defines the behavior of the lexeme
 - `Q` is a quantifier, whose function generally is analogous to the function of _numerical offset_ and _range subscripts_, but in some
 cases also might vary, as per documentation. the quantifier must also follow the suffix (if one present).
 
@@ -958,7 +961,7 @@ false
 
 ##
 ### Json types searches
-There are quite a handful of lexemes which search and match _JSON types_, in fact there are lexemes to cover _all_ _JSON type matches_
+There are quite a handful of lexemes that search and match _JSON types_, in fact there are lexemes to cover _all_ _JSON type matches_
 and even more. Four of those already have been covered:
 [_string type match_ `<>P`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches),
 [_numerical type match_ `<>N`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches),
@@ -971,7 +974,7 @@ The others are:
 - `<>e`: end node (leaf) match type, will match any of atomic types, or _empty_ containers (`{}`, `[]`)
 - `<>w`: wide type range match - will match _any_ JSON type/value 
 
-All of those lexemes can stay empty, or hold the _namespace_ which will be filled upon a successful match.
+All of those lexemes can stay empty, or hold the _namespace_ that will be filled upon a successful match.
 
 ```bash
 bash $ <<<$JSN jtc -rw'<>c:'
@@ -1191,7 +1194,7 @@ any _parsed_ objects will hold only 1 unique label - there cannot be two equal l
 of the same _JSON object_. 
 
 ##
-Though it's possible to pass to a parser an object which will hold non-unique labels, the JSON RFC 
+Even though it's possible to pass to a parser an object that will hold non-unique labels, the JSON RFC 
 ([8259](https://tools.ietf.org/html/rfc8259))
 _**does not define**_ software behavior in that regard. `jtc` in such case retains the first parsed value:
 ```bash
@@ -1259,11 +1262,11 @@ bash $ <<<$JSL jtc -lw'[obj] >One<l:'
 ### Scoped searches
 When you would like to perform a search but only among values under a specific _label_, it's known as a _scoped search_. 
 The syntax for a scoped search is rather symple: a 
-[literal offset](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts) is appeded to the 
+[literal offset](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts) is appeded wtih the 
 [search lexeme](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes) over colon `:`, 
 e.g.:  
 `[some label]:<search lexeme>`  
-All form of quantifiers and search suffixes are supported except label searches: `l`, `L` and `t` - understandably,
+All form of quantifiers and search suffixes are supported, except label searches: `l`, `L` and `t` - understandably,
 a label cannot be scoped by a label.
 
 For example:
@@ -1274,6 +1277,168 @@ bash $ <<<$JSL jtc -w'[One]:<org>q:'
 1
 true
 ```
+
+
+##
+### Regex searches
+All search lexemes supporting _regex_ based searching have been already covered:
+[`<..>R`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#string-searches),
+[`<..>L`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches),
+[`<..>D`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-searches),
+they support (RE) matching of _strings_, _labels_ and _numerical_ JSON values respectively.
+
+There's one more aspect to it though: the _regular expression_ also support _sub-groups_. Upon a successful match,
+the subgroups will automatically setup respective namespaces, e.g.: the first subgroup will populate a namespace `$1`, 
+the second will do `$2` and so on. Plus, the entire match will populate the namespace `$0`.
+
+That way it's possible to extract any part(s) from the found JSON values for a later re-use.
+```bash
+bash $ <<<$JSL jtc -w'<(.*)[oO](.*)>L:' -T'{ "sub-group 1":{{$1}}, "sub-group 2":{{$2}}, "entire match":{{$0}} }'
+```
+```json
+{
+   "entire match": "One",
+   "sub-group 1": "",
+   "sub-group 2": "ne"
+}
+{
+   "entire match": "obj",
+   "sub-group 1": "",
+   "sub-group 2": "bj"
+}
+{
+   "entire match": "One",
+   "sub-group 1": "",
+   "sub-group 2": "ne"
+}
+{
+   "entire match": "Two",
+   "sub-group 1": "Tw",
+   "sub-group 2": ""
+}
+```
+
+##
+### Directives and Namespaces
+##### Directives:
+There're few lexemes that look like searches but they do not do any searching/matching, instead they apply certain actions
+onto the currently walked JSONs elements or paths. They are known as _directives_. Directives are distinguishable from the search
+lexemes only by the suffix.
+
+Directives are typically agnostic to recursive or non-recursive forms of spelling, except one - `F`, 
+where the spelling has a semantical meaning. Also, the directives do not support quantifiers (the quantifiers are parsed, 
+but silently ignored).
+
+##
+##### Namespaces:
+_Namespace_ is a way to facilitate _variables_ in `jtc`. The _namespace_ is implemented as a container (in the currently processed 
+JSON) that holds all (sub) JSON values preserved during waling a walk-path.
+
+The JSON values found in the _namespace_ could be re-used later either during the _interpolation_, or in other lexemes of the same
+walk or in different (subsequent) walks.
+
+The namespace could be populated (setup) by a lexeme either from currently walked JSON element, or with an _**arbitrary**_ JSON value 
+(in the lexeme). e.g.:
+
+In this walk-path example a search lexeme `a` will find (recursively) the first occurrence of any _atomic JSON_ and will 
+populate the namespace _Atomic_ with a found JSON element:  
+`-w'<Atomic>a'`  
+In this walk-path example, the same search lexeme will populate the namespace _Atomic_ with the empty JSON array `[]`
+instead of a found atomic JSON:  
+`-w'<Atomic:[]>a'`  
+
+The ability (and the form) to setup an arbitrary JSON value is _universal_ for all lexemes (and directives)  that are capable
+of preserving values in the namespace.
+
+
+##
+#### Preserve current value in the namespace
+Directive `<NS>v` preserves currently walked value in the _namespace_ `NS`. 
+[Many search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
+are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful directive.
+
+```bash
+bash $ <<<$JSN jtc
+```
+```json
+[
+   "abc",
+   false,
+   null,
+   {
+      "pi": 3.14
+   },
+   [
+      1,
+      "two",
+      {
+         "number three": 3
+      }
+   ]
+]
+```
+```bash
+bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
+```
+```json
+"two"
+```
+
+It's fun to see how `jtc` works in a slow-mo, building a walk-path step by step, one lexeme at a time:
+```bash
+bash $ <<<$JSN jtc -w'[4]'
+```
+```json
+[
+   1,
+   "two",
+   {
+      "number three": 3
+   }
+]
+```
+\- addressed there the 5th JSON element in the JSON root (always begin walking from the root)  
+##
+```bash
+bash $ <<<$JSN jtc -w'[4][0]'
+```
+```json
+1
+```
+\-  addressed the 1st JSON value in the JSON iterable (found in the prior step)  
+##
+```bash
+bash $ <<<$JSN jtc -w'[4][0]<Idx>v'
+```
+```json
+1
+```
+\- memorized a currently walked JSON in the namespace `Idx` (which is the _JSON numeric_ `1`)  
+##
+```bash
+bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
+```
+```json
+[
+   1,
+   "two",
+   {
+      "number three": 3
+   }
+]
+```
+\- stepped one level up (towards the root) from the last walked JSON  
+##
+```bash
+bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
+```
+```json
+"two"
+```
+\- using a value from the namespace `Idx` found an offset in the JSON iterable (the numeric value `1` stored in `Idx` points to a
+2nd element in the JSON array, b/c all indices are _zero-based_)
+
+
 
 
 
