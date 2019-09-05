@@ -34,6 +34,7 @@
    * [Preserve a currently walked value in the namespace (`<..>v`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-a-currently-walked-value-in-the-namespace)
    * [Preserve a label of a currently walked (`<..>k`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-a-label-of-a-currently-walked)
    * [Erase namespace (`<..>z`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#erase-namespace)
+   * [Walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)
 
 
 ---
@@ -1523,6 +1524,16 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 ```json
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
+
+
+##
+### Walk branching
+
+
+
+
+
+
 
 
 
