@@ -1499,45 +1499,29 @@ The directive `<NS>z` allows erasing the namespace `NS`. Mostly, this would be r
 
 For example, let's replace all even numbers in the array with their negative values:
 ```bash
-bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -j
+bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 ```
 ```json
-[
-   1,
-   -2,
-   3,
-   -4,
-   5,
-   -6,
-   7,
-   -8,
-   9
-]
+[ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
 
 If the walk began w/o initial lexeme erasing namespace `Num`, then the whole attempt would fail:
 ```bash
-bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -j
+bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 ```
 ```json
-[
-   1,
-   -2,
-   -2,
-   -4,
-   -4,
-   -6,
-   -6,
-   -8,
-   -8
-]
+[ 1, -2, -2, -4, -4, -6, -6, -8, -8 ]
+
 ```
 
 Of course, knowing _how
 [Regex lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
 work_, it's possible to rewrite the lexeme in a bit more succinct way:
 ```bash
-bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -j
+bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
+```
+```json
+[ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
 
 
