@@ -1516,7 +1516,7 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 
 Of course, knowing _how
 [Regex lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
-work_, it's possible to rewrite the lexeme in a bit more succinct way:
+work_, it's possible to rewrite the walk-path in a bit more succinct way:
 ```bash
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 ```
