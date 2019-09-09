@@ -1496,7 +1496,8 @@ middle of the walk-path, the lexeme is completely meaningless in that form and h
 
 ##
 ### Erase namespace
-The directive `<NS>z` allows erasing the namespace `NS`. Mostly, this would be required when used together with _walk branching_.
+The directive `<NS>z` allows erasing the namespace `NS`. Mostly, this would be required when used together with 
+_[walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)_.
 
 For example, let's replace all even numbers in the array with their negative values:
 ```bash
@@ -1525,11 +1526,16 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
 
-
 ##
 ### Walk branching
+Normally, all the lexemes in the _walk-path_ are contatenated with the logical operator _AND_ (i.e., a walk is suscessful only
+if _all_ lexemes are).  
+Directives `<..>f`, `<..>F` and `><F` introduce walk branching (the easiest way to think of it as of `if .. else ..`).
+Note: direcitve `F` is sensitive to lexeme spelling and provides different actions for each of the form (this is the only directive
+so far sensitive to the lexeme encasement, all others are not). 
 
-
+`<>f` is a _fail-safe_ directive (facilitating `if` part). Once walked, it memorizes the internally maintained path to the
+currently walked JSON element and reinstate it, once the walk _past_ `<>f` fails:
 
 
 
