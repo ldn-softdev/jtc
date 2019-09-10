@@ -35,6 +35,7 @@
    * [Preserve a label of a currently walked (`<..>k`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#preserve-a-label-of-a-currently-walked)
    * [Erase namespace (`<..>z`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#erase-namespace)
    * [Walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)
+     * [Fail-safe directive (`<..>f`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#fail-safe-directive)
 
 
 ---
@@ -1530,12 +1531,17 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 ### Walk branching
 Normally, all the lexemes in the _walk-path_ are contatenated with the logical operator _AND_ (i.e., a walk is suscessful only
 if _all_ lexemes are).  
-Directives `<..>f`, `<..>F` and `><F` introduce walk branching (the easiest way to think of it as of `if .. else ..`).
-Note: direcitve `F` is sensitive to lexeme spelling and provides different actions for each of the form (this is the only directive
-so far sensitive to the lexeme encasement, all others are not). 
+Directives `<..>f`, `<..>F` and `><F` introduce walk branching (the easiest way to think of it as of `if .. else ..`), 
+i.e. they facilitate a control-flow logic of the walk-path exectution.
 
+_Note_: the direcitve `F` is sensitive to the lexeme spelling (a recursive vs a non-recursive form) and provides different
+reactions for each of the form (this is the only directive so far that is sensitive to the lexeme encasement, all others are not). 
+
+##
+#### Fail-safe directive
 `<>f` is a _fail-safe_ directive (facilitating `if` part). Once walked, it memorizes the internally maintained path to the
-currently walked JSON element and reinstate it, once the walk _past_ `<>f` fails:
+currently walked JSON element and reinstate it, shall the walk _past_ `<>f` directive fails:
+
 
 
 
