@@ -3043,7 +3043,7 @@ bash $
 \- hmmm, but we need such line one per record and not like above
 
 3. To ensure that we reconcile only each record (and not all of them), let's add one more walk which will fail interpolation of `$?`
-in the template (that will reset the value of '$?' back to `""`)
+in the template (that will reset the value of `$?` back to `""`)
 ```
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"'
 "John"
