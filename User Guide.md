@@ -503,7 +503,7 @@ for the currently walked JSON elements:
     * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
     without ending the walk;
     * `><F` - when the directive is reached, the walk successfully stops for the output processing    
-  * `u`: user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects waling: if a returned result of the
+  * `u`: user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
   * `I`: increment lexeme - if the namespace value pointed by a lexeme is _JSON number_ then it's incremented by the specified offset
