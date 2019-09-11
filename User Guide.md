@@ -1987,7 +1987,7 @@ Once options `-e` and `-u`(`-i`) are used together, following rules must be obse
 promoted to a _JSON string_ value)
 - failed (those returning non-zero exit code) or empty results of the shell evaluations are ignored
 (then JSON entry wont be updated/inserted, rather proceed to the next walked entry for another/next update attempt)
-
+- templates (`-T`) are ignored (unused) - template-interpolation already occurs during the _cli evaluation_
 
 if shell cli does not deliver expected result for some reason, it's easy to see why with `-dd` option, e.g, say, we want to 
 truncate all kid's names to 3 letters only (just for fun):
