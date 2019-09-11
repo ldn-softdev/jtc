@@ -1,4 +1,27 @@
 ## `jtc` Release Notes
+_Release Notes for `jtc` v.1.74_
+
+#### New features:
+- No new features, some enhancements and stability improvements
+
+
+#### Improvements, changes, fixes:
+- improved handling of `<>q` and `<>Q` lexemes drastically (performance and memory utilization-wise), 
+also now those lexemes may be empty (before it was mandatory to give a namespace in the lexemes)
+- option `-t` now can be used to control spacing for the compact (one-row) view, e.g.: `-r -t0` will print a very compact one-liner JSON, 
+w/o spaces; when used together (`-r` and `-t`), it will also control spacing in stringification of JSON in template operations
+- introduced a support for _flags_ in _Regular Expressions_ (namely: `INOCESXAGP`); flags can be given only as trailing part of the RE 
+(they will be removed from the RE itself after parsing), e.g.: `<...\I\O>R:`; also, flags `ESXAGP` facilitate various REGEX grammars, 
+those flags will be processed only once (i.e., only the first setup grammar flag will have an effect, all subsequent will be ignored)
+- enhanced behavior of empty `<>k` lexeme - now it also has an effect when placed in front `><F` lexeme (i.e. logical end of walking),
+not only at the syntactical end of the walk-path
+- enhanced interpolation behavior of `{}` token: when interpolation of a _JSON object_ fails, it will be re-attempted to strip the
+_JSON object_ as an _array_  - effectively allowing conversion of _JSON objects_ into _JSON arrays_ in templates.
+- fixed an issue when a _"move"_ - semantic (`-p`) applied to _update (`-u`)_/_insert (`-i`)_ operations: 
+if the walks of the latter fails entirely then a _purge_ should not be applied on destination walks (UT'ed)
+***
+
+
 _Release Notes for `jtc` v.1.73_
 
 #### New features:
