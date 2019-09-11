@@ -14,7 +14,7 @@
 using namespace std;
 
 
-#define VERSION "1.73"
+#define VERSION "1.74"
 #define CREATOR "Dmitry Lyssenko"
 #define EMAIL "ldn.softdev@gmail.com"
 
@@ -192,7 +192,8 @@ class Jtc {
         Json::iterator      dst;                                // -w walks (iterators) go here
         Json::iterator      src;                                // -i/u/c walks (iterators) go here
         Json::map_jn        ns;                                 // NS from respective -i/u/c iters.
-        string              lbl{"\n"};
+        string              lbl{"\n"};                          // facilitates -u for label update
+                                                                // init'ed with "\n" - invalid lbl
     };
 
     struct Grouping {
@@ -236,7 +237,9 @@ class Jtc {
                          is_tmp_per_walk_ = opt_[CHR(OPT_TMP)].hits() > 1 and
                                             opt_[CHR(OPT_SEQ)].hits() < 2 and
                                             opt_[CHR(OPT_TMP)].hits() == opt_[CHR(OPT_WLK)].hits();
-                         jinp_.tab(abs(opt_[CHR(OPT_IND)]))     // prepare json_
+                         // ready jinp_
+                         jinp_.tab(opt_[CHR(OPT_IND)].hits() > 0 or not opt_[CHR(OPT_RAW)]?
+                                    abs(opt_[CHR(OPT_IND)]): 1)
                               .raw(opt_[CHR(OPT_RAW)])
                               .quote_solidus(opt_[CHR(OPT_QUT)].hits() % 2 == 1);
 
@@ -889,8 +892,10 @@ void Jtc::upsert_json(char op) {
 
 
 void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
- // insert each/all -[iu] processed jsons
- if(processed_by_cli_(it)) return;                              // -ei ... \; w/o trailing -i<..>
+ // facilitate insert each/all -[iu] processed jsons:
+ // per each walked destination (-w, facilitated by &it), collect each respective source(s) (jits_)
+ // Grouping arg is unused here, but is required by subscriber_'s definition
+ if(processed_by_cli_(it)) return;                              // -ei ... \; w/o trailing -i<wlk>
 
  merge_ns_(cr_.global_ns(), wns_[&it]);                         // syncup global ns
  if(jits_.walk_size() > 0)                                      // walk_size > 0 means init'ed jits
@@ -899,7 +904,8 @@ void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
  while(advance_to_next_src()) {
   DBG(1) DOUT() << "optarg idx [" << wcur_ << "] out of "
                 << (jitt_ == src_optarg? jsrc_.size(): wsrc_.size()) << " ("
-                << (jitt_ == src_optarg? "static":opt_.ordinal(wsrc_[wcur_]).c_str()) << ")" <<endl;
+                << (jitt_ == src_optarg? "static":opt_.ordinal(wsrc_[wcur_]).c_str())
+                << ")" << endl;
   psrc_.emplace_back(it, jits_);                                // collect iterator
   if(is_multi_walk_) break;
  }
@@ -909,6 +915,7 @@ void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
 
 void Jtc::update_by_iterator(Json::iterator &it, Grouping unused) {
  // update each/all -u processed jsons
+ // Grouping arg is unused here, but is required by subscriber_'s definition
  if(lbl_update_ == false)                                       // not faced label update yet
   lbl_update_ = not it.walks().empty() and it.walks().back().jsearch == Json::key_of_json;
  else                                                           // lbl update occurred, then
@@ -929,7 +936,7 @@ bool Jtc::advance_to_next_src(signed_size_t i) {
 
  DBG(4) DOUT() << "walk src: " << i << ", walk/json: '"
                << (jitt_ == src_optarg?
-                    jsrc_[idx()].to_string(Jnode::Raw):
+                    jsrc_[idx()].to_string(Jnode::Raw, 1):
                     opt_.ordinal(wsrc_[idx()]).str()) << "'" << endl;
  size_t jc_size = jitt_ == src_optarg? jsrc_.size(): wsrc_.size();  // json source container size
  if(jits_.is_valid()) {                                         // if true, walk_size must be > 0
@@ -998,7 +1005,7 @@ void Jtc::apply_src_walks(char op) {
                                          pair.src: tmp.walk(), &pair.lbl);
    }
   }
-  else // ecli_ == true
+  else // ecli_ == true                                         // case: -e -u/i ... \; -u/i<wlk>
    if(execute_cli_(jexc_, pair.src, pair.ns) == true)
     (this->*upsert[op == CHR(OPT_UPD)])(pair.dst, jexc_.walk(), &pair.lbl);
 
@@ -1172,7 +1179,7 @@ void Jtc::location_(Streamstr::const_iterator &jbegin) {
 
 
 void Jtc::ready_params_(char option) {
- // fill / prepare data: jsrc_ (if multiple jsons, no walks: -u<static> -u<static>),
+ // fill / prepare data: jsrc_ (if multiple jsons, no walks: -u<static1> -u<static2>),
  // or jexc_ & wsrc_ (in case like: -eu -u... & -u<static> -u<walk> respectively)
  if(ecli_)                                                      // -e detected
   for(size_t i = cr_.opt_e_found(); cr_.opt_ui() and i <= opt_[cr_.opt_ui()].hits(); ++i)
@@ -1279,8 +1286,7 @@ void Jtc::compare_jsons_(const Jnode &j1, set<const Jnode*> &s1,
 
 void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *unused) {
  // merge 2 jsons. convert to array non-array dst jsons (predicated by -m)
- if(it_dst.walks().back().jsearch == Json::key_of_json and
-    it_dst.walks().back().stripped[0].empty())                  // '<>k' facing
+ if(it_dst.reinterpret_label())                                 // '<>k' facing
   { cerr << "error: insert into label not applicable, use update" << endl; return; }
 
  if(it_dst->is_object()) {                                      // dst is object
@@ -1379,13 +1385,12 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
 
 void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *lbl) {
  // update dst with src, merge jsons with overwrite if -m is given
- if(it_dst.walks().back().jsearch == Json::key_of_json and
-    it_dst.walks().back().stripped[0].empty()) {
+ if(it_dst.reinterpret_label()) {                               // '<>k' facing
   DBG(2) DOUT() << "label being updated" << endl;               // facilitate '<>k' (empty lexeme)
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }
   if(not it_src->is_string())
-   { cerr << "error: only labels could be updated with valid JSON strings" << endl; return; }
+   { cerr << "error: labels could be updated only with valid JSON strings" << endl; return; }
   auto & parent = (*it_dst)[-1];
   if(not parent.is_object())
    { cerr << "error: labels could be updated in objects only" << endl; return; }
@@ -1521,8 +1526,8 @@ bool Jtc::remove_others_(set<const Jnode*> &ws, Jnode &jn) {
 Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
  // collect all walk iterations from given walk path (used by swap/purge)
  vec_jit walk_itr;
- if(not psrc_.empty()) {                                        // psrc is filled when walked -[ui]
-  for(auto &pair: psrc_)
+ if(opt_[CHR(OPT_INS)].hits() > 0 or opt_[CHR(OPT_UPD)].hits() > 0 ) {
+  for(auto &pair: psrc_)                                        // psrc is filled when walked -[ui]
    walk_itr.push_back(move(jitt_ == src_input?                  // -[iu] by collect_itr_bindings
                             pair.src: pair.dst));
   DBG(0) DOUT() << "source of iterations: '" << ENUMS(Jitsrc, jitt_)
@@ -1694,7 +1699,7 @@ void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &f
  if(actuals.empty())                                            // should never be the case
   { wpi.clear(); return; }                                      // in case, avoiding endless loop
  DBG(2) DOUT() << "output instance: " << actuals.front()
-               << ", #lowest offsets/counter: {" << grouping << ", }" << endl;
+               << ", #lowest offsets/counter: {" << grouping << ", " << lf_counter << "}" << endl;
  (this->*subscriber_)(wpi[actuals.front()].front(), {grouping, lf_counter});
  wpi[actuals.front()].pop_front();
 }

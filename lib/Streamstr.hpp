@@ -287,8 +287,8 @@ const char & Streamstr::const_iterator::operator*(void) {
 Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
  // facilitate ++operation for streamed/buffered operations
  if(is_streamed())
-  if(cnt_ < ssp_->cnt_)
-   { rwd_ += ssp_->cnt_ - cnt_; cnt_ = ssp_->cnt_; }
+  if(cnt_ < ssp_->cnt_)                                         // stream advanced ahead of iter.
+   { rwd_ += ssp_->cnt_ - cnt_; cnt_ = ssp_->cnt_; }            // adjust so it looks like back-out
 
  if(rwd_ > 0)                                                   // there was a back out
   { --rwd_; return *this; }

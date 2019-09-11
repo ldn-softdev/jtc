@@ -22,7 +22,7 @@ void guide_wp(void) {
 
   * Walk-path syntax:
 
-Walk-paths made of various lexemes that instruct how to traverse JSON allow selecting a single or
+Walk-path made of various lexemes that instruct how to traverse JSON allows selecting a single or
 multiple elements from the input JSON
 
 There are only 2 types of lexemes (though there're a few variants of each type):
@@ -98,15 +98,18 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         namespace
      t: match a label/index value previously saved in a namespace, the lexeme must points to the
         namespace, which should be JSON string or numeric type only
-     q: match only unique JSON elements, every match is stored in the namespace
-     Q: match all non-unique (duplicate) elements, every match is stored in the namespace
+     q: match only original JSON elements, every match is stored in the namespace, the lexeme
+        may be empty
+     Q: match all non-unique (duplicate) elements, every match is stored in the namespace, the
+        lexeme may be empty
 
    Following suffixes define lexemes as directives (which do not perform any search):
      v: saves the most recent/found (or user-defined) JSON value into a namespace
-     k: instructs to treat the most recent/found label/index (if exists) as a value (thus a
-        label/index along can be updated/extracted programmatically), if a lexeme value is
-        non-empty then also saves found label/index into the given namespace
-     z: erase namespace pointed by lexeme value; if the lexeme is empty, erase entire namespace
+     k: if the lexeme is empty and walking has ended by exucuting it last (or before '><F'), then
+        then a label/index (if exists) is treated as a value (thus the label/index along can be
+        updated/extracted programmatically); if the lexeme's value is non-empty then it saves
+        the found label/index into the given namespace
+     z: erase namespace pointed by lexeme value; the lexeme cannot be empty
      f: fail-stop (or fork): if walking lexemes past the fail-stop fails, instead of progressing
         to the next iteration, a lexeme resolved JSON node (and path) at the fail-stop point will
         be restored; when used together with `F` directive, the walking may either continues past
