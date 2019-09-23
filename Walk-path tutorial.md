@@ -25,7 +25,7 @@
    * [Json types searches (`<>P`,`<>N`,`<>b`,`<>n`,`<>a`,`<>o`,`<>i`,`<>c`,`<>e`,`<>w`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
    * [Arbitrary Json searches (`<JSON>j`,`<ns>s`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#arbitrary-json-searches)
    * [Original and Duplicate searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#original-and-duplicate-searches)
-   * [Label searches (`<..>q`,`<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches)
+   * [Label searches (<..>L, <..>l, <..>t)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#label-searches)
      * [Non-recursive behavior of label lexemes (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#non-recursive-behavior-of-label-lexemes)
      * [Relative quantifiers (`>..<l`,`>..<t`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#relative-quantifiers)
    * [Scoped searches (`[label]:<..>`, `[label]:>..<`](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#scoped-searches)
