@@ -533,7 +533,7 @@ aiming to provide a user tool which would let attaining the desired result in a 
 ### utility ideology:
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
  - `jtc` is a unix utility confining its functionality to operation types with its data model only (as per unix ideology). `jtc`
- performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained
+ performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained over the pipe symbol `|`
 
 **jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
@@ -545,12 +545,12 @@ to facilitate even simple queries for **jq** is huge - that's the proof in itsel
 asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
 `jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embeds" the ask right into the
-walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
+_walk-path_. That facilitates a much higher feasibility of attaining a desired result: building the walk-path a lexeme by a lexeme, 
 one at a time, provides an immediate visual feedback and let coming up with the desired result quite quickly.
 
 ### learning curve:
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
- **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
+ **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a "PhD" in **jq**, or spending 
  lots of time on stackoverflow and similar forums
  - `jtc` employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
  each type though has several variants) which is easy to grasp.
@@ -559,12 +559,13 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  - **jq**: handling irregular JSONs for **jq** is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging the query (**jq** program) becomes
  - `jtc` was conceived with the idea of being capable of handling complex irregular JSONs with a simplified interface - that all is
- fitted into the concept of the _walk-path_, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every ask. 
+ fitted into the concept of the _walk-path_, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every query. 
 
 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
- - `jtc` is written in idiomatic _C++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
+ - `jtc` is written in idiomatic _C++_ (the most powerful programming language to date) using STL only.
+ Main JSON engine/library does not have a single `new` operator,
  nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
  (at least one class of the problems is off the table) - **STL guaranty**.  
  Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
@@ -590,25 +591,38 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 
 ### performance:
-here's a 4+ million node JSON:
+here's a 4+ million node [JSON](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
 bash $ jtc -zz standard.json 
 4329975
 ```
-The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`):
+The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`,
+a median value is selected from 5 attempts):
 
 `jtc` | jq
 ---: | :---
 _**`parsing JSON:`**_ | _**`parsing JSON:`**_
 `bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
 ` 7091578` | ` 7091578`
-`user 11.195 sec` | `user 24.685 sec`
+`user 8.686 sec` | `user 18.848 sec`
 _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
 `bash $ time jtc -pw'<attributes>l:' standard.json \| wc -l` | `bash $ time jq 'del(..\|.attributes?)' standard.json \| wc -l`
 ` 5573690` | ` 5573690`
-`user 12.334 sec` | `user 34.873 sec`
+`user 9.765 sec` | `user 27.399 sec`
 
-
+The computer's spec used for tests:
+```
+  Model Name:                 MacBook Pro
+  Model Identifier:           MacBookPro15,1
+  Processor Name:             Intel Core i7
+  Processor Speed:            2,6 GHz
+  Number of Processors:       1
+  Total Number of Cores:      6
+  L2 Cache (per Core):        256 KB
+  L3 Cache:                   12 MB
+  Hyper-Threading Technology: Enabled
+  Memory:                     16 GB
+```
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
