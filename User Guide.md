@@ -424,6 +424,38 @@ bash $ <ab.json jtc -w'<^N>R'
 bash $
 ```
 
+Regex lexemes allow specifying options for the RE search as trailing special symbols. Following symbols are supported
+([c++11 option type reference](https://en.cppreference.com/w/cpp/regex/syntax_option_type)):
+- `\I`: ignore case (_icase_)
+- `\N`: all marked sub-expressions `(expr)` are treated as non-marking sub-expressions `(?:expr)` (_nosubs_)
+- `\O`: instructs the RE engine to make matching faster at the cost of making construction (parsing) slower (_optimize_)
+- `\C`: character ranges of the form `[a-b]` are locale sensitive (_collate_)
+
+_Note_: a _multiline_ RE option is unsupported due to JSON not supporting multiline strings. Also, 
+when option `\N` is given, obviously, the
+[auto-generated namespaces for RE subgroups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
+won't be not available 
+
+
+Also, all following RE grammars are supported:
+- `\E`: utilizes _ECMAScript_ grammar (default)
+- `\S`: utilizes _basic_ RE grammar
+- `\X`: utilizes _extended_ RE grammar
+- `\A`: utilizes _awk_'s RE grammar
+- `\G`: utilizes _grep_'s RE grammar
+- `\P`: utilizes _egrep_'s RE grammar
+
+Only the first specified grammar is parsed and is in effect (in case multiple given).
+All the trailing special symbols will be trimmed after RE parsing (i.e. they are not part of the RE search expression).
+E.g., the above example with options `\I` and `\P` (ignore case and use _egrep_ grammar) looks like this:
+```
+bash $ <ab.json jtc -w'<^n\I\P>R'
+"New York"
+bash $ 
+```
+
+
+
 #### Search suffixes
 This is the list of suffixes to control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ value
