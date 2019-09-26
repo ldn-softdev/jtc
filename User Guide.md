@@ -2359,7 +2359,7 @@ The difference between single `{}` and double `{{}}` notations:
   will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided - `-T'[ {} ]'`
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
   will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T{ {}, "key": "new" }`
-    * when an object is attempted interpolation but resulted JSON fails, then the object will be tried to be interpolated as an array
+    * when an object is attempted interpolation but resulting JSON fails, then the object will be attempted interpolation as an array
     (i.e. only object's values will be interpolated) - that way it's possible to convert _JSON objects_ into _arrays_
 
 
