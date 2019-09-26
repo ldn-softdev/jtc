@@ -1,5 +1,5 @@
 
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.74)
+# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.74_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
