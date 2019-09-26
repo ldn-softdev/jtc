@@ -1796,8 +1796,8 @@ Here's the matrix table for update operations with and without merging:
 A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
 
 Another function featured by the lexeme is that the label is reinterpreted as a _JSON string_ value, that allows rewriting labels
-using update operation (insert into labels is not possible even semantically). however, that only applies if `<>k` lexeme is the
-last lexeme in the walk-path and if it's empty.
+using update operation (insert into labels is not possible even semantically). However, that only applies if `<>k` lexeme is the
+last lexeme in the walk-path (or the last lexeme before `><F`) and if it's empty.
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
 ```
