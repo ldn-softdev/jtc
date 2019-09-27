@@ -591,7 +591,7 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 
 ### performance:
-here's a 4+ million node [JSON](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
+here's a 4+ million node JSON [test file](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
 bash $ jtc -zz standard.json 
 4329975
