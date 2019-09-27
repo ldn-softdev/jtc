@@ -612,7 +612,7 @@ _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
 
 The computer's spec used for tests:
 ```
-  Model Name:                 MacBook Pro
+  Model Name:                 MacBook Pro (15-inch, 2019)
   Model Identifier:           MacBookPro15,1
   Processor Name:             Intel Core i7
   Processor Speed:            2,6 GHz
@@ -621,7 +621,7 @@ The computer's spec used for tests:
   L2 Cache (per Core):        256 KB
   L3 Cache:                   12 MB
   Hyper-Threading Technology: Enabled
-  Memory:                     16 GB
+  Memory:                     16 GB 2400 MHz DDR4
 ```
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
