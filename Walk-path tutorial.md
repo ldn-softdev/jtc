@@ -73,7 +73,7 @@ let's start with the most common one - _numerical offset_
 (walked) JSON, staring from `0` (indices are always zero-based):
 
 Let's work with this JSON:
-```bash
+```ShellSession
 bash $ JSN='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"number three": 3}] ]'
 bash $ <<<$JSN jtc
 ```
@@ -96,7 +96,7 @@ bash $ <<<$JSN jtc
 ```
 
 - select _1st_ element in _JSON array_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[0]
 ```
 ```json
@@ -104,7 +104,7 @@ bash $ <<<$JSN jtc -w[0]
 ```
 
 \- select _5th_ element in _JSON array_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4]
 ```
 ```json
@@ -121,7 +121,7 @@ If the selected element is non-atomic (a.k.a. _iterable_), i.e., _Json array_, o
 further the selected (walked) JSON tree:
 
 \- select _5th_ element in _JSON array_ and then _3rd_ one:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2]
 ```
 ```json
@@ -132,7 +132,7 @@ bash $ <<<$JSN jtc -w[4][2]
 
 If we try selecting a 2nd element from the resulted JSON (which has only single element), walking will fail and the output
 will be blank:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2][1]
 bash $
 bash $ <<<$JSN jtc -w[4][2][0]
@@ -152,7 +152,7 @@ E.g.: `[ 0 ]` will address an element with the label `" 0 "`.
 
 There are two elements in the above JSON that are addressable with _literal subscripts_, let's get to them using _literal subscripts_.
 First, let's get to `pi`'s value:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[3]
 ```
 ```json
@@ -160,7 +160,7 @@ bash $ <<<$JSN jtc -w[3]
    "pi": 3.14
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[3][pi]
 ```
 ```json
@@ -168,7 +168,7 @@ bash $ <<<$JSN jtc -w[3][pi]
 ```
 
 Now let's get to the `number three`'s value:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4]
 ```
 ```json
@@ -180,7 +180,7 @@ bash $ <<<$JSN jtc -w[4]
    }
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2]
 ```
 ```json
@@ -188,7 +188,7 @@ bash $ <<<$JSN jtc -w[4][2]
    "number three": 3
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2][number three]
 jtc json exception: unexpected_end_of_string
 ```
@@ -201,7 +201,7 @@ in fact, `jtc` there complains due to a different reason: a second part of a wal
 which `jtc` treats as a _filename_. It tries opening and reading it, but because such file does not exist an empty result is returned.
 However, the empty input is an _invalid JSON_ (by JSON standard) - that why it's a JSON parsing error is given.
 Here how walk-path parsing error looks like:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2][number three] -
 jtc json exception: walk_offset_missing_closure
 bash $
@@ -210,13 +210,13 @@ bash $
 
 To escape shell interpolation, either the whole argument must be quoted, or a space symbol (the former varian is preferred, but
 both will work):
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three]'
 ```
 ```json
 3
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2][number\ three]
 ```
 ```json
@@ -224,7 +224,7 @@ bash $ <<<$JSN jtc -w[4][2][number\ three]
 ```
 
 The elements within objects also could be addressed using _numerical offsets_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[4][2][0]
 ```
 ```json
@@ -234,12 +234,12 @@ bash $ <<<$JSN jtc -w[4][2][0]
 of elements within _JSON objects_ are fragile**_.
 
 Say, there's a following JSON:
-```bash
+```ShellSession
 bash $ ANML='{ "ANDEAN BEAR": "Bono", "AMUR TIGER": "Shadow", "GRIZZLY BEAR": "Goofy" }'
 ```
 And we want to get get the name of `ANDEAN BEAR`. Being lazy one can do it by a _numerical offset_, assuming here that the index
 of the required entry would be `0` (indeed, it's listed first there in the object), let's see:
-```bash
+```ShellSession
 bash $ <<<$ANML jtc -w[0]
 ```
 ```json
@@ -255,7 +255,7 @@ down to the internal implementation specifics.
 
 `jtc` always rearranges all the elements within the _JSON objects_ by their keys (labels) in  the _alphabetical_ order,
 thus for `jtc` the above JSON looks like this:
-```bash
+```ShellSession
 bash $ <<<$ANML jtc
 ```
 ```json
@@ -267,7 +267,7 @@ bash $ <<<$ANML jtc
 ```
 
 That is a serious enough reason to select elements in JSON objects by their keys/labels:
-```bash
+```ShellSession
 bash $ <<<$ANML jtc -w'[ANDEAN BEAR]'
 ```
 ```json
@@ -275,7 +275,7 @@ bash $ <<<$ANML jtc -w'[ANDEAN BEAR]'
 ```
 ##
 There's a curious case, when the label matches a numerical subscript, i.e. consider:
-```bash
+```ShellSession
 bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc
 ```
 ```json
@@ -286,7 +286,7 @@ bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc
 ```
 
 Addressing _JSON root_ with `[0]` will return `"abcde"`:
-```bash
+```ShellSession
 bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc -w[0]
 ```
 ```json
@@ -306,7 +306,7 @@ For those who are familiar with _Python addressing_, grasping this one is easy -
 
 Range subscript makes the walk-path iterable, i.e. it's like selecting multiple elements with just one _iterable walk_
 instead of specifying multiple offsets, compare:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[0] -w[1] -w[2]
 ```
 ```json
@@ -314,7 +314,7 @@ bash $ <<<$JSN jtc -w[0] -w[1] -w[2]
 false
 null
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[0:3]
 ```
 ```json
@@ -332,7 +332,7 @@ while a _default_ index in the second position means: till the last value in the
 it's quite handy when we need to select only portion of the elements in the iterable either starting form its beginning, or till it's
 last element, because sometimes we might not know upfront a number of elements in the iterable.
 - select 2 elements from the beginning of the _JSON root's_  iterable:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[:2]
 ```
 ```json
@@ -340,7 +340,7 @@ bash $ <<<$JSN jtc -w[:2]
 false
 ```
 - select _all_ elements staring from 3rd one:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[2:]
 ```
 ```json
@@ -359,7 +359,7 @@ null
 
 
 when both indices are missed `[:]` then each element in the iterable will be selected (_walked_):
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[:]
 ```
 ```json
@@ -381,7 +381,7 @@ null
 The _range indices_ (as well as any lexemes) can appear in the walk-path _any number of times_. The above example shows iterating over
 the _top iterable_ (or, the first tier) in JSON tree hierarchy, to iterate over _all_ iterables in the second tier of the JSON tree,
 do this:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[:][:]
 ```
 ```json
@@ -395,13 +395,13 @@ bash $ <<<$JSN jtc -w[:][:]
 \- an each element in the _top iterable_ will be _walked_ and then attempted to walk the _children_ of the walked element itself,
 one by one.
 Because first three elements are not iterable, they will not be shows (they cannot be iterated over):
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[0][:]
 bash $
 ```
 
 If you like to see (print) both walks of the top iterable and then each of the iterable at the second tier, then provide two walk paths:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[:] -w[:][:]
 ```
 ```json
@@ -427,7 +427,7 @@ null
 ```
 \- Note how `jtc` _interleaves_ the walks - it puts relevant walkings in a good (relevant) order, rather than dumping results of
 the first walk and then of the second. If one prefers seeing the latter behavior, option `-n` will do the trick, compare:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[:] -w[:][:] -n
 ```
 ```json
@@ -455,7 +455,7 @@ null
 ##### Alternative range notation
 `[+n]` is the alternative range notation for `[n:]`, they both do exactly the same thing - walk each element in the iterable starting
 from `n`th element:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[+3]
 ```
 ```json
@@ -470,7 +470,7 @@ bash $ <<<$JSN jtc -w[+3]
    }
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[3:]
 ```
 ```json
@@ -493,7 +493,7 @@ Using either of notations is a matter of personal preference and has no impact o
 Positive indices (and `0`) in the range notation (`[n:N]`) always refer to the index offset _from the beginning_ of the iterable.
 
 When both `n` and `N` are positive, naturally `N` must be > `n`, if `N` <= `n`, it'll result in a blank output:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[2:1]
 bash $
 bash $ <<<$JSN jtc -w[2:2]
@@ -501,7 +501,7 @@ bash $
 ```
 
 Case where `N` = `n` + 1, e.g., `[3:4]` is equal to spelling just a _numerical offset_ alone:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[3:4]
 ```
 ```json
@@ -509,7 +509,7 @@ bash $ <<<$JSN jtc -w[3:4]
    "pi": 3.14
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[3]
 ```
 ```json
@@ -524,7 +524,7 @@ A negative index in the _range subscript_ refers to the offset _from the end_ of
 mix and match positive and negative indices in any position.
 
 - select _last 3 elements_ from the top array:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[-3:]
 ```
 ```json
@@ -542,7 +542,7 @@ null
 ```
 
 - select _all_ elements in the range _from the 2nd_ till the one _before the last one_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[1:-1]
 ```
 ```json
@@ -556,7 +556,7 @@ null
 ##
 When either of indices is given outside of the _actual range_ of the iterable, `jtc` tolerates it fine re-adjusting respective range
 indices properly to the beginning and the end of actual range of the iterable:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w[-100:100]
 ```
 ```json
@@ -590,7 +590,7 @@ from the currently walked element
 
 Not sure if the definition above is easy to understand, but the concept is, so it's probably much easier to show it with the example.
 Let's see the walk path where we selected the JSON element `3`:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three]'
 ```
 ```json
@@ -602,14 +602,14 @@ The _**walk path**_ from the _JSON root_ towards the element `3` is **`[4][2][nu
 In fact, every walk at any given step (even when it's done via _recursive search_ lexemes) internally always maintains a
 representation expressed via _subscript and literal offsets_ only.
 E.g. the same number `3` could have been selected using a _recursive search_ walk:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<3>d'
 ```
 ```json
 3
 ```
 but internally, the path towards this JSON element would be built as:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
 ....walk_(), built path vector: 00000004-> 00000002-> number three
 ....walk_(), finished walking: with built path vector: 00000004-> 00000002-> number three
@@ -630,7 +630,7 @@ Thus in order to select either of parents, we just need to pick a respective ind
 _Note_: `[-0]` will address the value `3` itself, so there's no much of a point to use such addressing, while indices greater _root's
 (in that example are `[-4]`, `[-5]`, etc will keep addressing the JSON root)_
 Take a look:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][-1]'
 ```
 ```json
@@ -638,7 +638,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][-1]'
    "number three": 3
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][-2]'
 ```
 ```json
@@ -650,7 +650,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][-2]'
    }
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][-3]'
 ```
 ```json
@@ -679,7 +679,7 @@ Index from the root:   0    1  2      3
           walk-path: (root)[4][2][number three]
 ```
 You must get already the idea: the addressing parent off the root takes those indices:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][^0]'
 ```
 ```json
@@ -699,7 +699,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^0]'
    ]
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][^1]'
 ```
 ```json
@@ -711,7 +711,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^1]'
    }
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][^2]'
 ```
 ```json
@@ -719,7 +719,7 @@ bash $ <<<$JSN jtc -w'[4][2][number three][^2]'
    "number three": 3
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
 ```
 ```json
@@ -776,7 +776,7 @@ The lexeme might be empty or hold the `namespace` where matched value will be st
 
 Examples:
 - Find an exact string value:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<two>'
 ```
 ```json
@@ -784,7 +784,7 @@ bash $ <<<$JSN jtc -w'<two>'
 ```
 
 - Find a string value matching _RE_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<^t>R'
 ```
 ```json
@@ -792,7 +792,7 @@ bash $ <<<$JSN jtc -w'<^t>R'
 ```
 
 - Find the first _JSON string_ value:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<>P'
 ```
 ```json
@@ -820,7 +820,7 @@ an index
 
 Some examples:
 let's work with this JSON:
-```bash
+```ShellSession
 bash $ JSS='["one", "two", ["three", "four", {"5 to 7": [ "five", "six", "seven"], "second 1": "one"  } ] ]'
 bash $ <<<$JSS jtc
 ```
@@ -844,7 +844,7 @@ bash $ <<<$JSS jtc
 ```
 
 - among all _JSON strings_ find those from 2nd till 5th inclusive:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'<>P1:5'
 ```
 ```json
@@ -860,7 +860,7 @@ when _directives_ covered, for now just take it: one way to set a value to the n
 So, let's repeat the last example, but now using quantifier indices references in the namespaces:
 
 - among all _JSON strings_ find those from 2nd till 5th inclusive:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
 ```
 ```json
@@ -872,7 +872,7 @@ bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
 ##
 
 - find all the string occurrences where letter `e` is present:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'<e>R:'
 ```
 ```json
@@ -884,7 +884,7 @@ bash $ <<<$JSS jtc -w'<e>R:'
 ```
 
 - find all the occurrences of string `"one"`:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'<one>:'
 ```
 ```json
@@ -899,7 +899,7 @@ In the last example, 2 instances of the string `"one"` were found. That's becaus
 only among immediate children of a current _iterable_.
 
 the JSON's root in the example is an _array_, so if we apply a non-recursive search on the root's array, only one match will be found:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'>one<:'
 ```
 ```json
@@ -912,7 +912,7 @@ _any_ JSON type (even atomic).
 
 The recursive search always begins from checking the currently selected (walked) entry, that's why it's possible to apply it
 even onto atomic types and match those:
-```bash
+```ShellSession
 bash $ <<<$JSS jtc -w'[0]<one>'
 ```
 ```json
@@ -930,14 +930,14 @@ bash $ <<<$JSS jtc -w'[0]<one>'
 - `<>N`, `<namespace>N` - matches any JSON numerical value (a.k.a. _JSON numerical type match_), similar to `<.*>D` but faster.
 The lexeme might be empty or hold the `namespace` where matched value will be preserved (upon a match)
 
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<[13]>D1:'
 ```
 ```json
 1
 3
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<3.14>d:'
 ```
 ```json
@@ -954,7 +954,7 @@ in the `namespace` shall it be present in the lexeme
 - `<true>b`, `<false>b` - when a _JSON boolean_ is spelled as a lexeme parameter, then it's not a _namespace_ reference,
 but rather a spelled boolean value will be matched
 
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<>b:'
 ```
 ```json
@@ -978,7 +978,7 @@ The others are:
 
 All of those lexemes can stay empty, or hold the _namespace_ that will be filled upon a successful match.
 
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -rw'<>c:'
 ```
 ```json
@@ -992,7 +992,7 @@ bash $ <<<$JSN jtc -rw'<>c:'
 ##
 ### Arbitrary Json searches
 lexeme with the suffix `j` can match any arbitrary JSON value:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
 ```
 ```json
@@ -1002,7 +1002,7 @@ bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
 ```
 
 Even more, the parameter in the `j` lexeme can be a _templated JSON_:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][2][0] <Nr3>v [^0] <{"pi": {Nr3}.14}>j [pi]'
 ```
 ```json
@@ -1022,7 +1022,7 @@ Obviously the `j` lexeme cannot be empty or result in an empty lexeme after temp
 
 ##
 There's another search lexeme suffix - `s` - that one will find a JSON pointed by a _namespace_:
-```bash
+```ShellSession
 bash $  <<<$JSN jtc -w'<PI:{"pi": 3.14}>v <PI>s'
 ```
 ```json
@@ -1041,7 +1041,7 @@ The lexemes cannot be empty - they point to a namespace which will be _**overwri
 to the found element (original or duplicate) once the match is found.
 
 lexemes search for original or duplicate entries of any JSONs, not necessarily atomic types, here's an example:
-```bash
+```ShellSession
 bash $ JSD='{"Orig 1": 1, "Orig 2": "two", "list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ]}'
 bash $ <<<$JSD jtc
 ```
@@ -1061,7 +1061,7 @@ bash $ <<<$JSD jtc
 ```
 
 Let's see _all_ the original elements in the above JSON:
-```bash
+```ShellSession
 bash $ <<<$JSD jtc -lrw'<org>q:'
 ```
 ```json
@@ -1075,7 +1075,7 @@ bash $ <<<$JSD jtc -lrw'<org>q:'
 As you can see there were listed _all_ first seen JSON values (including the root itself)
 
 Now, let's list _all_ the duplicates:
-```bash
+```ShellSession
 bash $ <<<$JSD jtc -lrw'<dup>Q:'
 ```
 ```json
@@ -1100,7 +1100,7 @@ type of a search:
 or _addresses_ an immediate child in the _JSON iterable_ with the numerical index from the _namespace_ `NS`
 
 First two variants should not require much of a clarification, let's work with the following JSON:
-```bash
+```ShellSession
 bash $ JSL='{"One": 1, "obj": { "One": true, "Two": 2, "": 3 }, "45": "forty-five"}'
 bash $ <<<$JSL jtc
 ```
@@ -1115,7 +1115,7 @@ bash $ <<<$JSL jtc
    }
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -rlw'<[oO]>L:'
 ```
 ```json
@@ -1124,7 +1124,7 @@ bash $ <<<$JSL jtc -rlw'<[oO]>L:'
 "One": true
 "Two": 2
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -rlw'<One>l:'
 ```
 ```json
@@ -1136,13 +1136,13 @@ bash $ <<<$JSL jtc -rlw'<One>l:'
 recursive form `<NS>t` will try matching a label from the specified namespace. The JSON type in the `NS` might be either _JSON string_,
 or _JSON numeric_, in the latter case, it's automatically converted to a _string value_ and also can match a label expressed as
 a numerical value:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lrw'<idx:45>v <idx>t'
 ```
 ```json
 "45": "forty-five"
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lrw'<idx:"45">v <idx>t'
 ```
 ```json
@@ -1163,7 +1163,7 @@ another variant of a
 [literal subscripts](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)**_.
 The latter lacks one ability - to address labels spelled as numerical value: in the above JSON, it won't be possible to address a JSON
 value `"forty-five"` via literal subscript, but using `>..<l` lexeme it is:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -rlw'[45]'
 bash $
 bash $ <<<$JSL jtc -rlw'>45<l'
@@ -1175,14 +1175,14 @@ bash $ <<<$JSL jtc -rlw'>45<l'
 The lexeme `>..<t` can do both _JSON objects_ and _arrays_:
 \- if a _namespace_ referred by the lexeme has the type _JSON string_, then it will address the label (from the namespace)
 in the JSON object:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'<lbl:"45">v >lbl<t'
 ```
 ```json
 "45": "forty-five"
 ```
 \- if the lexeme's _namespace_ is set to _JSON numeric_ type, then it can address _JSON iterables_ by the index:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'<idx:2">v [obj]>idx<t'
 ```
 ```json
@@ -1199,7 +1199,7 @@ of the same _JSON object_.
 Even though it's possible to pass to a parser an object that will hold non-unique labels, the JSON RFC
 ([8259](https://tools.ietf.org/html/rfc8259))
 _**does not define**_ software behavior in that regard. `jtc` in such case retains the first parsed value:
-```bash
+```ShellSession
 bash $ <<<'{"abc":1, "abc":2}' jtc
 ```
 ```json
@@ -1223,7 +1223,7 @@ addressing neighbors (sibling) of the matched entry_. I.e., the quantifier here 
 and therefore can take a _negative value_ - that is the only case when a quantifier may go negative.
 
 Observe a relative quantifier in action:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -w'[obj]'
 ```
 ```json
@@ -1233,25 +1233,25 @@ bash $ <<<$JSL jtc -w'[obj]'
    "Two": 2
 }
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'[obj] >One<l'
 ```
 ```json
 "One": true
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'[obj] >One<l-1'
 ```
 ```json
 "": 3
 ```
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'[obj] >One<l1'
 "Two": 2
 ````
 
 The relative quantifiers though are fully compatible with the quantifiers range-notation:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -lw'[obj] >One<l:'
 ```
 ```json
@@ -1272,7 +1272,7 @@ All form of quantifiers and search suffixes are supported, except label searches
 a label cannot be scoped by a label.
 
 For example:
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -w'[One]:<org>q:'
 ```
 ```json
@@ -1294,7 +1294,7 @@ the subgroups will automatically setup respective namespaces, e.g.: the first su
 the second will do `$2` and so on. Plus, the entire match will populate the namespace `$0`.
 
 That way it's possible to extract any part(s) from the found JSON values for a later re-use.
-```bash
+```ShellSession
 bash $ <<<$JSL jtc -w'<(.*)[oO](.*)>L:' -T'{ "sub-group 1":{{$1}}, "sub-group 2":{{$2}}, "entire match":{{$0}} }'
 ```
 ```json
@@ -1359,7 +1359,7 @@ The directive `<NS>v` preserves currently walked value in the _namespace_ `NS`.
 [Many search lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#json-types-searches)
 are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful feature.
 
-```bash
+```ShellSession
 bash $ <<<$JSN jtc
 ```
 ```json
@@ -1379,7 +1379,7 @@ bash $ <<<$JSN jtc
    ]
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 ```
 ```json
@@ -1387,7 +1387,7 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 ```
 
 It's fun to see how `jtc` works in a slow-mo, building a walk-path step by step, one lexeme at a time:
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4]'
 ```
 ```json
@@ -1401,7 +1401,7 @@ bash $ <<<$JSN jtc -w'[4]'
 ```
 \- addressed there the 5th JSON element in the JSON root (always begin walking from the root)
 ##
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][0]'
 ```
 ```json
@@ -1409,7 +1409,7 @@ bash $ <<<$JSN jtc -w'[4][0]'
 ```
 \-  addressed the 1st JSON value in the JSON iterable (found in the prior step)
 ##
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v'
 ```
 ```json
@@ -1417,7 +1417,7 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v'
 ```
 \- memorized a currently walked JSON in the namespace `Idx` (which is the _JSON numeric_ `1`)
 ##
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
 ```
 ```json
@@ -1431,7 +1431,7 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
 ```
 \- stepped one level up (towards the root) from the last walked JSON
 ##
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 ```
 ```json
@@ -1447,7 +1447,7 @@ The directive `<NS>k` functions pretty much like `<NS>v`, but instead of preserv
 its label (if currently walked element is a child of _JSON object_), or its index (if the currently walked element is a child
 of a _JSON array_):
 
-```bash
+```ShellSession
 bash $ <<<$JSN jtc
 ```
 ```json
@@ -1467,7 +1467,7 @@ bash $ <<<$JSN jtc
    ]
 ]
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
 ```
 ```json
@@ -1477,13 +1477,13 @@ bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
 If the lexeme is _**empty**_ (`<>k`) _AND_ is the last one in the walk-path, then it does not memorize (obviously) the label/index
 in the namespace, but instead re-interprets the label as the JSON value. That way it become possible to rewrite labels in update (`-u`)
 operations, or re-use it in template interpolation.
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k'
 ```
 ```json
 3
 ```
-```bash
+```ShellSession
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' -T'{"idx": {{}}}' -r
 ```
 ```json
@@ -1499,7 +1499,7 @@ The directive `<NS>z` allows erasing the namespace `NS`. Mostly, this would be r
 _[walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)_.
 
 For example, let's replace all even numbers in the array with their negative values:
-```bash
+```ShellSession
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 ```
 ```json
@@ -1507,7 +1507,7 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num
 ```
 
 If the walk began w/o initial lexeme erasing namespace `Num`, then the whole attempt would fail:
-```bash
+```ShellSession
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 ```
 ```json
@@ -1518,7 +1518,7 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 Of course, knowing _how
 [Regex lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
 work_, it's possible to rewrite the walk-path in a bit more succinct way:
-```bash
+```ShellSession
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 ```
 ```json

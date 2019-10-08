@@ -81,7 +81,7 @@
 ### Pretty printing
 if no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file pointed by the argument.
 `jtc` will parse and validate input JSON and upon a successful validation will output:
-```
+```ShellSession
 bash $ <ab.json jtc
 {
    "Directory": [
@@ -161,7 +161,7 @@ bash $ <ab.json jtc
 bash $
 ```
 option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
-```
+```ShellSession
 bash $ <ab.json jtc -t 10
 {
           "Directory": [
@@ -182,12 +182,12 @@ Majority of the examples and explanations in this document are based on the abov
 
 ### Compact printing
 option `-r` will instruct to display JSON in a compact (one-row) format:
-```
+```ShellSession
 bash $ <ab.json jtc -r
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
 ```
 Option `-r` also can be used together with option `-t`, compare with the above output:
-```
+```ShellSession
 bash $ <ab.json jtc -rt0
 {"Directory":[{"address":{"city":"New York","postal code":10012,"state":"NY","street address":"599 Lafayette St"},"age":25,"children":["Olivia"],"name":"John","phone":[{"number":"112-555-1234","type":"mobile"},{"number":"113-123-2368","type":"mobile"}],"spouse":"Martha"},{"address":{"city":"Seattle","postal code":98104,"state":"WA","street address":"5423 Madison St"},"age":31,"children":[],"name":"Ivan","phone":[{"number":"273-923-6483","type":"home"},{"number":"223-283-0372","type":"mobile"}],"spouse":null},{"address":{"city":"Denver","postal code":80206,"state":"CO","street address":"6213 E Colfax Ave"},"age":25,"children":["Robert","Lila"],"name":"Jane","phone":[{"number":"358-303-0373","type":"office"},{"number":"333-638-0238","type":"home"}],"spouse":"Chuck"}]}
 ```
@@ -195,14 +195,14 @@ bash $ <ab.json jtc -rt0
 ### Printing JSON size
 JSON size is the total number of the JSON elements found within JSON, it could be printed using `-z`, the size appears after JSON
 is printed:
-```
+```ShellSession
 bash $ <ab.json jtc -r -z
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
 size: 56
 bash $
 ```
 if size only required, then use `-zz` option:
-```
+```ShellSession
 bash $ <ab.json jtc -zz
 56
 bash $
@@ -211,14 +211,14 @@ bash $
 ### Validating JSON
 When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, the short exception
 message will be displayed, e.g,:
-```
+```ShellSession
 bash $ <ab.json jtc
 jtc json exception: unexpected_end_of_line
 bash $
 ```
 though the message let us know that there's a problem with the input JSON, it not very informative with regard whereabouts the
 the problem. An easy way to see the spot where the problem and its locus is via debug (`-d`):
-```
+```ShellSession
 bash $ <ab.json jtc -d
 .read_inputs(), reading json from <stdin>
 .parsejson(), exception locus: ... Ave",|          "state": "CO,|          "postal code": 80206...
@@ -234,7 +234,7 @@ To fix that, the missing quotation mark to be added
 ### Forcing strict solidus parsing
 JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
 both unescaped and escaped appearances:
-```
+```ShellSession
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc
 {
    "escaped": "\/",
@@ -244,7 +244,7 @@ bash $
 ```
 If there's a need for a strict solidus parsing, option `-q` facilitates the need. It also will throw an exception upon facing
 a non-escaped notation:
-```
+```ShellSession
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc -q -d
 .read_json(), start parsing json from <stdin>
 .read_json(), exception locus: { "escaped": "\/", "unescaped": "/" }|
@@ -256,7 +256,7 @@ bash $
 ### Unquoting JSON strings
 If a JSON itself (or a result of JSON walking) is a single JSON string, then sometimes there's a need to unquote it
 (especially handy it comes if the string itself is an embedded JSON). `-qq` allows unquoting it, here are a few examples:
-```
+```ShellSession
 bash $ <<<'"{ \"JSON\": \"example of an embedded JSON\" }"' jtc
 "{ \"JSON\": \"example of an embedded JSON\" }"
 bash $
@@ -277,7 +277,7 @@ bash $
 ```
 
 When unquoting an empty _JSON string_ (`""`) the resulted blank lines are not even printed:
-```
+```ShellSession
 bash $ <<<'[null, "", true]' jtc -w[:] -qq
 null
 true
@@ -294,7 +294,7 @@ option `-qq` is silently ignored
 ### Stringifying JSON
 An opposite request is to string-quote a JSON itself (e.g. if you like to embed JSON as a string into another JSON). This is
 achieved with option notation `-rr`:
-```
+```ShellSession
 bash $ <<<'[ "JSON", "example" ]' jtc
 [
    "JSON",
@@ -317,7 +317,7 @@ Whenever there's a need to print only some or multiple JSON elements, walk-paths
 offsets are always enclosed into square brackets `[`,`]`, selecting JSON elements always begins from the root.
 Both arrays and objects can be subscripted using numerical offset, though it's best to utilize literal offsets to subscript objects.
 E.g. let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][1][address]'
 {
    "city": "Seattle",
@@ -329,7 +329,7 @@ bash $
 ```
 or, equally could be done like in below example, but the former syntax is preferable (for your own good - when giving indices you'd need
 to _guess_ the index of a labeled entry, which might be prone to mistakes):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][1][0]'
 {
    "city": "Seattle",
@@ -343,14 +343,14 @@ bash $
 #### Selecting multiple subscripted JSON elements
 if a numerical subscript is prepended with `+`, then the indexed and all subsequent subscripted elements will be selected as well
 (a.k.a _iterable_ lexeme), e.g., a following example prints all the names out of the address book, starting from the 2nd record:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][+1][name]'
 "Ivan"
 "Jane"
 bash $
 ```
 Any numerical offset could be subscripted that way, and any number of such lexemes could appear in the walk-path, e.g.:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][+0][phone][+1][number]'
 "113-123-2368"
 "223-283-0372"
@@ -362,7 +362,7 @@ the 2nd entry (`[+1]`)
 
 The same way object elements could be subscripted, here's an example where all address entries starting from the 2nd one are printed,
 each one stating from the 3rd entry:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][+1][address][+2]'
 "WA"
 "5423 Madison St"
@@ -387,7 +387,7 @@ Thus, multiple notations with the same semantics are possible, e.g.:
 - `[-2:]` will select last 2 elements in the collection
 
 E.g., let's print all phone numbers for the last 2 records in the `Directory`:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][-2:][phone][:][number]'
 "273-923-6483"
 "223-283-0372"
@@ -403,13 +403,13 @@ from the node in JSON where a prior lexeme has stopped.
 
 By default (if no one-letter suffix is given), a search lexeme will perform a search of _JSON string_ values only (i.e., it won't match
 _JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search finds a match:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<New York>'
 "New York"
 bash $
 ```
 while this one doesn't (the string value `New York` is found only in the first `Directory` record):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][1:]<New York>'
 bash $
 ```
@@ -417,7 +417,7 @@ bash $
 #### Searching JSON with RE
 Optionally, search lexemes may accept one-letter suffixes: a single character following the lexeme's closing bracket.
 These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a regex search among string values:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<^N>R'
 "New York"
 bash $
@@ -447,7 +447,7 @@ Also, all following RE grammars are supported:
 Only the first specified grammar is parsed and is in effect (in case multiple given).
 All the trailing special symbols will be trimmed after RE parsing (i.e. they are not part of the RE search expression).
 E.g., the above example with options `\I` and `\P` (ignore case and use _egrep_ grammar) looks like this:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<^n\I\P>R'
 "New York"
 bash $
@@ -562,7 +562,7 @@ for a shell evaluation.
 
 ##### Dynamic lookup using directives `-v` and `-k`
 Say, we have a following JSON:
-```
+```ShellSession
 bash $ <<<'{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' jtc
 {
    "item": "bread",
@@ -575,7 +575,7 @@ bash $
 ```
 the ask here is to retrieve a value from `list` defined by `item` - that would require a cross-reference lookup.
 Using namespaces it becomes a trivial task:
-```
+```ShellSession
 bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
 bash $ <<<$JSN jtc -w'[item]<itm>v[^0]<itm>t'
 1.20
@@ -588,7 +588,7 @@ in the namespace `itm` (which is `bread`)
 Similar way labels/indices could be accessed and stored in the namespaces - using directive `k`. The directive lets reinterpreting
 label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ value respectively.
 Say, we want to list all labels in the `address` record:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<address>l[:]<>k'
 "city"
 "postal code"
@@ -611,7 +611,7 @@ into the _walk-path_.
 Let's break it down:
 
 Say, we want to list all `mobile` phone records (let's do it along with names of phone holders):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][phone]<mobile>[-1]' -r
 "John"
 { "number": "112-555-1234", "type": "mobile" }
@@ -622,7 +622,7 @@ bash $
 ```
 As it appears, `Jane` has no mobile phone, but then our requirement is enhanced: for those who do not have a `mobile`, let's list
 the first available phone from the records (there a `<>f` directive comes to a rescue):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][phone][0] <>f [-1]<mobile>[-1]' -r
 "John"
 { "number": "112-555-1234", "type": "mobile" }
@@ -656,7 +656,7 @@ Thus, we need to build a single path, which will find the `name`, then inspect `
 
 We can do it in steps:
 1. let's get to the `name`s first and memorize those:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[0][:][name]<person>v'
 "John"
 "Ivan"
@@ -664,7 +664,7 @@ bash $ <ab.json jtc -x'[0][:][name]<person>v'
 bash $
 ```
 2. Now let's inspect a sibling record `children`:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]'
 [
    "Olivia"
@@ -677,7 +677,7 @@ bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]'
 bash $
 ```
 3. so far so good, but we need to engage _fail-safe_ to facilitate the requirement to classify those records as `true` / `false`:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<kids:false>f[0]<kids:true>v'
 "Olivia"
 []
@@ -689,7 +689,7 @@ bash $
 with `true` value
 
 4. finally, we need to interpolate preserved namespaces for our final / required output:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[0][:][name]<person>v [-1][children]<kids:false>f[0]<kids:true>v' -T'{"{person} has children":{kids}}' -r
 { "John has children": true }
 { "Ivan has children": false }
@@ -699,7 +699,7 @@ bash $
 
 
 Now, let's consider another example. Say, we have a following JSON:
-```
+```ShellSession
 bash $ JSN='[ { "ip": "1.1.1.1", "name": "server" }, { "ip": "1.1.1.100" }, { "ip": "1.1.1.2", "name": "printer" } ]'
 bash $ <<<$JSN jtc
 [
@@ -719,7 +719,7 @@ bash $
 ```
 How do we list only those records which don't have `name` and skip those which do? Well, one apparent solution then would be
 to walk all those entries, which do have `name` labels and purge them:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'<name>l:[-1]' -p
 [
    {
@@ -731,7 +731,7 @@ bash $
 But what if we want to walk them instead of purging (e.g., for reason of template-interpolating the entries at the output)?
 The prior solution would require piping the output to the next `jtc` cli, however, it's possible to achieve the same using this
 simple query:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[:]<>f[name]<>F'
 {
    "ip": "1.1.1.100"
@@ -739,7 +739,7 @@ bash $ <<<$JSN jtc -w'[:]<>f[name]<>F'
 bash $
 ```
 Without `<>F` directive, the walk would look like:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[:]<>f[name]'
 "server"
 {
@@ -754,7 +754,7 @@ Thus, `<>F` skips those (successfully) matched entries, leaving only one which f
 
 Now, what if in the latter example above (one with `<>F` directive) we want to process *failed* JSON further, say, to display ip only,
 w/o object itself? That is easily achievable - walking of the *failed* path continues past the `<>F` directive:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[:]<>f[name]<>F [ip]'
 "1.1.1.100"
 bash $
@@ -770,7 +770,7 @@ RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with followi
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first RE subgroup,
 - `$2` for a second RE subgroup, and so on
-```
+```ShellSession
 bash $ <ab.json jtc -w'<^J(.*)>R:'
 "John"
 "Jane"
@@ -788,7 +788,7 @@ There are also couple reserved namespaces to acquire a current JSON path:
 - `$PATH`: that namespace contains a _JSON array_ describing path to the currently selected element
 - `$path`: this is a stringified representation of the path
 Here are both demonstrated:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
 [ "Directory", 2, "name" ]
 bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
@@ -811,7 +811,7 @@ Quantifiers exist in the following formats:
 matches would be produced, so it's impossible to select a range/slice based off the last match), the rest of the notation rules apply
 
 To illustrate the quantifiers (with suffixes), let's dump all the _JSON arrays_ in the `Directory`, except the top one:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<>i1:' -r
 [ "Olivia" ]
 [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ]
@@ -831,7 +831,7 @@ Those are
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
 will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
 to address only one **single** label or index, there could not be any other, e.g. in this JSON:
-```
+```ShellSession
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -r
 { "a": 1, "b": 2, "c": 3, "d": 4, "e": 6 }
 bash $
@@ -842,7 +842,7 @@ make much of a sense: `<<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2'
 Thus the semantic of quantifiers only in those searches was altered (to extend use cases) - there, quantifiers provide a
 _relative offset_ meaning from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
 once match found then its second (successive) neighbor value will be selected:
-```
+```ShellSession
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2' -l
 "d": 4
 bash $
@@ -850,7 +850,7 @@ bash $
 Because of change in semantic, those are the only search quantifiers (they also have to be non-recursive spelling: `>..<l`, `>..<t`)
 which allow negative values. Positive quantifiers let selecting next (successive) neighbors, while negative quantifiers let
 selecting preceding neighbors:
-```
+```ShellSession
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l-1' -l
 "a": 1
 bash $
@@ -859,7 +859,7 @@ bash $
 #### Last Walk namespace
 Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
 to build up JSON 'historical' records:
-```
+```ShellSession
 bash $ <<<'["a","b","c"]' jtc -w[:]
 "a"
 "b"
@@ -878,7 +878,7 @@ The use of that variable comes handy when converting JSON to a `csv` format.
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e., the JSON node
 selected by walking all the prior lexemes). However, sometimes there's a need to limit searching scope only to the specific label.
 Here is the dump of all the _JSON strings_, where symbol `5` is sighted:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<5>R:'
 "599 Lafayette St"
 "112-555-1234"
@@ -888,7 +888,7 @@ bash $
 ```
 Some of the values are `street address`, some are the phone `number`. Say, we want to dump only the phone records. Knowing the label
 of the phone numbers (`"number"`), it's achievable via this notation:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[number]:<5>R:'
 "112-555-1234"
 "358-303-0373"
@@ -902,7 +902,7 @@ Sometimes there's a need to apply a non-recursive search onto collectable JSON n
 immediate children of the node and do not descend recursively. The notation facilitating such search is the same one, but
 angular brackets to be put inside-out, i.e.: `>..<`. To illustrate that: say, we want to find all string values in the 1st `Directory`
 record containing the letter `o`. If we do this using a recursive search, then all following entries will be found:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][0]<o>R:'
 "New York"
 "John"
@@ -911,7 +911,7 @@ bash $ <ab.json jtc -w'[Directory][0]<o>R:'
 bash $
 ```
 To facilitate our ask (find all such entries within the immediate values of the 1st record only), apply a non-recursive search notation:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][0]>o<R:'
 "John"
 bash $
@@ -924,7 +924,7 @@ Typically addressing parents would be needed after search lexemes (but can occur
 be addressed using notation `[-n]`. This feature allows building queries that answer quite complex queries.
 
 Let's dump all the names from the `Directory` whose records have a `home` phone entry:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[type]:<home>:[-3][name]'
 "Ivan"
 "Jane"
@@ -933,7 +933,7 @@ bash $
 The magic which happens here (let's break down the walk-path into the lexemes) is revealed:
   1. `[type]:<home>:` - this lexeme instruct to find all (ending quantifier `:`) strings `home` scoped by label `"type"` (`[type]:` -
   attached scope), thus all such phone records values will be selected:
-  ```
+  ```ShellSession
   bash $ <ab.json jtc -w'[type]:<home>:' -r
   "home"
   "home"
@@ -941,7 +941,7 @@ The magic which happens here (let's break down the walk-path into the lexemes) i
   ```
   2. `[-3]` - starting off those found JSON elements a 3rd ancestor will be selected. Let's see a parent selection in a slow-mo,
   one by one:
-  ```
+  ```ShellSession
   bash $ <ab.json jtc -w'[type]:<home>: [-1]' -r
   { "number": "273-923-6483", "type": "home" }
   { "number": "333-638-0238", "type": "home" }
@@ -959,7 +959,7 @@ The magic which happens here (let's break down the walk-path into the lexemes) i
 
 
 Another example: who is the parent of a child `Lila`?
-```
+```ShellSession
 bash $ <ab.json jtc -w'<children>l:<Lila>[-2][name]'
 "Jane"
 bash $
@@ -971,7 +971,7 @@ Explanation:
 
 
 Even more complex query: who of the parents with children, have mobile numbers?
-```
+```ShellSession
 bash $ <ab.json jtc -w'<children>l:[0][-2][type]:<mobile>[-3][name]'
 "John"
 bash $
@@ -988,7 +988,7 @@ us again up to the person's record level
 6. `[name]` - finally select the name
 
 There's another way to address parents - through `[^n]` notation, compare: the following walk-path achieves exactly the same ask:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<children>l:[0][^2][type]:<mobile>[^2][name]' -r
 "John"
 bash $
@@ -1023,7 +1023,7 @@ will be displaying resulted successful walks in an _interleaved_ manner, but fir
 
 #### Sequential walk processing
 option `-n` ensures that all given walk-paths (`-w`) will be processed (and printed) sequentially in the order they given:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n
 "John"
 "Ivan"
@@ -1051,7 +1051,7 @@ bash $
 
 #### Displaying walks with labels
 if resulted walks have labels in the input JSON (i.e., they were inside _JSON objects_), then `-l` let dumping their labels too:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -nl
 "name": "John"
 "name": "Ivan"
@@ -1070,7 +1070,7 @@ bash $
 `-j` does a quite simple thing - it wraps all walked entries back into a _JSON array_, however predicated by `-l` and `-n` options
 the result will vary:
 - `-j` without `-l` will just arrange walked entries into a JSON array:
-  ```
+  ```ShellSession
   bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -nj
   [
      "John",
@@ -1086,7 +1086,7 @@ the result will vary:
   bash $
   ```
 - once `-j` and `-l` given together, then entries which have labels (i.e., come from the _JSON objects_) will be wrapped into objects:
-  ```
+  ```ShellSession
   bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n -j -l
   [
      {
@@ -1126,7 +1126,7 @@ often it's required to group relevant walks together and then place them into re
 #### Interleaved walk processing
 Interleaved walk processing (and outputting) occurs by default, though there's a certain way to control it. Let's take a look at the
 above outputs dropping the option `-n` (i.e., print walks _interleaved_):
-```
+```ShellSession
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:'
 "John"
 "112-555-1234"
@@ -1147,7 +1147,7 @@ relevance between themselves.
 Right now both paths (`<name>l:` and `<number>l:`) do not have common base lexemes, thus it's unclear how to relate resulting walks
 (hence they just interleaved one by one). Though if we provide walk-paths relating each of those searches to their own record,
 then magic happens:
-```
+```ShellSession
 bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 "John"
 "112-555-1234"
@@ -1161,7 +1161,7 @@ bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 bash $
 ```
 And now, applying options `-j` together with `-l` gives a lot better result:
-```
+```ShellSession
 bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl
 [
    {
@@ -1191,7 +1191,7 @@ bash $
 
 #### Aggregating walks
 the walks also could be aggregated (per label), option `-nn` facilitates the ask:
-```
+```ShellSession
 bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl -nn
 [
    {
@@ -1219,7 +1219,7 @@ bash $
 which do not have labels (i.e., elements in _JSON array_ and root) will be ignored.
 
 E.g., let's dump all values from `Jane`'s record and wrap them all into an object:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj
 {
    "age": 25,
@@ -1252,7 +1252,7 @@ This become especially useful when dealing with templates. Let's consider a foll
 
 Say, the ask here is to extract names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
-```
+```json
 [
    {
        "name": "John",
@@ -1263,7 +1263,7 @@ has children or not, like this:
 ```
 
 1\. Extracting names is easy:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]'
 "John"
 "Ivan"
@@ -1276,7 +1276,7 @@ bash $
 and
 [namespace interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 , for now let's just construct a walk which create required namespace:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v'
 "John"
 "Olivia"
@@ -1297,7 +1297,7 @@ b/c if array `children` were empty, that walk would fail)
 
 3\. by now, each time when second walk finishes iteration, the namespace `C` should be correctly set to the respective values reflecting
 if a person has children or not, but to see that, we'd need to interpolate that namespace using a template:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}'
 "John"
 {
@@ -1314,7 +1314,7 @@ bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v'
 bash $
 ```
 4. okay, we're getting closer, but now we want to display all records with labels:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}' -l
 "name": "John"
 jtc jnode exception: label_accessed_not_via_iterator
@@ -1324,7 +1324,7 @@ Bummer! The exception (rightfully) occurs here because trying to find an outer l
 `{ "has children": "yes" }` fails - indeed it's a standalone JSON, and root does not have any label attached - hence the exception.
 In the situations like this, we'd rather want to reach out inside the object for the labeled value rather than find an outer label.
 The option `-ll` facilitates that need:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}' -llj
 [
    {
@@ -1355,7 +1355,7 @@ If you look at the prior example
 , you may notice that a common part of both walk-paths (`[Directory][:]`) we had to give twice. There's a way to express it in more
 succinct syntax: options `-x` and `-y` allows rearrange walk-paths so that `-x` takes an initial common part of the walk-path,
 whereas `-y` would take care of the individuals trailing pars. Thus the same example cold have been written like this:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:'
 "John"
 "112-555-1234"
@@ -1371,7 +1371,7 @@ bash $
 \- each occurrence of `-x` will be reconciled with all subsequent `-y` (until next `-x` is faced). Options `-x`, `-y` is merely
 a syntactical sugar and do not apply any walk-path parsing or validation, instead they just result in the respective `-w` options
 creations (internally), then the latter get processed. Thus, it's even possible to write it with what it seems a broken syntax at first:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:'
 ...
 ```
@@ -1380,7 +1380,7 @@ However, if a reinstatement of the options results in a valid walk-path - that's
 It's possible to combine both syntaxes (i.e., `-w` with `-x` and `-y`), however, given that the processing of `-x` and `-y`
 internally reinstates respective options `-w`, the former will be appended after any of given `-w` options (which will affect the
 order of processing/outputting) even though the order of their appearance is different:
-```
+```ShellSession
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -w '<children>l:' -rnl
 "children": [ "Olivia" ]
 "children": []
@@ -1414,7 +1414,7 @@ Both `n` and `N` are generally positive numbers, though there's a special notati
 to be displayed
 
 Say, we want to display _every 4th walk_ of the below JSON:
-```
+```ShellSession
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:]
 1
 2
@@ -1430,14 +1430,14 @@ bash $
 One way to achieve that would be to use templates (the trick is shown in
 [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
 section), but it's quite impractical. Much easier is to use `-x` option here:
-```
+```ShellSession
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4
 4
 8
 bash $
  ```
 To display _every 4th walk starting from 3rd one_, use this notation:
-```
+```ShellSession
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
 3
 7
@@ -1445,7 +1445,7 @@ bash $
 ```
 \- reminder: the second number in the option is an index and thus is zero based.
 Lets add to the output the very first walk and the last one:
-```
+```ShellSession
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2 -x/0 -x/-1
 1
 3
@@ -1476,7 +1476,7 @@ different flavors, one of them is the `walk-path` per-se.
 ### In-place JSON modification
 By default `jtc` will expect input from `stdin`. If the standalone argument `json_file` is given, then `jtc` will read
 input from the file (ignoring `stdin`), see below:
-```
+```ShellSession
 bash $ cat file.json
 [
    "JSON",
@@ -1500,7 +1500,7 @@ bash $
 ```
 If option `-f` is given (together with a _single_ `json_file` argument) then `jtc` will apply (redirect) its output of the operations
 into the file (instead of `stdout`):
-```
+```ShellSession
 bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f file.json
 bash $ cat file.json
 [
@@ -1513,7 +1513,7 @@ bash $
 In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored).
 
 The bare hyphen (`-`) overrides a file input and ensured that the input is read from the `stdin`:
-```
+```ShellSession
 bash $ <<<'[ "input", "JSON" ]' jtc -f - file.json
 bash $ cat file.json
 [
@@ -1527,7 +1527,7 @@ bash $
 ### Purging JSON
 `-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from address book (for the sake
 of example) all the `home` and `office` phones records (effectively leaving only `mobile` types):
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p) jtc -w'<phone>l:' -l
 "phone": [
    {
@@ -1549,18 +1549,18 @@ bash $ <<<$(<ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p) jtc
 bash $
 ```
 Of course there's a more succinct syntax:
-```
+```ShellSession
 bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p
 ```
 or, using even a single walk-path:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[type]:<(?:home)|(?:office)>R: [-1]' -p
 ```
 
 
 Another use-case exist: remove all the JSON elements _except_ walked ones (while preserving original JSON structure) - that's
 the feat for plural option notation: `-pp`. Let's drop all entries (in all records) but the `name` and `spouse`:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<(?:name)|(?:spouse)>L:' -pp
 {
    "Directory": [
@@ -1589,7 +1589,7 @@ Here, `(?:name)|(?:spouse)` is an RE (indicated by capitalized label search suff
 and resulted JSON elements will be swapped around.
 
 E.g., here's an example of swapping around `name` and `spouse` for all records on the address book:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<name>l:' -w'<spouse>l:' -s) jtc -w'<(?:name)|(?:spouse)>L:' -l
 "name": "Martha"
 "spouse": "John"
@@ -1604,7 +1604,7 @@ _\- for the sake of example brevity, swapped elements only sorted out_
 
 Possibly, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure.
 For the sake of example, let's remove _array_ encapsulation from phone records, leaving only the last phone in it:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s) jtc -w'<phone>l:' -l
 "phone": {
    "number": "113-123-2368",
@@ -1666,7 +1666,7 @@ Alternatively, add a trailing space at the end of the walk-lexeme: `[0] ` - then
 The destination insertion point(s) (`-w`) controls how insertion is done:
 - if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single point location - then
 all the supplied sources are attempted to get inserted into a single destination location:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": []
@@ -1681,7 +1681,7 @@ bash $
 - if a given destination insertion point is iterable or multiple are given, then all sources (`-i` arguments) are inserted one
 by one in a circular fashion (if source runs out of JSON elements, but destination has more room to iterate, then source
 is wrapped to the beginning element):
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<children>l:' -i'"Maggie"' -i'"Bruce"') jtc -w'<children>l:' -lr
 "children": [ "Olivia", "Maggie" ]
 "children": [ "Bruce" ]
@@ -1695,7 +1695,7 @@ while insertion into arrays is obvious (well, so far), insertion into object req
 - in case of clashing labels - destination is preserved while source is discarded
 
 To illustrate: let's insert a JSON structure: `{ "PO box": null, "street address": null }` into the last record's `address`:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][-1:][address]' -l
 "address": {
    "city": "Denver",
@@ -1799,7 +1799,7 @@ using update operation (insert into labels is not possible even semantically). H
 last lexeme in the walk-path (or the last lexeme before `><F`) and if it's empty.
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<address>l:[:]<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \;) jtc -w'<address>l:' -rl
 "address": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" }
 "address": { "CITY": "Seattle", "POSTAL CODE": 98104, "STATE": "WA", "STREET ADDRESS": "5423 Madison St" }
@@ -1809,7 +1809,7 @@ bash $
 
 NOTE: _mind the caveat - destination walk-path may become invalid (namely, when altering labels of the nested elements after
 the parent's label has been altered), in such case the update operation won't be applied due to invalidated destination_:
-```
+```ShellSession
 bash $ <ab.json jtc -x[Directory][0][address] -y'<>k' -y'[:]<>k'
 "address"
 "city"
@@ -1850,7 +1850,7 @@ bash $
 ```
 
 to achieve what's intended, first the most inner labels have to be walked/processed and then the outers:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'[:]<>k' -y'<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \;) jtc -w'[Directory][0]'
 {
    "ADDRESS": {
@@ -1881,7 +1881,7 @@ bash $
 
 **The above caveat is applicable only when label is being updated using _cli evaluation_.**
 When labels updated without _cli evaluation_ then recursive update is not a problem:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'<L>k<>k' -y'[:]<L>k<>k' -u0 -T'"NEW-{L}"') jtc -w'[Directory][0]'
 {
    "NEW-address": {
@@ -1921,7 +1921,7 @@ the operation, the source elements (referred by the source walk-path) become pos
 This is achievable by specifying option `-p`.
 
 Let's move `address` from the last `Directory` record into the first one:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][0][address]' -u'[Directory][-1:][address]' -p
 {
    "Directory": [
@@ -2000,7 +2000,7 @@ bash $
 ### Insert, Update: argument shell evaluation
 An argument for _insert_ and _update_ operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by preceding `-e`).
 E.g., let's capitalize all the `name` entries in the address book:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<name>l:'
 "John"
 "Ivan"
@@ -2026,7 +2026,7 @@ promoted to a _JSON string_ value)
 
 if shell cli does not deliver expected result for some reason, it's easy to see why with `-dd` option, e.g, say, we want to
 truncate all kid's names to 3 letters only (just for fun):
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu <<<{} sed -E 's/(...).*/\1/' \; -dd
 .read_inputs(), reading json from <stdin>
 ..demux_opt(), option: '-u', hits: 3
@@ -2044,7 +2044,7 @@ bash $
 ```
 \- It did not work, because `jtc` received at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell -
 `jtc` got that, thus, we have to quote it:
-```
+```ShellSession
 bash $ <ab.jsonbash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{}' sed -E 's/(...).*/\1/' \; -dd
 .read_inputs(), reading json from <stdin>
 ..demux_opt(), option: '-u', hits: 4
@@ -2085,7 +2085,7 @@ bash $
 \- Now it did not work, because `jtc` received `sed`'s argument without single quotations (again those have been eaten by bash
 before passing to `jtc` -  something `jtc` is unable to control - shell arguments evaluation of its own arguments). Thus,
 let's double quote it now:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{}' sed -E "'s/(...).*/\1/'" \; -dd
 .read_inputs(), reading json from <stdin>
 ..demux_opt(), option: '-u', hits: 4
@@ -2132,7 +2132,7 @@ bash $
 Now it worked!
 
 Actually, the whole _cli_ could have been coded like this:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{} sed -E "s/(...).*/\1/";'
 [
    "Oli",
@@ -2144,7 +2144,7 @@ bash $
 Of course, the above way of solving the ask is entirely academic - it's always best to avoid using _shell cli_ evaluation and
 default to it only as a last resort.
 A much better (efficient) way achieving the same ask would be to use RE and template interpolation:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w'<(...)>R:' -T'"{$1}"' -j
 [
    "Oli",
@@ -2161,7 +2161,7 @@ options `-c`, `-u`, `-i` allow two *kinds* of their arguments:
 2. walk-path (i.e., `<walk-path>`)
 
 \- when those used together, namely a `<walk-path>` argument(s) follows either of statics, e.g.:
-```
+```ShellSession
 jtc -u file.json -u'[Root][:]'`
 ```
 then all `<walk-path>` arguments (here `[Root][:]`) apply onto the static argument (here `file.json`).
@@ -2195,7 +2195,7 @@ a destination
 Hopefully this example will clarify:
 - say (just for the sake of example), we want to add to every record's `children` the `name` of the person, but not just - we
 want to add it in all capitals (i.e., transform the record).
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:') jtc -lrw'<name>l:' -w'<children>l:'
 "name": "John"
 "children": [ "Olivia", "JOHN" ]
@@ -2243,7 +2243,7 @@ examples) - root is always assumed_
 ## Comparing JSONs
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs.
 Let's compare `phone` records from the first and  the second entries of the address book:
-```
+```ShellSession
 bash $ <ab.json jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 "json_1": [
    {
@@ -2266,7 +2266,7 @@ bash $ <ab.json jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 bash $
 ```
 When both JSONs are equal, an empty set is displayed and return code is 0.
-```
+```ShellSession
 bash $ <<<'123' jtc -c'123' -l
 "json_1": {}
 "json_2": {}
@@ -2275,7 +2275,7 @@ bash $ echo $?
 bash $
 ```
 Otherwise (JSONs are different) a non-zero code is returned:
-```
+```ShellSession
 bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr
 "json_1": [ 1, 2, 3 ]
 "json_2": [ 2, 3 ]
@@ -2292,7 +2292,7 @@ different contents (leaf data), while their structures could be the same (though
 validate types of the leaf data as well).
 
 E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"') jtc -w'<Ivan>[-1]' -c'ab.json' -c'<Ivan>[-1]' -l
 "json_1": {
    "children": [
@@ -2305,7 +2305,7 @@ bash $
 
 However, their schemas would be the same. To compare schemas of two JSONs (loosely, with applied exemption on checking leaves data types),
 label directive `<>k` used together with `<>c` search suffix come handy:
-```
+```ShellSession
 bash $ <<<$(<ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"') jtc -w'<Ivan>[-1]<>c:<>k' -c'ab.json' -c'<Ivan>[-1]<>c:<>k' -l
 "json_1": {}
 "json_2": {}
@@ -2326,7 +2326,7 @@ bash $
 
 NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print a label of the root always results in the exception:_
-```
+```ShellSession
 bash $ <ab.json jtc -w'<>k'
 jtc json exception: walk_root_has_no_label
 bash $
@@ -2363,7 +2363,7 @@ The difference between single `{}` and double `{{}}` notations:
 
 
 A string interpolation w/o outer quotes is handy when it's required altering an existing string, here's example of altering JSON label:
-```
+```ShellSession
 bash $ <<<'{ "label": "value" }' jtc
 {
    "label": "value"
@@ -2375,7 +2375,7 @@ bash $ <<<'{ "label": "value" }' jtc -w'<label>l<>k' -u'<label>l<L>k' -T'"new {L
 bash $
 ```
 Here's an illustration when double braces are handier (e.g., swapping around labels and values):
-```
+```ShellSession
 bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
 bash $ <<<$JSN jtc
 {
@@ -2393,7 +2393,7 @@ bash $
 An array interpolation using a single brace notation `{..}` is handy when there's a need extending the array _during_
 interpolation.
 There's a special case though - template-extending of an empty array. Let's consider a following example:
-```
+```ShellSession
 bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
 bash $ <<<$JSN jtc
 [
@@ -2411,7 +2411,7 @@ bash $ <<<$JSN jtc
 bash $
 ```
 And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
 [
    {
@@ -2445,7 +2445,7 @@ of enumerations occurring over of either of `,` or `;`
 ### Namespaces with interleaved walks
 When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_),
 they populate namespaces in the order the walks appear:
-```
+```ShellSession
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
 "John"
 { "Parent": "John", "child": "Olivia" }
@@ -2471,7 +2471,7 @@ each own child. That way, for example, `Ivan` should not be even listed (he has 
 once and `Jane` should have 2 records (she has 2 kids).
 
 The situation could be easily rectified if for each walk we use own template and assign a dummy one for the first one:
-```
+```ShellSession
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
 ""
 { "Parent": "John", "child": "Olivia" }
@@ -2483,7 +2483,7 @@ bash $
 ```
 Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
 those annoying empty _JSON strings_ `""`? Those will be gone if `-qq` option is thrown in:
-```
+```ShellSession
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
 { "Parent": "John", "child": "Olivia" }
 { "Parent": "Jane", "child": "Robert" }
@@ -2493,7 +2493,7 @@ bash $
 \- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
 
 Yet, the same could have been achieved even a simpler way (using just one walk):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
 { "Parent": "John", "child": "Olivia" }
 { "Parent": "Jane", "child": "Robert" }
@@ -2505,7 +2505,7 @@ bash $
 ### Search quantifiers interpolation
 Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
 index value stored `item`:
-```
+```ShellSession
 bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
 bash $ <<<$JSN jtc
 {
@@ -2519,7 +2519,7 @@ bash $ <<<$JSN jtc
 bash $
 ```
 To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
 "milk": 0.90
 bash $
@@ -2527,20 +2527,20 @@ bash $
 It should be quite easy to read/understand such walk path (predicated one is familiar with suffixes / directives). Let's see
 how the walk-path works in a slow-mo:
 1. `[item]` selects the value by label `item`:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]'
 2
 bash $
 ```
 2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]<idx>v'
 2
 bash $
 ```
 3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
 the root of the input JSON:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
 {
    "item": 2,
@@ -2553,7 +2553,7 @@ bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
 bash $
 ```
 4. `[list]` selects the object value by label `list`:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
 {
    "bread": 1.20,
@@ -2566,7 +2566,7 @@ bash $
 (which is `2`) gives us the required value.
 
 _Alternatively_, the same ask could be achieved using a slightly different query:
-```
+```ShellSession
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
 bash $
@@ -2588,7 +2588,7 @@ types of operations) but one requires a reference from another.
 
 Say, we have 2 JSONs:
 1. `main.json`:
-```
+```ShellSession
 bash $ <main.json jtc
 [
    {
@@ -2610,7 +2610,7 @@ bash $ <main.json jtc
 bash $
 ```
 2. `id.json`:
-```
+```ShellSession
 bash $ <id.json jtc
 [
    {
@@ -2636,7 +2636,7 @@ The way to do it:
 
 The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and
 insert respective `title`:
-```
+```ShellSession
 bash $ <main.json jtc -w'[:][rec]<Record>v[-1][songs]' -mi id.json -i'[id]:<Record>s[-1][title]'
 [
    {
@@ -2679,7 +2679,7 @@ The trick is to use a dummy `-u`/`-i` operation and apply `-p`.
 When the cli is given in this notation:
 `<<<dst.json jtc -w... -u <src.json> -u... -p`,
 purging will be applied to walked destinations, but only predicated by a successful source walk:
-```
+```ShellSession
 bash $ <main.json jtc -w'[:][rec]<Record>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Record>s' -p
 [
    {
@@ -2692,7 +2692,7 @@ bash $
 ```
 
 The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
-```
+```ShellSession
 bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' -T'{{Entry}}' -pp
 [
    {
@@ -2721,7 +2721,7 @@ then it's a template value (after interpolation) will be used for the operations
 invalid JSON, in such case the source walk will be used).
 
 When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][0]<number>l:'
 "112-555-1234"
 "113-123-2368"
@@ -2742,7 +2742,7 @@ successful
 
 Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and
 altering the `phone` label at the same time via template):
-```
+```ShellSession
 bash $ <ab.json jtc -w'[0][0]<phone>l'
 [
    {
@@ -2784,7 +2784,7 @@ In the case when round-robin behavior is required when number of templates and w
 round-robin templates application onto sequential walks
 
 Compare:
-```
+```ShellSession
 bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -r
 { "Person": "John" }
 { "Age": 25 }
@@ -2814,7 +2814,7 @@ The mess in the above's last example is explained by `-nn` usage: templates are 
 
 
 One handy use-case of multiple round-robin templates would be this example:
-```
+```ShellSession
 bash $ <<<'[1,2,3,4,5,6,7,8,9,10]' jtc -w[:] -T'""' -T{} -T'""' -qq
 2
 5
@@ -2835,7 +2835,7 @@ in a "naked" JSON value (i.e. without quotation marks, curly braces or square br
 respectively). While double token notation is always a safe type and result of operation while be a complete JSON type.
 
 This little demo illustrates the tokens usage:
-```
+```ShellSession
 bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
 "[ \"a\", \"b\" ]"
 ```
@@ -2843,7 +2843,7 @@ bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
 The same could have been achieved with the template: `-T'>>{{}}<<'`
 
 That was an example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
-```
+```ShellSession
 bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' | jtc -T'[ <{{}}>, "c"]' -r
 [ "a", "b", "c" ]
 bash $
@@ -2854,7 +2854,7 @@ bash $
 ## Processing multiple input JSONs
 Normally `jtc` would process only a single input JSON. If multiple input JSONs given - the fist JSON will be processed and the
 rest of the inputs will be silently ignored:
-```
+```ShellSession
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -r
 [ "1st json" ]
 bash $
@@ -2864,7 +2864,7 @@ Couple options allow altering the behavior and process all the input JSONs:
 
 ### Process all input JSONs
 Option `-a` instructs to process all the input JSONS:
-```
+```ShellSession
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 [ "1st json" ]
 { "2nd": "json" }
@@ -2872,7 +2872,7 @@ bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 bash $
 ```
 \- respected processing (of all given options) will occur for all of the input JSONs:
-```
+```ShellSession
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "1st json"
 "json"
@@ -2881,7 +2881,7 @@ notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
 bash $
 ```
 All the input JSONs will be processed as long they are valid - processing will stops upon parsing failure:
-```
+```ShellSession
 bash $ <<<'[ "1st json" ] { "2nd": json" } "3rd json"' jtc -ad
 .read_inputs(), reading json from <stdin>
 .write_json(), outputting json to <stdout>
@@ -2896,7 +2896,7 @@ bash $
 
 ### Wrap all processed JSONs
 option `-J` let wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
-```
+```ShellSession
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -J -w'<json>R'
 notice: option -J cancels streaming input
 notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
@@ -2909,7 +2909,7 @@ bash $
 ```
 option `-J` also implicitly imposes `-j` thus it could be used safely even with a single JSON at the input with the same effect.
 Though, when walking multiple input JSONs, each of the option would have its own effect, this example clarifies:
-```
+```ShellSession
 bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
 [
    "John",
@@ -2972,7 +2972,7 @@ a network-based streaming)
 
 We can see the difference in the parsing when debugging `jtc`:
 \- in a _buffered read_ mode, the debug will show the _parsing point_ with data after:
-```
+```ShellSession
 bash $ <ab.json jtc -dddddd
 .read_inputs(), reading json from <stdin>
 ......parse_(), parsing point ->{|  "Directory": [|    {|       "name": "John",|       "ag...
@@ -2982,7 +2982,7 @@ bash $ <ab.json jtc -dddddd
 ...
 ```
 \- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
-```
+```ShellSession
 bash $ <ab.json jtc -dddddd -a
 .read_inputs(), reading json from <stdin>
 ..ss_init_(), initializing: stream
@@ -3037,7 +3037,7 @@ Say, we want to dump into `csv` format following data from the `ab.json`:
 `name, city, postal code, state, street address`
 
 1. First let's just dump all those entries:
-```
+```ShellSession
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:]
 "John"
 "New York"
@@ -3059,7 +3059,7 @@ bash $
 \- not that difficult
 
 2. then we need to reconcile all the walks into lines, here `$?` auto-namespace comes handy:
-```
+```ShellSession
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -T'"{$?}, {}"'
 "John"
 "John, New York"
@@ -3082,7 +3082,7 @@ bash $
 
 3. To ensure that we reconcile only each record (and not all of them), let's add one more walk which will fail interpolation of `$?`
 in the template (that will reset the value of `$?` back to `""`)
-```
+```ShellSession
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"'
 "John"
 "John, New York"
@@ -3107,7 +3107,7 @@ bash $
 \- that's better, now every 5th walk out of every 6 is what we need.
 
 4. Display only required walks:
-```
+```ShellSession
 bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"' -x6/4
 "John, New York, 10012, NY, 599 Lafayette St"
 "Ivan, Seattle, 98104, WA, 5423 Madison St"
@@ -3117,7 +3117,7 @@ bash $
 \- that is our required `CSV` format! Well, almost - every line is still a JSON string, but we can undress it with `-qq` option
 
 5. just a sugar topping: let's add a header line, which could be done using `echo` unix cli:
-```
+```ShellSession
 bash $ echo -e "name, city, postal, street\n$(<ab.json jtc -x[0][:] -y[name] -y'[address][:]' -y' ' -T'"{$?}, {}"' -x6/4 -qq)"
 name, city, postal, street
 John, New York, 10012, NY, 599 Lafayette St
@@ -3130,7 +3130,7 @@ DONE.
 
 ### Taming duplicates
 Quite very common tasks (and requests) for JSON is to process duplicates. Say, we deal with the following JSON:
-```
+```ShellSession
 bash $ dups='[ "string", true, null, 3.14, "string", null ]'
 bash $ <<<$dups jtc
 [
@@ -3145,7 +3145,7 @@ bash $
 ```
 So, let's
 #### Remove duplicates
-```
+```ShellSession
 bash $ <<<$dups jtc -w'<>Q:' -p
 [
    "string",
@@ -3160,7 +3160,7 @@ elements
 
 But there's a reverse action:
 #### Remove all but duplicates
-```
+```ShellSession
 bash $ <<<$dups jtc -w'<>Q:' -pp
 [
    "string",
@@ -3172,7 +3172,7 @@ That one is obvious - we just reversed the prior example.
 
 How about:
 #### Leave only those which have no duplicates
-```
+```ShellSession
 bash $ <<<$dups jtc -w'<dup>Q:[^0]<dup>s:' -p
 [
    true,
@@ -3188,7 +3188,7 @@ that way all duplicates (and their origins) will be removed, leaving the array o
 
 and finally
 #### Leave all duplicates
-```
+```ShellSession
 bash $ <<<$dups jtc -w'<dup>Q:[^0]<dup>s:' -pp
 [
    "string",
@@ -3207,14 +3207,14 @@ Thus use them cautiously when dealing with big JSONs (around or above hundreds o
 
 ### Counting with `jtc`
 Counting any number of properties is JSON could be done using exteral `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<number>l:' | wc -l
        6
 bash $
 ```
 
 The same is possible to achieve using only `jtc` capability - using `<..>I` lexeme:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<number>l:<cnt>I1' -T{cnt} -x/-1
 6
 bash $
@@ -3224,7 +3224,7 @@ bash $
 - `-x/-1` will display on the last walk
 
 Say, now we want to count the same phone numbers, but for some reason starting from `100`:
-```
+```ShellSession
 bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
 106
 bash $
@@ -3235,7 +3235,7 @@ continue walking past `<>F` lexeme - that will ensure that initial offset of the
 
 
 Finally, let's count home numbers and mobile numbers separately:
-```
+```ShellSession
 bash $ <ab.json jtc -x'<phone>l:' -y'<home>:<hn>I1'  -y'<mobile>:<mn>I1' -T'{"total home numbers": {hn}, "total mobile numbers": {mn}}' -x/-1
 {
    "total home numbers": 2,

@@ -90,7 +90,7 @@ See the latest [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Re
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
 
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
-```
+``` json
 {
    "Bookmarks": [
       {
@@ -148,7 +148,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 ### 1. let's start with a simple thing - list all URLs:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:' Bookmarks
 "https://www.nytimes.com/"
 "https://www.huffingtonpost.co.uk/"
@@ -168,7 +168,7 @@ let's take a look at the walk-path `<url>l:`:
 
 
 ### 2. dump all bookmark names from the `Work` folder:
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
@@ -199,11 +199,11 @@ _*** there's more on offsets and search quantifiers below_
 in order to understand better how a walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
 to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
-```
+``` ShellSession
 bash $ jtc -w'<Work>' -l Bookmarks
 "name": "Work"
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1]' -l Bookmarks
 {
    "children": [
@@ -222,7 +222,7 @@ bash $ jtc -w'<Work>[-1]' -l Bookmarks
    "stamp": "2018-03-06, 12:07:29"
 }
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
 "children": [
    {
@@ -237,7 +237,7 @@ bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
    }
 ]
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
 {
    "name": "Stack Overflow",
@@ -250,7 +250,7 @@ bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
    "url": "https://en.cppreference.com/"
 }
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 "name": "Stack Overflow"
 "name": "C++ reference"
@@ -258,7 +258,7 @@ bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 
 
 ### 3. dump all URL's names:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "The New York Times"
 "HuffPost UK"
@@ -276,7 +276,7 @@ this walk path `<url>l:[-1][name]`:
 
 
 ### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 [
    {
@@ -339,13 +339,13 @@ for the detailed explanation of the subscripts, search lexemes and directives.
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced (currently debug depth may go
 as deep as 7: `-ddddddd`).
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating a failing JSON:
-```
-bash $ <addressbook-sampe.json jtc 
+``` ShellSession
+bash $ <addressbook-sampe.json jtc
 jtc json exception: expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
 parsing failure point and its locus:
-```
+``` ShellSession
 bash $ <addressbook-sampe.json jtc -d
 .read_inputs(), reading json from <stdin>
 .parsejson(), exception locus: ...       ],|       "children": [,],|       "spouse": null|    }...
@@ -365,7 +365,7 @@ Say, we want to accomplish a following task:
 3. output resulting Address Book JSON
 
 Below is the code sample how that could be achieved using `Json.hpp` class and the source JSON - Address Book:
-```
+``` C++
 #include <iostream>
 #include <fstream>
 #include "lib/Json.hpp"
@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
 ```
 
 Address Book JSON:
-```
+``` ShellSession
 bash $ cat addressbook-sample.json
 {
   "AddressBook": [
@@ -456,7 +456,7 @@ bash $
 ```
 
 Output result:
-```
+``` ShellSession
 bash$ cat addressbook-sample.json | sort_ab
 [
    [
@@ -592,8 +592,8 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 ### performance:
 here's a 4+ million node JSON [test file](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
-```
-bash $ jtc -zz standard.json 
+``` ShellSession
+bash $ jtc -zz standard.json
 4329975
 ```
 The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`,
