@@ -1549,18 +1549,18 @@ bash $ <<<$(<ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p) jtc
 bash $
 ```
 Of course there's a more succinct syntax:
-````
+```
 bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p
-````
+```
 or, using even a single walk-path:
-````
+```
 bash $ <ab.json jtc -w'[type]:<(?:home)|(?:office)>R: [-1]' -p
-````
+```
 
 
 Another use-case exist: remove all the JSON elements _except_ walked ones (while preserving original JSON structure) - that's
 the feat for plural option notation: `-pp`. Let's drop all entries (in all records) but the `name` and `spouse`:
-````
+```
 bash $ <ab.json jtc -w'<(?:name)|(?:spouse)>L:' -pp
 {
    "Directory": [
@@ -1579,7 +1579,7 @@ bash $ <ab.json jtc -w'<(?:name)|(?:spouse)>L:' -pp
    ]
 }
 bash $
-````
+```
 Here, `(?:name)|(?:spouse)` is an RE (indicated by capitalized label search suffix `L`) matching labels containing either `"name"` or
 `"spouse"`
 
