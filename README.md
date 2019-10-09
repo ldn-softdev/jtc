@@ -1,7 +1,7 @@
 # `jtc` - cli tool to extract, manipulate and transform source JSON
 
-`jtc` stand for: _JSON test console_, but it's a legacy name, don't get misled.  
-  
+`jtc` stand for: _JSON test console_, but it's a legacy name, don't get misled.
+
 `jtc` offers a powerful way to select one or multiple elements from a source JSON and apply various actions on the selected elements
 at once (wrap selected elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare,
 transform and swap around).
@@ -33,7 +33,7 @@ transform and swap around).
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
   - insert/updates operations optionally may undergo _shell cli_ evaluation
-  - features namespaces, interpolation from namespaces and templates 
+  - features namespaces, interpolation from namespaces and templates
   - supports buffered and streamed modes of input reads
   - written entirely in C++14, no dependencies (STL only, idiomatic C++, no memory leaks)
   - extensively debuggable
@@ -52,9 +52,9 @@ paths. See below more detailed explanation with examples
 ### Linux and MacOS precompiled binaries are available for download
 
 For compiling, `c++14` (or later) is required:
-  - to compile under MacOS, use cli:  
+  - to compile under MacOS, use cli:
       `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
-  - To compile under Linux, use cli:  
+  - To compile under Linux, use cli:
       `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
 
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
@@ -90,7 +90,7 @@ See the latest [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Re
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
 
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
-```
+``` json
 {
    "Bookmarks": [
       {
@@ -148,7 +148,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 ### 1. let's start with a simple thing - list all URLs:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:' Bookmarks
 "https://www.nytimes.com/"
 "https://www.huffingtonpost.co.uk/"
@@ -168,18 +168,18 @@ let's take a look at the walk-path `<url>l:`:
 
 
 ### 2. dump all bookmark names from the `Work` folder:
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
 here the walk path `<Work>[-1][children][:][name]` is made of following lexemes (spaces separating lexemes are optional):
 
-a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
-b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
-c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
-d. `[:]`: select an **each node** in the array  
-e. `[name]`: select/address a node whose label is `"name"`  
+a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly
+b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)
+c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)
+d. `[:]`: select an **each node** in the array
+e. `[name]`: select/address a node whose label is `"name"`
 
 - subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
   * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
@@ -199,11 +199,11 @@ _*** there's more on offsets and search quantifiers below_
 in order to understand better how a walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
 to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
-```
+``` ShellSession
 bash $ jtc -w'<Work>' -l Bookmarks
 "name": "Work"
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1]' -l Bookmarks
 {
    "children": [
@@ -222,7 +222,7 @@ bash $ jtc -w'<Work>[-1]' -l Bookmarks
    "stamp": "2018-03-06, 12:07:29"
 }
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
 "children": [
    {
@@ -237,7 +237,7 @@ bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
    }
 ]
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
 {
    "name": "Stack Overflow",
@@ -250,7 +250,7 @@ bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
    "url": "https://en.cppreference.com/"
 }
 ```
-```
+``` ShellSession
 bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 "name": "Stack Overflow"
 "name": "C++ reference"
@@ -258,7 +258,7 @@ bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 
 
 ### 3. dump all URL's names:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "The New York Times"
 "HuffPost UK"
@@ -276,7 +276,7 @@ this walk path `<url>l:[-1][name]`:
 
 
 ### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
-```
+``` ShellSession
 bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 [
    {
@@ -312,17 +312,17 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 In short:
 - Subscript lexemes (`[..]`) facilitate:
     - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
-    from the root (toward leaves), e.g.: `[2]`, `[id]` 
+    from the root (toward leaves), e.g.: `[2]`, `[id]`
     - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves),
     e.g.:  `[-1]` (tier offset from the walked element), `[^2]` (tier offset from the root)
-    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1]` 
+    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1]`
 - Search lexemes (`<..>`, `>..<`) facilitate:
     - recursive (`<..>`) and non-recursive (`>..<`) matches
-    - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
-    search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs, 
+    - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string
+    search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs,
     unique, duplicates, etc.
     - there're also optional quantifiers to lexemes (must take the last position, after the suffix if one present) - let selecting
-    match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`; if no quantifier present `0` 
+    match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`; if no quantifier present `0`
     is assumed - first match)
 - subscript lexemes could be joined with search lexemes over ':' to facilitate _scoped search_, e.g.: `[id]:<value>` is a single
    lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e. `"id": "value"`
@@ -331,7 +331,7 @@ In short:
     like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation
     - couple directives (`<>f` and `<>F`) facilitate also walk branching
 
-Refer to 
+Refer to
 [`jtc` User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
 for the detailed explanation of the subscripts, search lexemes and directives.
 
@@ -339,19 +339,19 @@ for the detailed explanation of the subscripts, search lexemes and directives.
 `jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced (currently debug depth may go
 as deep as 7: `-ddddddd`).
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating a failing JSON:
-```
-bash $ <addressbook-sampe.json jtc 
+``` ShellSession
+bash $ <addressbook-sampe.json jtc
 jtc json exception: expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
 parsing failure point and its locus:
-```
+``` ShellSession
 bash $ <addressbook-sampe.json jtc -d
 .read_inputs(), reading json from <stdin>
 .parsejson(), exception locus: ...       ],|       "children": [,],|       "spouse": null|    }...
 .location_(), exception spot: --------------------------------->| (offset: 967)
 jtc json exception: expected_json_value
-bash $ 
+bash $
 ```
 
 ## Complete User Guide
@@ -365,7 +365,7 @@ Say, we want to accomplish a following task:
 3. output resulting Address Book JSON
 
 Below is the code sample how that could be achieved using `Json.hpp` class and the source JSON - Address Book:
-```
+``` C++
 #include <iostream>
 #include <fstream>
 #include "lib/Json.hpp"
@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
 ```
 
 Address Book JSON:
-```
+``` ShellSession
 bash $ cat addressbook-sample.json
 {
   "AddressBook": [
@@ -456,7 +456,7 @@ bash $
 ```
 
 Output result:
-```
+``` ShellSession
 bash$ cat addressbook-sample.json | sort_ab
 [
    [
@@ -526,7 +526,7 @@ for the complete description of Json class interface, refer to [Json.hpp](https:
 
 
 ## `jtc` vs **jq**:
-`jtc` was _inspired_ by the complexity of **jq** interface (and its 
+`jtc` was _inspired_ by the complexity of **jq** interface (and its
 [DSL](https://en.wikipedia.org/wiki/Domain-specific_language)),
 aiming to provide a user tool which would let attaining the desired result in a more feasible way
 
@@ -536,21 +536,21 @@ aiming to provide a user tool which would let attaining the desired result in a 
  performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained over the pipe symbol `|`
 
 **jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
-Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
+Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks
 is an overkill (that purpose is best facilitated with
-[GPL](https://en.wikipedia.org/wiki/General-purpose_language)).  
+[GPL](https://en.wikipedia.org/wiki/General-purpose_language)).
 The number of asks on the
-[stackoverflow](https://stackoverflow.com/) 
-to facilitate even simple queries for **jq** is huge - that's the proof in itself that for many people feasibility of attaining their 
+[stackoverflow](https://stackoverflow.com/)
+to facilitate even simple queries for **jq** is huge - that's the proof in itself that for many people feasibility of attaining their
 asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
 `jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embeds" the ask right into the
-_walk-path_. That facilitates a much higher feasibility of attaining a desired result: building the walk-path a lexeme by a lexeme, 
+_walk-path_. That facilitates a much higher feasibility of attaining a desired result: building the walk-path a lexeme by a lexeme,
 one at a time, provides an immediate visual feedback and let coming up with the desired result quite quickly.
 
 ### learning curve:
- - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
- **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a "PhD" in **jq**, or spending 
+ - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in
+ **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a "PhD" in **jq**, or spending
  lots of time on stackoverflow and similar forums
  - `jtc` employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
  each type though has several variants) which is easy to grasp.
@@ -559,28 +559,28 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  - **jq**: handling irregular JSONs for **jq** is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging the query (**jq** program) becomes
  - `jtc` was conceived with the idea of being capable of handling complex irregular JSONs with a simplified interface - that all is
- fitted into the concept of the _walk-path_, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every query. 
+ fitted into the concept of the _walk-path_, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every query.
 
 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
  - `jtc` is written in idiomatic _C++_ (the most powerful programming language to date) using STL only.
  Main JSON engine/library does not have a single `new` operator,
- nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
- (at least one class of the problems is off the table) - **STL guaranty**.  
+ nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks**
+ (at least one class of the problems is off the table) - **STL guaranty**.
  Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
 
 
 ### JSON numerical fidelity:
- - **jq** is not compliant with JSON numerical definition. What jq does, it simply converts a symbolic numerical representation to an 
+ - **jq** is not compliant with JSON numerical definition. What jq does, it simply converts a symbolic numerical representation to an
  internal binary and keeps it that way. That approach:
      - is not compliant with JSON definition of the numerical values
      - it has problems retaining required precision
      - might change original representation of numericals
  - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original symbolical format, so it's free of
  all the above caveats:
- 
- Handling | `jtc` | **jq** 
+
+ Handling | `jtc` | **jq**
  --- | ---: | :---
 Invalid Json: `[ 00 ]` | `<<<'[00]' jtc` | `<<<'[00]' jq -c .`
 _Parsing result_ | `jtc json exception: missed_prior_enumeration` | `[0]`
@@ -592,8 +592,8 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 ### performance:
 here's a 4+ million node JSON [test file](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
-```
-bash $ jtc -zz standard.json 
+``` ShellSession
+bash $ jtc -zz standard.json
 4329975
 ```
 The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`,
@@ -627,8 +627,3 @@ The computer's spec used for tests:
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
-
-
-
-
-
