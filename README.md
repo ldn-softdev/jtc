@@ -315,7 +315,8 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 - yes, multiple walks (`-w`) are allowed
 - option `-j` will wrap the walked outputs into a JSON array, but not just,
 - option `-l` used together with `-j` will ensure relevant walks are grouped together (try without `-l`)
-- if multiple walks (`-w`) are present, by default, walked results will be printed interleaved
+- if multiple walks (`-w`) are present, by default, walked results will be printed interleaved (with respect to each other JSON position, 
+if the latter can be inferred)
 
 
 ### 5. Subscripts (offsets) and Searches explained
