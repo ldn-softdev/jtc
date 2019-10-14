@@ -185,11 +185,11 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 ```
 here the walk path `<Work>[-1][children][:][name]` is made of following lexemes (spaces separating lexemes are optional):
 
-a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly
-b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)
-c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)
-d. `[:]`: select an **each node** in the array
-e. `[name]`: select/address a node whose label is `"name"`
+a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
+b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
+c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
+d. `[:]`: select an **each node** in the array  
+e. `[name]`: select/address a node whose label is `"name"`  
 
 - subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
   * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
