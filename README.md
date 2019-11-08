@@ -613,12 +613,12 @@ a median value is selected from 5 attempts):
 `jtc` | jq
 ---: | :---
 _**`parsing JSON:`**_ | _**`parsing JSON:`**_
-`bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
-` 7091578` | ` 7091578`
+`bash $ time jtc -t2 standard.json \| md5` | `bash $ time jq -M . standard.json \| md5`
+`d3b56762fd3a22d664fdd2f46f029599` | `d3b56762fd3a22d664fdd2f46f029599`
 `user 8.686 sec` | `user 18.848 sec`
 _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
-`bash $ time jtc -pw'<attributes>l:' standard.json \| wc -l` | `bash $ time jq 'del(..\|.attributes?)' standard.json \| wc -l`
-` 5573690` | ` 5573690`
+`bash $ time jtc -t2 -pw'<attributes>l:' standard.json \| md5` | `bash $ time jq -M 'del(..\|.attributes?)' standard.json \| md5`
+`0624aec46294399bcb9544ae36a33cd5` | `0624aec46294399bcb9544ae36a33cd5`
 `user 9.765 sec` | `user 27.399 sec`
 
 The computer's spec used for tests:
