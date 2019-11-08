@@ -620,10 +620,6 @@ _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
 `bash $ time jtc -t2 -pw'<attributes>l:' standard.json \| md5` | `bash $ time jq -M 'del(..\|.attributes?)' standard.json \| md5`
 `0624aec46294399bcb9544ae36a33cd5` | `0624aec46294399bcb9544ae36a33cd5`
 `user 9.765 sec` | `user 27.399 sec`
-_**`inserting JSON by a key:`**_ | _**`inserting JSON by a key:`**_
-`time jtc -t2 -w'<attributes>l:[-1]' -i'{"custom": "placeholder"}' standard.json \| md5` | `time jq -M 'walk(if type == "object" and has("attributes") then . + { "custom" : "placeholder" } else . end)' standard.json \| md5`
-`3309dd8a45023ccb5b7de91047d7c8fe` | `3309dd8a45023ccb5b7de91047d7c8fe`
-`user 13.875 sec` | `user 30.210 sec`
 
 The computer's spec used for tests:
 ```
