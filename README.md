@@ -610,7 +610,7 @@ bash $ jtc -zz standard.json
 The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`,
 a median value is selected from 5 attempts):
 
-`jtc` | jq
+`jtc 1.74` | jq-1.6
 ---: | :---
 _**`parsing JSON:`**_ | _**`parsing JSON:`**_
 `bash $ time jtc -t2 standard.json \| md5` | `bash $ time jq -M . standard.json \| md5`
