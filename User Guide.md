@@ -480,8 +480,8 @@ This is the list of suffixes to control search behavior:
   (e.g.: `<"{str}">j` - finds a _JSON string_ whose value is in
   [namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
   `str`)
-  * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
-  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`
+  * `s`: matches a JSON value previously stored in the namespace by lexemes like `<..>k`, `<..>v` or any other
+  * `t`: matches a tag (label/index) previously stored in the namespace by lexemes like `<..>k`, `<..>v` or any other
   * `q`: matches only original JSON values; lexeme maybe empty, otherwise it provides a namespace, where matched elements will be stored
   * `Q`: matches only repetitive (duplicate) JSON values; lexeme may be empty, otherwise it provides a namespace, where matched
   elements will be stored
