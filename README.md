@@ -85,9 +85,9 @@ See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases/tag/1
 
 ## Quick-start guide:
 *run `jtc -g` for walk path explanations, usage notes and additional usage examples*
-
+##
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
-```
+```json
 {
    "Bookmarks": [
       {
@@ -145,7 +145,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 
 ### 1. let's start with a simple thing - list all URLs:
-```
+```bash
 bash $ jtc -w'<url>l:' Bookmarks
 "https://www.nytimes.com/"
 "https://www.huffingtonpost.co.uk/"
@@ -159,13 +159,13 @@ The walk-path (an argument of `-w`) is a combination of lexemes. There are only 
 \- the walk-paths may contain any number of lexemes
 
 let's take a look at the walk-path `<url>l:`:
-- search lexemes are enclosed in angular brackets `<`, `>` - that style provides a **recursive search**
+- search lexemes are enclosed in angular brackets `<`, `>` - that style provides a **recursive search** throughout JSON 
 - suffix `l` instructs to search among **labels** only
 - quantifier `:` instructs to find **all occurrences**, such quantifiers makes a path *iterable*
 
 
 ### 2. dump all bookmark names from the `Work` folder:
-```
+```bash
 bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
@@ -176,31 +176,31 @@ a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON s
 b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
 c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
 d. `[:]`: select an **each node** in the array  
-e. `[name]`: select/address a node whose label is `"name"`  
+e. `[name]`: select/address a node whose label is `"name"` 
 
 - subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
   * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
 node - a.k.a. numerical subscripts
-  * slice/range offsets, expressed as `[N:N]` let selecting any slice/range of element in the array/object (any of `N` could be
-  omitted in that notation)
-  * numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
+  * slice/range offsets, expressed as `[N:M:S]` let selecting any slice/range of element in the array/object (any of `N`,`M`,`S` could be
+  omitted in that notation), where `N` is the start index, `M` is the index next after last, `S` is a step 
+  * alterniatively, numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
 given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) - such notation is equivalent
 of `[N:]`
-  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently
-selected/found node, a parent of a parent, etc
-  * textual offsets (e.g. `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
-immediate children (i.e. textual subscripts)
+  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently selected/found node, a parent
+  of a parent, etc
+  * literal offsets (e.g.: `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
+immediate children (i.e. literal subscripts)
 
 _*** there's more on offsets and search quantifiers below_
 
 in order to understand better how a walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
 to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
-```
+```bash
 bash $ jtc -w'<Work>' -l Bookmarks
 "name": "Work"
 ```
-```
+```bash
 bash $ jtc -w'<Work>[-1]' -l Bookmarks
 {
    "children": [
@@ -219,7 +219,7 @@ bash $ jtc -w'<Work>[-1]' -l Bookmarks
    "stamp": "2018-03-06, 12:07:29"
 }
 ```
-```
+```bash
 bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
 "children": [
    {
@@ -234,7 +234,7 @@ bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
    }
 ]
 ```
-```
+```bash
 bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
 {
    "name": "Stack Overflow",
@@ -247,7 +247,7 @@ bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
    "url": "https://en.cppreference.com/"
 }
 ```
-```
+```bash
 bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 "name": "Stack Overflow"
 "name": "C++ reference"
@@ -255,7 +255,7 @@ bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 
 
 ### 3. dump all URL's names:
-```
+```bash
 bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "The New York Times"
 "HuffPost UK"
@@ -273,7 +273,7 @@ this walk path `<url>l:[-1][name]`:
 
 
 ### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
-```
+```bash
 bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 [
    {
@@ -312,13 +312,13 @@ In short:
     from the root (toward leaves), e.g.: `[2]`, `[id]` 
     - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves),
     e.g.:  `[-1]` (tier offset from the walked element), `[^2]` (tier offset from the root)
-    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1]` 
+    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1:2]` 
 - Search lexemes (`<..>`, `>..<`) facilitate:
     - recursive (`<..>`) and non-recursive (`>..<`) matches
     - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
     search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs, 
-    unique, duplicates, etc.
-    - there're also optional quantifiers to lexemes (must take the last position, after the suffix if one present) - let selecting
+    unique, duplicates, sorted match, etc.
+    - there're also optional quantifiers to search lexemes (must take the last position, after the suffix if one present) - let selecting
     match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`; if no quantifier present `0` 
     is assumed - first match)
 - subscript lexemes could be joined with search lexemes over ':' to facilitate _scoped search_, e.g.: `[id]:<value>` is a single
@@ -333,21 +333,23 @@ Refer to
 for the detailed explanation of the subscripts, search lexemes and directives.
 
 ### 6. Debugability / JSON validation
-`jtc` is extensively debuggable: the more times option `-d` is given the more debugs will be produced (currently debug depth may go
+`jtc` is extensively debuggable: the more times option `-d` is passed the more debugs will be produced (currently debug depth may go
 as deep as 7: `-ddddddd`).
-Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating a failing JSON:
-```
-bash $ <addressbook-sampe.json jtc 
+Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating
+a failing JSON:
+```bash
+bash $ <addressbook-sample.json jtc 
 jtc json exception: expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
 parsing failure point and its locus:
-```
-bash $ <addressbook-sampe.json jtc -d
+```bash
+bash $ <addressbook-sample.json jtc -d
+.display_opts(), option set[0]: -d (internally imposed: )
 .read_inputs(), reading json from <stdin>
-.parsejson(), exception locus: ...       ],|       "children": [,],|       "spouse": null|    }...
-.location_(), exception spot: --------------------------------->| (offset: 967)
-jtc json exception: expected_json_value
+.location_(), exception locus: ...      }|       ],|       "children": [,],|       "spouse": null|    },|    {...
+.location_(), exception spot: ----------------------------------------->| (offset: 967)
+jtc json parsing exception (<stdin>:967): expected_json_value
 bash $ 
 ```
 
@@ -362,7 +364,7 @@ Say, we want to accomplish a following task:
 3. output resulting Address Book JSON
 
 Below is the code sample how that could be achieved using `Json.hpp` class and the source JSON - Address Book:
-```
+```c++
 #include <iostream>
 #include <fstream>
 #include "lib/Json.hpp"
@@ -380,157 +382,155 @@ int main(int argc, char *argv[]) {
  for(const auto &name: names)
   srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
 
- cout << jin["AddressBook"].clear().push_back( move(srt) ) << endl;              // put back into the original container and print
+ jin["AddressBook"].clear().push_back( move(srt) );                             // put back into the original container
+ cout << jin.tab(3) << endl;                                                    // and print using indentation 3
 }
+
 ```
 
 Address Book JSON:
-```
-bash $ cat addressbook-sample.json
+```bash
+bash $ jtc -tc addressbook-sample.json 
 {
-  "AddressBook": [
-    {
-       "Name": "John",
-       "age": 25,
-       "address": {
-          "city": "New York",
-          "street address": "599 Lafayette St",
-          "state": "NY",
-          "postal code": "10012"
-       },
-       "phoneNumbers": [
-          {
-             "type": "mobile",
-             "number": "212 555-1234"
-          }
-       ],
-       "children": [],
-       "spouse": null
-    },
-    {
-       "Name": "Ivan",
-       "age": 31,
-       "address": {
-          "city": "Seattle",
-          "street address": "5423 Madison St",
-          "state": "WA",
-          "postal code": "98104"
-       },
-       "phoneNumbers": [
-          {
-             "type": "home",
-             "number": "3 23 12334"
-          },
-          {
-             "type": "mobile",
-             "number": "6 54 12345"
-          }
-       ],
-       "children": [],
-       "spouse": null
-    },
-    {
-       "Name": "Jane",
-       "age": 25,
-       "address": {
-          "city": "Denver",
-          "street address": "6213 E Colfax Ave",
-          "state": "CO",
-          "postal code": "80206"
-       },
-       "phoneNumbers": [
-          {
-             "type": "office",
-             "number": "+1 543 422-1231"
-          }
-       ],
-       "children": [],
-       "spouse": null
-    }
-  ]
-}
-bash $
-```
-
-Output result:
-```
-bash$ cat addressbook-sample.json | sort_ab
-[
-   [
+   "AddressBook": [
+      {
+         "Name": "John",
+         "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" },
+         "age": 25,
+         "children": [ "Olivia" ],
+         "phoneNumbers": [
+            { "number": "212 555-1234", "type": "mobile" },
+            { "number": "213 123-2368", "type": "mobile" }
+         ],
+         "spouse": "Martha"
+      },
       {
          "Name": "Ivan",
-         "address": {
-            "city": "Seattle",
-            "postal code": "98104",
-            "state": "WA",
-            "street address": "5423 Madison St"
-         },
+         "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
          "age": 31,
          "children": [],
          "phoneNumbers": [
-            {
-               "number": "3 23 12334",
-               "type": "home"
-            },
-            {
-               "number": "6 54 12345",
-               "type": "mobile"
-            }
+            { "number": "573 923-6483", "type": "home" },
+            { "number": "523 283-0372", "type": "mobile" }
          ],
          "spouse": null
       },
       {
          "Name": "Jane",
-         "address": {
-            "city": "Denver",
-            "postal code": "80206",
-            "state": "CO",
-            "street address": "6213 E Colfax Ave"
-         },
+         "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
          "age": 25,
+         "children": [ "Robert", "Lila" ],
+         "phoneNumbers": [
+            { "number": "358 303-0373", "type": "office" },
+            { "number": "333 638-0238", "type": "home" }
+         ],
+         "spouse": "Chuck"
+      }
+   ]
+}
+bash $ 
+```
+
+Output result:
+```bash
+bash $ <addressbook-sample.json sort_ab | jtc -tc      # using jtc here only for a compact view
+{
+   "AddressBook": [
+      [
+         {
+            "Name": "Ivan",
+            "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
+            "age": 31,
+            "children": [],
+            "phoneNumbers": [
+               { "number": "573 923-6483", "type": "home" },
+               { "number": "523 283-0372", "type": "mobile" }
+            ],
+            "spouse": null
+         },
+         {
+            "Name": "Jane",
+            "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
+            "age": 25,
+            "children": [ "Robert", "Lila" ],
+            "phoneNumbers": [
+               { "number": "358 303-0373", "type": "office" },
+               { "number": "333 638-0238", "type": "home" }
+            ],
+            "spouse": "Chuck"
+         },
+         {
+            "Name": "John",
+            "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" },
+            "age": 25,
+            "children": [ "Olivia" ],
+            "phoneNumbers": [
+               { "number": "212 555-1234", "type": "mobile" },
+               { "number": "213 123-2368", "type": "mobile" }
+            ],
+            "spouse": "Martha"
+         }
+      ]
+   ]
+}
+bash $ 
+```
+for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
+
+Btw, the same sorting is achievable using `<>g` lexeme:
+```bash
+bash $ <addressbook-sample.json jtc -tc -w'[0]' -pi'[Name]:<>g:[-1]'
+{
+   "AddressBook": [
+      {
+         "Name": "Ivan",
+         "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
+         "age": 31,
          "children": [],
          "phoneNumbers": [
-            {
-               "number": "+1 543 422-1231",
-               "type": "office"
-            }
+            { "number": "573 923-6483", "type": "home" },
+            { "number": "523 283-0372", "type": "mobile" }
          ],
          "spouse": null
       },
       {
-         "Name": "John",
-         "address": {
-            "city": "New York",
-            "postal code": "10012",
-            "state": "NY",
-            "street address": "599 Lafayette St"
-         },
+         "Name": "Jane",
+         "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
          "age": 25,
-         "children": [],
+         "children": [ "Robert", "Lila" ],
          "phoneNumbers": [
-            {
-               "number": "212 555-1234",
-               "type": "mobile"
-            }
+            { "number": "358 303-0373", "type": "office" },
+            { "number": "333 638-0238", "type": "home" }
          ],
-         "spouse": null
+         "spouse": "Chuck"
+      },
+      {
+         "Name": "John",
+         "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" },
+         "age": 25,
+         "children": [ "Olivia" ],
+         "phoneNumbers": [
+            { "number": "212 555-1234", "type": "mobile" },
+            { "number": "213 123-2368", "type": "mobile" }
+         ],
+         "spouse": "Martha"
       }
    ]
-]
+}
 bash $
 ```
-for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
-
 
 ## `jtc` vs **jq**:
 `jtc` was _inspired_ by the complexity of **jq** interface (and its 
 [DSL](https://en.wikipedia.org/wiki/Domain-specific_language)),
-aiming to provide a user tool which would let attaining the desired result in a more feasible way
+aiming to provide a user tool which would let attaining the desired result in a more feasible and succinct way
+
 
 ### utility ideology:
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
  - `jtc` is a unix utility confining its functionality to operation types with its data model only (as per unix ideology). `jtc`
- performs one operation at a time and if successive operations required, then _cli_ to be daisy-chained
+ performs one major operation at a time (like insertion, update, swap, etc), however multiple operations could be chained
+ using `/` separator
 
 **jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
@@ -542,15 +542,17 @@ to facilitate even simple queries for **jq** is huge - that's the proof in itsel
 asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
 `jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embeds" the ask right into the
-walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
-one at a time, provides an immediate visual feedback and let coming up with the desired result quite quickly.
+walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path lexeme by lexeme, 
+one at a time, provides an immediate visual feedback and let coming up with the desired result rather quickly.
+
 
 ### learning curve:
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
- **jq**'s language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
+ **jq** language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
  lots of time on stackoverflow and similar forums
  - `jtc` employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
  each type though has several variants) which is easy to grasp.
+
 
 ### handling irregular JSONs:
  - **jq**: handling irregular JSONs for **jq** is not a challenge, building a query is! The more irregularities you need
@@ -561,10 +563,12 @@ one at a time, provides an immediate visual feedback and let coming up with the 
 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
- - `jtc` is written in idiomatic _C++14_ using STL only. Main JSON engine/library does not have a single `new` operator,
+ ([here's what I mean](https://github.com/ldn-softdev/cpluspus-vs-c))
+ - `jtc` is written in idiomatic _C++14_ using STL only. `jtc` does not have a single naked memory allocation operator
+ (those few `new` operators required for legacy interface are implemented as _guards_),
  nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
  (at least one class of the problems is off the table) - **STL guaranty**.  
- Also, `jtc` is written in a very portable way, it should not cause any problems compiling it under any unix like system.
+ Also, `jtc` is written in a very portable way, it should not cause problems compiling it under any unix like system.
 
 
 ### JSON numerical fidelity:
@@ -587,25 +591,41 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 
 
 ### performance:
-here's a 4+ million node JSON:
+here's a 4+ million node JSON file [standard.json](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
 bash $ jtc -zz standard.json 
 4329975
 ```
 The table below compares `jtc` and jq performance for similar operations (using `TIMEFORMAT="user %U sec"`):
 
-`jtc` | jq
+`jtc` 1.75 | jq 1.6
 ---: | :---
 _**`parsing JSON:`**_ | _**`parsing JSON:`**_
-`bash $ time jtc standard.json \| wc -l` | `bash $ time jq . standard.json \| wc -l`
-` 7091578` | ` 7091578`
-`user 11.195 sec` | `user 24.685 sec`
+`bash $ time jtc -t2 standard.json \| md5` | `bash $ time jq -M . standard.json \| md5`
+`d3b56762fd3a22d664fdd2f46f029599` | `d3b56762fd3a22d664fdd2f46f029599`
+`user 8.679 sec` | `user 19.570 sec`
 _**`removing by key from JSON:`**_ | _**`removing by key from JSON:`**_
-`bash $ time jtc -pw'<attributes>l:' standard.json \| wc -l` | `bash $ time jq 'del(..\|.attributes?)' standard.json \| wc -l`
-` 5573690` | ` 5573690`
-`user 12.334 sec` | `user 34.873 sec`
+`bash $ time jtc -t2 -pw'<attributes>l:' standard.json \| md5` | `bash $ time jq -M 'del(..\|.attributes?)' standard.json \| md5`
+`0624aec46294399bcb9544ae36a33cd5` | `0624aec46294399bcb9544ae36a33cd5`
+`user 9.442 sec` | `user 28.624 sec`
+_**`updating JSON recursively by label:`**_ | _**`updating JSON recursively by label:`**_
+`bash $ time jtc -t2 -w'<attributes>l:[-1]' -i'{"reserved": null}' standard.json \| md5` | `bash $ time jq -M 'walk(if type == "object" and has("attributes") then . + { "reserved" : null } else . end)' standard.json \| md5`
+`6c86462ae6b71e10e3ea114e86659ab5` | `6c86462ae6b71e10e3ea114e86659ab5`
+`user 12.292 sec` | `user 30.255 sec`
 
-
+Machine spec used for testing:
+```
+  Model Name:	MacBook Pro
+  Model Identifier:	MacBookPro15,1
+  Processor Name:	Intel Core i7
+  Processor Speed:	2,6 GHz
+  Number of Processors:	1
+  Total Number of Cores:	6
+  L2 Cache (per Core):	256 KB
+  L3 Cache:	12 MB
+  Hyper-Threading Technology:	Enabled
+  Memory:	16 GB 2400 MHz DDR4
+```
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
