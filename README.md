@@ -615,16 +615,16 @@ _**`updating JSON recursively by label:`**_ | _**`updating JSON recursively by l
 
 Machine spec used for testing:
 ```
-  Model Name:	MacBook Pro
-  Model Identifier:	MacBookPro15,1
-  Processor Name:	Intel Core i7
-  Processor Speed:	2,6 GHz
-  Number of Processors:	1
-  Total Number of Cores:	6
-  L2 Cache (per Core):	256 KB
-  L3 Cache:	12 MB
-  Hyper-Threading Technology:	Enabled
-  Memory:	16 GB 2400 MHz DDR4
+  Model Name:                 MacBook Pro
+  Model Identifier:           MacBookPro15,1
+  Processor Name:             Intel Core i7
+  Processor Speed:            2,6 GHz
+  Number of Processors:       1
+  Total Number of Cores:      6
+  L2 Cache (per Core):        256 KB
+  L3 Cache:                   12 MB
+  Hyper-Threading Technology: Enabled
+  Memory:                     16 GB 2400 MHz DDR4
 ```
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
