@@ -452,7 +452,9 @@
  *                          // WlkCallback is a struct catering iterator itself and callback
  *
  * Json class is DEBUGGABLE - see "dbg.hpp"
+ *
  */
+
 
 #pragma once
 
@@ -1033,6 +1035,7 @@ class Jnode {
 
 };
 
+
 // class static definitions
 Jnode::ClashingLabels Jnode::clashing_labels_{Jnode::Override};
 std::string Jnode::endl_{PRINT_PRT};                            // default is pretty format
@@ -1047,10 +1050,9 @@ STRINGIFY(Jnode::Jtype, JTYPE)
 
 
 
+//
 // DSL style JSON constructors definitions:
-// - when carrying of a performance, be aware, that passing arguments via initializer
-// list could not be moved (only copied)
-
+//
 struct NUL: public Jnode {
                         NUL(void): Jnode{Null} {}
 };
@@ -1137,7 +1139,9 @@ struct OBJ: public Jnode {
 
 
 
+//
 //                          Jnode iterator implementation
+//
 class Json;
 template<typename T>
 class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> {
@@ -1309,6 +1313,7 @@ bool Jnode::operator<(const Jnode &jn) const {
 Jnode & Jnode::normalize_idx(void) {
  // after yanking from JSON array, the array indices require re-normalization
  if(is_atomic()) return *this;
+
  if(is_array() and has_children())                              // normalize only if tampered
   if(stoul(children_().rbegin()->KEY, nullptr, 16) >= children_().size()) { // indices are tampered
    signed_size_t idx{0};                                        // new good index
@@ -1508,7 +1513,7 @@ std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, signed_si
    if(std::any_of(my.children_().begin(), my.children_().end(),
                   [](const auto &j){ return j.VALUE.is_iterable() and j.VALUE.has_children(); } ))
     return false;
-   GUARD(Jnode::endl_)                           // facilitate semicompact printing
+   GUARD(Jnode::endl_)                           // facilitate semi-compact printing
    GUARD(Jnode::tab_)
    my.tab(1).raw();
    os << endl_;
@@ -1591,10 +1596,8 @@ class Json {
                 May_be_any
     ENUM(ParseThrow, PARSE_THROW)
 
-    typedef ptrdiff_t signed_size_t;
-
-
  public:
+    typedef ptrdiff_t signed_size_t;
     typedef std::map<std::string, Jnode> map_jn;
 
     // suffixes taken : abcdDefFgGiIjklLnNoPrRstuvqQwWzZ
@@ -2693,14 +2696,17 @@ STRINGIFY(Json::iterator::SearchType, SEARCH_TYPE)
 
 
 
-// Jnode methods requiring Json definition:
+//
+// Jnode class methods requiring Json definition:
+//
 Jnode::Jnode(Json j) {                                          // type conversion Json -> Jnode
  swap(*this, j.root());
 }
 
 
-
-// Json definitions:
+//
+// Json class definitions:
+//
 Json operator ""_json(const char *c_str, std::size_t len) {
  // raw string parsing
  Json x;
@@ -3079,10 +3085,8 @@ std::string Json::readup_str_(Streamstr::const_iterator & jsp, size_t n) {
 //       all values walked (iterated), finally returns end() iterator (to json's
 //       root.children().end())
 
-
 std::string Json::iterator::dummy_lbl_;                         // used to indicate empty label
 unsigned short Json::iterator::walk_cnt_{0};                    // facilitates unique walk-id: wid_
-
 
 Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  #include "dbgflow.hpp"
@@ -3450,7 +3454,6 @@ void Json::parse_range_(std::string::const_iterator &si, WalkStep &ws, ParseThro
   if(ws.head < 0 or ws.tail < 0)                                // then cannot go negative
     throw EXP(Jnode::walk_negative_quantifier);
 }
-
 
 
 
@@ -4397,7 +4400,6 @@ size_t Json::iterator::gsort_matches_(const Jnode *jn, WalkStep &ws, size_t offs
 
 
 
-
 void Json::iterator::purge_ns_(const std::string &pfx) {
  #include "dbgflow.hpp"
  // erase from ns all cached keys starting with given prefix
@@ -4860,6 +4862,7 @@ size_t Json::byte_offset(const std::string &jsrc, size_t utf8_offset) {
 
  return chr_offset;
 }
+
 
 
 

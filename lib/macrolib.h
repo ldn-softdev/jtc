@@ -41,11 +41,6 @@
  *   can be extended
  */
 
-
-
-
-
-
 #pragma once
 
 
@@ -211,14 +206,15 @@
                 (xmacro, ##args)
 
 
+
 // helper definition so that null-arguments can be handled as well
 #define __MACRO_TO_ARGS__(macro_args...) \
     __XMACRO_TO_ARGS__(macro_args)
 
 
-
-
-
+//
+// User macro interfaces:
+//
 
 // user facing macro: count arguments (from 0 up to 99) - typically in #define directive
 #define COUNT_ARGS(args...) __COUNT_VARARGS__(args)

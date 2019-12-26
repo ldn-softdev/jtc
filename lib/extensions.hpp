@@ -34,7 +34,7 @@
  *          cout << endl;
  *
  * Obvious caveat: enums declared that way do not allow value re-definition
- * However, consider enum value redefinition a bad programming style.
+ * However, consider enum value redefinition a bad programming practice.
  * If required, provide enum-remapping facility instead
  */
 
@@ -174,8 +174,6 @@
  * Preferably use AMONG construct, when number of enlisted arguments > 2, otherwise
  * go with conditional 'or'
  */
-
-
 
 template<class T>
 bool operator==(const T &a, std::vector<T> v) {

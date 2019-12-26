@@ -1,3 +1,9 @@
+/*
+ * Created by Dmitry Lyssenko
+ *
+ * facilitates tracking of entry-leave points in the execution flow
+ */
+
 #include "dbg.hpp"
 
 #ifdef BG_FLOW                                                  // -DBG_FLOW to compile this debug

@@ -3,6 +3,7 @@
  *
  * this is a walk-path mini guide for Json class (Json.hpp)
  */
+
 #pragma once
 
 #include <iostream>
@@ -228,6 +229,14 @@ attached to the label "a label"; in that notation all suffixes (and quantifiers)
 except 'l', 'L' and 't', e.g.: '[age]:<25>j:' matches all JSON numerical values 25, where it's
 attached to the label "age" only
 )"};
+
+
+
+
+
+
+
+
 
 
 

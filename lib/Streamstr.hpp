@@ -16,6 +16,7 @@
 #define RB_SIZE 1024
 
 
+
 class Streamstr {
  // operates in 2 modes: buffer mode, stream mode.
  // in buffer mode it reads entire file/cin into the buffer and let iterating until the end of it
@@ -116,13 +117,11 @@ class Streamstr {
                          hb_.reserve(cbs);
                         }
     size_t              hb_size(void) const { return hb_.size(); }
-
     Circular &          hb(void) { return hb_; }
-
-
     DEBUGGABLE()
 
  protected:
+
     void                ss_init_(const_iterator &);
 
     Strmod              mod_;
@@ -135,7 +134,6 @@ std::deque<std::string> fn_;                                    // source file n
 
     Circular            hb_{HB_SIZE};
 };
-
 
 STRINGIFY(Streamstr::Strmod, STRMOD)
 #undef STRMOD
@@ -202,6 +200,7 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
 };
 
 
+
 //
 //  Streamstr definitions
 //
@@ -212,6 +211,7 @@ Streamstr::const_iterator Streamstr::begin(void) {
 }
 
 
+
 Streamstr::const_iterator Streamstr::end(void) {
  if(is_streamed()) {
   const_iterator it{mod_, this, static_cast<size_t>(-2)};
@@ -220,6 +220,7 @@ Streamstr::const_iterator Streamstr::end(void) {
  }
  return {mod_, this, buf_.size()};
 }
+
 
 
 void Streamstr::ss_init_(const_iterator &it) {
@@ -241,17 +242,6 @@ void Streamstr::ss_init_(const_iterator &it) {
  //        std::istream_iterator<char>{}};
 
  if(is_buffered_cin()) {                                        // buffered_cin
-  /*
-  // reason for not reading cin through ifstream("/dev/stdin") - it will render code non-portable
-  // and tellg does not work with redirected stdout: ... | jtc
-  GUARD(std::cin.tie, std::cin.tie)
-  GUARD(std::ios::sync_with_stdio, std::ios::sync_with_stdio)
-  std::cin.tie(nullptr);                                        // speedup cin
-  std::ios::sync_with_stdio(false);                             // speedup cin
-  buf_ = std::string{std::istream_iterator<char>(std::cin >> std::noskipws),
-                     std::istream_iterator<char>{}};
-  */
-  // change of hearts: reading stdin in successive reads until EOF - almost as fast as file read
   std::vector<std::vector<char>> aob;                           // array of buffers
   std::ifstream fin("/dev/stdin", std::ios::in);
   do {
@@ -301,6 +291,7 @@ const char & Streamstr::const_iterator::operator*(void) {
 }
 
 
+
 Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
  // facilitate ++operation for streamed/buffered operations
  if(is_streamed())
@@ -335,12 +326,14 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
 }
 
 
+
 std::string Streamstr::const_iterator::str(size_t len) const {
  // return string: for streaming mode - return historical string (up till current pointer),
  // for buffer mode - from current pointer onwards
  if(is_streamed()) return ssp_->hb_.str(len);
  return {ssp_->buf_, pos_ - rwd_, len};
 }
+
 
 
 

@@ -352,8 +352,7 @@ class Jtc {
                          jinp_.tab(opt()[CHR(OPT_IND)].hits() > 0 or not opt()[CHR(OPT_RAW)]?
                                     abs(opt()[CHR(OPT_IND)].str() == STR(IND_SFX)?
                                          atoi(opt()[CHR(OPT_IND)].c_str(0)):
-                                         static_cast<int>(opt()[CHR(OPT_IND)])):
-                                    1)
+                                         static_cast<int>(opt()[CHR(OPT_IND)])): 1)
                               .merge_clashing(opt()[CHR(OPT_MDF)].hits() >= 2)
                               .raw(opt()[CHR(OPT_RAW)])
                               .semicompact(opt()[CHR(OPT_IND)].str().back() == CHR(IND_SFX))
@@ -607,6 +606,7 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 }
 
 
+
 void run_decomposed(CommonResource &cr,
                     Streamstr::const_iterator &jsp, Streamstr::const_iterator &pse) {
  DEBUGGABLE()
@@ -734,6 +734,7 @@ void CommonResource::display_opts(std::ostream & out) {
   out << " )" << endl;
  }
 }
+
 
 
 char CommonResource::parse_opt(v_string & args) {
@@ -906,8 +907,6 @@ char CommonResource::recompile_args_(v_string & args) {
  args = move(new_args);
  return opt_eval;
 }
-
-
 
 
 
@@ -2288,9 +2287,6 @@ string sh_quote_str(const string &src) {
  }
  return quoted;
 }
-
-
-
 
 
 

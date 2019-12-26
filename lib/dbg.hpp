@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified July 3, 2015
+ * Created by Dmitry Lyssenko
  *
  *
  * an easy Debug class, featuring following qualities:
@@ -378,6 +378,7 @@ constexpr bool __is_dbg_propagatable__(...) { return false; }
 
 
 
+
 class __Dbg_flow__;
 
 class Debug {
@@ -497,6 +498,7 @@ class Debug {
 STRINGIFY( Debug::Month, MONTH)
 #undef MONTH
 
+
 short                   Debug::udl_{0};                         // 0: debugs disabled
 bool                    Debug::indented_{true};                 // by default prompt is indented
 std::string             Debug::indent_{DBG_INDENT};
@@ -510,6 +512,7 @@ std::mutex *            Debug::mp_{&Debug::mtx_};
 std::ostream *          Debug::op_{&std::cout};
 bool                    Debug::ft_{false};                      // filter-in by default
 std::vector<std::string>Debug::filter_;
+
 
 
 bool Debug::operator()(short d, const char * fn) const {
@@ -548,6 +551,7 @@ std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx
 }
 
 
+
 const std::string Debug::timestamp_(void) {
  // build a time-stamp of the local TZ, possibly including ms and us
  std::stringstream so;
@@ -566,6 +570,7 @@ const std::string Debug::timestamp_(void) {
 };
 
 
+
 const std::string Debug::stamp_str_(time_t t_stamp) {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
  std::stringstream so;
@@ -581,6 +586,7 @@ const std::string Debug::stamp_str_(time_t t_stamp) {
 
  return so.str();
 }
+
 
 
 bool Debug::match_(const char *fn) {
@@ -644,6 +650,8 @@ class __Dbg_flow__ {
 };
 
 size_t __Dbg_flow__::ind{0};                                    // debug's indent
+
+
 
 
 

@@ -435,8 +435,13 @@ class Getopt {
     Getopt &            help(void);                             // auto-generated help
     iter_opt            begin(void) { return om_.begin(); }
     iter_opt            end(void) { return om_.end(); }
-    Getopt &            reset(void)
-                         { for(auto &om: om_) om.second.reset(); ov_.clear(); return *this; }
+    Getopt &            reset(void) { 
+                         for(auto &om: om_) om.second.reset(); ov_.clear(); 
+                         #ifdef __linux__
+                          optind = 0;
+                         #endif
+                         return *this; 
+                        }
     bool                defined(char opt) const { return om_.count(opt) == 1; }
     std::vector<OptionsOrdered> &
                         ordinal(void) { return ov_; }

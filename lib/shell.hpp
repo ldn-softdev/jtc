@@ -9,7 +9,7 @@
  *  Shell s;
  *
  *  s.system("ls -la 2>&1");
- *  cout << s.stdout() << endl;
+ *  cout << s.out() << endl;
  */
 
 #pragma once
@@ -19,7 +19,6 @@
 #include <memory>
 #include "extensions.hpp"
 #include "dbg.hpp"
-
 
 
 

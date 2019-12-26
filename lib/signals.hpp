@@ -165,12 +165,15 @@ class Signal {
 STRINGIFY(Signal::eSignal, __SIGNALS__)
 //#undef __SIGNALS__                                            // spare signals definitions
 
+
 std::vector<Signal::func*> Signal::vpi_;
 sig_atomic_t Signal::user_interrupt{0};
 bool Signal::ui_received{false};
 void Signal::dummy_(int) {}                                     // unique ptr, instead of nullptr
 std::string Signal::int_deferred{"!!! interrupt received but deferred, wait until reinstated !!!"};
 std::string Signal::int_activated{"aborted due to user interrupt received: "};
+
+
 
 // add handlers below requiring special handling
 void Signal::SIGINT_handler(int sig) {
@@ -313,10 +316,6 @@ void Signal::demangle_(const char *bt, size_t n) {
 
 
 
-#undef STACK_DEPTH
-
-
-
 
 
 /* define SIGINT guard and block operator for convenience
@@ -343,6 +342,9 @@ void Signal::demangle_(const char *bt, size_t n) {
 
 
 
+
+
+#undef STACK_DEPTH
 
 
 
