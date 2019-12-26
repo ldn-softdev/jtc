@@ -327,14 +327,14 @@
 //
 // macros 2. and 3. are entirely covered by Debug's mutex
 
-#define __DBG_0_ARG__() __dbg__                                 // DBG(): access to debug object
-#define __DBG_1_ARG__(X) \
+#define __DBG_0_ARG__() __dbg__     /* DBG(): access to debug object */
+#define __DBG_1_ARG__(X)            /* DBG(N) {..}: debug operator, prints debug indention */\
     if( __dbg__(X) ) \
      for(std::unique_lock<std::mutex> mgard(__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
       if( __dbg__(X, __func__) )                                // now print the prompt
-#define __DBG_2_ARG__(O, X) \
+#define __DBG_2_ARG__(O, X)         /* DBG(F, N) {..}: using debug operator from F */\
     if( O.__dbg__(X) ) \
-     for(std::unique_lock<std::mutex> mgard(O.__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
+     for(std::unique_lock<std::mutex> mgard(O.__dbg__.mutex()); mgard.owns_lock(); mgard.unlock())\
       if( O.__dbg__(X, __func__) )                              // now print the prompt
 #define __DBG_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
 #define __DBG_CHOOSER__(args...) \
@@ -361,8 +361,8 @@
 #define DBG_INDENT "."                                          // default debug's indent prefix
 #define DBG_ALT_INDENT " "                                      // alternative prefix
 #define DBG_SUFFIX ", "                                         // default debug's suffix
-#define DBG_PROMPT(X) DBG().prompt(__func__, X+1)
-#define DBG_PMT(X) DBG().prompt(__func__, X+1)
+#define DBG_PROMPT(X) DBG().prompt(__func__, X + 1)
+#define DBG_PMT(X) DBG().prompt(__func__, X + 1)
 #define NDBG SHRT_MAX/2
 // NDBG definition is just insanely low debug severity - to be used when certain
 // debugs needed to be suppressed
@@ -378,8 +378,10 @@ constexpr bool __is_dbg_propagatable__(...) { return false; }
 
 
 
+class __Dbg_flow__;
 
 class Debug {
+ friend __Dbg_flow__;
  public:
                         Debug(void) = default;
     template<class X>   Debug(X &x) { x.DBG().severity(x); };
@@ -388,7 +390,11 @@ class Debug {
     Debug &             level(short ul) { udl_=ul; return *this; }
     bool                indented(void) const { return indented_; }
     Debug &             indented(bool x) { indented_ = x; return *this; }
+    std::string         prefix(void) const { return indent_; }
+    void                prefix(const std::string & i) const { indent_ = i; }
     Debug &             prefix(const char *i) { indent_ = i; return *this; }
+    std::string         alt_prefix(void) const { return alt_indent_; }
+    void                alt_prefix(const std::string & i) const { alt_indent_ = i; }
     Debug &             alt_prefix(const char *i) { alt_indent_ = i; return *this; }
     Debug &             suffix(const char *s) { suffix_ = s; return *this; }
     bool                stamped(void) const { return ts_; }
@@ -468,8 +474,8 @@ class Debug {
 
     static short        udl_;                                   // user debug level - set by user
     static bool         indented_;                              // is prompt indented?
-    static std::string  indent_;                                // chars used for indenting (prefix)
-    static std::string  alt_indent_;                            // chars used for indenting (prefix)
+    static std::string  indent_;                                // used for indenting (prefix)
+    static std::string  alt_indent_;                            // used for alt. indenting (prefix)
     static std::string  suffix_;                                // suffix (last of debug's promp)
     static bool         ts_;                                    // build time-stamp into prompt?
     static bool         ms_;                                    // use ms in time-stamp
@@ -518,7 +524,7 @@ bool Debug::operator()(short d, const char * fn) const {
  #endif
 
  if(d + ds_ >= level()) return false;                           // severity lower than set by user
- if(fn == nullptr) return true;                                 // user does not want printed prompt
+ if(fn == nullptr) return true;                                 // user wants no printed prompt
  if(not match_(fn)) return false;                               // filter does not match
 
  dout() << Debug::indent_ << prompt(fn, d);
@@ -596,6 +602,51 @@ bool Debug::match_(const char *fn) {
   { if(fname.find(f) == 0) return true; }
  return false;
 }
+
+
+
+
+
+/* This is a guard-type class to facilitate debugs of the execution flow, utilized by macro
+ *  defined in "dbgflow.hpp": it let tracing entry point and exit points
+ *
+ * SYNOPSIS:
+ * typical usage (first line in every method/function whose flow to be debugged):
+ * #include "dbgflow.hpp")              // works for DEBUGGABLE classes (methods)/functions only
+ *
+ * for non-debuggable classes requires a helper to be setup before usage:
+ * #define DBGBL_REF debuggable_class   // provide a reference to a DEBUGGABLE class
+ * ...
+ * #include "dbgflow.hpp"
+ *
+ *
+ * NOTES:
+ *  o for effectuating this debug, a flag -DBG_FLOW to be passed upon compiling
+ *  o this debug utilizes alt_prefix, so it's best to redefine a default value (which is " ")
+ */
+class __Dbg_flow__ {
+ public:
+                        __Dbg_flow__(const Debug & dbg, std::string pmt): dbg_(dbg), dpmt_(pmt) {
+                         if(dbg_(ind, nullptr))
+                          dbg_.dout() << dpmt_ << "entered -->Fn" << std::endl;
+                         ++ind;
+                        }
+                       ~__Dbg_flow__(void) {
+                         --ind;
+                         if(dbg_(ind, nullptr))
+                          dbg_.dout() << dpmt_ << "left Fn-->" << std::endl;
+                        }
+    static size_t       ind;
+
+ protected:
+    const Debug &       dbg_;                                   // debug reference
+    std::string         dpmt_;                                  // debug prompt
+};
+
+size_t __Dbg_flow__::ind{0};                                    // debug's indent
+
+
+
 
 
 

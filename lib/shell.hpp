@@ -35,7 +35,7 @@ class Shell {
                         Shell(size_t s = 1024) { buf_.resize(s); }
 
     Shell &             system(const std::string & cmd, const std::string & mode = "r");
-    const std::string & stdout(void) const { return out_; }
+    const std::string & out(void) const { return out_; }
     int                 rc(void) const { return rc_; }
     size_t              buff_size(void) const { return buf_.size(); }
     Shell &             buff_size(size_t s) { buf_.resize(s); return *this; }

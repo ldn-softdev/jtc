@@ -141,7 +141,6 @@
 #include "extensions.hpp"
 #include <algorithm>
 
-
 #define OPT_ARG_OFFSET 256
 #define OPT_WIDTH 100
 
@@ -163,16 +162,7 @@ class Option {
     typedef vec_string::iterator iter_opt;
     typedef vec_string::const_iterator citer_opt;
 
-    friend void             swap(Option &l, Option &r) {
-                             using std::swap;
-                             swap(l.id_, r.id_);
-                             swap(l.ot_, r.ot_);
-                             swap(l.val_, r.val_);
-                             swap(l.order_, r.order_);
-                             swap(l.name_, r.name_);
-                             swap(l.desc_, r.desc_);
-                             swap(l.go_, r.go_);
-                            }
+    friend SWAP(Option, id_, ot_, val_, order_, name_, desc_, go_)
 
  public:
     friend Getopt;
@@ -181,21 +171,35 @@ class Option {
     // standalone arguments; a bare '-' argument is set as a boolean option
     // options can be either boolean (w/o parameter) or parametric
     // standalone arguments are always parametric type
-    enum ArgKind { opt, arg };
-    enum OptType { boolean, parametric };
 
+    #define ARGKIND \
+             opt, \
+             arg
+    ENUMSTR(ArgKind, ARGKIND)
+
+    #define OPTTYPE \
+             boolean, \
+             parametric
+    ENUM(OptType, OPTTYPE)
+    #undef OPTTYPE
+
+    #define DMPOPT \
+             all, \
+             strike
+    ENUM(DumpOpt, DMPOPT)
+    #undef DMPOPT
 
                         Option(void) = delete;                  // DC deleted
-                        Option(short opt, Getopt *go):          // Custom constructor
+                        Option(int opt, Getopt *go):            // Custom constructor
                          id_{opt}, go_{go} { name_ = toupper(opt); }
                         Option(const Option &) = default;       // CC
-                        Option(Option && o)                     // MC
+                        Option(Option && o) noexcept            // MC
                          { swap(*this, o); }
-    Option &            operator=(Option o)                     // CA, MA
+    Option &            operator=(Option o) noexcept            // CA, MA
                          { swap(*this, o); return *this; }
 
     // User interface:
-    short int           id(void) const { return id_; }          // could be: 'a', 'x', 256, 257, ...
+    int                 id(void) const { return id_; }          // could be: 'a', 'x', 256, 257, ..
     ArgKind             kind(void) const
                          { return id_ < OPT_ARG_OFFSET? opt: arg; }
     OptType             type(void) const { return ot_; }
@@ -210,7 +214,7 @@ class Option {
     const std::string & description(void) const { return desc(); }
 
     // methods typically used after parsing
-    Option &            operator=(const std::string &s);        // append a new value & record a hit
+    Option &            operator=(const std::string &s);        // append a new value & record hit
     Option &            hit(void);                              // record a hit (& update order)
                         operator double(void) const
                          { return type() == boolean? hits(): atof(c_str()); }
@@ -241,11 +245,12 @@ class Option {
     citer_opt           begin(void) const { return ++val_.cbegin(); }
     iter_opt            end(void) { return val_.end(); }
     citer_opt           end(void) const { return val_.cend(); }
+    Option &            dump(DumpOpt x=strike, std::ostream &xout = std::cerr);
 
  protected:
     const std::string & deflt_(void) const { return val_.front(); }
 
-    short int           id_{0};                                 // option symbol / arg's position
+    int                 id_{0};                                 // option symbol / arg's position
                         // for options, id_ is the ascii code of the options symbol,
                         // for arguments, id_ is based off 256, i.e arg[0] has id 256, etc
     OptType             ot_{boolean};                           // boolean or parametric (type)
@@ -264,6 +269,8 @@ class Option {
                         // for negative values -1, -2, ... returns size()-1, size()-2, etc
 };
 
+STRINGIFY(Option::ArgKind, ARGKIND)
+#undef ARGKIND
 
 
 Option & Option::bind(const std::string &deflt) {
@@ -292,6 +299,33 @@ Option & Option::operator=(const std::string &v) {
 }
 
 
+Option & Option::dump(DumpOpt x, std::ostream &xout) {
+ // dump all/hit options
+ std::string dlm{kind() == opt? " opt [": " arg ["};
+ dlm += kind() == opt? std::string{static_cast<char>(id())}: std::to_string(id() - OPT_ARG_OFFSET);
+ dlm += "]: ";
+
+ for(auto &v: val_) {
+  if(type() == boolean) {
+   if(x == strike and hits() == 0) return *this;                // skip printing non-hit booleans
+   xout << dlm << hits() << " hits" << std::endl;
+   return *this;
+  }
+  // parametric types here
+  if(&v == &val_[0]) {                                          // handle default value
+   if(x == strike or kind() == arg) continue;                   // skip printing default
+   xout << dlm << v << (v.empty()? "": " (default)");
+   dlm = v.empty()? "": ", ";
+   continue;
+  }
+  xout << dlm << v;
+  dlm = ", ";
+ }
+ if(dlm == ", " or dlm == "") xout << std::endl;
+ return *this;
+}
+
+
 std::ostream & operator<<(std::ostream & os, const Option & opt) {
  return opt.type() == Option::boolean? os << opt.hits(): os << opt.c_str();
 }
@@ -306,32 +340,28 @@ class Getopt {
  //   o after parsing: provides access to the recorded option values
  // parses provided options (argv),
  // allows auto generating help and usage outputs
-    typedef std::map<short, Option> map_opt;
+    typedef std::map<int, Option> map_opt;
     typedef map_opt::iterator iter_opt;
 
     class OptionsOrdered {
      // facilitates back-tracing every option to it's original position in user cli
-        friend void         swap(OptionsOrdered &l, OptionsOrdered &r) {
-                             using std::swap;
-                             swap(l.opt_, r.opt_);
-                             swap(l.cnt_, r.cnt_);
-                             swap(l.go_, r.go_);
-                            }
+        friend Getopt;
+        friend SWAP(OptionsOrdered, opt_, cnt_, go_)
 
      public:
-                            OptionsOrdered(void) = default;     // DC
-                            OptionsOrdered(short opt, size_t cnt, Getopt *go):  // Custom Const.
+                            OptionsOrdered(void) = default;                     // DC
+                            OptionsOrdered(int opt, size_t cnt, Getopt *go):    // Custom Const.
                              opt_{opt}, cnt_{cnt}, go_(go) {}
                             OptionsOrdered(const OptionsOrdered &) = default;   // CC
-                            OptionsOrdered(OptionsOrdered && o) // MC
+                            OptionsOrdered(OptionsOrdered && o) noexcept        // MC
                              { swap(*this, o); }
-        OptionsOrdered &    operator=(OptionsOrdered o)         // CA, MA
+        OptionsOrdered &    operator=(OptionsOrdered o) noexcept                // CA, MA
                              { swap(*this, o); return *this; }
 
         size_t              count(void) const { return cnt_; }
         Option &            option(void) { return go_->om_.at(opt_); }
         const Option &      option(void) const { return go_->om_.at(opt_); }
-        short               id(void) const { return opt_; }
+        int                 id(void) const { return opt_; }
         Option::ArgKind     kind(void) const { return go_->om_.at(opt_).kind(); }
         Option::OptType     type(void) const { return go_->om_.at(opt_).type(); }
         const std::string & name(void) const { return go_->om_.at(opt_).name(); }
@@ -342,7 +372,7 @@ class Getopt {
         const std::string & str(void) const{ return option().str(count()); }
 
      private:
-        short               opt_;                               // option id: 'a', 'x', etc
+        int                 opt_;                               // option id: 'a', 'x', etc
         size_t              cnt_;                               // counter of an option (1,2,3,...)
         Getopt *            go_{nullptr};
     };
@@ -350,21 +380,10 @@ class Getopt {
     friend OptionsOrdered;
     friend Option;
 
-    friend void             swap(Getopt &l, Getopt &r) {
-                             using std::swap;
-                             swap(l.exception_, r.exception_);
-                             swap(l.throwException_, r.throwException_);
-                             swap(l.autohelp_, r.autohelp_);
-                             swap(l.variadic_, r.variadic_);
-                             swap(l.argc_, r.argc_);
-                             swap(l.argv_, r.argv_);
-                             swap(l.prolog_, r.prolog_);
-                             swap(l.epilog_, r.epilog_);
-                             swap(l.arguments_, r.arguments_);
-                             swap(l.prgname_, r.prgname_);
-                             swap(l.om_, r.om_);
-                             swap(l.ov_, r.ov_);
-                            }
+    friend COPY(Getopt, exception_, throw_exception_, autohelp_, variadic_,
+                        argc_, argv_, prolog_, epilog_, arguments_, prgname_, om_, ov_)
+    friend SWAP(Getopt, exception_, throw_exception_, autohelp_, variadic_,
+                        argc_, argv_, prolog_, epilog_, arguments_, prgname_, om_, ov_)
 
  public:
 
@@ -381,16 +400,27 @@ class Getopt {
     ENUMSTR(ThrowReason, THROWREASON)
 
 
-                        Getopt(void) = default;             // DC
-                        Getopt(const Getopt &) = default;   // CC
-                        Getopt(Getopt && go)                // MC
-                         { swap(*this, go); }
-    Getopt &            operator=(Getopt go)                // CA, MA
-                         { swap(*this, go); return *this; }
+                        Getopt(void) = default;                 // DC
+                        Getopt(const Getopt &go) {              // CC
+                         copy(*this, go);
+                         for(auto &o: *this) o.second.go_ = this;
+                         for(auto &o: ordinal()) o.go_ = this;
+                        }
+                        Getopt(Getopt && go) noexcept {         // MC
+                         swap(*this, go);
+                         for(auto &o: *this) o.second.go_ = this;
+                         for(auto &o: ordinal()) o.go_ = this;
+                        }
+    Getopt &            operator=(Getopt go) noexcept {         // CA, MA
+                         swap(*this, go);
+                         for(auto &o: *this) o.second.go_ = this;
+                         for(auto &o: ordinal()) o.go_ = this;
+                         return *this;
+                        }
 
 
     Getopt &            suppress_opterr(bool x=true) { opterr = !x; return *this; }
-    Getopt &            suppress_exceptions(void) { throwException_ = false; return *this; }
+    Getopt &            suppress_exceptions(void) { throw_exception_ = false; return *this; }
     Getopt &            suppress_autohelp(void) { autohelp_ = false; return *this; }
     Getopt &            variadic(bool x = true) { variadic_ = x; return *this; }
     void                parse(int argc, char *argv[], const char *fmt = nullptr);
@@ -411,12 +441,18 @@ class Getopt {
     std::vector<OptionsOrdered> &
                         ordinal(void) { return ov_; }
     OptionsOrdered &    ordinal(size_t idx) { return ov_[idx]; }
+    Getopt &            dump(Option::DumpOpt x = Option::strike, std::ostream &xout = std::cerr) {
+                         xout << "dump of parsed options:" << std::endl;
+                         for(auto &kv: om_) kv.second.dump(x, xout);
+                         return *this;
+                        }
+
 
     EXCEPTIONS(ThrowReason)
 
  protected:
     char                exception_;                             // option that generated exception
-    bool                throwException_{true};                  // let throw is a default behavior
+    bool                throw_exception_{true};                 // let throw is a default behavior
     bool                autohelp_{true};
     bool                variadic_{true};
                         // last argument can be variadic (accept multiple values), however,
@@ -456,6 +492,7 @@ Option & Option::hit(void) {
  // and update order of the option itself
  go_->ov_.emplace_back(id(), hits() + 1, go_);                  // update order of the option
  order_.push_back(go_->ov_.size() - 1);                         // update my order reference
+ if(kind() == arg) ++go_->arguments_;                           // if it's argument, increase cnt
  return *this;
 }
 
@@ -464,20 +501,19 @@ Option & Option::hit(void) {
 // for description of variables optreset, optind, optarg and optopt refer to description
 // of getopt() function. Those are external parameters which getopt sets and is based on
 
-//void Getopt::update_order_(short option) {
-// record given option into order vector - to keep track or options original order
-//}
-
-
 void Getopt::parse(int argc, char *argv[], const char *f) {
  // 1. recover format string from defined options (if any) - so that getopt could parse it
  // 2. generate auto-help (if -h given) and setup program name
  // 3. process input 'argv' array (via getopt call), then post process standalone arguments
- #ifndef __linux__
- optreset = 1;                                                  // allow multiple parsing
- #endif
- optind = 1;                                                    // - linux way to use optreset
  std::string fmt = recoverFormat_(f);                           // recovered format
+ #ifdef __linux__
+  if(optind != 0) optind = 1;                                   // linux way to rescan aruments
+  if(fmt.front() != '+') fmt = "+" + fmt;
+  // '+' in optstring: description at http://man7.org/linux/man-pages/man3/getopt.3.html
+ #else
+  optreset = 1;                                                 // allow multiple parsing
+  optind = 1;
+ #endif
 
  if(autohelp_) {
   if(fmt.find('h') != std::string::npos)
@@ -493,6 +529,9 @@ void Getopt::parse(int argc, char *argv[], const char *f) {
 
  parseInputArgs_(argc, argv, fmt);                              // process all inputs in argc/argv
  processStandalone_(argc, argv);                                // now process all args
+ #ifdef __linux__
+  optind = 0;
+ #endif
 }
 
 
@@ -506,10 +545,10 @@ void Getopt::parseInputArgs_(int argc, char *argv[], const std::string &fmt) {
    throw EXP(opt_argument_missing);                             // missing argument, forced ':'
 
   if(option == '?')                                             // '?' means invalid option
-   if(throwException_) {                                         // if throwing is allowed
-    exception_ = optopt;                                        //   optopt = either unknown option,
-    throw fmt.find(exception_) == std::string::npos?            //   (if not found in fmt string)
-           EXP(invalid_option): EXP(opt_argument_missing);      //   or missing arg, throw anyway
+   if(throw_exception_) {                                       // if throwing is allowed
+    exception_ = optopt;                                        //  optopt = either unknown option
+    throw fmt.find(exception_) == std::string::npos?            //  (if not found in fmt string)
+           EXP(invalid_option): EXP(opt_argument_missing);      //  or missing arg, throw anyway
    }                                                            // otherwise let user handle it
 
   if(optarg)                                                    // if option has argument
@@ -533,7 +572,7 @@ void Getopt::processStandalone_(int argc, char *argv[]) {
  int ha = 0;                                                    // ha: hyphen adjust
 
  for(int i = optind; i<argc; i++) {                             // process all standalone arguments
-  short idx = OPT_ARG_OFFSET + i - optind - ha;                 // arg index in the map (adjusted)
+  int idx = OPT_ARG_OFFSET + i - optind - ha;                   // arg index in the map (adjusted)
   if(argv[i][0] == '-' and argv[i][1] == '\0') {                // if arg is a bare qualifier '-'
    om_.at('-').hit();
    ++ha;
@@ -545,15 +584,14 @@ void Getopt::processStandalone_(int argc, char *argv[]) {
     throw EXP(too_many_arguments);                              // throw if not variadic
    if(idx == OPT_ARG_OFFSET)                                    // if it's a first argument
     om_.emplace(OPT_ARG_OFFSET, Option{OPT_ARG_OFFSET, this});  // record it,
-   om_.rbegin()->second = argv[i];                              // select last index (it's variadic)
+   om_.rbegin()->second = argv[i];                              // select last index, it's variadic
   }
   else                                                          // argument was defined
    om_.at(idx) = argv[i];
-  ++arguments_;
  } // for(...
 
  // now check if any mandatory arguments are missing
- for(auto &o: om_) {                                             // go through all the parsed option
+ for(auto &o: om_) {                                            // go through all the parsed option
   auto & opt = o.second;
   if(opt.kind() == Option::arg)                                 // argument defined/described
    if(opt.size() == 1 and opt.str(0).empty())                   // but its value is unset
@@ -580,7 +618,7 @@ class Option & Getopt::operator[](char opt) {
 class Option & Getopt::operator[](int opt) {
  // user access to the standalone arguments
 
- short idx = OPT_ARG_OFFSET + opt;
+ int idx = OPT_ARG_OFFSET + opt;
 
  if(om_.find(idx) != om_.end())                                 // argument is found (defined)
   return om_.at(idx);
@@ -617,7 +655,7 @@ void Getopt::usagePrintOptions_(std::stringstream &ss, int indent) {
  // print options only here
  std::stringstream os;
  os << " [-";
- for(auto &m: om_) {                                             // print boolean options first
+ for(auto &m: om_) {                                            // print boolean options first
   auto &opt = m.second;
   if(opt.type() != Option::boolean) continue;                   // process options w/a params here
   if(opt.id() == '-' ) continue;                                // skip input redirector
@@ -627,7 +665,7 @@ void Getopt::usagePrintOptions_(std::stringstream &ss, int indent) {
  outputOpt_(ss, indent, os.str());
  os.str(std::string());
 
- for(auto &m: om_) {                                             // print options with parameters
+ for(auto &m: om_) {                                            // print options with parameters
   auto &opt = m.second;
   if(opt.kind() == Option::arg) continue;
   if(opt.type() != Option::parametric) continue;
@@ -669,17 +707,17 @@ Getopt & Getopt::help(void) {
  // print help screen
  std::cout << prolog_ << std::endl;
 
- if(om_.size() - arguments()) {                                  // if any options deinfed
+ if(om_.size() - arguments()) {                                 // if any options deinfed
   std::cout << "optional arguments:" << std::endl;
 
-  for(auto &m: om_) {                                            // first print boolean options
+  for(auto &m: om_) {                                           // first print boolean options
    auto & opt = m.second;
    if(opt.id() == '-') continue;
    if(opt.type() == Option::boolean)
     optionHelpLine_(opt);
   }
 
-  for(auto &m: om_) {                                            // print parametrical options
+  for(auto &m: om_) {                                           // print parametrical options
    auto & opt = m.second;
    if(opt.kind() == Option::opt and opt.type() == Option::parametric)
     optionHelpLine_(opt);
@@ -732,28 +770,29 @@ std::string Getopt::recoverFormat_(const char *f) {
  if(om_.empty() and fmt.empty())
   throw EXP(format_missing);                                    // either must be defined
 
- for(auto &m: om_) {                                             // recover fmt from defined options
+ for(auto &m: om_) {                                            // recover fmt from defined options
   auto & opt = m.second;
   if(opt.kind() == Option::arg)
    continue;                                                    // process only options for now
 
-  if(fmt.find(opt.id()) == std::string::npos) {                  // if option is not in fmt yet - add
+  if(fmt.find(opt.id()) == std::string::npos) {                 // if option is not in fmt yet: add
+   if(opt.id() == '-') continue;                                // do not recover option '-'
    fmt += opt.id();
    if(opt.type() == Option::parametric)
     fmt += ':';
    continue;
   }
 
-  auto ops = fmt.find(opt.id());                                // option defined, check consistency
+  auto ops = fmt.find(opt.id());                                // option exists, check consistency
   if(not ((opt.type() == Option::boolean) xor (fmt[ops+1] == ':')))
    throw EXP(inconsistent_format_string);
  } // for(...
 
- auto itr = om_.begin();                                       // point to last found option
- for(auto ops: fmt)                                            // ensure all ops are booked, per fmt
+ auto itr = om_.begin();                                        // point to last found option
+ for(auto ops: fmt)                                             // ensure ops are booked, per fmt
   if(ops == ':')
-   itr->second.bind();                                         // make parametric
-  else                                                         // ops == ':', option is parametric
+   itr->second. bind();                                         // make parametric
+  else                                                          // ops == ':', option is parametric
    if(om_.count(ops) == 0)
     itr = om_.emplace(ops, Option{ops, this}).first;
    else

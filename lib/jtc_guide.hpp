@@ -1,283 +1,178 @@
+/*
+ * Created by Dmitry Lyssenko, 2018, ldn.softdev@gmail.com
+ *
+ * this is a mini guide to Jtc, includes:
+ *   o mini walk-path guide (wp_guide.hpp)
+ *   o short usage notes
+ *   o a limited set of examples
+ */
+#pragma once
+
 #include <iostream>
+#include "wp_guide.hpp"
 
-void guide_wp(void);
-void guide_un(void);
-void guide_ex(void);
+// facilitate option materialization
+#define XSTR(X) #X
+#define STR(X) XSTR(X)
+#define XCHR(X) *#X
+#define CHR(X) XCHR(X)
 
-int print_guide(void) {
- guide_wp();
- cout << endl;
 
- guide_un();
- cout << endl;
 
- guide_ex();
- cout << endl;
 
- return 0;
-}
 
-void guide_wp(void) {
- cout << R"(
+class GuideJtc {
+ // a singleton facilitating printing of a JTC guide (wp_guide, jtc_usage, jtc_examples)
+ public:
+    static GuideJtc &   instance(void)
+                         { static GuideJtc guide; return guide; }
+    void                print(void);
 
-  * Walk-path syntax:
+ private:
+                        GuideJtc(void) = default;
+                        GuideJtc(const GuideJtc &) = delete;
+     const GuideJtc &   operator=(const GuideJtc &) = delete;
 
-Walk-path made of various lexemes that instruct how to traverse JSON allows selecting a single or
-multiple elements from the input JSON
+    static std::string  jtc_usage_;
+    static std::string  jtc_examples_;
+};
 
-There are only 2 types of lexemes (though there're a few variants of each type):
- a) Subscript lexemes - provide addressing/subscripting JSON nodes
- b) Search lexemes - perform search down the JSON tree
 
-a. Subscript lexemes: enclosed into square braces '[', ']', their meaning depends on the content;
-   following notations are possible: '[]', '[text]', '[n]', '[-n]', '[^n]', '[+n]', '[N:N]'
-   - []: an empty offset, matches an empty label, like one in the following JSON:
-        { "": "empty label example" }
-   - [text]: the offset selects a child in the node by the label, e.g.: '[number]' selects the
-     element 3.14 in the following JSON:
-        { "number": 3.14, "false": true }
-   - [n]: plain numerical offset selects indexed element within an iterable (an iterable is either
-     a JSON array or an object), e.g.: '[1]' - selects a 2nd child of an array (or an object) node
-     (all indices and quantifiers in walk-path are zero based); in the above JSON, the element
-     by label "false" will be selected (i.e. value 'true'')
-   - [-n]: a negative numerical offset, backs off n levels up the JSON tree (from a given node);
-     e.g.: a path like '[0][0][-2]' digs 2 levels down the JSON tree and then selects back the
-     root node (i.e. ascends 2 levels/tiers up)
-   - [^n] numerical offsets with preceding circumflex do a similar thing as negative offsets, but
-     instead descends from the root; e.g.: following walk-paths results are equal: '[0][1]',
-     '[0][1][2][-1]', '[0][1][2][^2]'; n must be signless (cannot go negative in this type of
-     offset) preceding '+' is also not allowed;
-   - [+n]: a positive numerical offset makes the path iterable, e.g.: [+1] selects all immediate
-     children within a given JSON node (JSON array or object) staring from the 2nd child
-   - [N:N]: a range offset (same notation like in Python) - selects all elements in the specified
-     range. e.g.: [-3:] selects last 3 elements among JSON iterable's children; like in Python,
-     the '+','-' signs as well as the numerical indices of a range are optional, thus all of the
-     following notations are valid: '[:]', '[1:]', '[-2:]', '[+2:]', '[:3]', '[:-3]', '[+4:-5]'
-   Some notations may duplicate each other, e.g.:
-     '[+0]' and '[:]', or '[+2]' and '[2:]' have the same effect
 
-b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a recursive (or a
-   non-recursive) search under a given JSON tree point; following notation forms are possible:
-   '<txt>', '<txt>S', '<txt>N', '<txt>SN'
-   and the respective non-recursive search lexeme forms:
-   '>txt<', '>txt<S', '>txt<N', '>txt<SN'
-   where txt - is any text to search for, S - is an optional one letter suffix, N - is an optional
-   quantifier, which comes in several variants
-   - if a lexeme is given using '<..>' encasement, then a *recursive* search applied off the
-     current JSON node, otherwise (i.e. '>..<' encasement given) - a *non-recursive* search is
-     performed among immediate JSON node's children only
-   - '<a text>': performs a search of "a text" under a JSON tree off the given node among JSON
-     strings values only - it's a default behavior, which could be altered with an optional suffix
-   S: an optional one letter suffix, either of these: [rRdDbnlLaoicewjstqQvkzfFu], each one
-      altering the search in the following way:
-     r: apply exact match (default, may be omitted) while searching JSON string values only
-     R: same as r, but expression in braces is a Regex (regex match applied)
-     P: match any string, equals '<.*>R' but faster and let saving the value in a namespace
-     d: match a specific number (i.e. searches numeric JSON values only)
-     D: same as d, but expression in braces is a Regex (the value is treated as a string here)
-     N: numerical match, same as '<.*>D' but faster and let saving the value in a namespace
-     b: match a boolean (i.e. searching only boolean values), 'true'/'false' must be fully
-        spelled, while any other (including empty) lexeme content will memorize the boolean value
-        in the respective namespace, e.g.: '<true>b', '<false>b', '<>b', '<Bool>b'
-     n: match null values only, the content within the encasement may be empty, e.g.: '><n'
-     l: apply exact match while searching objects' labels only
-     L: same as l, but expression in braces is a Regex (a regex match applied)
-     a: match any atomic JSON value (string, numeric, boolean, null); the content within the
-        encasements may be empty (e.g.: '<>a')
-     o: match any object JSON value (i.e. '{..}'); the lexeme's content may be empty
-     i: match any array (indexable) JSON value (i.e. '[..]'); the content within the encasement
-        may be empty
-     c: match either arrays or objects; the content within the encasement may be empty
-     e: end-node match (matches leaves only) - matches either of: atomic, {}, []
-     w: wide range match - matches any JSON value (atomic, objects, arrays)
-     j: match user specific JSON value, the content within the encasement should be a valid
-        literal JSON value, e.g.: '<{ "pi": 3.14 }>j' - will find given JSON object; it's also
-        possible to specify a templated JSON, e.g.: '<{ "{lbl}": {{val}} }>j' to match JSON
-        dynamically based on the current namespace values
-     s: match a JSON value previously stored in a namespace, the lexeme content points to the
-        namespace
-     t: match a label/index value previously saved in a namespace, the lexeme must points to the
-        namespace, which should be JSON string or numeric type only
-     q: match only original JSON elements, every match is stored in the namespace, the lexeme
-        may be empty
-     Q: match all non-unique (duplicate) elements, every match is stored in the namespace, the
-        lexeme may be empty
+void GuideJtc::print(void) {
+ // print walk path guide (substitute all required tokens)
 
-   Following suffixes define lexemes as directives (which do not perform any search):
-     v: saves the most recent/found (or user-defined) JSON value into a namespace
-     k: if the lexeme is empty and walking has ended by exucuting it last (or before '><F'), then
-        then a label/index (if exists) is treated as a value (thus the label/index along can be
-        updated/extracted programmatically); if the lexeme's value is non-empty then it saves
-        the found label/index into the given namespace
-     z: erase namespace pointed by lexeme value; the lexeme cannot be empty
-     f: fail-stop (or fork): if walking lexemes past the fail-stop fails, instead of progressing
-        to the next iteration, a lexeme resolved JSON node (and path) at the fail-stop point will
-        be restored; when used together with `F` directive, the walking may either continues past
-        `F` directive, or stop at F directive
-     F: when spelled as '<>F' then upon walking instructs to skip to the next iteration; if
-        spelled as '><F' then instructs to stop walking (despite present further path); usage of
-        the lexeme is only meaningful when paired with `f` lexeme
-     u: validate currently walked JSON value via shell evaluation: if upon a shell evaluation the
-        value 0 (success) returned then walk continues past '<..>u' lexeme, otherwise walk fails
+ typedef std::pair<const char *, const char *> replace_token;
+ static const replace_token rtv[] = {                // replace-token vectors
+               {"%w", STR(OPT_WLK) }, {"%j", STR(OPT_JSN) }, {"%n", STR(OPT_SEQ) },
+               {"%c", STR(OPT_CMP) }, {"%s", STR(OPT_SWP) }, {"%l", STR(OPT_LBL) },
+               {"%i", STR(OPT_INS) }, {"%u", STR(OPT_UPD) }, {"%p", STR(OPT_PRG) },
+               {"%e", STR(OPT_EXE) }, {"%m", STR(OPT_MDF) }, {"%x", STR(OPT_CMN) },
+               {"%y", STR(OPT_PRT) }, {"%T", STR(OPT_TMP) }, {"%f", STR(OPT_FRC) }
+ };
+ auto replace = [] (const replace_token &rt) {
+                 GuideJtc::jtc_usage_ = std::regex_replace(GuideJtc::jtc_usage_,
+                                                           std::regex{rt.first}, rt.second);
+                 GuideJtc::jtc_examples_ = std::regex_replace(GuideJtc::jtc_examples_,
+                                                              std::regex{rt.first}, rt.second);
+                };
 
-   N: an integer quantifier specifying search match instance/range, comes in following variants
-     n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
-       a JSON tree (off a given search point); all quantifiers, as well as numerical subscripts
-       are zero based
-     +n - collects all matched encounters staring from index n, e.g.: '<a text>+2' will match 3rd
-       encounter of "a text", 4th, 5th and so on until all matches found
-     n:n - once ':' is sighted within a quantifier, then it specifies a range; the range
-       quantifiers follow the same notation/rules as subscript's range
+ for(const auto &rt: rtv)
+  replace(rt);
 
-   - the indices in quantifiers typically cannot go negative, with exceptions for search types
-     '>..<t' and '>..<l', where they signify a relative offset, so that it's possible to select
-     siblings of the found matches (see full user guide for explanation and use cases)
-   - following lexemes suffixes may stay empty ('<>', '><'): [naoicew], however, once a value is
-     given then it saves current JSON into a namespace; e.g., a walk-path: '<>i<array>v' could be
-     collapsed into '<array>i'
-   - these lexeme suffixes cannot be empty: [RdDbLjstqQv] and require some (respective) content
-   - all other lexemes [rlkzfF] might be be either empty or carry some value
-
-All lexeme types allow specifying inner brackets, however, the closing one has to be quoted with
-the preceding backslash, e.g.: '[case[0\]]' - specifies an offset lexeme to the label "case[0]";
-'<tag<a\>>' - denotes a search lexeme for the text "tag<a>"
-
-Spaces *between* lexemes are allowed and ignored; for the subscript lexemes even a more generic
-rule is in play: if a subscript lexeme violates any of the described above rules and does not
-represent a valid offset, then it's treated as a textual type of offset; e.g.: '[ 1]' and '[1 ]'
-are in fact respective textual offsets (labels) " 1" and "1 " rather than a numerical offset 1;
-'[^-3]', '[+-2]', are also examples of textual subscripts
-
-There're cases when JSON values have to be searched where they attached only to a specific label
-(a.k.a. scoped search), a following lexeme syntax facilitates such case: '[a label]:<some text>'
-- in that example "some text" will be searched (and matched) only among JSON values which are
-attached to the label "a label"; in that notation all suffixes (and quantifiers) are allowed
-except 'l', 'L' and 't', e.g.: '[age]:<25>j:' matches all JSON numerical values 25, where it's
-attached to the label "age" only
-)";
+ GuideWp::instance().print();
+ std::cout << GuideJtc::jtc_usage_ << std::endl;
+ std::cout << GuideJtc::jtc_examples_ << std::endl;
 }
 
 
 
-void guide_un(void) {
- cout << R"(
+std::string GuideJtc::jtc_usage_{R"(
 
   * Usage notes:
 
-multiple -)" STR(OPT_WLK) R"( usage:
- - if switch -)" STR(OPT_SEQ)
-   R"( is given, then all walk paths will be processed sequentially, otherwise, results
+multiple -%w usage:
+ - if switch -%n is given, then all walk paths will be processed sequentially, otherwise, results
    would be grouped by relevance and walks interleaved; the order of provided walks will be (if
    can be) honored
 
-options -)" STR(OPT_JSN) R"( and -)" STR(OPT_LBL) R"( usage:
- - when -)" STR(OPT_JSN) R"( is given w/o -)" STR(OPT_LBL)
-   R"(, then all walked elements will be collected into a JSON array; when
-   use together, all walked elements will be grouped into *relevant* objects within a parent array
- - when -)" STR(OPT_JSN) STR(OPT_JSN)
-   R"( is given, walked elements with labels only (thus elements in arrays and root ignored)
-   will be collected into JSON object; usage of options -)" STR(OPT_LBL) R"( and -)" STR(OPT_SEQ)
-   R"( in this case is moot
+options -%j and -%l usage:
+ - when -%j is given w/o -%l, then each walked elements will be encapsulate into a JSON array; when
+   used together, each walked elements will be grouped into relevant objects within a parent array
+ - when -%j%j is given, walked elements with labels only (thus elements in arrays and the root are
+   ignored) will be collected into JSON object; if used together with -%l%l then instead of
+   collecting walked elements by outer label, inner labels (and respective) elements within walked
+   objects will be collected
 
-mutually exclusive options:
- - options -)" STR(OPT_CMP) R"( -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(, -)"
-   STR(OPT_SWP) R"(, -)" STR(OPT_PRG)
-   R"( normally are mutually exclusive; if sighted together, only one type
-   will be executed (selected in the priority of the listed order); though there's one case usage
-   of -)" STR(OPT_PRG) R"( together with options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
-   R"( (facilitating move semantic), see notes below
+mutually exclusive primary operations:
+ - options -%c -%i, -%u, -%s, -%p normally are mutually exclusive; if sighted together, only one type
+   will be executed (selected in the priority of the listed order); though there's a case usage
+   of -%p together with options -%i, -%u (facilitating move semantic), see notes below
 
-options -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"( when used with -)" STR(OPT_EXE) R"(:
+options -%i, -%u when used with -%e:
  - the options accept one parameter which may be treated differently: initially a file name
    assumed; if the file is not found, then the parameter is treated as a JSON and its parsing is
    attempted; if parsing fails then a walk-path is assumed and if it fails an exception is thrown
- - when used together with  option -)" STR(OPT_EXE)
-   R"(, the latter must precede option -)" STR(OPT_INS) R"( or option -)" STR(OPT_UPD) R"(; in such
+ - when used together with  option -%e, the latter must precede option -%i or option -%u; in such
    case the parameter is subjected a for shell evaluation, but before that an interpolation occurs
    (see notes on the interpolation); the interpolated entry is completely escaped, thus does not
    require any additional quoting; all shell-specific chars (e.g.: '|', ';', '\"', etc) have to be
    quoted or escaped; terminate the cli line with trailing semicolon (which has to be escaped): \;
 
-option -)" STR(OPT_MDF) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(:
- - option -)" STR(OPT_MDF) R"( modifies behaviors of the these options:
-   for -)" STR(OPT_INS)
-           R"(: toggles "merge" semantic; by default -)" STR(OPT_INS)
-           R"( can insert its parameter only into iterables,
-           while with -)" STR(OPT_MDF)
-           R"(, the parameter is merged with the destined element(s), which could be any
+option -%m usage with -%i, -%u:
+ - option -%m modifies behaviors of the these options:
+   for -%i: toggles "merge" semantic; by default -%i can insert its parameter only into iterables,
+           while with -%m, the parameter is merged with the destined element(s), which could be any
            JSON type
-   for -)" STR(OPT_UPD)
-           R"(: toggles "merge" semantic instead of overwrite when updating;
- - due to a variety of combinations of sources -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
-   R"( and destination -)" STR(OPT_WLK) R"(, the number of various
+   for -%u: toggles "merge" semantic instead of overwrite when updating;
+ - due to a variety of combinations of sources -%i, -%u and destination -%w, the number of various
    operation possibilities is big, therefore it's easier to track it in the following table:
 
- * insert operation (-)" STR(OPT_INS) R"() without merge usage examples:
+ * insert operation (-%i) without merge usage examples:
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
     [1,2]     |      [1,2,[3,4]     |  [1,2,{"a":3,"c":4}]  | [1,2,{"a":3},{"c":4}] |   [1,2,3]
  {"a":1,"b":2}|    {"a":1,"b":2}    |  {"a":1,"b":2,"c":4}  |  {"a":1,"b":2,"c":4}  |{"a":1,"b":2}
      "a"      |         "a"         |          "a"          |          "a"          |     "a"
- * insert (-)" STR(OPT_INS) R"() with the merge (-)" STR(OPT_MDF) R"():
+ * insert (-%i) with the merge (-%m):
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
  -------------+---------------------+-----------------------+-----------------------+-------------
     [1,2]     |      [1,2,3,4]      |       [1,2,3,4]       |       [1,2,3,4]       |   [1,2,3]
  {"a":1,"b":2}|{"a":[1,3],"b":[2,4]}|{"a":[1,3],"b":2,"c":4}|{"a":[1,3],"b":2,"c":4}|{"a":1,"b":2}
      "a"      |      ["a",3,4]      |       ["a",3,4]       |       ["a",3,4]       |   ["a",3]
 
- * update operation (-)" STR(OPT_UPD) R"() without merge usage examples:
+ * update operation (-%u) without merge usage examples:
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |      3
 --------------+---------------------+-----------------------+-----------------------+-------------
     [1,2]     |        [3,4]        |     {"a":3,"c":4}     |           3           |      3
  {"a":1,"b":2}|        [3,4]        |     {"a":3,"c":4}     |           3           |      3
      "a"      |        [3,4]        |     {"a":3,"c":4}     |           3           |      3
- * update (-)" STR(OPT_UPD) R"() with the merge (-)" STR(OPT_MDF) R"():
+ * update (-%u) with the merge (-%m):
    to \ from  |        [3,4]        |     {"a":3,"c":4}     |         "a":3         |      3
 --------------+---------------------+-----------------------+-----------------------+-------------
     [1,2]     |        [3,4]        |         [3,4]         |         [3,2]         |    [3,2]
  {"a":1,"b":2}|    {"a":3,"b":4}    |  {"a":3,"b":2,"c":4}  |     {"a":3,"b":2}     |{"a":3,"b":2}
      "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |      3
 
-option -)" STR(OPT_PRG) R"( usage with -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD) R"(:
-  - if option -)" STR(OPT_PRG) R"( is sighted together with -)" STR(OPT_INS) R"(, or -)"
-    STR(OPT_UPD) R"( when the latter use a walk-path as a parameter
+option -%p usage with -%i, -%u:
+  - if option -%p is sighted together with -%i, or -%u when the latter use a walk-path as a parameter
     then the insert/update operations effectively turn into *move*: the source entries (parameters
-    of the -)" STR(OPT_INS) R"(, -)" STR(OPT_UPD)
-    R"() will be purged at the end of operation; if -)" STR(OPT_PRG) STR(OPT_PRG)
-    R"( is sighted, then everything else
-    is removed besides the destination locations (-)" STR(OPT_WLK) R"()
+    of the -%i, -%u) will be purged at the end of operation; if -%p%p is sighted, then everything else
+    is removed besides the destination locations (-%w)
 
-options -)" STR(OPT_CMN) R"( and -)" STR(OPT_PRT) R"( usage:
- - these options should be given together: one -)" STR(OPT_CMN) R"( per any number of -)"
-   STR(OPT_PRT) R"( options; each argument of
-   -)" STR(OPT_PRT) R"( will be prepended with preceding -)" STR(OPT_CMN)
-   R"(, together they will form an equivalent of -)" STR(OPT_WLK) R"(, e.g.:
-   -)" STR(OPT_CMN) R"(1 -)" STR(OPT_PRT) R"(A -)" STR(OPT_PRT) R"(B -)" STR(OPT_CMN) R"(2 -)"
-   STR(OPT_CMN) R"(3 -)" STR(OPT_PRT) R"(C is converted into: -)" STR(OPT_WLK) R"(1A -)"
-   STR(OPT_WLK) R"(1B -)" STR(OPT_WLK) R"(2 -)" STR(OPT_WLK) R"(3C; there's no syntax validation
-   in -)" STR(OPT_CMN) R"( and -)" STR(OPT_PRT)
-   R"( until they converted into the respective -)" STR(OPT_WLK)
-   R"( options, then walk validation occurs
+options -%x and -%y usage:
+ - these options should be given together: one -%x per any number of -%y options; each argument of
+   -%y will be prepended with preceding -%x, together they will form an equivalent of -%w, e.g.:
+   -%x1 -%yA -%yB -%x2 -%x3 -%yC is converted into: -%w1A -%w1B -%w2 -%w3C; there's no syntax validation
+   in -%x and -%y until they converted into the respective -%w options, then walk validation occurs
 
 interpolation:
- - interpolation may occur when using templates (-)" STR(OPT_TMP)
-   R"(), or in shell cli argument; the notation for
+ - interpolation may occur when using templates (-%T), or in shell cli argument; the notation for
    an interpolation is expressed in by tokens like {name}, or {{name}}. In the latter notation
    form the token gets interpolated from the namespace pointed by the token 'name' - the JSON
    element (in the namespace) being interpolated is preserved; in the former notation format, if
    JSON is a string, then outer quotation marks are dropped, if it's a JSON array or object, then
-   the respective encasements ('[', ']', or '{}'.'}') are dropped, so the user must specify those
+   the respective encasements ('[', ']', or '{', '}') are dropped, so the user must specify those
  - if an empty token is given (e.g.: {}, {{}}), then the interpolation of the currently selected
-   (walked) JSON element occurs (same interpolation rules apply)
-)";
-}
+   (walked) JSON element occurs (thw same interpolation rules apply)
+
+operations chaining:
+ - jtc normally performs one (primary) operation at a time; if multiple required those could be
+   chained up using shell piping, e.g.:
+      <stream.json jtc -J | jtc <..insert operation..> | jtc <..swap operation..> | etc
+   however, such approach is less preferable due to printing/parsing JSON in between each step,
+   the same could be performed using option set separator '/':
+      <stream.json jtc -J / <..insert operation..> / <..swap operation..> / etc
+   here, all operations are performed by a single jtc invocation, resulting in a much faster
+   performance, plus that way the namespace is common across all the steps, which allows achieving
+   operations with JSON otherwise unattainable in the former notation
+)"};
 
 
 
-void guide_ex(void) {
- cout << R"(
+std::string GuideJtc::jtc_examples_{R"(
 
-  * Some examples with explanations:
+  * Some examples and explanations:
   * - for a complete user guide visit:
   *   https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
 
@@ -301,69 +196,72 @@ void guide_ex(void) {
 
 
 - to select node "children" for the first record, run:
-    jtc -)" STR(OPT_WLK) R"( [Relation][0][children] example.json
+    jtc -%w[Relation][0][children] example.json
     [
        "Sophia",
        "Olivia"
     ]
+  the above example shows drilling through JSON structure, but the same could be achieved via
+  recursive search:
+    jtc -%w'<children>l' example.json
 
 
 - to select all children records individually (for the first record), run:
-    jtc -)" STR(OPT_WLK) R"( '[Relation][0][children][+0]' example.json
+    jtc -%w[Relation][0][children][:] example.json
     "Sophia"
     "Olivia"
+  or:
+    jtc -%w'<children>l[:]' example.json
+  or:
+    jtc -%w'<children>l<>P:' example.json
 
 
 - to select all children (for all records) and their parents as well, run:
-    jtc -)" STR(OPT_WLK) R"('[Relation][:][parent]' -)" STR(OPT_WLK)
-    R"('[Relation][:][children][:]' example.json
+    jtc -%w[Relation][:][parent] -%w[Relation][:][children][:] example.json
     "John Smith"
     "Sophia"
     "Olivia"
     "Anna Johnson"
     "John"
+  or:
+    jtc -w'<parent>l:' -w'<parent>l:[-1][children][:]' example.json
 
-the same could be achieved through a bit more succinct syntax:
-    jtc -)" STR(OPT_CMN) R"('[Relation][:]' -)" STR(OPT_PRT) R"([parent] -)" STR(OPT_PRT)
-    R"( '[children][:]' example.json
-Here, all concatenations of an option -)" STR(OPT_CMN) R"( with every option -)" STR(OPT_PRT)
-R"( is transformed into -)" STR(OPT_WLK) R"( then compiled
-and executed. That syntax is supposed to save the input space when a common path is present in
-multiple walks
+  the same could be achieved through a bit more succinct syntax:
+    jtc -%x'[Relation][:]' -%y[parent] -%y '[children][:]' example.json
+  or:
+    jtc -%x'<parent>l:' -%y' ' -%y'[-1][children][:]' example.json
+
+  Here, all concatenations of an option -%x with every option -%y is transformed into -%w then
+  compile and executed. That syntax is supposed to save the input space when a common path is
+  present in multiple walks
 
 
 - to select all children, from the node whose parent's name starts with "John", run:
-    jtc -)" STR(OPT_WLK) R"( '<^John>R[-1][children][:]' example.json
+    jtc -%w '<^John>R[-1][children][:]' example.json
     "Sophia"
     "Olivia"
 
-- however, the above walk syntax is prone to false positives, as it finds any string starting
-with "John"; to improve it, we have to ensure that the search is attached to the label, i.e.,
-'"parent": "John..."':
-    jtc -)" STR(OPT_WLK) R"( '[parent]:<^John>R[-1][children][:]' example.json
+  However, the above walk syntax might be prone to false positives, as it finds any string
+  starting with "John"; to improve it, we have to ensure that the search is attached to the label
+  (a.k.a. scoped search), i.e., '"parent": "John..."':
+    jtc -%w '[parent]:<^John>R[-1][children][:]' example.json
 
 
 - to add (insert) a child "James" to a parent whose name starts with "John" and reflect the
-changes right into the source file, run:
-    jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"('[parent]:<^John>R[-1][children]' -)"
-    STR(OPT_INS) R"('"James"' example.json; jtc example.json
+  changes right into the source file, run:
+    jtc -%f%w'[parent]:<^John>R[-1][children]' -%i'"James"' example.json
+    jtc -tc example.json
     {
        "Relation": [
           {
              "age": 31,
-             "children": [
-                "Sophia",
-                "Olivia",
-                "James"
-             ],
+             "children": [ "Sophia", "Olivia", "James", "James" ],
              "city": "New York",
              "parent": "John Smith"
           },
           {
              "age": 28,
-             "children": [
-                "John"
-             ],
+             "children": [ "John" ],
              "city": "Chicago",
              "parent": "Anna Johnson"
           }
@@ -371,26 +269,20 @@ changes right into the source file, run:
     }
 
 
-- to alter the parent's name from "John Smith" into "Jane Smith" run:
-    jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"( '<John Smith>' -)" STR(OPT_UPD)
-    R"( '"Jane Smith"' example.json; jtc example.json
+- to alter (rewrite) the parent's name from "John Smith" into "Jane Smith" run:
+    jtc -%f%w '<John Smith>' -%u '"Jane Smith"' example.json
+    jtc -tc example.json
     {
        "Relation": [
           {
              "age": 31,
-             "children": [
-                "Sophia",
-                "Olivia",
-                "James"
-             ],
+             "children": [ "Sophia", "Olivia", "James", "James" ],
              "city": "New York",
              "parent": "Jane Smith"
           },
           {
              "age": 28,
-             "children": [
-                "John"
-             ],
+             "children": [ "John" ],
              "city": "Chicago",
              "parent": "Anna Johnson"
           }
@@ -398,46 +290,72 @@ changes right into the source file, run:
     }
 
 
-- to add a new record:
-    jtc -)" STR(OPT_FRC) STR(OPT_WLK) R"('[parent]:<Jane Smith>[-1]' -)"
-    STR(OPT_INS) R"('{"Y-chromosome": true}' example.json; jtc example.json
+- to add a new record into a JSON node where parent is '"Jane Smith"':
+    jtc -tc -%w'[parent]:<Jane Smith>[-1]' -%i'{"gene": "Y"}' example.json
     {
        "Relation": [
           {
-             "Y-chromosome": true,
              "age": 31,
-             "children": [
-                "Sophia",
-                "Olivia",
-                "James"
-             ],
+             "children": [ "Sophia", "Olivia", "James", "James" ],
              "city": "New York",
+             "gene": "Y",
              "parent": "Jane Smith"
           },
           {
              "age": 28,
-             "children": [
-                "John"
-             ],
+             "children": [ "John" ],
              "city": "Chicago",
              "parent": "Anna Johnson"
           }
        ]
     }
 
+  However, that would add a record only to "Jane Smith" rendering the whole JOSN irregular.
+  It's possible to update all records conditionally: say, update all records with
+  '"gene": "X"', but the records containing word "Smith" with '"gene": "Y"':
+    jtc -%f%w'[Relation][:]<g:"X">f<\bSmith\b>R<g:"Y">v[-1]' -%i0 -%T'{"gene": "{g}"}' example.json
+    jtc -tc example.json
+    {
+       "Relation": [
+          {
+             "age": 31,
+             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "city": "New York",
+             "gene": "Y",
+             "parent": "Jane Smith"
+          },
+          {
+             "age": 28,
+             "children": [ "John" ],
+             "city": "Chicago",
+             "gene": "X",
+             "parent": "Anna Johnson"
+          }
+       ]
+    }
 
-- it's possible to wrap walked results back into JSON, with help of -)" STR(OPT_JSN) R"( option:
-    jtc -)" STR(OPT_WLK) R"('[Relation][:][parent]' -)" STR(OPT_JSN) R"( example.json
+    That conditional insertion is facilitated using a few tricks:
+    1. directive `<g:"X">f` facilitates 2 things at once: it sets up a namespace `g` to the value
+       "X" and provides walk branching - if subsequent walking fails, then currently walked
+       point will be restored
+    2. directive <g:"Y">v will rewrite namespace `g` predicated previous walk step was a success
+    3. Given we would need to apply template interpolation (to utilize the namespace `g`) the
+       insertion argument is irrelevant, hence '-i0' is given
+    4. Finally the template `-%T'{"gene": "{g}"}`` will expand into a relevant entry (before
+       insertion) facilitating interpolation of a namespace `g`
+
+
+- it's possible to wrap walked results back into JSON, with help of -%j option:
+    jtc -%w'[Relation][:][parent]' -%j example.json
     [
        "Jane Smith",
        "Anna Johnson"
     ]
 
 
-- if we throw in an option -)" STR(OPT_LBL)
-R"(, then output JSON format ensures that entries with labels will be
-grouped and displayed accordingly:
-    jtc -)" STR(OPT_WLK) R"('[Relation][+0][parent]' -)" STR(OPT_JSN) STR(OPT_LBL) R"( example.json
+- if we throw in an option -%l, then output JSON format ensures that entries with labels will be
+  grouped and displayed accordingly:
+    jtc -%w'[Relation][:][parent]' -%j%l example.json
     [
        {
           "parent": [
@@ -446,31 +364,27 @@ grouped and displayed accordingly:
           ]
        }
     ]
+  ors:
+    jtc -w'<parent>l:' -j example.json
 
 
 - an insert and update options could be subjected for a shell cli evaluation, e.g., say we want to
-capitalize all parent names in our JSON:
-    jtc -)" STR(OPT_WLK) R"('<parent>l:' -)" STR(OPT_EXE) STR(OPT_UPD)
-    R"( echo {{}} \| tr "[:lower:]" "[:upper:]" \; example.json
+  capitalize all parent names in our JSON:
+    jtc -tc -%w'<parent>l:' -%e%u echo {{}} \| tr "[:lower:]" "[:upper:]" \; example.json
     {
        "Relation": [
           {
-             "Y-chromosome": true,
              "age": 31,
-             "children": [
-                "Sophia",
-                "Olivia",
-                "James"
-             ],
+             "children": [ "Sophia", "Olivia", "James", "James" ],
              "city": "New York",
+             "gene": "Y",
              "parent": "JANE SMITH"
           },
           {
              "age": 28,
-             "children": [
-                "John"
-             ],
+             "children": [ "John" ],
              "city": "Chicago",
+             "gene": "X",
              "parent": "ANNA JOHNSON"
           }
        ]
@@ -478,41 +392,44 @@ capitalize all parent names in our JSON:
 
 
 - to add a child "Victoria" into each record, but as the first child use update operation with
-templating:
-    jtc -)" STR(OPT_WLK) R"('<children>)" STR(OPT_LBL) R"(:' -)" STR(OPT_UPD) R"('<children>)"
-    STR(OPT_LBL) R"(:' -)" STR(OPT_TMP) R"('["Victoria", {}]' example.json
+  templating:
+    jtc -tc -%w'<children>l:' -%u'<children>l:' -%T'["Victoria", {}]' example.json
     {
        "Relation": [
           {
-             "Y-chromosome": true,
              "age": 31,
-             "children": [
-                "Victoria",
-                "Sophia",
-                "Olivia",
-                "James"
-             ],
+             "children": [ "Victoria", "Sophia", "Olivia", "James", "James" ],
              "city": "New York",
+             "gene": "Y",
              "parent": "Jane Smith"
           },
           {
              "age": 28,
-             "children": [
-                "Victoria",
-                "John"
-             ],
+             "children": [ "Victoria", "John" ],
              "city": "Chicago",
+             "gene": "X",
              "parent": "Anna Johnson"
           }
        ]
     }
 
+  in that example, the destination point of an update (-%w), as well as the source point of the
+  update (-%u) are in the same input - `example.json`. In the template (-%T), the interpolation
+  of `{}` token will result in the bare array of "children", making resulting array carrying
+  "Victoria" as the first element
+
 
 * for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
-)";
-}
+)"};
 
 
+
+
+
+#undef XSTR
+#undef STR
+#undef XCHR
+#undef CHR
 
 
 

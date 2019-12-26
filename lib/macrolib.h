@@ -1,5 +1,5 @@
 /*
- * Created by Dmitry Lyssenko, last modified July 3, 2015
+ * Created by Dmitry Lyssenko
  *
  * definitions for x-macro interface.
  *
@@ -22,7 +22,7 @@
  *    cout << "all defined colors: " << MACRO_TO_ARGS(TO_COUT, COLORS) << endl;
  *
  * Output:
- *    all colors: Red Amber Blue
+ *    all defined colors: Red Amber Blue
  *
  *
  *
@@ -34,6 +34,11 @@
  *
  * Output:
  *    all colors: Red Amber Blue
+ *
+ *
+ *
+ * - The interfaces are defined to work with definitions up to 99 tokens, but easily
+ *   can be extended
  */
 
 

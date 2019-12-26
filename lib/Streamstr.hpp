@@ -13,6 +13,7 @@
 
 
 #define HB_SIZE 1024
+#define RB_SIZE 1024
 
 
 class Streamstr {
@@ -225,7 +226,7 @@ void Streamstr::ss_init_(const_iterator &it) {
  DBG(0) DOUT() << "initializing: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
  if(is_buffered_src()) return;                                  // buffered source
                                                                 // mod == stream
- if(mod_ == streamed_cin) {
+ if(is_streamed()) {
   std::cin.tie(nullptr);                                        // speedup cin
   std::cin >> std::noskipws;
   buf_.resize(1);
@@ -240,15 +241,29 @@ void Streamstr::ss_init_(const_iterator &it) {
  //        std::istream_iterator<char>{}};
 
  if(is_buffered_cin()) {                                        // buffered_cin
+  /*
   // reason for not reading cin through ifstream("/dev/stdin") - it will render code non-portable
+  // and tellg does not work with redirected stdout: ... | jtc
   GUARD(std::cin.tie, std::cin.tie)
+  GUARD(std::ios::sync_with_stdio, std::ios::sync_with_stdio)
   std::cin.tie(nullptr);                                        // speedup cin
+  std::ios::sync_with_stdio(false);                             // speedup cin
   buf_ = std::string{std::istream_iterator<char>(std::cin >> std::noskipws),
                      std::istream_iterator<char>{}};
+  */
+  // change of hearts: reading stdin in successive reads until EOF - almost as fast as file read
+  std::vector<std::vector<char>> aob;                           // array of buffers
+  std::ifstream fin("/dev/stdin", std::ios::in);
+  do {
+   aob.emplace_back(std::vector<char>(RB_SIZE));
+   fin.read(aob.back().data(), RB_SIZE - 1);
+  } while(not fin.eof());
+  buf_.reserve(aob.size() * (RB_SIZE - 1));
+  for(auto &b: aob) buf_ += b.data();
  }
  else                                                           // buffered_file
   do {
-   std::ifstream fin(fn_.front().c_str(), std::ios::in);
+   std::ifstream fin(fn_.front().c_str(), std::ios::in);        // read next file in fn_
    if(fin) {
     fin.seekg(0, std::ios::end);
     buf_.resize(fin.tellg());
@@ -256,6 +271,8 @@ void Streamstr::ss_init_(const_iterator &it) {
     fin.read(&buf_[0], buf_.size());
     cf_ = fn_.front();
    }
+   else
+    std::cerr << "error: could not open file '" <<  fn_.front() << "'" << std::endl;
    fn_.pop_front();
   } while(buf_.empty() and not fn_.empty());
 
@@ -329,6 +346,7 @@ std::string Streamstr::const_iterator::str(size_t len) const {
 
 
 #undef HB_SIZE
+#undef RB_SIZE
 
 
 

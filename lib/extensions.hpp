@@ -30,7 +30,7 @@
  *          cout << "All traffic-light colors:";
  *          for(int i=0; i<COUNT_ARGS(MY_COLORS); ++i)
  *           cout << ' ' << SomeClass::trafficLightColors_str[i];
- *           // or equally: cout << ' ' << STREN(trafficLightColors, i);
+ *           // or equally: cout << ' ' << ENUMS(trafficLightColors, i);
  *          cout << endl;
  *
  * Obvious caveat: enums declared that way do not allow value re-definition
@@ -46,8 +46,8 @@
 
 
 
-#define __COMMA_SEPARATED__(x) x,
-#define __STR_COMMA_SEPARATED__(x) #x,
+#define __COMMA_SEPARATED__(X) X,
+#define __STR_COMMA_SEPARATED__(X) #X,
 
 
 #define ENUM(enum_class, enums...) \
@@ -198,9 +198,12 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 
 
 /*
- * This interface provides a guard functionality for an arbitrary object:
- * it will preserve the object value upon interface declaration and will restore
- * the object value upon exiting the scope (GUARD's destruction);
+ * GUARD is a polymorphic macro allowing preserving and automatically reinstating the
+ * value of the preserved object accessed either by a reference, or via getters/setters
+ *
+ * 1. following GUARD interface provides a guard functionality for an arbitrary objects
+ * accessible by reference: it will preserve the object value upon interface declaration
+ * and will restore the object value upon exiting the scope (GUARD's destruction);
  *
  * Synopsis:
  *
@@ -219,8 +222,8 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
  *      x: 3.14
  *
  *
- * However, sometimes classes cater only getter and setter methods to access
- * their objects. For such case, the interface also provides a solution:
+ * 2. Sometimes classes cater only getter and setter methods to access
+ * their objects. For such case, this GUARD interface provides a solution:
  *
  *      class MyX {
  *       public:
@@ -261,11 +264,12 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 // the latter
 //
 // __GUARD_1_ARG__: declares a trivial class __Guard_X__, which stores object's
-// value and its pointer. Restoration of the object's value occurs upon __GUARD_1_ARG__'s
+// value and its pointer. Restoration of the object's value occurs upon __GUARD_X__'s
 // destruction
 //
 // __GUARD_2_ARG__: declares a child class of __Guard_X__, where it only captures
-// the value of the object through its getter.
+// the value of the object through its getter (in the constructor of the child class
+// xptr_ is getting nullified so that when destroyed the restoration at parent is skipped)
 // Restoration of the object is designed through capturing object's setter via lambda
 // and calling the lambda (i.e. object's setter effectively) with preserved value
 // in the destructor of the child class
@@ -280,11 +284,11 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
     struct __GUARD_TKN2__(__Guard_GS__, __LINE__): public __Guard_X__<decltype(X())> { \
         __GUARD_TKN2__(__Guard_GS__, __LINE__)(decltype(X()) __Guard_X_arg__, \
                                                std::function<void(decltype(X()))> __Guard_X_l__): \
-         __Guard_X__(__Guard_X_arg__), lambda{__Guard_X_l__} {} \
+         __Guard_X__(__Guard_X_arg__), lambda{__Guard_X_l__} { xptr_ = nullptr; } \
        ~__GUARD_TKN2__(__Guard_GS__, __LINE__)(void) { lambda(x_); }; \
         std::function<void (decltype(X()))> lambda; \
     } __GUARD_TKN2__(__my_Guard_GS__, __LINE__) \
-        {X(), [&](decltype(X()) __Guard_X_arg__) { Y(__Guard_X_arg__); } };
+        { X(), [&](decltype(X()) __Guard_X_arg__) { Y(__Guard_X_arg__); } };
 #define __GUARD_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
 #define __GUARD_CHOOSER__(args...) \
     __GUARD_4TH_ARG__(dummy, ##args, __GUARD_2_ARG__, __GUARD_1_ARG__)
@@ -296,13 +300,81 @@ template <typename T>
 class __Guard_X__ {
  // Guard class itself
  public:
+                        __Guard_X__(void) = delete;
                         __Guard_X__(T &__Guard_X_arg__):
                          x_{__Guard_X_arg__}, xptr_{&__Guard_X_arg__} {}
-                       ~__Guard_X__(void) { *xptr_ = x_; }
+                       ~__Guard_X__(void) { if(xptr_) *xptr_ = x_; }
  protected:
     typename std::remove_reference<T>::type     x_;
     typename std::remove_reference<T>::type *   xptr_;
 };
+
+
+
+
+
+/*
+ * A trivial SWAP macro facilitating plain `void swap(left, right)` operation:
+ *
+ * Synopsis:
+ * class my_class {
+ *  friend SWAP(my_class, a_, b_, c_)
+ *  ...
+ * }
+ *
+ * The above translates into:
+ * class my_class {
+ *  friend void swap(my_class &left, my_class &right) {
+ *   using std::swap;
+ *   swap(left.a_, right.a_);
+ *   swap(left.b_, right.b_);
+ *   swap(left.c_, right.c_);
+ *  }
+ *  ...
+ * }
+ *
+ *
+ * Another COPY macro defying a copy for all enumerated elements: void copy(left, const right)
+ * - similar to SWAP, but copies by value - to facilitate copying in non-default CC:
+ *
+ * Synopsis:
+ * class my_class {
+ *  friend COPY(my_class, a_, b_, c_)
+ *                      my_class(const my_class &rhs)  {        // CC
+ *                       copy(*this, rhs);
+ *                       ...
+ *                      }
+ *  ...
+ *  private:
+ *      some_type        a_, b_, c_;
+ * }
+ *
+ */
+
+#define __SWAP_PAIR__(X) swap(left.X, right.X);
+
+#define SWAP(TYPE, args...) \
+    void swap(TYPE &left, TYPE &right) \
+     { using std::swap; MACRO_TO_ARGS(__SWAP_PAIR__, args) }
+
+
+
+#define __COPY_VAR__(X) left.X = right.X;
+
+#define COPY(TYPE, args...) \
+    void copy(TYPE &left, const TYPE &right) \
+     { MACRO_TO_ARGS(__COPY_VAR__, args) }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
