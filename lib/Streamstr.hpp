@@ -44,7 +44,7 @@ class Streamstr {
                              size_t offset = len <= cur_? hb_.size(): cur_ + hb_.size() - len;
                              std::string s(&hb_[offset], hb_.size() - offset);
                              offset = len <= cur_? cur_ - len: 0;
-                             s += {&hb_[offset], cur_ - offset};
+                             s += std::string{&hb_[offset], cur_ - offset};
                              return s;
                             }
         const char &        chr(size_t offset = 0) const {
