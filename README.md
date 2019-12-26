@@ -1,6 +1,6 @@
 # `jtc` - cli tool to extract, manipulate and transform source JSON
 
-`jtc` stand for: _JSON transformational chains_ (used to be JSON test console).  
+`jtc` stand for: **_JSON transformational chains_** (used to be _JSON test console_).  
   
 `jtc` offers a powerful way to select one or multiple elements from a source JSON and apply various actions on the selected
 elements at once (wrap selected elements into a new JSON, filter in/out, sort elements, update elements, insert new elements,
