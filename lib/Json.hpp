@@ -2870,8 +2870,10 @@ void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
    { exp_ = jsp; throw EXP(Jnode::missed_prior_enumeration); }
 
-  auto res = node.children_().emplace(label.str(), child);
-  if(res.second == false and node.is_merging())
+  auto found = node.children_().find(label.str());
+  if(found == node.children_().end())
+   node.children_().emplace(std::move(label.str()), std::move(child));
+  else
    merge_(c2a, node, std::move(label), std::move(child));
   comma_read = false;
  }
