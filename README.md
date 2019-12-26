@@ -1,10 +1,10 @@
 # `jtc` - cli tool to extract, manipulate and transform source JSON
 
-`jtc` stand for: _JSON test console_, but it's a legacy name, don't get misled.  
+`jtc` stand for: _JSON transformational chains_ (used to be JSON test console).  
   
-`jtc` offers a powerful way to select one or multiple elements from a source JSON and apply various actions on the selected elements
-at once (wrap selected elements into a new JSON, filter in/out, update elements, insert new elements, remove, copy, move, compare,
-transform and swap around).
+`jtc` offers a powerful way to select one or multiple elements from a source JSON and apply various actions on the selected
+elements at once (wrap selected elements into a new JSON, filter in/out, sort elements, update elements, insert new elements,
+remove, copy, move, compare, transform, swap around and many other operations).
 
 ### Content:
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
@@ -27,9 +27,9 @@ transform and swap around).
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
 
 `jtc` offers following features (a short list of main features):
-  - simple user interface allowing applying a bulk of changes in one command
+  - simple user interface allowing applying a bulk of changes in a single or chained sets of commands 
   - featured walk-path interface lets extracting any combination of data from source JSON
-  - extracted data is representable either as it found, or encapsulated in JSON array/object
+  - extracted data is representable either as it found, or could be encapsulated in JSON array/object
   - support Regular Expressions when searching source JSON
   - fast and efficient processing very large JSON files (built-in search cache)
   - insert/updates operations optionally may undergo _shell cli_ evaluation
@@ -41,7 +41,7 @@ transform and swap around).
 
 Walk path feature is easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and **upwards**
-  - search lexemes - encased into `<`, `>`: search lexemes facilitate either full match or Regex search.
+  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively): search lexemes facilitate various match criteria defined by an optional suffix.
 
 Both types of lexemes are iterable - subscript let iterating over children of currently addressed iterables node (array/object),
 while iterable search lexemes let iterating over all matches for a given search criteria.
@@ -51,39 +51,36 @@ paths. See below more detailed explanation with examples
 
 ### Linux and MacOS precompiled binaries are available for download
 
-For compiling, `c++14` (or later) is required:
-  - to compile under MacOS, use cli:  
-      `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
-  - To compile under Linux, use cli:  
-      `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
+For compiling, `c++14` (or later) is required. To compile under different platforms:
+  - MacOS/BSD: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
+  - Linux: `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
+  - Debian: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
 there's no performance gain from doing so*
 
 or download the latest precompiled binary:
-- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.74/jtc-macos-64.v1.74)
-- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.74/jtc-linux-64.v1.74)
-- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.74/jtc-linux-32.v1.74)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-macos-64.v1.75)
+- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-linux-64.v1.75)
+- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-linux-32.v1.75)
 
 
 ### Compile and install instructions:
 
-download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using
-an appropriate command, move compiled file into an install location.
+download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using an appropriate command,
+move compiled file into an install location.
 
 here're the example steps for **MacOS**:
   - say, `jtc-master.zip` has been downloaded to a folder and the terminal app is open in that
 folder:
   - `unzip jtc-master.zip`
   - `cd jtc-master`
-  - `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
+  - `c++ -o jtc -Wall -std=c++17 -Ofast jtc.cpp`
   - `sudo mv ./jtc /usr/local/bin/`
 
-For **Linux** you'd have to compile using this line:
-- `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
 
 ### Release Notes
-See the latest [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
+See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases/tag/1.75a)
 
 
 ## Quick-start guide:
