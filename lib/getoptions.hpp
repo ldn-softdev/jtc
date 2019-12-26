@@ -436,7 +436,8 @@ class Getopt {
     iter_opt            begin(void) { return om_.begin(); }
     iter_opt            end(void) { return om_.end(); }
     Getopt &            reset(void) { 
-                         for(auto &om: om_) om.second.reset(); ov_.clear(); 
+                         for(auto &om: om_) om.second.reset();
+                         ov_.clear(); 
                          #ifdef __linux__
                           optind = 0;
                          #endif
