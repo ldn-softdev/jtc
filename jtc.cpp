@@ -877,7 +877,7 @@ char CommonResource::recompile_args_(v_string & args) {
    { new_args.push_back(arg); continue; }                       // push arg w/o any processing
 
   if(opt_eval) {                                                // facing -i/u; '\;' not found yet
-   if(arg.back() == ';')                                        // ';' found
+   if(arg == ";")                                               // terminating ';' found
     { semicolon_found = true; arg.pop_back(); }                 // trim trailing ';'
    if(not arg.empty())
     new_args.back() += string{(new_args.back().empty()? "":" ")} + arg;
@@ -892,8 +892,6 @@ char CommonResource::recompile_args_(v_string & args) {
      opt_eval = chr;
      new_args.push_back(arg.substr(0, &chr - arg.c_str() + 1)); // push options only, e.g.: "-eu"
      arg = arg.substr((&chr) - arg.c_str() + 1);
-     if(arg.back() != ';')  break;
-     semicolon_found = true; arg.pop_back();
      break;
     }
    }
