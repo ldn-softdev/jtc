@@ -24,7 +24,7 @@
 using namespace std;
 
 #define PRGNAME "JSON transformational chains"
-#define VERSION "1.75"
+#define VERSION "1.75b"
 #define CREATOR "Dmitry Lyssenko"
 #define EMAIL "ldn.softdev@gmail.com"
 
@@ -1226,7 +1226,6 @@ void Jtc::upsert_json(char op) {
            opt()[CHR(OPT_TMP)].hits() == wsrc_.size();
 
  walk_interleaved_(upsert_mtd[op == CHR(OPT_UPD)]);
- //if(ecli_ == false or not wsrc_.empty())                        // no -e, or -e with -i/u
  apply_src_walks(op);
 
  maybe_update_lbl_();                                           // will update lbl if any pending
@@ -1343,30 +1342,34 @@ void Jtc::apply_src_walks(char op) {
   if(jitt_ == Src_input and not pair.src.is_valid())
    { cerr << "error: src walk " << key_++ << " invalided by prior operations" << endl; continue; }
 
+  bool is_ecli_success;
   Json::iterator ewlk;
   if(ecli_)
-   { ecli_ &= execute_cli_(jsrc_[0], pair.src, pair.ns); ewlk = jsrc_[0].walk(); }
+   { is_ecli_success = execute_cli_(jsrc_[0], pair.src, pair.ns); ewlk = jsrc_[0].walk(); }
 
-  Json tmp;
-  tmp.type(Jnode::Neither).DBG().severity(NDBG);
+  if(not ecli_ or is_ecli_success) {
+  // i.e.: when globally shell eval is disabled, or in a given iteration it did not fail
+   Json tmp;
+   tmp.type(Jnode::Neither).DBG().severity(NDBG);
 
-  if(opt()[CHR(OPT_TMP)].hits() > 0) {                          // -T given
-   // if number of templates matches number of -[iu]<walk>s, then apply template per relevant walk
-   // otherwise apply templates round-robin
-   if(is_tpw_)                                                  // template per walk:
-    tpw_.emplace(pair.src.walk_id(),                            // relate interleaved walks to tmp
-                 tpw_.size() < opt()[CHR(OPT_TMP)].size() - 1?
-                  opt()[CHR(OPT_TMP)].str(tpw_.size() + 1): "");
-   else                                                         // circular templates
-    tpw_.emplace(upst_key_ % (opt()[CHR(OPT_TMP)].size() - 1),
-                  opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
-   size_t tmp_idx = is_tpw_?
-           pair.src.walk_id(): upst_key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
-   tmp = Json::interpolate(tpw_[tmp_idx], ecli_? ewlk: pair.src, pair.ns);
+   if(opt()[CHR(OPT_TMP)].hits() > 0) {                          // -T given
+    // if number of templates matches number of -[iu]<walk>s, then apply template per relevant walk
+    // otherwise apply templates round-robin
+    if(is_tpw_)                                                  // template per walk:
+     tpw_.emplace(pair.src.walk_id(),                            // relate interleaved walks to tmp
+                  tpw_.size() < opt()[CHR(OPT_TMP)].size() - 1?
+                   opt()[CHR(OPT_TMP)].str(tpw_.size() + 1): "");
+    else                                                         // circular templates
+     tpw_.emplace(upst_key_ % (opt()[CHR(OPT_TMP)].size() - 1),
+                   opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
+    size_t tmp_idx = is_tpw_?
+            pair.src.walk_id(): upst_key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
+    tmp = Json::interpolate(tpw_[tmp_idx], ecli_? ewlk: pair.src, pair.ns);
+   }
+
+   (this->*upsert[op == CHR(OPT_UPD)])                           // demux -i and -u
+    (pair.dst, not tmp.is_neither()? tmp.walk(): ecli_? ewlk: pair.src, &pair.lbl);
   }
-
-  (this->*upsert[op == CHR(OPT_UPD)])                           // demux -i and -u
-   (pair.dst, not tmp.is_neither()? tmp.walk(): ecli_? ewlk: pair.src, &pair.lbl);
 
   vsrc[key_] = move(psrc_[key_]);
   ++key_;
