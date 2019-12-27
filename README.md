@@ -9,6 +9,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
 ### Content:
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc#linux-and-macos-precompiled-binaries-are-available-for-download)
+    * [Installing via MacPorts](https://github.com/ldn-softdev/jtc#installing-via-macports)
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
     * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
@@ -63,6 +64,15 @@ or download the latest precompiled binary:
 - _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-macos-64.v1.75)
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-linux-64.v1.75)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75a/jtc-linux-32.v1.75)
+
+### Installing via MacPorts
+
+On macOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
+
+``` ShellSession
+$ sudo port selfupdate
+$ sudo port install jtc
+```
 
 
 ### Compile and install instructions:
