@@ -222,7 +222,7 @@ class Option {
                         // size: the number of times the value was recorded for given parametric
                         // option/argument, size is always >= 1 (due to a reserved place for a
                         // default value)
-    size_t              hits(void) const { return order_.size()-1; }
+    size_t              hits(void) const { return order_.size() - 1; }
                         // hits: the number of times given option was given (boolean/parametric)
     size_t              ordinal(long i = -1) const
                          { return order_[mod_(order_.size(), i)]; }
@@ -236,9 +236,7 @@ class Option {
                         // str() and c_str() let inspect any recorded option parameters/arguments,
                         // including a default value (if set). by default, str() and c_str()
                         // return the last set value (including default)
-    Option &            reset(void)
-                         { val_.resize(1); order_.resize(1); return *this; }
-                        // reset to the state after setup and before parse
+    Option &            reset(void);
 
     // methods to iterate over parametric option values, skip default value
     iter_opt            begin(void) { return ++val_.begin(); }
@@ -273,6 +271,7 @@ STRINGIFY(Option::ArgKind, ARGKIND)
 #undef ARGKIND
 
 
+
 Option & Option::bind(const std::string &deflt) {
  // calling bind() sets default value for the option and makes option 'parametric'
  if(not deflt.empty())
@@ -280,6 +279,7 @@ Option & Option::bind(const std::string &deflt) {
  ot_ = parametric;
  return *this;
 }
+
 
 
 Option & Option::name(const std::string &n) {
@@ -290,6 +290,7 @@ Option & Option::name(const std::string &n) {
 }
 
 
+
 Option & Option::operator=(const std::string &v) {
  // append a new value to the option (and make it parametric)
  val_.push_back(v);
@@ -297,6 +298,7 @@ Option & Option::operator=(const std::string &v) {
  hit();
  return *this;
 }
+
 
 
 Option & Option::dump(DumpOpt x, std::ostream &xout) {
@@ -326,6 +328,7 @@ Option & Option::dump(DumpOpt x, std::ostream &xout) {
 }
 
 
+
 std::ostream & operator<<(std::ostream & os, const Option & opt) {
  return opt.type() == Option::boolean? os << opt.hits(): os << opt.c_str();
 }
@@ -350,7 +353,7 @@ class Getopt {
 
      public:
                             OptionsOrdered(void) = default;                     // DC
-                            OptionsOrdered(int opt, size_t cnt, Getopt *go):    // Custom Const.
+                            OptionsOrdered(int opt, size_t cnt, Getopt *go):    // for emplacement
                              opt_{opt}, cnt_{cnt}, go_(go) {}
                             OptionsOrdered(const OptionsOrdered &) = default;   // CC
                             OptionsOrdered(OptionsOrdered && o) noexcept        // MC
@@ -435,13 +438,13 @@ class Getopt {
     Getopt &            help(void);                             // auto-generated help
     iter_opt            begin(void) { return om_.begin(); }
     iter_opt            end(void) { return om_.end(); }
-    Getopt &            reset(void) { 
+    Getopt &            reset(void) {
                          for(auto &om: om_) om.second.reset();
                          ov_.clear();
                          #ifdef __linux__
                           optind = 0;
                          #endif
-                         return *this; 
+                         return *this;
                         }
     bool                defined(char opt) const { return om_.count(opt) == 1; }
     std::vector<OptionsOrdered> &
@@ -504,6 +507,21 @@ Option & Option::hit(void) {
 
 
 
+Option & Option::reset(void) {
+ // reset to the state after setup and before parse
+ val_.resize(1);
+ order_.resize(1);
+
+ decltype(go_->ov_) new_ov;
+ for(auto &opt: go_->ov_)
+  if(opt.id() != id()) new_ov.push_back(std::move(opt));
+ go_->ov_ = std::move(new_ov);
+
+ return *this;
+}
+
+
+
 // for description of variables optreset, optind, optarg and optopt refer to description
 // of getopt() function. Those are external parameters which getopt sets and is based on
 
@@ -541,6 +559,7 @@ void Getopt::parse(int argc, char *argv[], const char *f) {
 }
 
 
+
 void Getopt::parseInputArgs_(int argc, char *argv[], const std::string &fmt) {
  // parse all provided arguments with getopt():
  // extract option one by one, create Option container out of extracted values
@@ -569,6 +588,7 @@ void Getopt::parseInputArgs_(int argc, char *argv[], const std::string &fmt) {
  om_.emplace('-', Option{'-', this});
  // boolean option '-' is always defined, however hit count let user know if it's ever hit
 }
+
 
 
 void Getopt::processStandalone_(int argc, char *argv[]) {
@@ -606,6 +626,7 @@ void Getopt::processStandalone_(int argc, char *argv[]) {
 }
 
 
+
 class Option & Getopt::operator[](char opt) {
  // user access to the option. If undefined option is accessed after parsing
  // the program will throw (deemed to be a programming error)
@@ -639,6 +660,7 @@ class Option & Getopt::operator[](int opt) {
 }
 
 
+
 Getopt & Getopt::usage(void) {
  // print usage on the console: first go options then arguments
  std::stringstream ss;
@@ -655,6 +677,7 @@ Getopt & Getopt::usage(void) {
  std::cout << ss.str() << std::endl;
  return *this;
 }
+
 
 
 void Getopt::usagePrintOptions_(std::stringstream &ss, int indent) {
@@ -682,6 +705,7 @@ void Getopt::usagePrintOptions_(std::stringstream &ss, int indent) {
 }
 
 
+
 void Getopt::usagePrintArgs_(std::stringstream &ss, int indent) {
  // print arguments taking into account possible variadic behavior of the last argument
  bool noneDefined = true;
@@ -707,6 +731,7 @@ void Getopt::usagePrintArgs_(std::stringstream &ss, int indent) {
 
  if(noneDefined and variadic_) std::cout << " ...";
 }
+
 
 
 Getopt & Getopt::help(void) {
@@ -745,6 +770,7 @@ Getopt & Getopt::help(void) {
 }
 
 
+
 void Getopt::optionHelpLine_(const Option & opt) {
  // printing options help line
  std::stringstream out;
@@ -766,6 +792,7 @@ void Getopt::optionHelpLine_(const Option & opt) {
 
  std::cout << out.str() << std::endl;
 }
+
 
 
 std::string Getopt::recoverFormat_(const char *f) {
@@ -808,12 +835,14 @@ std::string Getopt::recoverFormat_(const char *f) {
 }
 
 
+
 unsigned Getopt::countArgs_(void) {
  // counts defined standalone args (i.e. before parsing)
  return
   std::count_if(om_.begin(), om_.end(),
            [](const auto &p) { return p.second.kind()==Option::arg; } );
 }
+
 
 
 void Getopt::outputOpt_(std::stringstream &ss, int indent, const std::string &str) {

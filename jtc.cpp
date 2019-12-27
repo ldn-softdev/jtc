@@ -229,7 +229,8 @@ class CommonResource {
     void                display_opts(std::ostream & out);
     bool                is_decomposed_first(void) { return opp_ == &vopt_.front(); }
     bool                is_decomposed_last(void) { return opp_ == &vopt_.back(); }
-    void                init_decomposed(void) { opp_ = &vopt_.front(); }
+    void                init_decomposed(void);
+    CommonResource &    last_decomposed(void) {  opp_ = &vopt_.back(); return *this; };
     size_t              total_decomposed(void) { return vopt_.size(); }
     size_t              decomposed_idx(void) {
                          for(size_t i = 0; i < vopt_.size(); ++i)
@@ -349,15 +350,15 @@ class Jtc {
                                    opt()[CHR(OPT_SEQ)].hits() < 2 and
                                    opt()[CHR(OPT_TMP)].hits() == opt()[CHR(OPT_WLK)].hits();
                          // ready jinp_
-                         jinp_.tab(opt()[CHR(OPT_IND)].hits() > 0 or not opt()[CHR(OPT_RAW)]?
-                                    abs(opt()[CHR(OPT_IND)].str() == STR(IND_SFX)?
+                         jinp_.tab(opt()[CHR(OPT_IND)].hits() > 0 or                // -t given, or
+                                   opt()[CHR(OPT_RAW)].hits() == 0?                 // no -r given
+                                    abs(opt()[CHR(OPT_IND)].str() == STR(IND_SFX)?  // -tc?
                                          atoi(opt()[CHR(OPT_IND)].c_str(0)):
                                          static_cast<int>(opt()[CHR(OPT_IND)])): 1)
                               .merge_clashing(opt()[CHR(OPT_MDF)].hits() >= 2)
-                              .raw(opt()[CHR(OPT_RAW)])
+                              .raw(opt()[CHR(OPT_RAW)].hits() % 2)
                               .semicompact(opt()[CHR(OPT_IND)].str().back() == CHR(IND_SFX))
                               .quote_solidus(opt()[CHR(OPT_QUT)].hits() % 2 == 1);
-
                          jinp_.callback(GLAMBDA(shell_callback_)).engage_callbacks();
                         }
 
@@ -597,7 +598,7 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 
  if(cr.global_json().empty()) exit(cr.rc());
 
- Jtc jtc(cr);                                                   // global (-J) resulting json
+ Jtc jtc(cr.last_decomposed());                                 // need for access to write_json()
  for(const char *o = STR(OPT_JAL) STR(OPT_JSN) STR(OPT_QUT) STR(OPT_RAW); *o != NULL_CHR; ++o)
   jtc.opt()[*o].reset();                                        // above options to be ignored
  jtc.write_json(cr.global_json());
@@ -716,6 +717,37 @@ void CommonResource::decompose_opt(int argc, char *argv[]) {
 
 
 
+void CommonResource::init_decomposed(void) {
+ // init opp_ point to the front decomposed set,
+ // also remove non-transient options single -r, -t, -q, '-', -f from interims sets
+ // - bare qualifier '-' allowed only in 1st set and not in the others
+ for(auto &opt: vopt_)
+  for(const char *o = STR(OPT_RAW) STR(OPT_IND) STR(OPT_QUT)
+                       STR(OPT_FRC) STR(OPT_RDT); *o != NULL_CHR; ++o) {
+   if(&opt == &vopt_.front())                                   // handle 1st set
+    if(*o == CHR(OPT_RDT)) continue;                            // '-' allowed only in 1st set
+
+   if(&opt == &vopt_.back())                                    // handle last set
+    if(*o == CHR(OPT_RDT) and opt[*o].hits() > 0) {
+     cerr << "notice: ignoring qualifier " << *o << " in non-initial set" << endl;
+     opt[*o].reset();
+     continue;
+    }
+
+   if(&opt != &vopt_.back()) {                                  // handle interim sets
+    if(opt[*o].hits() > 0)
+     cerr << "notice: ignoring non-transient option(s) "
+          << (*o == CHR(OPT_RDT)? "":"-") << *o << " in interim set" << endl;
+    opt[*o].reset();
+    continue;
+   }
+  }
+
+ opp_ = &vopt_.front();
+}
+
+
+
 void CommonResource::display_opts(std::ostream & out) {
  // display all options
  for(size_t i = 0; i < vopt_.size(); ++i) {
@@ -827,7 +859,7 @@ Streamstr & CommonResource::read_inputs(void) {
 void CommonResource::jsonize(Json jout) {
  #include "lib/dbgflow.hpp"
  // put all walked json results into a global json
- if(opt().imposed(CHR(OPT_JSN))) {                              // -j was imposed by -J
+ if(opt().imposed(CHR(OPT_JSN)) and jout.is_iterable()) {       // -j imposed by -J & not -rr
   for(auto &jn: jout)                                           // therefore push one by one
    global_json().push_back(move(jn));
   return;
