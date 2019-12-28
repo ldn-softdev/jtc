@@ -190,7 +190,7 @@ bash $
 ```
 
 By default, the compact prniting view will use a single space as a spacer between all tokens, that also could be controlled if `-r` and `-t` used together, e.g. to print the above JSON w/o spacer:
-```
+```bash
 bash $ <ab.json jtc -rt0
 {"Directory":[{"address":{"city":"New York","postal code":10012,"state":"NY","street address":"599 Lafayette St"},"age":25,"children":["Olivia"],"name":"John","phone":[{"number":"112-555-1234","type":"mobile"},{"number":"113-123-2368","type":"mobile"}],"spouse":"Martha"},{"address":{"city":"Seattle","postal code":98104,"state":"WA","street address":"5423 Madison St"},"age":31,"children":[],"name":"Ivan","phone":[{"number":"273-923-6483","type":"home"},{"number":"223-283-0372","type":"mobile"}],"spouse":null},{"address":{"city":"Denver","postal code":80206,"state":"CO","street address":"6213 E Colfax Ave"},"age":25,"children":["Robert","Lila"],"name":"Jane","phone":[{"number":"358-303-0373","type":"office"},{"number":"333-638-0238","type":"home"}],"spouse":"Chuck"}]}
 bash $ 
@@ -245,20 +245,21 @@ bash $
 
 
 ### Printing JSON size
-JSON size is the total number of the JSON elements found within JSON, it could be printed using `-z`, the size appears after JSON
-is printed:
-```
-bash $ <ab.json jtc -r -z
+JSON size is the total number of the JSON elements found within JSON, it could be printed using `-z`, the size appears after input JSON
+is printed (starting from version 1.75b the size is printed in a JSON format):
+```bash
+bash $ <ab.json jtc -rz
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
-size: 56
-bash $
+{ "size": 56 }
+bash $ 
 ```
-if size only required, then use `-zz` option:
-```
+if size only required (i.e., w/o printing the input JSON), then use `-zz` option:
+```bash
 bash $ <ab.json jtc -zz
 56
 bash $ 
 ```
+
 
 ### Validating JSON
 When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, the short exception
