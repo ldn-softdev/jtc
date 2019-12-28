@@ -90,7 +90,7 @@ using namespace std;
 
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
-#define JTCS_PFX "{ size: "
+#define JTCS_PFX "{ \"size\": "
 #define JTCS_SFX " }"
 #define WLK_HPFX "$?"
 #define USE_HPFX -1
