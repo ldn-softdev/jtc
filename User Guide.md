@@ -1,9 +1,9 @@
-
-# [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75, being updated_)
+# User Guide: [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75, being updated_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
    * [Compact printing (`-r`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing)
+   * [Semi-compact printing (`-tNc`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#semi-compact-printing)   
    * [Printing JSON size (`-z`, `-zz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
    * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
    * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
@@ -80,9 +80,9 @@
 
 ## Displaying JSON
 ### Pretty printing
-if no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file pointed by the argument.
+if no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the argument.
 `jtc` will parse and validate input JSON and upon a successful validation will output:
-```
+```bash
 bash $ <ab.json jtc
 {
    "Directory": [
@@ -162,7 +162,7 @@ bash $ <ab.json jtc
 bash $
 ```
 option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
-```
+```bash
 bash $ <ab.json jtc -t 10
 {
           "Directory": [
@@ -182,12 +182,67 @@ bash $ <ab.json jtc -t 10
 Majority of the examples and explanations in this document are based on the above simplified version of the above address book JSON model.
 
 ### Compact printing
-option `-r` will instruct to display JSON in a compact (one-row) format:
-```
+option `-r` will instruct to display JSON in a compact (single row) format:
+```bash
 bash $ <ab.json jtc -r
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
 bash $
 ```
+
+By default, the compact prniting view will use a single space as a spacer between all tokens, that also could be controlled if `-r` and `-t` used together, e.g. to print the above JSON w/o spacer:
+```
+bash $ <ab.json jtc -rt0
+{"Directory":[{"address":{"city":"New York","postal code":10012,"state":"NY","street address":"599 Lafayette St"},"age":25,"children":["Olivia"],"name":"John","phone":[{"number":"112-555-1234","type":"mobile"},{"number":"113-123-2368","type":"mobile"}],"spouse":"Martha"},{"address":{"city":"Seattle","postal code":98104,"state":"WA","street address":"5423 Madison St"},"age":31,"children":[],"name":"Ivan","phone":[{"number":"273-923-6483","type":"home"},{"number":"223-283-0372","type":"mobile"}],"spouse":null},{"address":{"city":"Denver","postal code":80206,"state":"CO","street address":"6213 E Colfax Ave"},"age":25,"children":["Robert","Lila"],"name":"Jane","phone":[{"number":"358-303-0373","type":"office"},{"number":"333-638-0238","type":"home"}],"spouse":"Chuck"}]}
+bash $ 
+```
+
+
+### Semi-compact printing
+A semi-compact view is a middle ground between pretty and compact views. The semi-compact view is engaged with the suffix -`c` appended
+to the indent value in `-t` option (e.g.: `-t5c`) . In the semi-compact view all _JSON iterables_ made of only _atomic values_ and/or
+empty iterables (`[]`, `{}`) will be printed in a single line, the rest if pretty-printed, compare:
+```bash
+bash $ <ab.json jtc -tc
+{
+   "Directory": [
+      {
+         "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" },
+         "age": 25,
+         "children": [ "Olivia" ],
+         "name": "John",
+         "phone": [
+            { "number": "112-555-1234", "type": "mobile" },
+            { "number": "113-123-2368", "type": "mobile" }
+         ],
+         "spouse": "Martha"
+      },
+      {
+         "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
+         "age": 31,
+         "children": [],
+         "name": "Ivan",
+         "phone": [
+            { "number": "273-923-6483", "type": "home" },
+            { "number": "223-283-0372", "type": "mobile" }
+         ],
+         "spouse": null
+      },
+      {
+         "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
+         "age": 25,
+         "children": [ "Robert", "Lila" ],
+         "name": "Jane",
+         "phone": [
+            { "number": "358-303-0373", "type": "office" },
+            { "number": "333-638-0238", "type": "home" }
+         ],
+         "spouse": "Chuck"
+      }
+   ]
+}
+bash $ 
+```
+
 
 ### Printing JSON size
 JSON size is the total number of the JSON elements found within JSON, it could be printed using `-z`, the size appears after JSON
