@@ -332,7 +332,7 @@ bash $
 ```
 
 When unquoting an empty _JSON string_ (`""`) the resulted blank lines are not even printed:
-```
+```bash
 bash $ <<<'[null, "", true]' jtc -w[:] -qq
 null
 true
@@ -349,7 +349,7 @@ option `-qq` is silently ignored
 ### Stringifying JSON
 An opposite request is to string-quote a JSON itself (e.g. if you like to embed JSON as a string into another JSON). This is
 achieved with the option notation `-rr`:
-```
+```bash
 bash $ <<<'[ "JSON", "example" ]' jtc
 [
    "JSON",
@@ -361,7 +361,7 @@ bash $ <<<'[ "JSON", "example" ]' jtc -rr
 bash $
 ```
 
-B.t.w, both _string unquoting and _JSON stringification_ also could be achieved via 
+B.t.w, both _string unquoting_ and _JSON stringification_ also could be achieved via 
 [template operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified).
 
 
