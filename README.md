@@ -169,22 +169,6 @@ c. `[children]`: **select/address** a node whose label is `"children"` (it'll be
 d. `[:]`: select **each node** in the array  
 e. `[name]`: select/address a node whose label is `"name"` 
 
-- subscript offsets are always enclosed into square brackets `[..]` and may have different meaning:
-  * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child by the given index
-  in the addressed node - a.k.a. _numerical subscripts_
-  * slice/range offsets, expressed as `[N:M:S]` let selecting any slice/range of element in the array/object (any of `N`,`M`,`S` could be
-  omitted in that notation), where `N` is the start index, `M` is the index next after last, `S` is a step
-  * alterniatively, numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
-given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) - such notation is the 
-exact equivalent of `[N:]`
-  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of a currently selected/found node, a parent
-  of a parent, etc
-  * numerical offsets prepended with the caret char (e.g.`[^0]`, `[^1]`, etc ) also allows selecting a parent of a currently found node, however, unlike the negative offet, does it by using an index off the root rather than the index off the leaf, e.g.: `[^0]` always
-  selects the root
-  * literal offsets (e.g.: `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
-immediate children (i.e. literal subscripts)
-
-_*** there's more on offsets and search quantifiers below_
 
 in order to understand better how the walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
 to the path one by one, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
@@ -258,7 +242,7 @@ bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 ```
 this walk path `<url>l:[-1][name]`:
 
- - finds recursively (encasement `<`, `>`) all (`:`) JSON elements with a label (`l`) matching `url`
+ - finds recursively (encasement `<`, `>`) each (`:`) JSON element with a label (`l`) matching `url`
  - then for an each found JSON element, select its parent (`[-1]`)
  - then, select a JSON element with the label `"name"` (encasement `[`, `]`)
 
@@ -301,18 +285,18 @@ In short:
 - Subscript lexemes (`[..]`) facilitate:
     - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
     from the root (toward leaves), e.g.: `[2]`, `[id]` 
-    - addressing parents (immediate and distant) - i.e. traverse JSON structure upwards, toward the the root (from leaves),
-    e.g.:  `[-1]` (tier offset from the walked element), `[^2]` (tier offset from the root)
+    - addressing parents (immediate and distant) - i.e. traverse JSON structure **upwards**, toward the the root (from leaves),
+    e.g.:  `[-1]` (tier offset from the currently walked/found element), `[^2]` (tier offset from the root towards walked/found element)
     - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1:2]` 
 - Search lexemes (`<..>`, `>..<`) facilitate:
     - recursive (`<..>`) and non-recursive (`>..<`) matches
     - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
     search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs, 
     unique, duplicates, sorted match, etc.
-    - there're also optional quantifiers to search lexemes (must take the last position, after the suffix if one present) - let selecting
-    match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`; if no quantifier present `0` 
-    is assumed - first match)
-- subscript lexemes could be joined with search lexemes over ':' to facilitate _scoped search_, e.g.: `[id]:<value>` is a single
+    - there're also optional quantifiers to search lexemes (must take the last position in the search lexeme, after the suffix
+    if one present) - let selecting match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`;
+    if no quantifier present `0` is assumed - first match)
+- a subscript lexeme could be grouped with a search lexeme over ':' to facilitate a **_scoped search_**, e.g.: `[id]:<value>` is a single
    lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e. `"id": "value"`
 - Directives: there are a few suffixes which turn a search lexeme into a directive:
     - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
@@ -324,15 +308,14 @@ Refer to
 for the detailed explanation of the subscripts, search lexemes and directives.
 
 ### 6. Debugability / JSON validation
-`jtc` is extensively debuggable: the more times option `-d` is passed the more debugs will be produced (currently debug depth may go
-as deep as 7: `-ddddddd`).
+`jtc` is extensively debuggable: the more times option `-d` is passed the more debugs will be produced.
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating
 a failing JSON:
 ```bash
 bash $ <addressbook-sample.json jtc 
 jtc json exception: expected_json_value
 ```
-If JSON is big, it's desirable to locate the parsing failure point. Specifying just one `-d` let easily spotting the
+If JSON is big, it's desirable to locate the parsing failure point. Passing just one `-d` let easily spotting the
 parsing failure point and its locus:
 ```bash
 bash $ <addressbook-sample.json jtc -d
@@ -376,7 +359,6 @@ int main(int argc, char *argv[]) {
  jin["AddressBook"].clear().push_back( move(srt) );                             // put back into the original container
  cout << jin.tab(3) << endl;                                                    // and print using indentation 3
 }
-
 ```
 
 Address Book JSON:
@@ -521,7 +503,7 @@ aiming to provide a user tool which would let attaining the desired result in a 
  - **jq** is a stateful processor with own DSL, variables, operations, control flow logic, IO system, etc, etc
  - `jtc` is a unix utility confining its functionality to operation types with its data model only (as per unix ideology). `jtc`
  performs one major operation at a time (like insertion, update, swap, etc), however multiple operations could be chained
- using `/` separator
+ using `/` delimiter
 
 **jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
@@ -533,31 +515,31 @@ to facilitate even simple queries for **jq** is huge - that's the proof in itsel
 asks with **jq** is a way too low, hence they default to posting their questions on the forum.
 
 `jtc` on the other hand is a utility (not a language), which employs a novel but powerful concept, which "embeds" the ask right into the
-walk-path. That facilitates a much higher feasibility of attaining a desired result: building a walk-path lexeme by lexeme, 
+_walk-path_. That facilitates a much higher feasibility of attaining a desired result: building a walk-path a lexeme by lexeme, 
 one at a time, provides an immediate visual feedback and let coming up with the desired result rather quickly.
 
 
 ### learning curve:
  - **jq**: before you could come up with a query to handle even a relatively simple ask, you need to become an expert in 
- **jq** language, which will take some time. Coming up with the complex queries requires it seems having a PhD in **jq**, or spending 
+ **jq** language, which will take some time. Coming up with the complex queries requires what it seems having a PhD in **jq**, or spending 
  lots of time on stackoverflow and similar forums
- - `jtc` employs only a single (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
- each type though has several variants) which is easy to grasp.
+ - `jtc` employs only a simple (but powerful) concept of the _walk-path_ (which is made only of 2 types of lexemes,
+ each type though has several variants) which is quite easy to grasp.
 
 
 ### handling irregular JSONs:
  - **jq**: handling irregular JSONs for **jq** is not a challenge, building a query is! The more irregularities you need
  to handle the more challenging the query (**jq** program) becomes
  - `jtc` was conceived with the idea of being capable of handling complex irregular JSONs with a simplified interface - that all is
- fitted into the concept of the _walk-path_, while daisy-chaining multiple `jtc` operations it's possible to satisfy almost every ask. 
+ fitted into the concept of the _walk-path_, while daisy-chaining multiple operations is possible to satisfy almost every ask. 
 
 
 ### programming model
  - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
  ([here's what I mean](https://github.com/ldn-softdev/cpluspus-vs-c))
- - `jtc` is written in idiomatic _C++14_ using STL only. `jtc` does not have a single naked memory allocation operator
+ - `jtc` is written in the idiomatic _C++14_ using STL only. `jtc` does not have a single naked memory allocation operator
  (those few `new` operators required for legacy interface are implemented as _guards_),
- nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory leaks** 
+ nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory/resourses leaks** 
  (at least one class of the problems is off the table) - **STL guaranty**.  
  Also, `jtc` is written in a very portable way, it should not cause problems compiling it under any unix like system.
 
@@ -568,8 +550,8 @@ one at a time, provides an immediate visual feedback and let coming up with the 
      - is not compliant with JSON definition of the numerical values
      - it has problems retaining required precision
      - might change original representation of numericals
- - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original symbolical format, so it's free of
- all the above caveats:
+ - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original literal format, so it's free of
+ all the above caveats, compare:
  
  Handling | `jtc` | **jq** 
  --- | ---: | :---
