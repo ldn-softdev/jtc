@@ -80,7 +80,7 @@
 
 ## Displaying JSON
 ### Pretty printing
-if no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the argument.
+If no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the argument.
 `jtc` will parse and validate input JSON and upon a successful validation will output:
 ```bash
 bash $ <ab.json jtc
@@ -182,7 +182,7 @@ bash $ <ab.json jtc -t 10
 Majority of the examples and explanations in this document are based on the above simplified version of the above address book JSON model.
 
 ### Compact printing
-option `-r` will instruct to display JSON in a compact (single row) format:
+Option `-r` will instruct to display JSON in a compact (single row) format:
 ```bash
 bash $ <ab.json jtc -r
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
@@ -262,32 +262,33 @@ bash $
 
 
 ### Validating JSON
-When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, the short exception
+When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, a short exception
 message will be displayed, e.g,:
-```
+```bash
 bash $ <ab.json jtc
-jtc json exception: unexpected_end_of_line
-bash $
+jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
+bash $ 
 ```
-though the message let us know that there's a problem with the input JSON, it not very informative with regard whereabouts the
-the problem. An easy way to see the spot where the problem and its locus is via debug (`-d`):
-```
+and though the message lets us knowing that there's a problem with the input JSON, it not very informative with regards whereabouts the
+the problem. To visualize the spot where the problem is, as well as its locus pass a single debug option (`-d`):
+```bash
 bash $ <ab.json jtc -d
+.display_opts(), option set[0]: -d (internally imposed: )
 .read_inputs(), reading json from <stdin>
-.parsejson(), exception locus: ... Ave",|          "state": "CO,|          "postal code": 80206...
-.location_(), exception spot: --------------------------------->| (offset: 1150)
-jtc json exception: unexpected_end_of_line
+.location_(), exception locus: ...206,|            "state": "CO,|            "street address": ...
+.location_(), exception spot: --------------------------------->| (offset: 1214)
+jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
 bash $ 
 ```
 the vertical pipe symbol `|` in the debug showing JSON replaces new lines, thus it becomes easy to spot the problem. 
-The offset (`1150`) is given in _unicode UTF-8_ characters from the beginning of the input/file/stream. In that particular failure 
-instance, `jtc` found the end of a line, while _JSON string_ `"Co,` is still open (JSON standard does not permit multi-line strings).
-To fix that, the missing quotation mark to be added
+The offset (`1214` in the example) is given in _unicode UTF-8_ characters from the beginning of the input/file/stream.
+In that particular failure instance, `jtc` found the end of a line, while _JSON string_ `"Co,` is still open (JSON standard does not
+permit multi-line strings). To fix that, the missing quotation mark to be added
 
 ### Forcing strict solidus parsing
 JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
 both unescaped and escaped appearances:
-```
+```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc
 {
    "escaped": "\/",
@@ -297,26 +298,27 @@ bash $
 ```
 If there's a need for a strict solidus parsing, option `-q` facilitates the need. It also will throw an exception upon facing
 a non-escaped notation:
-```
+```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc -q -d
-.read_json(), start parsing json from <stdin>
-.read_json(), exception locus: { "escaped": "\/", "unescaped": "/" }|
+.display_opts(), option set[0]: -q -d (internally imposed: )
+.read_inputs(), reading json from <stdin>
+.location_(), exception locus: { "escaped": "\/", "unescaped": "/" }|
 .location_(), exception spot: --------------------------------->| (offset: 33)
-jtc json exception: unquoted_character
+jtc json parsing exception (<stdin>:33): unquoted_character
 bash $ 
 ```
 
 ### Unquoting JSON strings
-If a JSON itself (or a result of JSON walking) is a single JSON string, then sometimes there's a need to unquote it
-(especially handy it comes if the string itself is an embedded JSON). `-qq` allows unquoting it, here are a few examples:
-```
+If a JSON itself (or a result from walking JSON) is a single JSON string, then sometimes there's a need to unquote it
+(especially it comes handy if the string itself is an embedded JSON). `-qq` allows unquoting it, here are a few examples:
+```bash
 bash $ <<<'"{ \"JSON\": \"example of an embedded JSON\" }"' jtc
 "{ \"JSON\": \"example of an embedded JSON\" }"
 bash $ 
 bash $ <<<'"{ \"JSON\": \"example of an embedded JSON\" }"' jtc -qq
 { "JSON": "example of an embedded JSON" }
 bash $ 
-bash $ <<<$(<<<'"{ \"JSON\": \"example of an embedded JSON\" }"' jtc -qq) jtc
+bash $ <<<'"{ \"JSON\": \"example of an embedded JSON\" }"' jtc -qq | jtc
 {
    "JSON": "example of an embedded JSON"
 }
@@ -337,8 +339,8 @@ true
 bash $ 
 ```
 
-NOTE: _the option notation `-qq` will not engulf a single notation `-q`, if both behaviors are required then both variants have
-to be specified (e.g. `jtc -q -qq`, or `jtc -qqq`)_  
+NOTE: _the option notation `-qq` will not engulf a single option notation `-q`, if both behaviors are required then both variants have
+to be spelled (e.g. `jtc -q -qq`, or `jtc -qqq`)_  
 
 Also, `-qq` is incompatible with `-j`, `-J` options, because of a risk of ill-formed JSON, thus, when sighted together
 option `-qq` is silently ignored
@@ -346,7 +348,7 @@ option `-qq` is silently ignored
 
 ### Stringifying JSON
 An opposite request is to string-quote a JSON itself (e.g. if you like to embed JSON as a string into another JSON). This is
-achieved with option notation `-rr`:
+achieved with the option notation `-rr`:
 ```
 bash $ <<<'[ "JSON", "example" ]' jtc
 [
@@ -358,6 +360,9 @@ bash $ <<<'[ "JSON", "example" ]' jtc -rr
 "[ \"JSON\", \"example\" ]"
 bash $
 ```
+
+B.t.w, both _string unquoting and _JSON stringification_ also could be achieved via 
+[template operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified).
 
 
 ## Walking JSON
