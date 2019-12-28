@@ -1744,13 +1744,13 @@ class Json {
     Jnode::iterator     end(void) { return root().end(); }
   Jnode::const_iterator end(void) const { return root().end(); }
   Jnode::const_iterator cend(void) const { return root().cend(); }
-    Json &              erase(Jnode::iterator & it) { root().erase(it); return *this; };
-    Json &              erase(Jnode::const_iterator & it) { root().erase(it); return *this; };
-    size_t              count(const std::string & l) const { return root().count(l); };
+    Json &              erase(Jnode::iterator & it) { root().erase(it); return *this; }
+    Json &              erase(Jnode::const_iterator & it) { root().erase(it); return *this; }
+    size_t              count(const std::string & l) const { return root().count(l); }
     Jnode::iterator     find(const std::string & l) { return root().find(l); }
   Jnode::const_iterator find(const std::string & l) const { return root().find(l); }
     Jnode::iterator     find(size_t i) { return root().find(i); }
-  Jnode::const_iterator find(size_t i) const { return root().find(i); };
+  Jnode::const_iterator find(size_t i) const { return root().find(i); }
 
     bool                is_merging(void) const { return root().is_merging(); }
     Json &              merge_clashing(bool x = true) { root().merge_clashing(x); return *this; }
@@ -2643,7 +2643,7 @@ static const std::regex outer_string_re_;                       // RE to check i
                          return ce_;
                         }
     Json &              engage_callbacks(bool x = true)         // engage/disengage all callbacks
-                         { ce_ = x; return *this; };
+                         { ce_ = x; return *this; }
     Json &              clear_callbacks(CallbackType ct = Any_callback) {
                          if(ct == Any_callback or ct == Label_callback) lcb_.clear();
                          if(ct == Any_callback or ct == Walk_callback) wcb_.clear();

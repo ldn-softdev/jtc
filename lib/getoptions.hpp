@@ -531,7 +531,7 @@ void Getopt::parse(int argc, char *argv[], const char *f) {
  // 3. process input 'argv' array (via getopt call), then post process standalone arguments
  std::string fmt = recoverFormat_(f);                           // recovered format
  #ifdef __linux__
-  if(optind != 0) optind = 1;                                   // linux way to rescan aruments
+  if(optind != 0) optind = 1;                                   // linux way to rescan arguments
   if(fmt.front() != '+') fmt = "+" + fmt;
   // '+' in optstring: description at http://man7.org/linux/man-pages/man3/getopt.3.html
  #else
@@ -809,7 +809,6 @@ std::string Getopt::recoverFormat_(const char *f) {
    continue;                                                    // process only options for now
 
   if(fmt.find(opt.id()) == std::string::npos) {                 // if option is not in fmt yet: add
-   if(opt.id() == '-') continue;                                // do not recover option '-'
    fmt += opt.id();
    if(opt.type() == Option::parametric)
     fmt += ':';
@@ -824,7 +823,7 @@ std::string Getopt::recoverFormat_(const char *f) {
  auto itr = om_.begin();                                        // point to last found option
  for(auto ops: fmt)                                             // ensure ops are booked, per fmt
   if(ops == ':')
-   itr->second. bind();                                         // make parametric
+   itr->second.bind();                                          // make parametric
   else                                                          // ops == ':', option is parametric
    if(om_.count(ops) == 0)
     itr = om_.emplace(ops, Option{ops, this}).first;

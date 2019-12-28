@@ -86,10 +86,12 @@ using namespace std;
 #define SQTE_CHR '\''
 #define DQTE_CHR '"'
 #define SPCE_CHR ' '
+#define DCMP_CHR "/"
 
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
-#define SIZE_PFX "size: "
+#define JTCS_PFX "{ size: "
+#define JTCS_SFX " }"
 #define WLK_HPFX "$?"
 #define USE_HPFX -1
 
@@ -170,7 +172,7 @@ class GETopt: public Getopt {
     set<char> &         imp(void)
                          { return imp_; }
     auto &              wm(void)
-                         { return wm_; };
+                         { return wm_; }
     char                opt_eval(void) const
                          { return opt_eval_; }
     void                opt_eval(char x)
@@ -218,10 +220,13 @@ class CommonResource {
 
     int                 rc(void) const { return rc_; }
     void                rc(int rc) { rc_ = rc; }
-    GETopt &            opt(void) { return *opp_; };             // access to Getopt class instance
-    Json::map_jn &      global_ns(void) {  return gns_; };      // access to global namespaces
-    Streamstr &         iss(void) {  return iss_; };            // access to stream class
-    Json &              global_json(void) { return gjsn_; };    // access to global JSON (-J)
+    GETopt &            opt(signed_size_t x = -1) {              // access to Getopt class instance
+                         if(x < 0 or x >= vopt_.size()) return *opp_;
+                         return vopt_[x];
+                        }
+    Json::map_jn &      global_ns(void) {  return gns_; }       // access to global namespaces
+    Streamstr &         iss(void) {  return iss_; }             // access to stream class
+    Json &              global_json(void) { return gjsn_; }     // access to global JSON (-J)
     size_t              elocation(void) { return elocation_; }
     void                elocation(size_t x) { elocation_ = x; }
 
@@ -230,7 +235,7 @@ class CommonResource {
     bool                is_decomposed_first(void) { return opp_ == &vopt_.front(); }
     bool                is_decomposed_last(void) { return opp_ == &vopt_.back(); }
     void                init_decomposed(void);
-    CommonResource &    last_decomposed(void) {  opp_ = &vopt_.back(); return *this; };
+    CommonResource &    last_decomposed(void) {  opp_ = &vopt_.back(); return *this; }
     size_t              total_decomposed(void) { return vopt_.size(); }
     size_t              decomposed_idx(void) {
                          for(size_t i = 0; i < vopt_.size(); ++i)
@@ -247,7 +252,7 @@ class CommonResource {
     void                disable_global_output(void);
     Streamstr &         read_inputs(void);
     void                jsonize(Json jout);
-    auto &              wm(void) { return wm_; };
+    auto &              wm(void) { return wm_; }
 
  private:
     bool                is_recompile_required_(const v_string & args);
@@ -364,7 +369,7 @@ class Jtc {
 
 
     // expose private objects
-    GETopt &            opt(void) { return cr_.opt(); }
+    GETopt &            opt(signed_size_t x = -1) { return cr_.opt(x); }
     auto &              json(void) { return jinp_; }
     auto &              jout(void) { return jout_; }
 
@@ -682,14 +687,17 @@ void CommonResource::decompose_opt(int argc, char *argv[]) {
   newargs.clear();
   char chr_eval = parse_opt(args);                              // returns '\0', or 'i', or 'u'
 
-  if(opt().arguments() and opt()[0].str(1) == "/") {            // found '/' delimiter, decompose
+  if(opt().arguments() and opt()[0].str(1) == DCMP_CHR) {       // found '/' delimiter, decompose
    newargs.push_back(move(args[0]));                            // move progname to newargs
    args.clear();
    args.push_back(newargs[0]);                                  // reinstate progname in args
+
    for(auto & o: opt().ordinal())                               // copy all options to newargs
-    if(o.kind() == Option::opt)
-     { newargs.push_back(string{"-"} + static_cast<char>(o.id()));      // copy option, e.g. "-i"
-       if(o.type() == Option::parametric) newargs.push_back(o.str()); } // copy argument e.g. "[]"
+    if(o.kind() == Option::opt) {
+     newargs.push_back(string{o.id() == CHR(OPT_RDT)? "": "-"} + static_cast<char>(o.id()));
+     if(o.type() == Option::parametric) newargs.push_back(o.str()); // copy argument e.g. "[]"
+    }
+
    for(int i = 2; i <= opt().arguments(); ++i)                  // copy now all values to args
     args.push_back(opt()[0].str(i));                            // excluding first '/' argument
    if(newargs.size() > 1) {                                     // re-parse if there are any params
@@ -697,6 +705,7 @@ void CommonResource::decompose_opt(int argc, char *argv[]) {
     parse_arguments_(newargs);
    }
   }
+
   if(newargs.size() != 1) {                                     // record only if newargs is empty
    vopt_.push_back(opt());                                      // or has arguments (b/s progname)
    vopt_.back().opt_eval(chr_eval);
@@ -719,7 +728,7 @@ void CommonResource::decompose_opt(int argc, char *argv[]) {
 
 void CommonResource::init_decomposed(void) {
  // init opp_ point to the front decomposed set,
- // also remove non-transient options single -r, -t, -q, '-', -f from interims sets
+ // also remove non-transient options single -l, -r, -t, -q, '-', -f from interims sets
  // - bare qualifier '-' allowed only in 1st set and not in the others
  for(auto &opt: vopt_)
   for(const char *o = STR(OPT_RAW) STR(OPT_IND) STR(OPT_QUT)
@@ -729,7 +738,7 @@ void CommonResource::init_decomposed(void) {
 
    if(&opt == &vopt_.back())                                    // handle last set
     if(*o == CHR(OPT_RDT) and opt[*o].hits() > 0) {
-     cerr << "notice: ignoring qualifier " << *o << " in non-initial set" << endl;
+     cerr << "notice: ignoring qualifier '" << *o << "' in a non-initial option set" << endl;
      opt[*o].reset();
      continue;
     }
@@ -737,11 +746,17 @@ void CommonResource::init_decomposed(void) {
    if(&opt != &vopt_.back()) {                                  // handle interim sets
     if(opt[*o].hits() > 0)
      cerr << "notice: ignoring non-transient option(s) "
-          << (*o == CHR(OPT_RDT)? "":"-") << *o << " in interim set" << endl;
+          << (*o == CHR(OPT_RDT)? "":"-") << *o << " in an interim option set" << endl;
     opt[*o].reset();
     continue;
    }
   }
+
+ auto & last_opt = opt(total_decomposed() - 1);
+ if(last_opt[CHR(OPT_FRC)].hits() > 0 and opt(0)[0].hits() > 1) {   // disable -f if multiple files
+  cerr << "notice: ignoring option -" STR(OPT_FRC) " b/c of multi-file processing" << endl;
+  last_opt[CHR(OPT_FRC)].reset();
+ }
 
  opp_ = &vopt_.front();
 }
@@ -756,10 +771,10 @@ void CommonResource::display_opts(std::ostream & out) {
   out << DBG_PROMPT(0) << "option set[" << i << "]:";
   for(size_t j = 0; j < opt.ordinal().size(); ++j)
    if(opt.ordinal(j).id() < 256)
-    out << " -" << (char)opt.ordinal(j).id()
-        << (opt.ordinal(j).type() == Option::boolean? string{}: " " + opt.ordinal(j).str());
+    out << (opt.ordinal(j).id()==CHR(OPT_RDT)? " ": " -") << (char)opt.ordinal(j).id()
+        << (opt.ordinal(j).type() == Option::boolean? string{}: "'" + opt.ordinal(j).str() + "'");
    else
-    out << " " << opt.ordinal(j).c_str();
+    out << " '" << opt.ordinal(j).c_str() << "'";
 
   out << " (internally imposed:";
   for(auto &i: opt.imp()) cerr << " -" << i;
@@ -785,12 +800,6 @@ char CommonResource::parse_opt(v_string & args) {
 
  if(opt()[CHR(OPT_JAL)].hits() > 0)                             // -J - insert -j, -a
   enable_global_output();
-
- if(opt()[CHR(OPT_ALL)].hits() > 0 and
-   opt().imposed(CHR(OPT_ALL)) == false and opt()[CHR(OPT_FRC)].hits() > 0) {
-  cerr << "notice: ignoring option -" STR(OPT_FRC) " b/c of multi-input processing" << endl;
-  opt()[CHR(OPT_FRC)].reset();                                  // -a (-J), ensure -f ignored
- }
 
  for(auto &o: opt()[CHR(OPT_TMP)])
   if(o.find(string{"{}"} + WLK_HPFX + "}" ) != string::npos)
@@ -1075,7 +1084,8 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
  if(opt()[CHR(OPT_SZE)].hits() > 1)                             // -zz
   { cout << json.size() << endl; return; }
 
- bool write_to_file{opt()[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
+ bool write_to_file{opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
+      // filename is in the 1st set of arguments, while -f is in the last
  bool unquote{opt()[CHR(OPT_QUT)].hits() >= 2};                 // -qq given, unquote
  bool inquote{opt()[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
 
@@ -1092,7 +1102,10 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
  if(opt()[CHR(OPT_JAL)].hits() > 0)                             // -J, jsonize to global, defer
   { cr_.jsonize(move(json)); return; }                          // output until all JSON processed
 
- ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr};
+ static ios_base::openmode mod = ios_base::out;                 // first time re-write file
+ ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr, mod};
+ if(mod == ios_base::out) mod |= ios_base::app;                 // next time - append
+
  ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
 
  if(unquote and json.is_string())
@@ -1100,7 +1113,7 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
  else xout << json << endl;
 
  if(opt()[CHR(OPT_SZE)])
-  cout << SIZE_PFX << json.size() << endl;
+  xout << JTCS_PFX << json.size() << JTCS_SFX << endl;
 }
 
 
@@ -2179,24 +2192,30 @@ void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
  bool measure{opt()[CHR(OPT_SZE)].hits() >= 1};                 // -z
  size_t size{0};
 
+ bool write_to_file{opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
+ static ios_base::openmode mod = ios_base::out;                 // first time re-write file
+ ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr, mod};
+ if(mod == ios_base::out) mod |= ios_base::app;                 // next time - append
+ ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
+
  Jnode dummy = ARY{nullptr};
  for(auto itl = (glean_lbls? src: dummy).begin(); itl != (glean_lbls? src: dummy).end(); ++itl) {
   auto & srr = glean_lbls? *itl: src;                           // source reference
   bool unquote{opt()[CHR(OPT_QUT)].hits() >= 2};                 // -qq given, unquote
 
   if(opt()[CHR(OPT_LBL)] and srr.has_label())                   // -l given
-   { cout << '"' << srr.label() << "\": ";  unquote = false; }  // then print label (if present)
+   { xout << '"' << srr.label() << "\": ";  unquote = false; }  // then print label (if present)
   if(unquote and srr.is_string())                               // don't try collapsing it into
-   { if(not srr.str().empty()) cout << json().unquote_str(srr.str()) << endl; }
+   { if(not srr.str().empty()) xout << json().unquote_str(srr.str()) << endl; }
   else {
-   if(inquote) cout << '"' << json().inquote_str(srr.to_string(Jnode::Raw)) << '"' << endl;
-   else cout << srr << endl;                                      // a single operation!
+   if(inquote) xout << '"' << json().inquote_str(srr.to_string(Jnode::Raw)) << '"' << endl;
+   else xout << srr << endl;                                      // a single operation!
   }
   if(measure) size += srr.size();
  }
 
  if(measure)                                                    // -z given
-  cout << SIZE_PFX << size << endl;
+  xout << JTCS_PFX << size << JTCS_SFX << endl;
 }
 
 

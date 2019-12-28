@@ -79,7 +79,7 @@ class Streamstr {
                         Streamstr(size_t hbs):                  // stream mode, w. hb allocation
                          mod_{streamed_cin}, hb_(hbs) {}
 
-    const std::string & buffer(void) const { return buf_; };
+    const std::string & buffer(void) const { return buf_; }
     bool                is_streamed(void) const { return mod_ == streamed_cin; }
     bool                is_buffered(void) const { return mod_ != streamed_cin; }
     bool                is_buffered_src(void) const { return mod_ == buffered_src; }
