@@ -29,30 +29,30 @@ remove, copy, move, compare, transform, swap around and many other operations).
 
 `jtc` offers following features (a short list of main features):
   - simple user interface allowing applying a bulk of changes in a single or chained sets of commands 
-  - featured walk-path interface lets extracting any combination of data from source JSON
-  - extracted data is representable either as it found, or could be encapsulated in JSON array/object
-  - support Regular Expressions when searching source JSON
-  - fast and efficient processing very large JSON files (built-in search cache)
-  - insert/updates operations optionally may undergo _shell cli_ evaluation
-  - features namespaces, interpolation from namespaces and templates 
-  - supports buffered and streamed modes of input reads
-  - written entirely in C++14, no dependencies (STL only, idiomatic C++, no memory leaks)
+  - featured _walk-path_ interface lets extracting any combination of data from source JSON
+  - extracted data is representable either as found, or could be encapsulated in JSON array/object or transfored using _templates_
+  - support _Regular Expressions_ when searching source JSON (various _RE grammars_ supported)
+  - fast and efficient processing of very large JSON files (built-in search cache)
+  - insert/update operations optionally may undergo _shell cli_ evaluation
+  - features namespaces, interpolation from namespaces in templates 
+  - supports _buffered_ and _streamed_ modes of input reads
+  - written entirely in _C++14_, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-Walk path feature is easy to understand - it's only made of 2 types of lexemes:
-  - subscripts - enclosed into `[`, `]`: subscripts let traversing JSON tree downwards and **upwards**
-  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively): search lexemes facilitate various match criteria defined by an optional suffix.
+The _Walk path_ feature is easy to understand - it's only made of 2 types of lexemes:
+  - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards and **upwards (!)**
+  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively); search lexemes facilitate various match criteria defined by an optional suffix and/or quantifier.
 
-Both types of lexemes are iterable - subscript let iterating over children of currently addressed iterables node (array/object),
-while iterable search lexemes let iterating over all matches for a given search criteria.
-A walk path is made of an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
+Both types of lexemes cab be _iterable_ - **subscripts** let iterating over children of currently addressed JSON iterables
+nodes (arrays/objects), while iterable **search lexemes** let iterating over all matches for a given search criteria.
+A _walk path_ may have an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 
 ### Linux and MacOS precompiled binaries are available for download
 
-For compiling, `c++14` (or later) is required. To compile under different platforms:
+For compiling, **`c++14`** (or later) is required. To compile under different platforms:
   - MacOS/BSD: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
   - Linux: `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
   - Debian: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
@@ -60,14 +60,14 @@ For compiling, `c++14` (or later) is required. To compile under different platfo
 *pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
 there's no performance gain from doing so*
 
-or download the latest precompiled binary:
+or download the latest **precompiled binary**:
 - _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.75b/jtc-macos-64.v1.75b)
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75b/jtc-linux-64.v1.75b)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75b/jtc-linux-32.v1.75b)
 
 ### Installing via MacPorts
 
-On macOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
+On MacOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
 
 ``` ShellSession
 $ sudo port selfupdate
@@ -81,7 +81,8 @@ download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using
 move compiled file into an install location.
 
 here're the example steps for **MacOS**:
-  - say, `jtc-master.zip` has been downloaded to a folder and the terminal app is open in that
+  - say, [`jtc-master.zip`](https://github.com/ldn-softdev/jtc/archive/master.zip) 
+  has been downloaded to a folder and the terminal app is open in that
 folder:
   - `unzip jtc-master.zip`
   - `cd jtc-master`
@@ -90,7 +91,7 @@ folder:
 
 
 ### Release Notes
-See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases/tag/1.75a)
+See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
 
 ## Quick-start guide:
