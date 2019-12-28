@@ -40,7 +40,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-The _Walk path_ feature is easy to understand - it's only made of 2 types of lexemes:
+The _walk path_ feature is easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards and **upwards (!)**
   - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively); search lexemes facilitate various match criteria defined by an optional suffix and/or quantifier.
 
@@ -77,12 +77,11 @@ $ sudo port install jtc
 
 ### Compile and install instructions:
 
-download `jtc-master.zip`, unzip it, descend into unzipped folder, compile using an appropriate command,
-move compiled file into an install location.
+download [`jtc-master.zip`](https://github.com/ldn-softdev/jtc/archive/master.zip),
+unzip it, descend into unzipped folder, compile using an appropriate command, move compiled file into an install location.
 
 here're the example steps for **MacOS**:
-  - say, [`jtc-master.zip`](https://github.com/ldn-softdev/jtc/archive/master.zip) 
-  has been downloaded to a folder and the terminal app is open in that
+  - say, `jtc-master.zip` has been downloaded to a folder and the terminal app is open in that
 folder:
   - `unzip jtc-master.zip`
   - `cd jtc-master`
@@ -105,27 +104,15 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
          "children": [
             {
                "children": [
-                  {
-                     "name": "The New York Times",
-                     "stamp": "2017-10-03, 12:05:19",
-                     "url": "https://www.nytimes.com/"
-                  },
-                  {
-                     "name": "HuffPost UK",
-                     "stamp": "2017-11-23, 12:05:19",
-                     "url": "https://www.huffingtonpost.co.uk/"
-                  }
+                  { "name": "The New York Times", "stamp": "2017-10-03, 12:05:19", "url": "https://www.nytimes.com/" },
+                  { "name": "HuffPost UK", "stamp": "2017-11-23, 12:05:19", "url": "https://www.huffingtonpost.co.uk/" }
                ],
                "name": "News",
                "stamp": "2017-10-02, 12:05:19"
             },
             {
                "children": [
-                  {
-                     "name": "Digital Photography Review",
-                     "stamp": "2017-02-27, 12:05:19",
-                     "url": "https://www.dpreview.com/"
-                  }
+                  { "name": "Digital Photography Review", "stamp": "2017-02-27, 12:05:19", "url": "https://www.dpreview.com/" }
                ],
                "name": "Photography",
                "stamp": "2017-02-27, 12:05:19"
@@ -136,22 +123,15 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
       },
       {
          "children": [
-            {
-               "name": "Stack Overflow",
-               "stamp": "2018-05-01, 12:05:19",
-               "url": "https://stackoverflow.com/"
-            },
-            {
-               "name": "C++ reference",
-               "stamp": "2018-06-21, 12:05:19",
-               "url": "https://en.cppreference.com/"
-            }
+            { "name": "Stack Overflow", "stamp": "2018-05-01, 12:05:19", "url": "https://stackoverflow.com/" },
+            { "name": "C++ reference", "stamp": "2018-06-21, 12:05:19", "url": "https://en.cppreference.com/" }
          ],
          "name": "Work",
          "stamp": "2018-03-06, 12:07:29"
       }
    ]
 }
+
 ```
 
 
@@ -164,10 +144,10 @@ bash $ jtc -w'<url>l:' Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
-The walk-path (an argument of `-w`) is a combination of lexemes. There are only 2 types of lexemes:
-1. subscript lexemes -  enclosed in `[`,`]`
-2. search lexemes - enclosed in `<`,`>`
-\- the walk-paths may contain any number of lexemes
+The **_walk-path_** (an argument of `-w`) is a combination of lexemes. There are only 2 types of lexemes:
+1. subscript lexemes -  enclosed in `[..]`
+2. search lexemes - enclosed in `<..>` for a _recursive_, or in `>..<` for a _non-recursive_ type of search
+\- the walk-paths may contain any number of lexemes, optionally separated with space(s)
 
 let's take a look at the walk-path `<url>l:`:
 - search lexemes are enclosed in angular brackets `<`, `>` - that style provides a **recursive search** throughout JSON 
@@ -181,31 +161,33 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-here the walk path `<Work>[-1][children][:][name]` is made of following lexemes (spaces separating lexemes are optional):
+here the walk path `<Work>[-1][children][:][name]` is made of following lexemes:
 
 a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
 b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
 c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
-d. `[:]`: select an **each node** in the array  
+d. `[:]`: select **each node** in the array  
 e. `[name]`: select/address a node whose label is `"name"` 
 
-- subscript offsets are enclosed into square brackets `[`, `]` and may have different meaning:
-  * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child in the addressed
-node - a.k.a. numerical subscripts
+- subscript offsets are always enclosed into square brackets `[..]` and may have different meaning:
+  * simple numerical offsets (e.g.: `[0]`, `[5]`, etc) select/address a respective JSON immediate child by the given index
+  in the addressed node - a.k.a. _numerical subscripts_
   * slice/range offsets, expressed as `[N:M:S]` let selecting any slice/range of element in the array/object (any of `N`,`M`,`S` could be
-  omitted in that notation), where `N` is the start index, `M` is the index next after last, `S` is a step 
+  omitted in that notation), where `N` is the start index, `M` is the index next after last, `S` is a step
   * alterniatively, numerical offsets proceeded with `+` make a path *iterable* - all children starting with the
-given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) - such notation is equivalent
-of `[N:]`
-  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of currently selected/found node, a parent
+given index will be selected (e.g.: [+2] will select/address all immediate children starting from 3rd one) - such notation is the 
+exact equivalent of `[N:]`
+  * numerical negative offsets (e.g.`[-1]`, `[-2]`, etc ) will select/address a parent of a currently selected/found node, a parent
   of a parent, etc
+  * numerical offsets prepended with the caret char (e.g.`[^0]`, `[^1]`, etc ) also allows selecting a parent of a currently found node, however, unlike the negative offet, does it by using an index off the root rather than the index off the leaf, e.g.: `[^0]` always
+  selects the root
   * literal offsets (e.g.: `[name]`, `[children]`, etc) select/address nodes with corresponding labels among
 immediate children (i.e. literal subscripts)
 
 _*** there's more on offsets and search quantifiers below_
 
-in order to understand better how a walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
-to the path, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
+in order to understand better how the walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
+to the path one by one, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```bash
 bash $ jtc -w'<Work>' -l Bookmarks
@@ -277,9 +259,7 @@ bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 this walk path `<url>l:[-1][name]`:
 
  - finds recursively (encasement `<`, `>`) all (`:`) JSON elements with a label (`l`) matching `url`
-
  - then for an each found JSON element, select its parent (`[-1]`)
-
  - then, select a JSON element with the label `"name"` (encasement `[`, `]`)
 
 
