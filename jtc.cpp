@@ -221,7 +221,7 @@ class CommonResource {
     int                 rc(void) const { return rc_; }
     void                rc(int rc) { rc_ = rc; }
     GETopt &            opt(signed_size_t x = -1) {              // access to Getopt class instance
-                         if(x < 0 or x >= vopt_.size()) return *opp_;
+                         if(x < 0 or SIZE_T(x) >= vopt_.size()) return *opp_;
                          return vopt_[x];
                         }
     Json::map_jn &      global_ns(void) {  return gns_; }       // access to global namespaces
