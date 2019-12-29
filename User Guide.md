@@ -80,8 +80,8 @@
 
 ## Displaying JSON
 ### Pretty printing
-If no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the argument.
-`jtc` will parse and validate input JSON and upon a successful validation will output:
+If no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the 
+argumen(t). `jtc` will parse and validate input JSON and upon a successful validation will output:
 ```bash
 bash $ <ab.json jtc
 {
@@ -366,16 +366,16 @@ B.t.w, both _string unquoting_ and _JSON stringification_ also could be achieved
 
 
 ## Walking JSON
-Whenever there's a need to print only some or multiple JSON elements, walk-paths (`-w`) tell how to do it. A walk path
-(an argument of `-w` option) is made of an arbitrary number of lexemes. Though there are only 2 types of the lexemes:
+Whenever there's a need to select only one or multiple JSON elements, walk-paths (`-w`) tell how to do it. A walk path
+(an argument of `-w` option) can be made of an arbitrary number of lexemes. Though there are only 2 types of the lexemes:
 - offset lexeme (`[..]`)
 - search lexeme (`<..>`, `>..<`)
 
 ### Walking with subscripts (offset lexemes)
-offsets are always enclosed into square brackets `[`,`]`, selecting JSON elements always begins from the root.
+Offsets are always enclosed into square brackets `[..]`. Selecting JSON elements always begins from the root.
 Both arrays and objects can be subscripted using numerical offset, though it's best to utilize literal offsets to subscript objects.
 E.g. let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][1][address]'
 {
    "city": "Seattle",
@@ -387,7 +387,7 @@ bash $
 ```
 or, equally could be done like in below example, but the former syntax is preferable (for your own good - when giving indices you'd need 
 to _guess_ the index of a labeled entry, which might be prone to mistakes):
-```
+```bash
 bash $ <ab.json jtc -w'[0][1][0]'
 {
    "city": "Seattle",
@@ -399,16 +399,16 @@ bash $
 ```
 
 #### Selecting multiple subscripted JSON elements
-if a numerical subscript is prepended with `+`, then the indexed and all subsequent subscripted elements will be selected as well
+if a numerical subscript index is prepended with `+`, then all the subsequent subscripted elements will be selected as well
 (a.k.a _iterable_ lexeme), e.g., a following example prints all the names out of the address book, starting from the 2nd record:
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][+1][name]'
 "Ivan"
 "Jane"
 bash $
 ```
 Any numerical offset could be subscripted that way, and any number of such lexemes could appear in the walk-path, e.g.:
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][+0][phone][+1][number]'
 "113-123-2368"
 "223-283-0372"
@@ -420,7 +420,7 @@ the 2nd entry (`[+1]`)
 
 The same way object elements could be subscripted, here's an example where all address entries starting from the 2nd one are printed,
 each one stating from the 3rd entry: 
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][+1][address][+2]'
 "WA"
 "5423 Madison St"
@@ -430,52 +430,55 @@ bash $
 ```
 
 ##### Subscript slice notation
-Another way to select multiple subscripts is to use a slice notation `[N:N]`. In that notation `N` could be either positive or negative, 
-or entirely missed. First position designates beginning of the selection, the last position designates the end of the slice exclusively
-(i.e., not including the indexed element itself)
-- positive `N` subscripts `N`th element from the beginning of the collection (whether it's array or an object)
-- negative `N` subscripts the `N`th element from the end of the collection.
-- empty (missed `N`) tells to address either from the the beginning of the collection (in the first position), or from the end
+Another way to select multiple subscripts is to use a slice notation `[N:M:S]`. In that notation `N` and `M` could be either positive
+or negative, while `S` must be strictly positive. Any of positions (as well as position separator `:`) could be omitted.
+The first position (`N`) designates a beginning of the slice selection, the last position (`M`) designates the end of the 
+slice exclusively (i.e., not including the indexed element itself)
+- positive `N` (and `M`) refers to `N`th element offset from the beginning of the iterable (whether it's array or an object)
+- negative `N` (and `M`) refers to the `N`th element offset from the end of the collection.
+- empty (missed `N` and `M`) tells to address either from the the beginning of the collection (in the first position), or from the end
 (last position) 
+- `S` position indicates a step value when iterating over the selected slice, the default value is obviously `1`
 
 Thus, multiple notations with the same semantics are possible, e.g.:
-- `[:]`, `[0:]` will select all the element in the collection and is equivalent of `[+0]` notation
-- `[0:1]`, `[:1]` will select only the first element and is the same as `[0]`
+- `[:]`, `[0:]`, `[0::]` will select all the element in the collection and is equivalent of `[+0]` notation
+- `[0:1]`, `[:1]`, will select only the first element and is the same as `[0]`
 - `[:-1]` will select all the elements except the last one
 - `[-2:]` will select last 2 elements in the collection 
+- `[::2]` -will select every other element in the collection
 
 E.g., let's print all phone numbers for the last 2 records in the `Directory`:
-```
-bash $ <ab.json jtc -w'[Directory][-2:][phone][:][number]'
-"273-923-6483"
-"223-283-0372"
-"358-303-0373"
-"333-638-0238"
-bash $
+```bash
+bash $ <ab.json jtc -w'[Directory][-2:][phone][:][number]' -l
+"number": "273-923-6483"
+"number": "223-283-0372"
+"number": "358-303-0373"
+"number": "333-638-0238"
+bash $ 
 ```
 
 ### Searching JSON
-Walk-path lexemes enclosed into `<`,`>` braces instruct to perform a _recursive_ search of the value under a selected JSON node. 
-I.e., if a search lexeme appears as the first one in the walk-path, then the search will be done from the root, otherwise
-from the node in JSON where a prior lexeme has stopped.
+Walk-path lexemes enclosed into `<..>` braces instruct to perform a _recursive_ search off the value under a currently selected JSON node. 
+I.e., if a search lexeme appears as the first one in the walk-path, then the search will be done from the root, otherwise from the node
+in JSON where a prior lexeme has stopped.
 
-By default (if no one-letter suffix is given), a search lexeme will perform a search of _JSON string_ values only (i.e., it won't match 
-_JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search finds a match:
-```
+By default (if no suffix is given), a search lexeme will perform a search among _JSON string_ values only (i.e., it won't match 
+_JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search produces a match:
+```bash
 bash $ <ab.json jtc -w'<New York>'
 "New York"
 bash $
 ```
-while this one doesn't (the string value `New York` is found only in the first `Directory` record): 
-```
+while this one doesn't have a match (the string value `New York` is found only in the first `Directory` record): 
+```bash
 bash $ <ab.json jtc -w'[Directory][1:]<New York>'
 bash $
 ```
 
 #### Searching JSON with RE
-Optionally, search lexemes may accept one-letter suffixes: a single character following the lexeme's closing bracket.
+Optionally, search lexemes may accept _one-letter suffixes_: a single character following the lexeme's closing bracket.
 These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a regex search among string values:
-```
+```bash
 bash $ <ab.json jtc -w'<^N>R'
 "New York"
 bash $
@@ -483,47 +486,54 @@ bash $
 
 #### Search suffixes
 This is the list of suffixes to control search behavior: 
-  * `r`: default (could be omitted), fully matches _JSON string_ value
-  * `R`: the lexeme is a search RE, only _JSON string_ values searched
-  * `P`: matches _any_ string value (like `<.*>R`), the lexeme value might be empty
-  * `d`: matches _JSON number_
-  * `D`: the lexeme is an RE, only _JSON numerical_ values searched
-  * `N`: matches _any_ JSON numerical value (like `<.*>D`), the lexeme value might be empty
-  * `b`: matches _JSON boolean_ value, must be spelled as `<true>b`, `<false>b`, `<>b`, or `<any>b` - the last two are the same
-  * `n`: matches _JSON null_ value, the lexeme value may be empty:`<>n`
-  * `l`: fully matches _JSON label_
-  * `L`: the lexeme is a search RE, only _JSON labels_ searched
-  * `a`: matches any JSON atomic value, i.e., _strings), _numerical), _boolean_, _null_, the lexeme value may be empty
-  * `o`: matches any JSON object (`{..}`), the lexeme value may be empty
-  * `i`: matches any JSON array (iterable/indexable - `[..]`), the lexeme value may be empty
-  * `c`: matches either arrays or objects (containers); the content within the encasement may be empty
-  * `e`: matches end-nodes only: atomic values, `[]`, `{}`, the lexeme value may be empty
-  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays; the lexeme value may be empty
-  * `j`: matches specified JSON value; the lexeme must be either a valid JSON (e.g.: `<[]>j` - finds an empty JSON array), or a
+  * `r`: default (could be omitted), fully matches _JSON string_ values (e.g.: `<CO>`, `<CO>r`)
+  * `R`: the lexeme is a search RE, only _JSON string_ values searched (e.g.: `<^N+*>R`)
+  * `P`: matches _any_ string values, same like `<.*>R`, just faster (e.g.: `<>P`)
+  * `d`: matches _JSON numericals_ (e.g.: `<3.14>d`)
+  * `D`: the lexeme is an RE, only _JSON numerical_ values searched (e.g.: `<^3\.+*>D`)
+  * `N`: matches _any_ JSON numerical value, same like `<.*>D`, just faster (e.g.: `<>N`)
+  * `b`: matches _JSON boolean_ values; to match the exact boolean, it must be spelled as `<true>b`, `<false>b`; when the lexeme is empty
+  (`<>n`) it matches any boolean
+  * `n`: matches _JSON null_ value (e.g.: `<>n`)
+  * `l`: fully matches _JSON label_ (e.g.: `<address>l`)
+  * `L`: the lexeme is a search RE, only _JSON labels_ searched (e.g. `<^[a-z]>L`)
+  * `a`: matches any JSON atomic value, i.e., _strings_, _numerical_, _boolean_, _null_ (e.g.: `<>a`)
+  * `o`: matches any JSON object `{..}` (e.g.: `<>o`)
+  * `i`: matches any JSON array `[..]` (e.g.: `<>i`)
+  * `c`: matches containers - either arrays or objects (e.g.: `<>c`) 
+  * `e`: matches end-nodes only, which is either atomic values, or an empty iterables `[]`, `{}` (e.g.: `<>e`)
+  * `w`: matches any JSON value (wide range match): atomic values, objects, arrays (e.g. `<>w`)
+  * `j`: matches a JSON value; the lexeme can be either a valid JSON (e.g.: `<[]>j` - finds an empty JSON array), or a
   [template](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
   resulting in a valid JSON after 
   [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
   (e.g.: `<"{str}">j` - finds a _JSON string_ whose value is in
   [namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
   `str`)
-  * `s`: matches a JSON value previously stored in the namespace by directives: `<..>k`, `<..>v`
-  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v`  
-  * `q`: matches only original JSON values; lexeme must not be empty - must provide a namespace, where matched elements will be stored 
-  * `Q`: matches only repetitive (duplicate) JSON values; lexeme must not be empty - must provide a namespace, where matched
-  elements will be stored
+  * `s`: matches a JSON value previously stored in the namespace by directives `<..>k`, `<..>v` (e.g.: `<Val>v ... <Val>s`)
+  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v` (e.g. `<Lbl>k ... <Lbl>t`)  
+  * `q`: matches only original JSON values, i.e. selects non-duplicated values (e.g.: `<>q`)  
+  * `Q`: matches only repetitive (duplicating) JSON values (e.g.: `<>Q`)
+  * `g`: matches all JSON values in the ascending order (e.g.: `<>g`)
+  * `G`: matches all JSON values in the descending order (e.g.: `<>G`)
 
 
 Some search lexemes (and
 [directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces))
-require their **content to be set and be non-empty* (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`q`,`Q`,`v`,`u`), otherwise an exception 
-`walk_empty_lexeme` will be thrown
+require their content is set and be **non-empty** (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`v`,`z`,`u`,`I`,`Z`,`W`), otherwise an exception 
+_`walk_empty_lexeme`_ will be thrown
 
-Some lexemes might be left empty, but they cary a semantic of an **empty search** (`r`,`l`,`b`), e.g.: `<>` (same as `<>r`) - will match
-an empty _JSON string_, `<>l` - will match an entry with the empty _JSON label_
+A few of search lexemes might be left empty, but then they cary a semantic of an **empty search** (`r`,`l`,`b`):
+  - `<>` (same as `<>r`) - will match an empty _JSON string_
+  - `<>l` - will match an entry with the empty _JSON label_
+  - `<>b` will match any boolean value.
 
-The rest of the lexemes (search and directives - `n`,`a`,`o`,`i`,`c`,`e`,`w`,`k`,`f`,`F`) also might be left empty, however,
-if the lexeme is non-empty, then it **specifies a namespace** where the value (result of a match) will be stored,
-e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the namespace `array`
+The rest of the lexemes (search and directives - `P`,`N`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`k`,`f`,`F`) also might be left
+empty. However, if those lexemes are non-empty, then the content specifies a
+[**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+where the value (result of a match) will be stored, e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the
+namespace `array`
+
 
 ##### Cached Search
 `jtc` is super efficient searching recursively even huge JSONs structures - normally no exponential search decay will be observed
