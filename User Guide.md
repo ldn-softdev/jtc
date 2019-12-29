@@ -19,7 +19,7 @@
      * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
-       * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom JSON-value-into-a-namespace)
+       * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
        * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#examples-sporting-fail-safe-using-namespaces-and-interpolation)
        * [Uses of `Fn` directive with non-default quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
