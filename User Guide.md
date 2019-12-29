@@ -881,7 +881,7 @@ bash $
 _JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
 
 
-#####      Search quantifiers with relative offset semantic 
+##### Search quantifiers with relative offset semantic 
 There are two search lexemes types where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
 Those are 
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
