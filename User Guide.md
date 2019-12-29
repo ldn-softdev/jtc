@@ -398,7 +398,7 @@ bash $ <ab.json jtc -w'[0][1][0]'
 bash $
 ```
 
-#### • Selecting multiple subscripted JSON elements
+#### Selecting multiple subscripted JSON elements
 if a numerical subscript index is prepended with `+`, then all the subsequent subscripted elements will be selected as well
 (a.k.a _iterable_ lexeme), e.g., a following example prints all the names out of the address book, starting from the 2nd record:
 ```bash
