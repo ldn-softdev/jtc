@@ -11,7 +11,7 @@
    * [Stringifying JSON (`-rr`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json) 
 2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
    * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
-     * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
+     * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#•-selecting-multiple-subscripted-json-elements)
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
@@ -386,7 +386,7 @@ bash $ <ab.json jtc -w'[Directory][1][address]'
 bash $
 ```
 or, equally could be done like in below example, but the former syntax is preferable (for your own good - when giving indices you'd need 
-to _guess_ the index of a labeled entry, which might be prone to mistakes):
+to _guess_ the index of a labeled entry, which might be prone  to mistakes):
 ```bash
 bash $ <ab.json jtc -w'[0][1][0]'
 {
@@ -398,7 +398,7 @@ bash $ <ab.json jtc -w'[0][1][0]'
 bash $
 ```
 
-#### Selecting multiple subscripted JSON elements
+#### • Selecting multiple subscripted JSON elements
 if a numerical subscript index is prepended with `+`, then all the subsequent subscripted elements will be selected as well
 (a.k.a _iterable_ lexeme), e.g., a following example prints all the names out of the address book, starting from the 2nd record:
 ```bash
@@ -529,9 +529,9 @@ A few of search lexemes might be left empty, but then they cary a semantic of an
   - `<>b` will match any boolean value.
 
 The rest of the lexemes (search and directives - `P`,`N`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`k`,`f`,`F`) also might be left
-empty. However, if those lexemes are non-empty, then the content specifies a
+empty. However, if those lexemes are non-empty, then the content points to a
 [**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
-where the value (result of a match) will be stored, e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the
+where the found value (result of a match) will be stored, e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the
 namespace `array`
 
 
@@ -557,23 +557,23 @@ for the currently walked JSON elements, these are _directives_:
 
 ZW
 
-  * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme (lexeme cannot be empty)
+  * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme (e.g.: `<Jsn>v`)
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
-         can be updated/extracted programmatically), if the lexeme's value is non-empty then it saves a found key 
-         (label/index) into the corresponding namespace and **cancels reinterpretation** of the label as a value
-  * `z`: erases namespace pointed by lexeme value; the lexeme must not be empty
-  * `f`: fail-safe: if lexeme walking **past the fail-safe** fails, instead of progressing to the next iteration
-         (a normal behavior), the lexeme immediately preceding the fail-safe will be matched; walking (of the same walk-path)
-         may continue for the failed path if `F` directive is present (past the failing point) from the walk lexeme following
-         `F` directive
+         can be updated/extracted programmatically) - e.g.: `<>k`; if the lexeme is non-empty then it saves a found key 
+         (label/index) into the corresponding namespace and **cancels reinterpretation** of the label as a value (e.g.: `<Lbl>k`)
+  * `z`: erases namespace pointed by the lexeme's; the lexeme must not be empty (e.g.: `<Jsn>z`)
+  * `f`: fail-safe (branching): if walking **past the fail-safe** lexeme fails then, instead of progressing to the next iteration
+         (a typical behavior), the walk for the lexeme immediately preceding the fail-safe will be reinstated;
+         walking (of the same walk-path) may continue if `><F` directive is present (past the failing point)
   * `F`: Forward-Stop: behavior of the directive is dependent on spelling:
     * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
     without ending the walk;
     * `><F` - when the directive is reached, the walk successfully stops for the output processing    
-  * `u`: user evaluation of the walk-path: lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
+  * `u`: user evaluation of the walk-path: the lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
-  * `I`: increment lexeme - if the namespace value pointed by a lexeme is _JSON number_ then it's incremented by the specified offset
+  * `I`: increment/multiply lexeme.
+  if the namespace value pointed by a lexeme is a _JSON number_ then it's incremented by the specified offset
   (e.g. `<var>I-3` will decrement `var` by `3`), if the pointed value is not a _JSON number_ then it's ignored
    
 The use of `F` directive makes only sense paired with `<>f`. Together they cover all cases of walk-paths branching:
