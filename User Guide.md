@@ -18,7 +18,11 @@
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
+       * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
+       * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
+       * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#examples-sporting-fail-safe-using-namespaces-and-interpolation)
+       * [Uses of `Fn` directive with non-default quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Last Walk namespace (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#last-walk-namespace)
      * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -620,8 +624,8 @@ bash $
 ```
 
 
-##### Cross-lookups using directives `<>v`, `<>k` and search lexemes `<>s`, `<>t`
-Say, we have a following JSON:
+##### Cross-lookups using namespace 
+Directives `<>v`, `<>k` and search lexemes `<>s`, `<>t` let facilitating cross-lookups. Say, we have a following JSON:
 ```bash
 bash $ <<<'{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' jtc -tc
 {
@@ -706,7 +710,7 @@ A _walk-path_ may contain multiple _fail-safe_, only the respective fail-safe wi
 one to the failing point)
 
 
-##### Some examples sporting _fail-safe_ using namespaces and interpolation:
+##### Examples sporting _fail-safe_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
 this format 
 `<Name> has children: true/false`
