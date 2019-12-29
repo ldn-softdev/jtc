@@ -18,15 +18,15 @@
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
+       * [Last Walk namespace (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#last-walk-namespace)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
        * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#examples-sporting-fail-safe-using-namespaces-and-interpolation)
-       * [Uses of `Fn` directive with non-default quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
+       * [Uses of `Fn` directive with non-default quantifiers (`<>Fn`, `><Fn`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
-     * [Last Walk namespace (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#last-walk-namespace)
-     * [Search quantifiers (`n`,`+n`,`n:n`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
-     * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic)
+     * [Search quantifiers (`n`,`+n`,`n:m:s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
+       * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
@@ -624,6 +624,21 @@ bash $
 ```
 
 
+#### Last Walk namespace
+Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
+to build up JSON 'historical' records:
+```bash
+bash $ <<<'["a","b","c"]' jtc -w[:]
+"a"
+"b"
+"c"
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r -x0
+[ "a", "b", "c" ]
+```
+When interpolation of $? occurs first time (i.e. there was no prior walk), or when interpolation of $? fails, then the value of this
+namespace is reset to an empty string (`""`).  
+
+
 ##### Cross-lookups using namespace 
 Directives `<>v`, `<>k` and search lexemes `<>s`, `<>t` let facilitating cross-lookups. Say, we have a following JSON:
 ```bash
@@ -826,7 +841,7 @@ RE search lexemes (`R`, `L`, `D`) also auto-populate the namespace with followin
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first RE subgroup,
 - `$2` for a second RE subgroup, and so on
-```
+```bash
 bash $ <ab.json jtc -w'<^J(.*)>R:'
 "John"
 "Jane"
@@ -846,13 +861,13 @@ Quantifiers exist in the following formats:
 - `n`, - a positive number - tells which instance of a match to pick. By default, a quantifier `0` is applied
 (i.e., first match is selected)
 - `+n` - selects all match instances starting from `n`th (zero based)
-- `N:N` - slice select: the notation rules for this quantifier the same as for 
+- `N:M:S` - slice select: the notation rules for this quantifier the same as for 
 [subscript slices](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#subscript-slice-notation)
-(`[N:N]`), with just one understandable caveat: `N` here cannot go negative (there's no way of knowing upfront how many
+(`[N:M:S]`), with just one understandable caveat: `N`,`M` here cannot go negative (there's no way of knowing upfront how many
 matches would be produced, so it's impossible to select a range/slice based off the last match), the rest of the notation rules apply
 
 To illustrate the quantifiers (with suffixes), let's dump all the _JSON arrays_ in the `Directory`, except the top one:
-```
+```bash
 bash $ <ab.json jtc -w'<>i1:' -r
 [ "Olivia" ]
 [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ]
@@ -866,8 +881,8 @@ bash $
 _JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
 
 
-#### Search quantifiers with relative offset semantic 
-There are two search lexemes where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
+##### Search quantifiers with relative offset semantic 
+There are two search lexemes types where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
 Those are 
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
 will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
@@ -888,61 +903,45 @@ bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2' -l
 "d": 4
 bash $ 
 ```
-Because of change in semantic, those are the only search quantifiers (they also have to be non-recursive spelling: `>..<l`, `>..<t`) 
+Because of change in semantic, those are the only search quantifiers (they also have to have a _non-recursive_ spelling: `>..<l`, `>..<t`) 
 which allow negative values. Positive quantifiers let selecting next (successive) neighbors, while negative quantifiers let
 selecting preceding neighbors:
-```
+```bash
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l-1' -l
 "a": 1
 bash $ 
 ```
 
-#### Last Walk namespace
-Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
-to build up JSON 'historical' records:
-```
-bash $ <<<'["a","b","c"]' jtc -w[:]
-"a"
-"b"
-"c"
-bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
-[ "a" ]
-[ "a", "b" ]
-[ "a", "b", "c" ]
-```
-When interpolation of $? occurs first time (i.e. there was no prior walk), or when interpolation of $? fails, then the value of this
-namespace is reset to an empty string (`""`).  
-The use of that variable comes handy when converting JSON to a `csv` format.
 
-
-#### Scoped search 
+#### Scoped search
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e., the JSON node
 selected by walking all the prior lexemes). However, sometimes there's a need to limit searching scope only to the specific label.
 Here is the dump of all the _JSON strings_, where symbol `5` is sighted:
-```
-bash $ <ab.json jtc -w'<5>R:'
-"599 Lafayette St"
-"112-555-1234"
-"5423 Madison St"
-"358-303-0373"
-bash $
+```bash
+bash $ <ab.json jtc -w'<5>R:' -l
+"street address": "599 Lafayette St"
+"number": "112-555-1234"
+"street address": "5423 Madison St"
+"number": "358-303-0373"
+bash $ 
 ```
 Some of the values are `street address`, some are the phone `number`. Say, we want to dump only the phone records. Knowing the label
 of the phone numbers (`"number"`), it's achievable via this notation:
 ```
-bash $ <ab.json jtc -w'[number]:<5>R:'
-"112-555-1234"
-"358-303-0373"
-bash $
+bash $ <ab.json jtc -w'[number]:<5>R:' -l
+"number": "112-555-1234"
+"number": "358-303-0373"
+bash $ 
 ```
-I.e., once the label lexeme is attached to the search lexeme over `:`, it signifies a scoped search.
+I.e., once the literal subscript lexeme is attached to the search lexeme over `:` symbol, it makes a scoped search.
 
 
 #### Non-recursive search
-Sometimes there's a need to apply a non-recursive search onto collectable JSON nodes (arrays, objects) - i.e., find a value within
+Sometimes there's a need to apply a non-recursive search onto iterable JSON nodes (arrays, objects) - i.e., find a value within
 immediate children of the node and do not descend recursively. The notation facilitating such search is the same one, but
-angular brackets to be put inside-out, i.e.: `>..<`. To illustrate that: say, we want to find all string values in the 1st `Directory`
-record containing the letter `o`. If we do this using a recursive search, then all following entries will be found:
+angular brackets to be put inside-out, i.e.: `>..<`.  
+To illustrate that: say, we want to find all string values in the 1st `Directory` record containing the letter `o`. 
+If we do this using a recursive search, then all following entries will be found:
 ```
 bash $ <ab.json jtc -w'[Directory][0]<o>R:'
 "New York"
