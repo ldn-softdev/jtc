@@ -624,7 +624,7 @@ bash $
 ```
 
 
-#### Last Walk namespace
+##### Last Walk namespace
 Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
 to build up JSON 'historical' records:
 ```bash
