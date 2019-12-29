@@ -601,6 +601,25 @@ Beside user provided names, `jtc` features a number of internally generated/supp
   (default value is `,`) 
 
 
+##### Path namespace example
+Here are both of the path tokens demonstrated:
+```bash
+bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
+[ "Directory", 2, "name" ]
+bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
+"Directory_0_address_state"
+bash $ 
+```
+_to play safe with the templates, always surround them with single quotes (to dodge shell interpolation)_  
+
+here's an example how to join path tokens using a custom separator:
+```bash
+bash $ <ab.json jtc -w'<$_:" : ">v<NY>' -T'{{$path}}'
+"Directory : 0 : address : state"
+bash $ 
+```
+
+
 ##### Cross-lookups using directives `<>v`, `<>k` and search lexemes `<>s`, `<>t`
 Say, we have a following JSON:
 ```bash
@@ -790,8 +809,8 @@ bash $
 
 ```
 
-##### Uses of `F` directive with non-default quantifiers
-there are couple other uses for `F` lexeme with a non-zero (non-default) quantifier:
+##### Uses of `Fn` directive with non-default quantifiers
+there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifier:
   - `<>Fn` - this variant of the lexeme acts as a 'jump' instructions for the walk path - i.e. once walked, it will jump to the `n`th 
   lexeme (from the lexeme `<>F`) and continues walking from there. E.g.: `<>F1` does not do anything - it continues walking from the 1st 
   lexeme after `<>F1`, `<>F2` will jump over one lexeme and continues walking from the 2nd one, and so on and so forth.  
@@ -799,7 +818,7 @@ there are couple other uses for `F` lexeme with a non-zero (non-default) quantif
 
 
 #### RE generated namespaces
-RE search lexemes (`R`, `L`, `D`) also auto-populate the namespaces with following names:
+RE search lexemes (`R`, `L`, `D`) also auto-populate the namespace with following names:
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first RE subgroup,
 - `$2` for a second RE subgroup, and so on
@@ -814,21 +833,6 @@ bash $
 ```
 (coverage of REGEX is entirely out of scope of this document, rather refer to this external link: 
 [Regular Expression](https://www.regular-expressions.info/))
-
-
-#### Path namespaces
-There are also couple reserved namespaces to acquire a current JSON path:
-- `$PATH`: that namespace contains a _JSON array_ describing path to the currently selected element
-- `$path`: this is a stringified representation of the path
-Here are both demonstrated:
-```
-bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
-[ "Directory", 2, "name" ]
-bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
-"Directory_0_address_state"
-bash $ 
-```
-to play safe with the templates, always surround them with single quotes (to dodge shell interpolation)
 
 
 #### Search quantifiers
