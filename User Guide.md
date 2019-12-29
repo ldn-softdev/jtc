@@ -15,7 +15,7 @@
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQ`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
-     * [Directives and Namespaces (`vkzfFuI`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+     * [Directives (`vkzfFuI`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Path namespaces (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespaces)
@@ -508,7 +508,7 @@ This is the list of suffixes to control search behavior:
   resulting in a valid JSON after 
   [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
   (e.g.: `<"{str}">j` - finds a _JSON string_ whose value is in
-  [namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+  [namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
   `str`)
   * `s`: matches a JSON value previously stored in the namespace by directives `<..>k`, `<..>v` (e.g.: `<Val>v ... <Val>s`)
   * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v` (e.g. `<Lbl>k ... <Lbl>t`)  
@@ -519,7 +519,7 @@ This is the list of suffixes to control search behavior:
 
 
 Some search lexemes (and
-[directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces))
+[directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives))
 require their content is set and be **non-empty** (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`v`,`z`,`u`,`I`,`Z`,`W`), otherwise an exception 
 _`walk_empty_lexeme`_ will be thrown
 
@@ -530,7 +530,7 @@ A few of search lexemes might be left empty, but then they cary a semantic of an
 
 The rest of the lexemes (search and directives - `P`,`N`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`k`,`f`,`F`) also might be left
 empty. However, if those lexemes are non-empty, then the content specifies a
-[**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives-and-namespaces)
+[**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
 where the value (result of a match) will be stored, e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the
 namespace `array`
 
@@ -539,27 +539,23 @@ namespace `array`
 `jtc` is super efficient searching recursively even huge JSONs structures - normally no exponential search decay will be observed
 (which is very typical for such kind of operations). The decay is avoided because `jtc` builds a cache for all searches (whenever
 cacheing is required, both recursive and non-recursive) and thus all subsequent matches are taken from the cache.  
-Though, there are cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
+Though, there couple cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
 resolution of the search is dependent on the _namespace_ value.  
 Here's the list of such search types:
-  * `q`,`Q`: the lexemes refer (internally) to _namespaces_ when performing search and hence not cacheable
-  * recursive `<..>s`,`<..>t`: those lexemes using _namespaces_ when performing search and hence are not cacheable
-  * [non-recursive](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
-  search lexemes with 
-  [relative quantifiers](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic) 
-  \- `>..<lN`, `>..<tN`: these lexemes simply do not require cacheing - they are not exposed to exponential decay; 
-  note, lexemes `<>lN`, `<>tN` are using regular quantifiers semantic (i.e., match instance) and therefore a subjected for cacheing 
-  * JSON match when lexeme is a template, e.g.: `<{"label": {{val}} }>j`: template typically requires _namespace_ for interpolation
-  and hence also non-cacheable (though `j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j`)
+  * recursive `<..>s`,`<..>t`: the lexemes are using _namespaces_ when performing search and hence could not cached
+  * JSON match when the lexeme is a template, e.g.: `<{ "label": {{val}} }>j`: templates typically require _namespace_ for interpolation
+  and hence are also non-cacheable, though `<..>j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j`)
 
 \- all the above cases are exempt from cacheing and hence the exponential decay might become noticeable, so be aware when building a 
-query for very large JSON structures
+query for very large JSON structures (order of hundred thousands of nodes)
 
 
-#### Directives and Namespaces
+#### Directives
 
-There are few lexemes that look like search, though they do not perform any matching, rather they apply certain actions
-for the currently walked JSON elements:
+There are a few lexemes that look like searches, though they do not perform any matching, rather they apply certain actions
+for the currently walked JSON elements, these are _directives_:
+
+ZW
 
   * `v`: saves the currently walked JSON value into a namespace under the name specified by the lexeme (lexeme cannot be empty)
   * `k`: instructs to reinterpret the key (label/index) of the currently walked JSON and treat it as a value (thus a label/index
