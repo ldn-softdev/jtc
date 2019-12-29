@@ -24,7 +24,7 @@
 using namespace std;
 
 #define PRGNAME "JSON transformational chains"
-#define VERSION "1.75b"
+#define VERSION "1.75c"
 #define CREATOR "Dmitry Lyssenko"
 #define EMAIL "ldn.softdev@gmail.com"
 
@@ -802,7 +802,7 @@ char CommonResource::parse_opt(v_string & args) {
   enable_global_output();
 
  for(auto &o: opt()[CHR(OPT_TMP)])
-  if(o.find(string{"{}"} + WLK_HPFX + "}" ) != string::npos)
+  if(o.find(string{"{"} + WLK_HPFX + "}" ) != string::npos)
    opt().impose(USE_HPFX);
  if(any_of(wm().begin(), wm().end(),
     [](GETopt::Multiwalk &x){ return x.factor == 0 and x.offset == -1; }))
