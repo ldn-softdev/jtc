@@ -36,7 +36,7 @@
      * [Wrapping resulted walks to JSON array (`-j`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array)
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
      * [Aggregating walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks)
-     * [Wrapping walked entries into JSON object (`-jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-json-object)
+     * [Wrapping walked entries into a JSON object (`-jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-a-json-object)
      * [Extracting labeled value (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-value)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
      * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
@@ -861,9 +861,9 @@ Quantifiers exist in the following formats:
 - `n`, - a positive number - tells which instance of a match to pick. By default, a quantifier `0` is applied
 (i.e., first match is selected)
 - `+n` - selects all match instances starting from `n`th (zero based)
-- `N:M:S` - slice select: the notation rules for this quantifier the same as for 
+- `n:m:s` - slice select: the notation rules for this quantifier the same as for 
 [subscript slices](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#subscript-slice-notation)
-(`[N:M:S]`), with just one understandable caveat: `N`,`M` here cannot go negative (there's no way of knowing upfront how many
+(`[n:m:s]`), with just one understandable caveat: `n`,`m` here cannot go negative (there's no way of knowing upfront how many
 matches would be produced, so it's impossible to select a range/slice based off the last match), the rest of the notation rules apply
 
 To illustrate the quantifiers (with suffixes), let's dump all the _JSON arrays_ in the `Directory`, except the top one:
@@ -927,7 +927,7 @@ bash $
 ```
 Some of the values are `street address`, some are the phone `number`. Say, we want to dump only the phone records. Knowing the label
 of the phone numbers (`"number"`), it's achievable via this notation:
-```
+```bash
 bash $ <ab.json jtc -w'[number]:<5>R:' -l
 "number": "112-555-1234"
 "number": "358-303-0373"
@@ -942,7 +942,7 @@ immediate children of the node and do not descend recursively. The notation faci
 angular brackets to be put inside-out, i.e.: `>..<`.  
 To illustrate that: say, we want to find all string values in the 1st `Directory` record containing the letter `o`. 
 If we do this using a recursive search, then all following entries will be found:
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][0]<o>R:'
 "New York"
 "John"
@@ -951,7 +951,7 @@ bash $ <ab.json jtc -w'[Directory][0]<o>R:'
 bash $
 ```
 To facilitate our ask (find all such entries within the immediate values of the 1st record only), apply a non-recursive search notation:
-```
+```bash
 bash $ <ab.json jtc -w'[Directory][0]>o<R:'
 "John"
 bash $
@@ -960,46 +960,72 @@ bash $
 
 ### Addressing parents
 One of the charming features of `jtc` is the ability to address parents (any ancestors up till the root) of the found JSON nodes.
-Typically addressing parents would be needed after search lexemes (but can occur anywhere in the walk-path). Parents can
+Typically, addressing parents would be requierd after search lexemes (but can be used anywhere in the walk-path). Parents can
 be addressed using notation `[-n]`. This feature allows building queries that answer quite complex queries.
 
 Let's dump all the names from the `Directory` whose records have a `home` phone entry:
-```
+```bash
 bash $ <ab.json jtc -w'[type]:<home>:[-3][name]'
 "Ivan"
 "Jane"
 bash $
 ```
 The magic which happens here (let's break down the walk-path into the lexemes) is revealed:
-  1. `[type]:<home>:` - this lexeme instruct to find all (ending quantifier `:`) strings `home` scoped by label `"type"` (`[type]:` -
+  1. `[type]:<home>:` - this lexeme instructs to find all (ending quantifier `:`) strings `home` scoped by label `"type"` (`[type]:` -
   attached scope), thus all such phone records values will be selected:
-  ```
-  bash $ <ab.json jtc -w'[type]:<home>:' -r
+  ```bash
+  bash $ <ab.json jtc -w'[type]:<home>:'
   "home"
   "home"
    bash $
   ```
   2. `[-3]` - starting off those found JSON elements a 3rd ancestor will be selected. Let's see a parent selection in a slow-mo,
   one by one:
-  ```
-  bash $ <ab.json jtc -w'[type]:<home>: [-1]' -r
+  ```bash
+  bash $ <ab.json jtc -w'[type]:<home>: [-1]' -tc
   { "number": "273-923-6483", "type": "home" }
   { "number": "333-638-0238", "type": "home" }
-  bash $
-  bash $ <ab.json jtc -w'[type]:<home>: [-2]' -r
-  [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ]
-  [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
-  bash $
-  bash $ <ab.json jtc -w'[type]:<home>: [-3]' -r
-  { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null   }
-  { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" }
-  bash $
+  bash $ 
+  bash $ <ab.json jtc -w'[type]:<home>: [-2]' -tc
+  [
+     { "number": "273-923-6483", "type": "home" },
+     { "number": "223-283-0372", "type": "mobile" }
+  ]
+  [
+     { "number": "358-303-0373", "type": "office" },
+     { "number": "333-638-0238", "type": "home" }
+  ]
+  bash $ 
+  bash $ <ab.json jtc -w'[type]:<home>: [-3]' -tc
+  {
+     "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
+     "age": 31,
+     "children": [],
+     "name": "Ivan",
+     "phone": [
+        { "number": "273-923-6483", "type": "home" },
+        { "number": "223-283-0372", "type": "mobile" }
+     ],
+     "spouse": null
+  }
+  {
+     "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
+     "age": 25,
+     "children": [ "Robert", "Lila" ],
+     "name": "Jane",
+     "phone": [
+        { "number": "358-303-0373", "type": "office" },
+        { "number": "333-638-0238", "type": "home" }
+     ],
+     "spouse": "Chuck"
+  }
+  bash $ 
   ```
   3. `[name]` - now we can select (subscript) `[name]` of out those selected JSON nodes
 
 
 Another example: who is the parent of a child `Lila`?
-```
+```bash
 bash $ <ab.json jtc -w'<children>l:<Lila>[-2][name]'
 "Jane"
 bash $
@@ -1011,7 +1037,7 @@ Explanation:
 
 
 Even more complex query: who of the parents with children, have mobile numbers?
-```
+```bash
 bash $ <ab.json jtc -w'<children>l:[0][-2][type]:<mobile>[-3][name]'
 "John"
 bash $
@@ -1028,13 +1054,13 @@ us again up to the person's record level
 6. `[name]` - finally select the name
 
 There's another way to address parents - through `[^n]` notation, compare: the following walk-path achieves exactly the same ask:
-```
-bash $ <ab.json jtc -w'<children>l:[0][^2][type]:<mobile>[^2][name]' -r
+```bash
+bash $ <ab.json jtc -w'<children>l:[0][^2][type]:<mobile>[^2][name]'
 "John"
 bash $
 ```
-Note `[^2]` - this notation, likewise `[-n]` also selects a certain parent, however, while `[-n]` select the parent from the leaf
-(i.e., from the currently selected node) `[^n]` notation does it from the root.
+Note `[^2]` - this notation, likewise `[-n]` also selects a certain parent, however, while `[-n]` select the parent off the leaf
+(i.e., from the currently selected node) `[^n]` notation does it off the root.
 
 When `jtc` walks lexemes, internally it maintains a path of the walked steps (it's visible via debugs `-dddd`). E.g., when the first
 lexeme's match found (for `<children>l:`), the internal walked steps path would look like: `root -> [Directory] -> [0] -> [children]`,
@@ -1063,7 +1089,7 @@ will be displaying resulted successful walks in an _interleaved_ manner, but fir
 
 #### Sequential walk processing
 option `-n` ensures that all given walk-paths (`-w`) will be processed (and printed) sequentially in the order they given:
-```
+```bash
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n
 "John"
 "Ivan"
@@ -1091,7 +1117,7 @@ bash $
 
 #### Displaying walks with labels
 if resulted walks have labels in the input JSON (i.e., they were inside _JSON objects_), then `-l` let dumping their labels too:
-```
+```bash
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -nl
 "name": "John"
 "name": "Ivan"
@@ -1110,7 +1136,7 @@ bash $
 `-j` does a quite simple thing - it wraps all walked entries back into a _JSON array_, however predicated by `-l` and `-n` options
 the result will vary:
 - `-j` without `-l` will just arrange walked entries into a JSON array:
-  ```
+  ```bash
   bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -nj 
   [
      "John",
@@ -1126,38 +1152,20 @@ the result will vary:
   bash $
   ```
 - once `-j` and `-l` given together, then entries which have labels (i.e., come from the _JSON objects_) will be wrapped into objects:
-  ```
-  bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n -j -l
+  ```bash
+  bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -tc -njl
   [
-     {
-        "name": "John"
-     },
-     {
-        "name": "Ivan"
-     },
-     {
-        "name": "Jane"
-     },
-     {
-        "number": "112-555-1234"
-     },
-     {
-        "number": "113-123-2368"
-     },
-     {
-        "number": "273-923-6483"
-     },
-     {
-        "number": "223-283-0372"
-     },
-     {
-        "number": "358-303-0373"
-     },
-     {
-        "number": "333-638-0238"
-     }
+     { "name": "John" },
+     { "name": "Ivan" },
+     { "name": "Jane" },
+     { "number": "112-555-1234" },
+     { "number": "113-123-2368" },
+     { "number": "273-923-6483" },
+     { "number": "223-283-0372" },
+     { "number": "358-303-0373" },
+     { "number": "333-638-0238" }
   ]
-  bash $
+  bash $ 
   ```
 Though even that behavior is influenced by the `-n` option. The above output looks dull and hardly will have many use-cases, a lot more
 often it's required to group relevant walks together and then place them into respective JSON structures. For that, let's review
@@ -1166,7 +1174,7 @@ often it's required to group relevant walks together and then place them into re
 #### Interleaved walk processing
 Interleaved walk processing (and outputting) occurs by default, though there's a certain way to control it. Let's take a look at the
 above outputs dropping the option `-n` (i.e., print walks _interleaved_):
-```
+```bash
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:'
 "John"
 "112-555-1234"
@@ -1187,7 +1195,7 @@ relevance between themselves.
 Right now both paths (`<name>l:` and `<number>l:`) do not have common base lexemes, thus it's unclear how to relate resulting walks
 (hence they just interleaved one by one). Though if we provide walk-paths relating each of those searches to their own record,
 then magic happens:
-```
+```bash
 bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 "John"
 "112-555-1234"
@@ -1201,37 +1209,28 @@ bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 bash $
 ```
 And now, applying options `-j` together with `-l` gives a lot better result:
-```
-bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl
+```bash
+bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -tc -jl
 [
    {
       "name": "John",
-      "number": [
-         "112-555-1234",
-         "113-123-2368"
-      ]
+      "number": [ "112-555-1234", "113-123-2368" ]
    },
    {
       "name": "Ivan",
-      "number": [
-         "273-923-6483",
-         "223-283-0372"
-      ]
+      "number": [ "273-923-6483", "223-283-0372" ]
    },
    {
       "name": "Jane",
-      "number": [
-         "358-303-0373",
-         "333-638-0238"
-      ]
+      "number": [ "358-303-0373", "333-638-0238" ]
    }
 ]
-bash $
+bash $ 
 ```
 
 #### Aggregating walks
 the walks also could be aggregated (per label), option `-nn` facilitates the ask:
-```
+```bash
 bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl -nn
 [
    {
@@ -1254,13 +1253,31 @@ bash $
 ```
 
 
-#### Wrapping walked entries into JSON object
+#### Wrapping walked entries into a JSON object
 `-jj` let wrapping walked JSON elements into a _JSON object_. All the elements in JSON object must have labels, thus any walked elements
 which do not have labels (i.e., elements in _JSON array_ and root) will be ignored.
 
 E.g., let's dump all values from `Jane`'s record and wrap them all into an object:
+```bash
+bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj
+{
+   "age": 25,
+   "city": "Denver",
+   "name": "Jane",
+   "number": "333-638-0238",
+   "postal code": 80206,
+   "spouse": "Chuck",
+   "state": "CO",
+   "street address": "6213 E Colfax Ave",
+   "type": "home"
+}
+bash $ 
 ```
-bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj 
+The above output though does not hold all the atomic entries from the Jane's record (e.g.: Jane has 2 phone numbers, while only
+one is displayed). That is because clashing labels will override each other (as of version _1.75_). To ensure aggregation of clashing 
+labels into arrays, use `-m` option:
+```bash
+bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jjm
 {
    "age": 25,
    "city": "Denver",
@@ -1280,10 +1297,9 @@ bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj
 }
 bash $ 
 ```
-As one can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output,
-because they are enlisted in _JSON array_ and therefore have no attached labels (and hence ignored).
-
-Another point to note: the values with the clashing labels will be reassembled into a _JSON array_
+As one can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output, that is
+because they are enlisted in _JSON array_ and therefore have no labels (and hence ignored in `-jj` option, which only considers
+values with labels only).
 
 
 #### Extracting labeled value
@@ -1292,7 +1308,7 @@ This become especially useful when dealing with templates. Let's consider a foll
 
 Say, the ask here is to extract names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
-```
+```json
 [
    {
        "name": "John",
