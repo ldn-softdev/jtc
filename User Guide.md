@@ -37,7 +37,7 @@
      * [Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing)
      * [Aggregating walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks)
      * [Wrapping walked entries into a JSON object (`-jj`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-a-json-object)
-     * [Extracting labeled value (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-value)
+     * [Extracting labeled values (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-value)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
      * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
 3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
@@ -1254,8 +1254,8 @@ bash $
 
 
 #### Wrapping walked entries into a JSON object
-`-jj` let wrapping walked JSON elements into a _JSON object_. All the elements in JSON object must have labels, thus any walked elements
-which do not have labels (i.e., elements in _JSON array_ and root) will be ignored.
+While `-j` wraps walks into a _JSON array_, `-jj` does into a _JSON object_. All the elements in JSON object must have labels,
+thus any walked elements which do not have labels (i.e., elements in _JSON array_ and root) will be ignored.
 
 E.g., let's dump all values from `Jane`'s record and wrap them all into an object:
 ```bash
@@ -1273,7 +1273,7 @@ bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj
 }
 bash $ 
 ```
-The above output though does not hold all the atomic entries from the Jane's record (e.g.: Jane has 2 phone numbers, while only
+Well, the above output though does not have all the atomic entries from the Jane's record (e.g.: Jane has 2 phone numbers, while only
 one is displayed). That is because clashing labels will override each other (as of version _1.75_). To ensure aggregation of clashing 
 labels into arrays, use `-m` option:
 ```bash
@@ -1302,7 +1302,7 @@ because they are enlisted in _JSON array_ and therefore have no labels (and henc
 values with labels only).
 
 
-#### Extracting labeled value
+#### Extracting labeled values
 Sometimes, when displaying outputs wrapped into array or object, it's desirable to extract the the labeled value from the object.
 This become especially useful when dealing with templates. Let's consider a following exercise:
 
@@ -1319,8 +1319,8 @@ has children or not, like this:
 ```
 
 1\. Extracting names is easy:
-```
-bash $ <ab.json jtc -w'[0][:][name]'
+```bash
+bash $ <ab.json jtc -w'<name>l:'
 "John"
 "Ivan"
 "Jane"
@@ -1332,8 +1332,8 @@ bash $
 and
 [namespace interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 , for now let's just construct a walk which create required namespace:
-```
-bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v'
+```bash
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v'
 "John"
 "Olivia"
 "Ivan"
@@ -1342,7 +1342,7 @@ bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v'
 "Robert"
 bash $ 
 ```
-\- the second walk above features a couple concepts:
+\- the second walk above features couple concepts:
 - [branching](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
 (`<..>f`) _fail-safe_ lexeme: ensures that the walk is reinstated at the placement of the lexeme if/once the 
 subsequent walk fails
@@ -1353,25 +1353,19 @@ b/c if array `children` were empty, that walk would fail)
 
 3\. by now, each time when second walk finishes iteration, the namespace `C` should be correctly set to the respective values reflecting
 if a person has children or not, but to see that, we'd need to interpolate that namespace using a template:
-```
-bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}'
+```bash
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": {{C}}}' -tc
 "John"
-{
-   "has children": "yes"
-}
+{ "has children": "yes" }
 "Ivan"
-{
-   "has children": "no"
-}
+{ "has children": "no" }
 "Jane"
-{
-   "has children": "yes"
-}
+{ "has children": "yes" }
 bash $ 
 ```
 4. okay, we're getting closer, but now we want to display all records with labels:
-```
-bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}' -l
+```bash
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": {{C}}}' -l
 "name": "John"
 jtc jnode exception: label_accessed_not_via_iterator
 bash $ 
@@ -1380,29 +1374,58 @@ Bummer! The exception (rightfully) occurs here because trying to find an outer l
 `{ "has children": "yes" }` fails - indeed it's a standalone JSON, and root does not have any label attached - hence the exception.
 In the situations like this, we'd rather want to reach out inside the object for the labeled value rather than find an outer label.
 The option `-ll` facilitates that need:
-```
-bash $ <ab.json jtc -w'[0][:][name]' -w'[0][:][children] <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": "{C}"}' -llj
+```bash
+bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -llj -tc
 [
-   {
-      "has children": "yes",
-      "name": "John"
-   },
-   {
-      "has children": "no",
-      "name": "Ivan"
-   },
-   {
-      "has children": "yes",
-      "name": "Jane"
-   }
+   { "has children": "yes", "name": "John" },
+   { "has children": "no", "name": "Ivan" },
+   { "has children": "yes", "name": "Jane" }
 ]
 bash $ 
 ```
-Finally - what's `-TT` in there? It's a dummy template (one which surely fails). It needed because if it wasn't here, then 
+Finally, what's `-TT` in there? It's a dummy template (one which surely fails). It needed because if it wasn't here, then 
 a single template would apply to both walks (and we don't want our template to apply onto the first walk). So, we'd need to provide 
 a dummy one so that each 
 [template would relate to own walk](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks)
 . If templates fails (and `-TT` surely does) then no interpolation applied and walked iteration result is used as it is.
+
+if that dummy template (`-TT`) discomforts you, there's a way to go without one: keep in mind that template gets applied only once it
+results in a legit JSON after the interpolation occurs (shall one occurs). Let's see what the result would be w/o that dummy template:
+```bash
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc
+"John"
+{ "has children": "yes" }
+{ "has children": "yes" }
+{ "has children": "no" }
+{ "has children": "no" }
+{ "has children": "yes" }
+bash $ 
+```
+Now, the same template (`-T'{"has children": {{C}}}'`) gets applied to each walk, and while for the 1st walk the template interpolation
+definitely fails (while walking the 1st walk for the 1st time the name `C` does not exist yet in the namespace) and therefore the very
+1st walk is getting displayed as it is, for all the subsequent iterations of the 1st walk template interpolation would succeed (because 
+the namespace `C` now holds the value from the 2nd walk) and therefore unwanted template substitution occurs.  
+To fix that problem easily, we can erase the namespace `C` right at the beginning of the 1st walk:
+```bash
+bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc
+"John"
+{ "has children": "yes" }
+"Ivan"
+{ "has children": "no" }
+"Jane"
+{ "has children": "yes" }
+bash $ 
+```
+And adding `-llj` provides the desired effect now:
+```bash
+bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc -llj
+[
+   { "has children": "yes", "name": "John" },
+   { "has children": "no", "name": "Ivan" },
+   { "has children": "yes", "name": "Jane" }
+]
+bash $ 
+```
 
 
 #### Succinct walk-path syntax
