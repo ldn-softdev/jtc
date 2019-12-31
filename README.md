@@ -566,7 +566,7 @@ _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
 ### performance:
 here's a 4+ million node JSON file [standard.json](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
-bash $ time jtc -t2 -zz standard.json 
+bash $ time jtc -zz standard.json 
 4329975
 user 5.537 sec
 ```
