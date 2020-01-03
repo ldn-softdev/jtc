@@ -1,4 +1,4 @@
-# User Guide: [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75, being updated_)
+# User Guide: [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75c, being updated_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
