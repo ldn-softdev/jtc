@@ -553,7 +553,7 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original literal format, so it's free of
  all the above caveats, compare:
  
- Handling | `jtc` | **jq** 
+ Handling | `jtc` | **jq 1.6** 
  --- | ---: | :---
 Invalid Json: `[ 00 ]` | `<<<'[00]' jtc` | `<<<'[00]' jq -c .`
 _Parsing result_ | `jtc json exception: missed_prior_enumeration` | `[0]`
