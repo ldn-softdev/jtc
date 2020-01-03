@@ -90,8 +90,7 @@ using namespace std;
 
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
-#define JTCS_PFX "{ \"size\": "
-#define JTCS_SFX " }"
+#define JTCS_TKN "size"
 #define WLK_HPFX "$?"
 #define USE_HPFX -1
 
@@ -732,7 +731,7 @@ void CommonResource::init_decomposed(void) {
  // - bare qualifier '-' allowed only in 1st set and not in the others
  for(auto &opt: vopt_)
   for(const char *o = STR(OPT_RAW) STR(OPT_IND) STR(OPT_QUT)
-                       STR(OPT_FRC) STR(OPT_RDT); *o != NULL_CHR; ++o) {
+                       STR(OPT_SZE) STR(OPT_FRC) STR(OPT_RDT); *o != NULL_CHR; ++o) {
    if(&opt == &vopt_.front())                                   // handle 1st set
     if(*o == CHR(OPT_RDT)) continue;                            // '-' allowed only in 1st set
 
@@ -1081,25 +1080,30 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
  #include "lib/dbgflow.hpp"
  // write whole json to output (demultiplexing file and stdout), featuring:
  // inquoting/unquoting json string, putting json into array (-j), printing size to stdout
- if(opt()[CHR(OPT_SZE)].hits() > 1)                             // -zz
-  { cout << json.size() << endl; return; }
 
  bool write_to_file{opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
       // filename is in the 1st set of arguments, while -f is in the last
  bool unquote{opt()[CHR(OPT_QUT)].hits() >= 2};                 // -qq given, unquote
  bool inquote{opt()[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
+ bool global_jsn{opt()[CHR(OPT_JAL)].hits() > 0};               // -J given
 
  if(allow_encap == Jsonize and opt()[CHR(OPT_JSN)].hits() == 1) // -j given, force jsonizing
   json = ARY{ move(json) };
  if(not unquote and inquote)
   json.root() = json.inquote_str(json.to_string(Jnode::Raw));
 
+ size_t jsize{0};
+ if(not global_jsn) {
+  if(opt()[CHR(OPT_SZE)].hits() > 0) jsize = json.size();       // -z or -zz
+  if(opt()[CHR(OPT_SZE)].hits() > 1) json.root() = jsize;       // -zz
+ }
+
  DBG(0)
   DOUT() << "outputting json to "
          << (write_to_file?
               cr_.iss().filename():
-              opt()[CHR(OPT_JAL)]? "<JSON>": opt()[CHR(OPT_JSN)]? "<json>": "<stdout>") << endl;
- if(opt()[CHR(OPT_JAL)].hits() > 0)                             // -J, jsonize to global, defer
+              global_jsn? "<JSON>": opt()[CHR(OPT_JSN)]? "<json>": "<stdout>") << endl;
+ if(global_jsn)                                                 // -J, jsonize to global, defer
   { cr_.jsonize(move(json)); return; }                          // output until all JSON processed
 
  static ios_base::openmode mod = ios_base::out;                 // first time re-write file
@@ -1112,8 +1116,8 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
   { if(not json.str().empty()) xout << json.unquote_str(json.str()) << endl; }
  else xout << json << endl;
 
- if(opt()[CHR(OPT_SZE)])
-  xout << JTCS_PFX << json.size() << JTCS_SFX << endl;
+ if(opt()[CHR(OPT_SZE)].hits() == 1)                            // -z
+  xout << OBJ{LBL{JTCS_TKN, static_cast<double>(jsize)}} << endl;
 }
 
 
@@ -2183,9 +2187,6 @@ void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
  // no -j given, print out element pointed by iter wi
  // there are 3 source to chose from: 1. template (jtmp_ref); 2. current walk value (*wi);
  // 3. if -ll given then and conditions met (glean_lbls), then either 1. or 2. to be iterated
- if(opt()[CHR(OPT_SZE)].hits() > 1)                             // -zz
-  { cout << wi->size() << endl; return; }
-
  auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
  bool glean_lbls{src.is_object() and src.has_children() and opt()[CHR(OPT_LBL)].hits() >= 2};
  bool inquote{opt()[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
@@ -2198,6 +2199,9 @@ void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
  if(mod == ios_base::out) mod |= ios_base::app;                 // next time - append
  ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
 
+ if(opt()[CHR(OPT_SZE)].hits() > 1)                             // -zz
+  { xout << wi->size() << endl; return; }
+
  Jnode dummy = ARY{nullptr};
  for(auto itl = (glean_lbls? src: dummy).begin(); itl != (glean_lbls? src: dummy).end(); ++itl) {
   auto & srr = glean_lbls? *itl: src;                           // source reference
@@ -2209,13 +2213,13 @@ void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
    { if(not srr.str().empty()) xout << json().unquote_str(srr.str()) << endl; }
   else {
    if(inquote) xout << '"' << json().inquote_str(srr.to_string(Jnode::Raw)) << '"' << endl;
-   else xout << srr << endl;                                      // a single operation!
+   else xout << srr << endl;                                    // a single operation!
   }
   if(measure) size += srr.size();
  }
 
  if(measure)                                                    // -z given
-  xout << JTCS_PFX << size << JTCS_SFX << endl;
+  xout << OBJ{LBL{JTCS_TKN, static_cast<double>(size)}} << endl;
 }
 
 

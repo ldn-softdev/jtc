@@ -1226,8 +1226,8 @@ class Jnode::Iterator: public std::iterator<std::bidirectional_iterator_tag, T> 
                          { return &sn_(underlying_()->KEY, underlying_()->VALUE); }
     Iterator<T> &       operator++(void) { ++ji_; return *this; }
     Iterator<T> &       operator--(void) { --ji_; return *this; }
-    Iterator<T>         operator++(int) { auto tmp{*this}; ++(*this); return tmp; }
-    Iterator<T>         operator--(int) { auto tmp{*this}; --(*this); return tmp; }
+    Iterator<T>         operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+    Iterator<T>         operator--(int) { auto tmp = *this; --(*this); return tmp; }
 
  protected:
                         // constructor for iterator type:
@@ -3304,9 +3304,12 @@ void Json::parse_user_json_(WalkStep &ws) const {
  }
  // try parsing user_json
  try { Json j; ws.user_json = std::move(j.parse(json_ptr, Strict_no_trail).root()); }
- catch(Json::stdException & e) {
+ catch(Json::stdException & e) {                                // parsing as JSON fails
   if(ws.jsearch != json_match)                                  // i.e. if not <..>j, otherwise
-   throw EXP(Jnode::json_lexeme_invalid);                       // lexeme is a template (or bad)
+   try { Json j; ws.user_json = std::move(j.parse(std::string{"\""} + json_ptr + "\"",  // try
+                                                  Strict_no_trail).root()); }   // promoting to str
+   catch(Json::stdException & e)                                // and only if it fails - throw
+    { throw EXP(Jnode::json_lexeme_invalid); }
   return;                                                       // here <..>j is a template
  }
 
@@ -4612,11 +4615,29 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));
  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));
 
+ auto idx2str = [](size_t x, bool r) {                          // convert idx x to "a","b",etc
+  size_t ofs{r? SIZE_T('A'): SIZE_T('a')};
+  std::string v;
+  while(x > ('z' - 'a'))
+   { v = static_cast<char>(ofs + x % ('z' - 'a' + 1)) + v; x /= 'z' - 'a' + 1; --x; }
+  v = static_cast<char>(ofs + x) + v;
+  return v;
+ };
+
+ size_t val{0}, lbl{0};
+ if(jit->is_iterable())                                         // for all iterables generate
+  for(auto &rec: *jit) {                                        // auto tokens
+   if(jit->is_object())
+    { auto_ns.emplace(std::string{"$"} + idx2str(lbl++, true), rec.label()); }
+   auto_ns.emplace(std::string{"$"} + idx2str(val++, false), rec);
+  }
+
  for(auto p: {false, true}) {                                   // second pass: try obj as array
   ibit[Process_as_array] = p;
   tmp = interpolate_tmp_(tmp, auto_ns, ibit);
-  tmp = interpolate_tmp_(tmp, *nsp, ibit);                      // interpolate all NS values
-  tmp = interpolate_jsn_(tmp, jit.json());                      // jsonize/stringify (<<>> / >><<)
+  if(p == false)
+   { tmp = interpolate_tmp_(tmp, *nsp, ibit);                   // interpolate all NS values
+     tmp = interpolate_jsn_(tmp, jit.json()); }                 // jsonize/stringify (<<>> / >><<)
 
   if(parse_type == Json::Dont_parse)
    rj = std::move(STR{tmp});
@@ -4625,7 +4646,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
    catch(Json::stdException & e) { rj.root().type(Jnode::Neither); }
 
   if(rj.root().type() != Jnode::Neither or not ibit[Obj_attempted]) // successful interpolation, or
-   break;                                                       // was no interpolation of {..}
+   break;                                                       // was no interpolation of obj
   tmp = tmpc;
  }
 
