@@ -8,7 +8,8 @@
    * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
    * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
    * [Unquoting JSON strings (`-qq`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings)
-   * [Stringifying JSON (`-rr`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json) 
+   * [Stringifying JSON (`-rr`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json)
+   * [Summary of display options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-display-options)
 2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
    * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
      * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
@@ -368,6 +369,18 @@ bash $
 
 B.t.w, both _string unquoting_ and _JSON stringification_ also could be achieved via 
 [template operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified).
+
+
+### Summary of display options
+- `-tN`: pretty printing using indentation with N spaces (by default `N` is `3`)
+- `-r`: compact (single row) printing using with a default spacer (1 white space) 
+- `-rtN`: compact printing using `N` white spaces as a spacer
+- `-tNc`: semi-compact printing with indentation of `N` white spaces (default is `3`)
+- `-z`: additionally print a size of an entire JSON (or of each walked elements) at the end of printing JSON (walked elements)
+- `-zz`: print a size instead of a JSON (walked elements)
+- `-q`: force parsing of a solidus `/` as strictly quoted (i.e., `\/`)
+- `-qq`: unquote printed (walked) JSON string (drop the outer quotation marks and if the string is embedded JSON, parse and print it)
+- `-rr`: inquote (embed) JSON (walked elements) into a JSON string values
 
 
 ## Walking JSON
