@@ -18,10 +18,11 @@
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
-       * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
+
+       * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
+       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
        * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#examples-sporting-fail-safe-using-namespaces-and-interpolation)
        * [Uses of `Fn` directive with non-default quantifiers (`<>Fn`, `><Fn`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
@@ -633,6 +634,51 @@ Beside user provided names, `jtc` features a number of internally generated/supp
   (default value is `,`) 
 
 
+##### Cross-lookups using namespace 
+Directives `<>v`, `<>k` (as well as all other lexemes allowing capturing and setting namespace) and search lexemes `<>s`, `<>t` 
+let facilitating cross-lookups. Say, we have a following JSON:
+```bash
+bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
+bash $ <<<$JSN jtc -tc
+{
+   "item": "bread",
+   "list": { "bread": 1.20, "milk": 0.90 }
+}
+bash $ 
+```
+the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
+Using namespaces it becomes a trivial task:
+```bash
+bash $ <<<$JSN jtc -w'[item]<Itm>v[^0]<Itm>t' -l
+"bread": 1.20
+bash $ 
+```
+- `[item]` - selects a value by label `item`
+- `<Itm>v` - stores currently walked (selected) value (`bread`) it in the namespace `Itm`
+- `[^0]` - resets the walk path back to the root
+- `<Itm>t` - searches (recursively) for a (first) label matching the value stored in the namespace `Itm` (which is `bread`)
+
+The similar way (like in `<Itm>v`) labels/indices could be accessed and stored in the namespace using directive `<>k`.
+The empty directive lets reinterpreting label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ 
+value respectively.  
+Say, we want to list all labels in the `address` record:
+```bash
+bash $ <ab.json jtc -w'<address>l[:]<>k'
+"city"
+"postal code"
+"state"
+"street address"
+bash $ 
+```
+
+
+##### Setting a custom JSON value into a namespace
+The lexeme `<..>v` (and all others that allow _namespaces_ - `P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`v`,`k`,`f`,`F`) 
+allows setting up a custom JSON value (in lieu of currently walked JSON) - if the lexeme's value is given in the format:  
+- `<name:JSON_value>v`
+then upon walking such syntax the `JSON_value` will be preserved in the namespace `name` instead of a currently walked JSON.
+
+
 ##### Path namespace example
 Here are both of the path tokens demonstrated:
 ```bash
@@ -689,56 +735,14 @@ bash $
 ```
 
 
-
-##### Cross-lookups using namespace 
-Directives `<>v`, `<>k` and search lexemes `<>s`, `<>t` let facilitating cross-lookups. Say, we have a following JSON:
-```bash
-bash $ <<<'{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }' jtc -tc
-{
-   "item": "bread",
-   "list": { "bread": 1.20, "milk": 0.90 }
-}
-bash $ 
-```
-the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
-Using namespaces it becomes a trivial task:
-```bash
-bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
-bash $ <<<$JSN jtc -w'[item]<Itm>v[^0]<Itm>t'
-1.20
-bash $ 
-```
-- `[item]<Itm>v` - will retrieve a value in `item` and store it in the namespace `Itm`
-- `[^0]<Itm>t` - will reset the point of departure back to the root, then will search for a label matching the value stored
-in the namespace `Itm` (which is `bread`)
-
-The similar way labels/indices could be accessed and stored in the namespace - using directive `<>k`. The empty directive lets 
-reinterpreting label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ value respectively.
-Say, we want to list all labels in the `address` record:
-```bash
-bash $ <ab.json jtc -w'<address>l[:]<>k'
-"city"
-"postal code"
-"state"
-"street address"
-bash $ 
-```
-
-
-##### Setting a custom JSON value into a namespace
-The lexeme `<..>v` (and all others that allow _namespaces_ - `P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`v`,`k`,`f`,`F`) 
-allows setting up a custom JSON value (in lieu of currently walked JSON) - if the lexeme's value is given in the format:  
-- `<name:JSON_value>v`
-then upon walking such syntax the `JSON_value` will be preserved in the namespace `name`
-
-
 #### Fail-safe and Forward-Stop directives
 All the lexemes in the _walk-path_ are bound by a logical `AND` - only once all succeed then the walk-path succeeds too (and printed
 or passed for a respective operation). The _fail-safe_ and _Forward-Stop_ directives make possible to introduce branching logic 
 into the _walk-path_. Let's break it down:
 
 When directive `F` is paired with `<>f`, together they cover all cases of walk-paths branching:
-  * ... `<>f` {if this path does not fail, then skip it} `<>F` {otherwise walk this path (starting from `<>f` point)} ...
+  * ... `<>f` {if this path fails, then a walk ends reinstating the walk at `<>f` point}
+  * ... `<>f` {if this path does not fail, then skip it} `<>F` {otherwise keep walking this path starting from `<>f` point} ...
   * ... `<>f` {if this path does not fail, then end walking} `><F` {otherwise walk this path} ...
   * ... `<>f` {if this path does not fail, then end walking} `><F <>F` # otherwise skip it (i.e., skip the failed path)
   * etc (there's unlimited number of times `<>f` and `<>F`/`><F` pairs could be present in the walk)
@@ -778,7 +782,7 @@ one to the failing point)
 
 ##### Examples sporting _fail-safe_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
-this format 
+this format  
 `<Name> has children: true/false`
 
 Thus, we need to build a single path, which will find the `name`, then inspect `children` record and transform it into
@@ -813,7 +817,7 @@ bash $
 - otherwise (i.e., upon a successful walk - addressing a first child `[0]`) the namespace `C` will be overwritten
 with the value `true`
 
-4. finally, we need to interpolate preserved namespaces for our final / required output:
+4. finally, we need to interpolate preserved namespaces for our final / required output using a template:
 ```bash
 bash $ <ab.json jtc -x'[0][:][name]<N>v [-1][children]<C:false>f[0]<C:true>v' -T'"{N} has children: {C}"' -qq
 John has children: true
@@ -855,7 +859,7 @@ bash $ <<<$JSN jtc -w'[:]<>f[name]<>F' -tc
 bash $ 
 
 ```
-Without `<>F` directive, the walk would look like this:
+Without `<>F` directive at the end, the walk would look like this:
 ```bash
 bash $ <<<$JSN jtc -w'[:]<>f[name]' -tc
 "server"
@@ -869,22 +873,24 @@ Thus, `<>F` skips those (successfully) matched entries, leaving only one which f
 (the record(s) which does not have `name` in it)
 
 
-Now, what if in the latter example above (one with `<>F` directive) we want to process *failed* JSON further, say, to display ip only, 
-w/o object itself? That is easily achievable - walking of the *failed* path continues past the `<>F` directive:
+Now, what if in the example above (one with `<>F` directive) we want to process *failed* JSON further, say, to display `ip` only, 
+rather than the whole record? That is easily achievable - walking of the *failed* path continues past the `F` directive:
 ```bash
-bash $ <<<$JSN jtc -w'[:]<>f[name]<>F [ip]'
-"1.1.1.100"
-"1.1.1.101"
+bash $ <<<$JSN jtc -w'[:]<>f[name]<>F [ip]' -qq
+1.1.1.100
+1.1.1.101
 bash $ 
 
 ```
+
 
 ##### Uses of `Fn` directive with non-default quantifiers
 there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifier:
   - `<>Fn` - this variant of the lexeme acts as a 'jump' instructions for the walk path - i.e. once walked, it will jump to the `n`th 
   lexeme (from the lexeme `<>F`) and continues walking from there. E.g.: `<>F1` does not do anything - it continues walking from the 1st 
   lexeme after `<>F1`, `<>F2` will jump over one lexeme and continues walking from the 2nd one, and so on and so forth.  
-  - `><Fn` - this variant will repeat the same walk up to the lexeme additionally `n` times - that is useful when there's a need 
+  - `><Fn` - this variant will repeat the same walk up to the lexeme additionally `n` times - that is useful when there's a need to
+  replicate a path additionally `n` times
 
 
 #### RE generated namespaces
@@ -929,12 +935,12 @@ bash $ <ab.json jtc -w'<>i1:' -r
 bash $
 ```
 \- the trailing `1:` in the walk path is the slice quantifier, which selects (prints) all the matches (we are matching
-_JSON arrays_ here - `i`) starting from second one (all quantifiers and indices are zero-based)
+_JSON arrays_ here - suffix `i`) starting from second one (all quantifiers and indices are zero-based)
 
 
 ##### Search quantifiers with relative offset semantic 
 There are two search lexemes types where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
-Those are 
+Those 
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
 will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
 to address only one **single** label or index, there could not be any other, e.g. in this JSON:
@@ -946,20 +952,20 @@ bash $
 there could be only one label `"b"`, thus normally trying to match a second, third, etc instance of the label `"b"` would not
 make much of a sense: `<<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2'`
 
-Thus the semantic of quantifiers only in those searches was altered (to extend use cases) - there, quantifiers provide a
+Thus the semantic of quantifiers only in those searches was altered (to extend use cases) - there, the quantifiers provide a
 _relative offset_ meaning from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
-once match found then its second (successive) neighbor value will be selected:
+then its second (successive) neighbor value will be selected:
 ```
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2' -l
 "d": 4
 bash $ 
 ```
-Because of change in semantic, those are the only search quantifiers (they also have to have a _non-recursive_ spelling: `>..<l`, `>..<t`) 
+Because of change in semantic, those are the only search quantifiers (in the _non-recursive_ lexemes `>..<l`, `>..<t`) 
 which allow negative values. Positive quantifiers let selecting next (successive) neighbors, while negative quantifiers let
 selecting preceding neighbors:
 ```bash
-bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l-1' -l
-"a": 1
+bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>d<l-2' -l
+"b": 2
 bash $ 
 ```
 
@@ -976,7 +982,7 @@ bash $ <ab.json jtc -w'<5>R:' -l
 "number": "358-303-0373"
 bash $ 
 ```
-Some of the values are `street address`, some are the phone `number`. Say, we want to dump only the phone records. Knowing the label
+Some of the values are `street address`es, some are the phone `number`s. Say, we want to dump only the phone records. Knowing the label
 of the phone numbers (`"number"`), it's achievable via this notation:
 ```bash
 bash $ <ab.json jtc -w'[number]:<5>R:' -l
@@ -984,7 +990,7 @@ bash $ <ab.json jtc -w'[number]:<5>R:' -l
 "number": "358-303-0373"
 bash $ 
 ```
-I.e., once the literal subscript lexeme is attached to the search lexeme over `:` symbol, it makes a scoped search.
+I.e., once the literal subscript lexeme is attached to the search lexeme over `:` symbol, it makes a scoped search (`[..]:<..>`).
 
 
 #### Non-recursive search
