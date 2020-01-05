@@ -388,7 +388,7 @@ print a size instead of a JSON (walked elements)
 force parsing of a solidus `/` as strictly quoted (i.e., `\/`)
 - [`-qq`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-json-strings):
 unquote printed (walked) JSON string (drop the outer quotation marks and if the string is embedded JSON, parse and print it)
-- [`-rr`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-display-options):
+- [`-rr`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json):
 inquote (embed) JSON (walked elements) into a JSON string values
 - `-rrtN`: inquote (embed) JSON (walked elements) into a JSON string values with a spacer `N`
 
