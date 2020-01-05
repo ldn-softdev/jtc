@@ -372,15 +372,25 @@ B.t.w, both _string unquoting_ and _JSON stringification_ also could be achieved
 
 
 ### Summary of display options
-- `-tN`: pretty printing using indentation with N spaces (by default `N` is `3`)
-- `-r`: compact (single row) printing using with a default spacer (1 white space) 
-- `-rtN`: compact printing using `N` white spaces as a spacer
-- `-tNc`: semi-compact printing with indentation of `N` white spaces (default is `3`)
-- `-z`: additionally print a size of an entire JSON (or of each walked elements) at the end of printing JSON (walked elements)
-- `-zz`: print a size instead of a JSON (walked elements)
-- `-q`: force parsing of a solidus `/` as strictly quoted (i.e., `\/`)
-- `-qq`: unquote printed (walked) JSON string (drop the outer quotation marks and if the string is embedded JSON, parse and print it)
-- `-rr`: inquote (embed) JSON (walked elements) into a JSON string values
+- [`-tN`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing):
+pretty printing using indentation with N spaces (by default `N` is `3`)
+- [`-r`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing):
+compact (single row) printing using with a default spacer (1 white space) 
+- [`-rtN`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing):
+compact printing using `N` white spaces as a spacer
+- [`-tNc`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#semi-compact-printing):
+semi-compact printing with indentation of `N` white spaces (default is `3`)
+- [`-z`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size):
+additionally print a size of an entire JSON (or of each walked elements) at the end of printing JSON (walked elements)
+- [`-zz`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size):
+print a size instead of a JSON (walked elements)
+- [`-q`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing):
+force parsing of a solidus `/` as strictly quoted (i.e., `\/`)
+- [`-qq`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-json-strings):
+unquote printed (walked) JSON string (drop the outer quotation marks and if the string is embedded JSON, parse and print it)
+- [`-rr`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-display-options):
+inquote (embed) JSON (walked elements) into a JSON string values
+- `-rrtN`: inquote (embed) JSON (walked elements) into a JSON string values with a spacer `N`
 
 
 ## Walking JSON
