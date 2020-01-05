@@ -19,7 +19,7 @@
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Last Walk namespace (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#last-walk-namespace)
+       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
@@ -401,7 +401,7 @@ Whenever there's a need to select only one or multiple JSON elements, walk-paths
 
 ### Walking with subscripts (offset lexemes)
 Offsets are always enclosed into square brackets `[..]`. Selecting JSON elements always begins from the root.
-Both arrays and objects can be subscripted using numerical offset, though it's best to utilize literal offsets to subscript objects.
+Both arrays and objects can be subscripted using numerical offseta, though it's best to utilize literal offsets to subscript objects.
 E.g. let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
 ```bash
 bash $ <ab.json jtc -w'[Directory][1][address]'
@@ -460,10 +460,10 @@ bash $
 ##### Subscript slice notation
 Another way to select multiple subscripts is to use a slice notation `[N:M:S]`. In that notation `N` and `M` could be either positive
 or negative, while `S` must be strictly positive. Any of positions (as well as position separator `:`) could be omitted.
-The first position (`N`) designates a beginning of the slice selection, the last position (`M`) designates the end of the 
-slice exclusively (i.e., not including the indexed element itself)
-- positive `N` (and `M`) refers to `N`th element offset from the beginning of the iterable (whether it's array or an object)
-- negative `N` (and `M`) refers to the `N`th element offset from the end of the collection.
+The first position (`N`) designates a beginning of the slice selection, the position (`M`) designates the end of the 
+slice exclusively (i.e., not including the indexed element itself), the last position (`S`) designates a step.
+- positive `N` (and `M`) refers to `N`th element offset from the beginning of the iterable (whether it's an array or an object)
+- negative `N` (and `M`) refers to the `N`th element offset from the end of the iterable.
 - empty (missed `N` and `M`) tells to address either from the the beginning of the collection (in the first position), or from the end
 (last position) 
 - `S` position indicates a step value when iterating over the selected slice, the default value is obviously `1`
@@ -505,7 +505,7 @@ bash $
 
 #### Searching JSON with RE
 Optionally, search lexemes may accept _one-letter suffixes_: a single character following the lexeme's closing bracket.
-These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a regex search among string values:
+These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a _regex search_ among string values:
 ```bash
 bash $ <ab.json jtc -w'<^N>R'
 "New York"
@@ -513,7 +513,7 @@ bash $
 ```
 
 #### Search suffixes
-This is the list of suffixes to control search behavior: 
+This is the list of suffixes that control search behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ values (e.g.: `<CO>`, `<CO>r`)
   * `R`: the lexeme is a search RE, only _JSON string_ values searched (e.g.: `<^N+*>R`)
   * `P`: matches _any_ string values, same like `<.*>R`, just faster (e.g.: `<>P`)
@@ -523,13 +523,13 @@ This is the list of suffixes to control search behavior:
   * `b`: matches _JSON boolean_ values; to match the exact boolean, it must be spelled as `<true>b`, `<false>b`; when the lexeme is empty
   (`<>n`) it matches any boolean
   * `n`: matches _JSON null_ value (e.g.: `<>n`)
-  * `l`: fully matches _JSON label_ (e.g.: `<address>l`)
+  * `l`: fully matches _JSON labels_ (e.g.: `<address>l`)
   * `L`: the lexeme is a search RE, only _JSON labels_ searched (e.g. `<^[a-z]>L`)
   * `a`: matches any JSON atomic value, i.e., _strings_, _numerical_, _boolean_, _null_ (e.g.: `<>a`)
   * `o`: matches any JSON object `{..}` (e.g.: `<>o`)
   * `i`: matches any JSON array `[..]` (e.g.: `<>i`)
-  * `c`: matches containers - either arrays or objects (e.g.: `<>c`) 
-  * `e`: matches end-nodes only, which is either atomic values, or an empty iterables `[]`, `{}` (e.g.: `<>e`)
+  * `c`: matches any containers - either arrays or objects (e.g.: `<>c`) 
+  * `e`: matches end-nodes only, which is either atomic values, or empty iterables `[]`, `{}` (e.g.: `<>e`)
   * `w`: matches any JSON value (wide range match): atomic values, objects, arrays (e.g. `<>w`)
   * `j`: matches a JSON value; the lexeme can be either a valid JSON (e.g.: `<[]>j` - finds an empty JSON array), or a
   [template](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
@@ -538,9 +538,9 @@ This is the list of suffixes to control search behavior:
   (e.g.: `<"{str}">j` - finds a _JSON string_ whose value is in
   [namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
   `str`)
-  * `s`: matches a JSON value previously stored in the namespace by directives `<..>k`, `<..>v` (e.g.: `<Val>v ... <Val>s`)
-  * `t`: matches a tag (label/index) previously stored in the namespace by directives `<..>k`, `<..>v` (e.g. `<Lbl>k ... <Lbl>t`)  
-  * `q`: matches only original JSON values, i.e. selects non-duplicated values (e.g.: `<>q`)  
+  * `s`: matches a JSON value previously stored in the namespace (e.g.: `<Val>v ... <Val>s`)
+  * `t`: matches a tag (label/index) previously stored in the namespace (e.g. `<Lbl>k ... <Lbl>t`)  
+  * `q`: matches only original JSON values, i.e. selects non-duplicated values only (e.g.: `<>q`)  
   * `Q`: matches only repetitive (duplicating) JSON values (e.g.: `<>Q`)
   * `g`: matches all JSON values in the ascending order (e.g.: `<>g`)
   * `G`: matches all JSON values in the descending order (e.g.: `<>G`)
@@ -593,16 +593,16 @@ for the currently walked JSON elements, these are _directives_:
   * `F`: Forward-Stop: behavior of the directive is dependent on spelling:
     * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
     without ending the walk;
-    * `><F` - when the directive is reached, the walk successfully stops for the output processing    
+    * `><F` - when the directive is reached, the walk successfully ends for the output processing    
   * `u`: user evaluation of the walk-path: the lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
   * `I`: increment/multiply lexeme; the lexeme let incrementing and/or multiplying the namespace value pointed by the lexeme, 
   e.g.: `<val>I3:2` - a JSON numerical stored in the namespace `val` will be incremented by 3 and then multiplied by 2.
   * `Z`: saved into a provided namespace a size of a currently walked JSON (recursive and non-recursive notations produces different
-  effects - the former calculates the entire JSON size, while the latter does only the number of children); With the quantifier of `1`
+  effects - the former calculates the entire JSON size, while the latter does only the number of children); with the quantifier of `1`
   (i.e., `<StrSize>Z1`) saves into the namespace a size of the currently walked _JSON string_, otherwise (if not a string) `-1`
-  * `W` saves into the provided namespace a currently walked JSON's walk-path as a JSON array (e.g.: `<wp>W`)
+  * `W` saves into the provided namespace a currently walked JSON's walk-path as a _JSON array_ (e.g.: `<wp>W`)
 
 
 #### Namespace
@@ -614,17 +614,22 @@ Stored in the namespace values could be reused later in the same or different wa
 for a shell evaluation.
 
 Beside user provided names, `jtc` features a number of internally generated/supported tokens and names that have various applications:
-  - `$N`, where `N` is a number - typically that would be a reference to the result of a REGEX matched group (however, could be (re)used
-  be a user as well)
-  - `$PATH` - used in templates when requires to interpolate a path (set of indices/labels) to the walked point as 
-  a JSON array
+  - `$N` namespace, where `N` is a number - typically that would be a reference to the result of a REGEX matched group
+  (however, could be (re)used be a user as well)
+  - `$a`, `$b`, `$c`, etc - auto generated tokens when the interpolated value is an iterable (an array or an object),
+  where `$a` refers to the first element in the iterable, `$b` to the second, etc
+  - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an an object,
+  where `$A` refers to the first element's label, `$B` to the second's label, etc
+  - `$PATH` - an auto generated token, used in templates when requires to interpolate a path (set of indices/labels)
+  to the walked point as a JSON array
   - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
-  - `$_` - all the elements during `$path` interpolation will be concatenated using the symbol(s) held by that name (default value `_`) 
-  - `$#` - when a _JSON array_ or _object_ is getting template-interpolated into a string, then the separator used to join all the
-  values is held by that name (default value `, `)
-  - `$?` - this token holds the result of a previous successful walk, thus it's used to expand multiple walks into a string or an array
-  (typically would be used together with `-x0` option to display the result of the last expansion)
-  - `$$?` - when expanding walks using `$?` token into a string, the separator which is used by expansion is held by this name
+  - `$_` - a namespace, holding a string value that is used when the elements during `{$path}` interpolation are getting concatenated 
+  (default value `_`) 
+  - `$#` - a namespace, holding a string value that is used as a separator when a _JSON array_ or _object_ is getting
+  template-interpolated into a string (default value `, `)
+  - `$?` - a token, referring to the result of a prior successful walk, thus it's used to expand multiple walks into a string
+  or an array
+  - `$$?` - a namespace holding a string separator considered when expanding walks using `{$?}` token into a string
   (default value is `,`) 
 
 
@@ -641,25 +646,48 @@ _to play safe with the templates, always surround them with single quotes (to do
 
 here's an example how to join path tokens using a custom separator:
 ```bash
-bash $ <ab.json jtc -w'<$_:" : ">v<NY>' -T'{{$path}}'
-"Directory : 0 : address : state"
+bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
+Directory       0       address state
 bash $ 
 ```
 
 
-##### Last Walk namespace
-Any last walk could be referred (during interpolation) using an auto-generated namespace `$?`. It comes handy when is required
+##### Prior Walk token
+A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
 to build up JSON 'historical' records:
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w[:]
 "a"
 "b"
 "c"
-bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r -x0
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
+[ "a" ]
+[ "a", "b" ]
 [ "a", "b", "c" ]
+bash $ 
 ```
-When interpolation of $? occurs first time (i.e. there was no prior walk), or when interpolation of $? fails, then the value of this
-namespace is reset to an empty string (`""`).  
+When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk), or when interpolation of `$?` fails,
+then the value of this token is reset to an empty string (`""`). 
+
+
+When expanding values into a string (rather than into an array), the separator used by a user is arbitrary, e.g.:
+```bash
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"' 
+" | a"
+" | a | b"
+" | a | b | c"
+bash $ 
+```
+The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artefact 
+the namespace `$$?` holds the value which `jtc` consiers as a separator (if it matches user's):
+```bash
+bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
+"a"
+"a | b"
+"a | b | c"
+bash $ 
+```
+
 
 
 ##### Cross-lookups using namespace 
