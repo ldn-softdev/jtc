@@ -24,7 +24,7 @@
 using namespace std;
 
 #define PRGNAME "JSON transformational chains"
-#define VERSION "1.75c"
+#define VERSION "1.75d"
 #define CREATOR "Dmitry Lyssenko"
 #define EMAIL "ldn.softdev@gmail.com"
 

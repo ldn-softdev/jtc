@@ -500,8 +500,7 @@
 
 
 #define ARRAY_LMT 4                                             // #bytes per array's index
-#define WLK_SUCCESS -1                                          // some routines use -1 as success
-#define WLK_FAIL -2                                             // some routines use -2 as fail
+#define WLK_SUCCESS LONG_MIN                                    // walk() uses it as success
 #define SIZE_T(N) static_cast<size_t>(N)
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
@@ -2473,7 +2472,7 @@ class Json {
                             walk_path_(void) const { return ws_; }
         auto &              sn_type_ref_(void) { return sn_.type_; }    // original container type
 
-        size_t              walk_(void);
+        signed_size_t       walk_(void);
         void                walk_step_(size_t wsi, Jnode *);
         void                process_directive_(size_t wsi, Jnode *jn);
         void                process_directive_I_(size_t wsi, Jnode *jn);
@@ -3690,7 +3689,7 @@ bool Json::iterator::is_valid_(Jnode & jn, size_t idx) const {
 
 
 
-size_t Json::iterator::walk_(void) {
+Json::signed_size_t Json::iterator::walk_(void) {
  #include "dbgflow.hpp"
  // walk 'ws' structure from the root building a path vector
  // empty pv_ addresses json.root()
@@ -3718,7 +3717,7 @@ size_t Json::iterator::walk_(void) {
     { pv_.pop_back(); lwsi_ = i - 1; break; }
    if(ws_[i].load_offset(json()) != 0)                          // facilitate <>Fn
     { pv_.pop_back(); i += ws_[i].load_offset(json()) - 1; continue; }
-   return WLK_FAIL;                                             // facilitate <>F0 (continue)
+   return -i;                                                   // facilitate <>F0 (continue)
   }
 
   signed_size_t fs_wsi = failed_stop_(i);                       // check if FS gets locked there
@@ -3892,7 +3891,7 @@ Json::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
  auto found_cache = cache_map.find(skey);
  bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
                     (found_cache->KEY.ws.type != WalkStep::Cache_complete and   // not cached yet
-                     static_cast<size_t>(ws.offset) >= found_cache->VALUE.front().pv.size());
+                     SIZE_T(ws.offset) >= found_cache->VALUE.front().pv.size());
 
  if(build_cache) {
   DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
@@ -4491,6 +4490,7 @@ void Json::iterator::dmx_callback_(const Jnode *jn, const char *lbl,
 
 
 Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
+ #include "dbgflow.hpp"
  // increment walk step and re-walk: returns true / false upon successful / unsuccessful walk
  auto & ws = walk_path_()[ wsi ];
 
@@ -4499,12 +4499,12 @@ Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
  unlock_fs_domain(wsi);
  DBG(json(), 2) DOUT(json()) << "next incremented: [" << wsi << "] " << ws << std::endl;
 
- size_t failed_wsi = walk_();
+ signed_size_t failed_wsi = walk_();
 
  if(pv_.empty() or pv_.back().jit != json().end_())             // successful walk
   return WLK_SUCCESS;
- if(failed_wsi == static_cast<size_t>(WLK_FAIL))                // it's an <>F lexeme, then exit
-  return wsi;                                                   // to continue walking
+ if(failed_wsi < 0 and failed_wsi != WLK_SUCCESS)               // it's an <>F lexeme, then exit
+  return next_iterable_ws_(-failed_wsi);                        // to continue walking
 
  DBG(json(), 2)
   DOUT(json()) << "WalkStep idx from a fruitless walk: " << failed_wsi << std::endl;
@@ -4517,12 +4517,12 @@ Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
   // other walk step (index), then next walk still might yield a match in the next record.
   // That logic is required to handle irregular JSONs
   signed_size_t next_wsi = next_iterable_ws_(failed_wsi);
-  return next_wsi < 0? WLK_FAIL: next_wsi;
+  return next_wsi;
  }
 
  // walk at wsi failed, get next more significant ws index and reload offset at wsi
  signed_size_t next_wsi = next_iterable_ws_(wsi);               // get next more significant wsi
- if(next_wsi < 0) return WLK_FAIL;                              // out of iteratables
+ if(next_wsi < 0) return next_wsi;                              // out of iteratables
 
  // here we need to reload the walkstep's offset with the head's value
  ws.offset = ws.type == WalkStep::Range_walk and not ws.heads.empty()?
@@ -4635,9 +4635,8 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  for(auto p: {false, true}) {                                   // second pass: try obj as array
   ibit[Process_as_array] = p;
   tmp = interpolate_tmp_(tmp, auto_ns, ibit);
-  if(p == false)
-   { tmp = interpolate_tmp_(tmp, *nsp, ibit);                   // interpolate all NS values
-     tmp = interpolate_jsn_(tmp, jit.json()); }                 // jsonize/stringify (<<>> / >><<)
+  tmp = interpolate_tmp_(tmp, *nsp, ibit);                      // interpolate all NS values
+  tmp = interpolate_jsn_(tmp, jit.json());                      // jsonize/stringify (<<>> / >><<)
 
   if(parse_type == Json::Dont_parse)
    rj = std::move(STR{tmp});
@@ -4892,7 +4891,6 @@ size_t Json::byte_offset(const std::string &jsrc, size_t utf8_offset) {
 
 #undef ARRAY_LMT
 #undef WLK_SUCCESS
-#undef WLK_FAIL
 #undef SIZE_T
 #undef KEY
 #undef VALUE
