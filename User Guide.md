@@ -12,7 +12,7 @@
    * [Summary of display options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-display-options)
 2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
    * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
-     * [Selecting multiple subscripted JSON elements (`[+n], [n:n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
+     * [Selecting multiple subscripted JSON elements (`[+n], [n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
