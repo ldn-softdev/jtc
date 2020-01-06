@@ -1016,7 +1016,7 @@ bash $
 
 ### Addressing parents
 One of the charming features of `jtc` is the ability to address parents (any ancestors up till the root) of the found JSON nodes.
-Typically, addressing parents would be requierd after search lexemes (but can be used anywhere in the walk-path). Parents can
+Typically, addressing parents would be requierd after search lexemes (but can occur anywhere in the walk-path). Parents can
 be addressed using notation `[-n]`. This feature allows building queries that answer quite complex queries.
 
 Let's dump all the names from the `Directory` whose records have a `home` phone entry:
@@ -1027,15 +1027,15 @@ bash $ <ab.json jtc -w'[type]:<home>:[-3][name]'
 bash $
 ```
 The magic which happens here (let's break down the walk-path into the lexemes) is revealed:
-  1. `[type]:<home>:` - this lexeme instructs to find all (ending quantifier `:`) strings `home` scoped by label `"type"` (`[type]:` -
-  attached scope), thus all such phone records values will be selected:
+  1. `[type]:<home>:` - this lexeme instructs to find _each_ (ending quantifier `:`) string `home` scoped by label `"type"` (`[type]:` -
+  is attached scope), thus all such phone records values will be selected:
   ```bash
   bash $ <ab.json jtc -w'[type]:<home>:'
   "home"
   "home"
    bash $
   ```
-  2. `[-3]` - starting off those found JSON elements a 3rd ancestor will be selected. Let's see a parent selection in a slow-mo,
+  2. `[-3]` - starting off an each found JSON element a 3rd ancestor will be selected. Let's see a parent selection in a slow-mo,
   one by one:
   ```bash
   bash $ <ab.json jtc -w'[type]:<home>: [-1]' -tc
@@ -1078,8 +1078,7 @@ The magic which happens here (let's break down the walk-path into the lexemes) i
   bash $ 
   ```
   3. `[name]` - now we can select (subscript) `[name]` of out those selected JSON nodes
-
-
+##
 Another example: who is the parent of a child `Lila`?
 ```bash
 bash $ <ab.json jtc -w'<children>l:<Lila>[-2][name]'
@@ -1087,11 +1086,10 @@ bash $ <ab.json jtc -w'<children>l:<Lila>[-2][name]'
 bash $
 ```
 Explanation:
-1. `<children>l:` - finds all records with the label `children`
-2. `<Lila>` - in found records find string value `Lila`, and once/if found
-3. `[-2][name]` - go 2 levels (parents) up from found entry `"Lila"` and then subscript/offset by label `name`
-
-
+1. `<children>l:` - finds each record with the label `children`
+2. `<Lila>` - in the each found record find a string value `Lila`, and once/if found
+3. `[-2][name]` - go 2 levels (parents) up from the found entry `"Lila"` and then subscript/offset by label `name`
+##
 Even more complex query: who of the parents with children, have mobile numbers?
 ```bash
 bash $ <ab.json jtc -w'<children>l:[0][-2][type]:<mobile>[-3][name]'
@@ -1101,7 +1099,7 @@ bash $
 \-  that is the only correct answer (because Ivan has no children and Jane has no `mobile` phone)
 
 The walk-path break down:
-1. `<children>l:` - find all records by label `"children"`
+1. `<children>l:` - find each record by label `"children"`
 2. `[0]` - try addressing first element in the found records (that'll ensure that `children` is non-empty)
 3. `[-2]` - go 2 parents up for those records which survived the prior step - that'll bring us to the person's record level 
 4. `[type]:<mobile>` - find recursively `mobile` string scoped by `type` (already only for those records which have children)
@@ -1118,22 +1116,23 @@ bash $
 Note `[^2]` - this notation, likewise `[-n]` also selects a certain parent, however, while `[-n]` select the parent off the leaf
 (i.e., from the currently selected node) `[^n]` notation does it off the root.
 
-When `jtc` walks lexemes, internally it maintains a path of the walked steps (it's visible via debugs `-dddd`). E.g., when the first
-lexeme's match found (for `<children>l:`), the internal walked steps path would look like: `root -> [Directory] -> [0] -> [children]`,
+When `jtc` walks lexemes (traverse JSON tree), internally it maintains a path to the walked steps (it's visible via debugs `-dddd`).
+E.g., when the first lexeme's match found (for `<children>l:`), the internal walked steps path would look like:
+`root -> [Directory] -> [0] -> [children]`,
 then when the next lexeme is successfully applied, the internal path becomes: `root -> [Directory] -> [0] -> [children] -> [0]`
 The meaning of `[-n]` and `[^n]` notation then is easy to observe on this diagram:
 ```
-                                                                         etc.
-                                                                         [^5]
-to address a parent from root: [^0]      [^1]       [^2]      [^3]       [^4]
-                                |          |          |         |          |
-                                v          v          v         v          v
-       internally built path: root -> [Directory] -> [0] -> [children] -> [0]
-                                ^          ^          ^         ^          ^
-                                |          |          |         |          |
-to address a parent from leaf: [-4]      [-3]       [-2]      [-1]       [-0]
-                               [-5]
-                               etc.                         
+                                                                             etc.
+                                                                             [^5]
+to address a parent from the root: [^0]      [^1]       [^2]      [^3]       [^4]
+                                    |          |          |         |          |
+                                    v          v          v         v          v
+           internally built path: root -> [Directory] -> [0] -> [children] -> [0]
+                                    ^          ^          ^         ^          ^
+                                    |          |          |         |          |
+to address a parent from the leaf: [-4]      [-3]       [-2]      [-1]       [-0]
+                                   [-5]
+                                   etc.                         
 ```
 
 
