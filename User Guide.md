@@ -1387,7 +1387,7 @@ and
 [namespace interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
 , for now let's just construct a walk which create required namespace:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v'
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v'
 "John"
 "Olivia"
 "Ivan"
@@ -1401,14 +1401,14 @@ bash $
 (`<..>f`) _fail-safe_ lexeme: ensures that the walk is reinstated at the placement of the lexeme if/once the 
 subsequent walk fails
 - [namespaces](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
-(`<C:"no">f`, `<C:"yes">v`): both lexemes setup the _namespace_ `C`, initially to value `"no"` then to value `"yes"`; 
+(`<C:no>f`, `<C:yes>v`): both lexemes setup the _namespace_ `C`, initially to value `"no"` then to value `"yes"`; 
 the latter value will override the former only if walking `[0]` was successful (i.e., if the person indeed has at least one child,
 b/c if array `children` were empty, that walk would fail)
 
 3\. by now, each time when second walk finishes iteration, the namespace `C` should be correctly set to the respective values reflecting
 if a person has children or not, but to see that, we'd need to interpolate that namespace using a template:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": {{C}}}' -tc
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -TT -T'{"has children": {{C}}}' -tc
 "John"
 { "has children": "yes" }
 "Ivan"
@@ -1419,7 +1419,7 @@ bash $
 ```
 4. okay, we're getting closer, but now we want to display all records with labels:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -TT -T'{"has children": {{C}}}' -l
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -TT -T'{"has children": {{C}}}' -l
 "name": "John"
 jtc jnode exception: label_accessed_not_via_iterator
 bash $ 
@@ -1429,7 +1429,7 @@ Bummer! The exception (rightfully) occurs here because trying to find an outer l
 In the situations like this, we'd rather want to reach out inside the object for the labeled value rather than find an outer label.
 The option `-ll` facilitates that need:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -llj -tc
+bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:no">f[0]<C:yes>v' -T'{"has children": {{C}}}' -llj -tc
 [
    { "has children": "yes", "name": "John" },
    { "has children": "no", "name": "Ivan" },
@@ -1446,7 +1446,7 @@ a dummy one so that each
 if that dummy template (`-TT`) discomforts you, there's a way to go without one: keep in mind that template gets applied only once it
 results in a legit JSON after the interpolation occurs (shall one occurs). Let's see what the result would be w/o that dummy template:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc
+bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -tc
 "John"
 { "has children": "yes" }
 { "has children": "yes" }
@@ -1461,7 +1461,7 @@ definitely fails (while walking the 1st walk for the 1st time the name `C` does 
 the namespace `C` now holds the value from the 2nd walk) and therefore unwanted template substitution occurs.  
 To fix that problem easily, we can erase the namespace `C` right at the beginning of the 1st walk:
 ```bash
-bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc
+bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -tc
 "John"
 { "has children": "yes" }
 "Ivan"
@@ -1472,7 +1472,7 @@ bash $
 ```
 And adding `-llj` provides the desired effect now:
 ```bash
-bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:"no">f[0]<C:"yes">v' -T'{"has children": {{C}}}' -tc -llj
+bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -tc -llj
 [
    { "has children": "yes", "name": "John" },
    { "has children": "no", "name": "Ivan" },
