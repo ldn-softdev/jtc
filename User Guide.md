@@ -1206,7 +1206,8 @@ the result will vary:
   ]
   bash $
   ```
-- once `-j` and `-l` given together, then entries which have labels (i.e., come from the _JSON objects_) will be wrapped into objects:
+- once `-n`,`-j` and `-l` given together, then entries which have labels be wrapped into own objects
+(array items won't be wrapped into objects):
   ```bash
   bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -tc -njl
   [
@@ -1222,7 +1223,7 @@ the result will vary:
   ]
   bash $ 
   ```
-Though even that behavior is influenced by the `-n` option. The above output looks dull and hardly will have many use-cases, a lot more
+Though even that behavior is influenced by the `-n` option, the above output looks dull and hardly will have many use-cases, a lot more
 often it's required to group relevant walks together and then place them into respective JSON structures. For that, let's review
 
 
@@ -1249,7 +1250,7 @@ relevance between themselves.
 
 Right now both paths (`<name>l:` and `<number>l:`) do not have common base lexemes, thus it's unclear how to relate resulting walks
 (hence they just interleaved one by one). Though if we provide walk-paths relating each of those searches to their own record,
-then magic happens:
+then the magic happens:
 ```bash
 bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 "John"
@@ -1265,7 +1266,7 @@ bash $
 ```
 And now, applying options `-j` together with `-l` gives a lot better result:
 ```bash
-bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -tc -jl
+bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl -tc
 [
    {
       "name": "John",
@@ -1283,10 +1284,11 @@ bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -t
 bash $ 
 ```
 
+
 #### Aggregating walks
 the walks also could be aggregated (per label), option `-nn` facilitates the ask:
 ```bash
-bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jl -nn
+bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jlnn
 [
    {
       "name": [
@@ -1328,9 +1330,9 @@ bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jj
 }
 bash $ 
 ```
-Well, the above output though does not have all the atomic entries from the Jane's record (e.g.: Jane has 2 phone numbers, while only
+Well, the above output though does not keep all the atomic entries from the Jane's record (e.g.: Jane has 2 phone numbers, while only
 one is displayed). That is because clashing labels will override each other (as of version _1.75_). To ensure aggregation of clashing 
-labels into arrays, use `-m` option:
+labels, use `-m` option:
 ```bash
 bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jjm
 {
@@ -1358,17 +1360,14 @@ values with labels only).
 
 
 #### Extracting labeled values
-Sometimes, when displaying outputs wrapped into array or object, it's desirable to extract the the labeled value from the object.
-This become especially useful when dealing with templates. Let's consider a following exercise:
+Sometimes, when displaying outputs wrapped into an object, it's desirable to extract the labeled value from the object.
+This become especially handy when dealing with templates. Let's consider a following exercise:
 
-Say, the ask here is to extract names of all the people from `ab.json` and group them with newly crafted record indicating if a person
+Say, the ask here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
 ```json
 [
-   {
-       "name": "John",
-       "has children": "yes"
-   },
+   { "name": "John", "has children": "yes" },
    ...
 ]
 ```
@@ -1486,10 +1485,10 @@ bash $
 #### Succinct walk-path syntax
 If you look at the prior example
 ([Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing))
-, you may notice that a common part of both walk-paths (`[Directory][:]`) we had to give twice. There's a way to express it in more 
+, you may notice that a common part of both walk-paths (`[Directory][:]`) had been given twice. There's a way to express it in more 
 succinct syntax: options `-x` and `-y` allows rearrange walk-paths so that `-x` takes an initial common part of the walk-path, 
 whereas `-y` would take care of the individuals trailing pars. Thus the same example cold have been written like this:
-```
+```bash
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:'
 "John"
 "112-555-1234"
@@ -1505,7 +1504,7 @@ bash $
 \- each occurrence of `-x` will be reconciled with all subsequent `-y` (until next `-x` is faced). Options `-x`, `-y` is merely
 a syntactical sugar and do not apply any walk-path parsing or validation, instead they just result in the respective `-w` options 
 creations (internally), then the latter get processed. Thus, it's even possible to write it with what it seems a broken syntax at first:
-```
+```bash
 bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:'
 ...
 ```
@@ -1514,7 +1513,7 @@ However, if a reinstatement of the options results in a valid walk-path - that's
 It's possible to combine both syntaxes (i.e., `-w` with `-x` and `-y`), however, given that the processing of `-x` and `-y`
 internally reinstates respective options `-w`, the former will be appended after any of given `-w` options (which will affect the 
 order of processing/outputting) even though the order of their appearance is different:
-```
+```bash
 bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -w '<children>l:' -rnl
 "children": [ "Olivia" ]
 "children": []
@@ -1532,23 +1531,24 @@ bash $
 ```
 - here `children` walked first, because `name` and `number` walks undergo reconciliation (internally) and inserted *after* all options 
 
+
 #### Controlling displayed walks
 By default all walks (`-w`) will be displayed (unless `jtc` carries any of modification operations like insert/update/swap/purge, then
 the entire JSON will be displayed). However, there's a way to control which ones will be displayed - option `-x` is overloaded to provide
 such capability.
 
-If argument of option `-x` is given in any of notations `-xn`, `-xn/N`, `-x/N` - where `n` and `N` are numbers, then it controls
+If argument of option `-x` is given in any of notations: `-xn`, `-xn/N`, `-x/N` - where `n` and `N` are numbers, then it controls
 a frequency of the displayed walks (and does not represent a common portion of a walk-path).  
 The first number `n` in that notation tells to display every `n`th walk. if `n` is `0` it tells to display `N`th walk once (and in such
 case `0` - a default value - can be omitted resulting in the syntax `-x/N`)
 The second (optional) number `N` tells to begin displaying walks starting from `N`th one (`N` is an index and thus is zero based, default
 value is `0`).
 
-Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` - in such case _the last walk_ is ensured 
-to be displayed
+Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` (or equally `-x0`) - in such case 
+_the last walk_  is _ensured_ to be displayed
 
 Say, we want to display _every 4th walk_ of the below JSON:
-```
+```bash
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:]
 1
 2
@@ -1564,22 +1564,23 @@ bash $
 One way to achieve that would be to use templates (the trick is shown in
 [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
 section), but it's quite impractical. Much easier is to use `-x` option here:
-```
+```bash
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4
 4
 8
 bash $ 
- ```
+ ```bash
 To display _every 4th walk starting from 3rd one_, use this notation:
-```
+```bash
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
 3
 7
 bash $ 
 ```
 \- reminder: the second number in the option is an index and thus is zero based.  
+
 Lets add to the output the very first walk and the last one:
-```
+```bash
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2 -x/0 -x/-1
 1
 3
