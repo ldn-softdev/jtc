@@ -41,6 +41,8 @@
      * [Extracting labeled values (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-value)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
      * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
+   * [Summary of walk lexemes](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-lexemes)
+   * [Summary of walk options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-options)
 3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
@@ -1588,6 +1590,54 @@ bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2 -x/0 -x/-1
 9
 bash $ 
 ```
+
+
+### Summary of walk lexemes
+- `[]`: matches an _empty label_ in a currently walked JSON element (e.g.: like in `{ "": "empty label" }`)
+- `[text]`: matches an _exact label_ in a currently walked JSON element (e.g.: like in `{ "text": "a label" }`)
+- `[N]`: matches _`N`th_ child (zero based) in a currently walked JSON _iterable_
+- `[+N]`: matches _every child_ in a currently walked JSON _iterable_ starting from _`N`th_ child
+- `[N:M:S]`: matches _every child_ in a currently walked JSON _iterable_ starting from _`N`th_ child up till, but not including _`M`th_
+with the step of _`S`_ (`N`,`M` could be negative defining the start/end of the slice from the end of the _iterable_ rather than from
+the start, while `S` can only be positive); either of positional parameters could be omitted (e.g.: 
+`[:]`, `[::]`, `[1:]`, `[:-2]`, `[::3]`, etc)
+- `<>`: finds recursively the first _empty string_ (e.g.: like in `{ "empty string": "" }`)
+- `<text>`: finds _recursively_ the first string _`"text"`_ (e.g.: like in `[ "text" ]`)
+- `<..>S`: _`S`_ is an optional one-letter suffix altering the behavior of the lexeme:  
+  * if _`S`_ is any of _`rRPdDNbnlLaoicewjstqQgG`_ - then it's a _search_ matching a first occurrence of the lexeme, as per the 
+  suffix description      
+  * if _`S`_ is any of _`vkzfFuIZW`_ then it's a _directive_ and applies the respective behavior as per the suffix description
+- `<text>n`: finds recursively _`n`th_ occurrence of _`"text"`_ in a currently walked JSON element
+- `<text>+n`: finds recursively _each occurrence_ of _`"text"`_ in a currently walked JSON element starting from _`n`th_ occurrence
+- `<text>n:m:s`: finds recursively _each occurrence_ of `"text"` in a currently walked JSON element for the selected slice,
+where _`n`_,_`m`_,_`s`_ parameters comply with all `[N:M:S]` rules with an additional limitation: _`n`_ and _`m`_ cannot go negative
+and one additiona liberation: either of parameters _`n`_,_`m`_,_`s`_ could be _interpolated_ from the namespace
+- `<..>Sn`, `<..>S+n`, `<..>Sn:m:s`: 
+  * if _`S`_ is a search lexeme suffix, then quantifier notations apply exactly the same way as per in above `text` search quantifiers
+  * if _`S`_ is a directive lexeme suffix, then the quantifier behavior is either ignored (like in directives `vkzW`), 
+  or is specific for the given directive (refer to the relevant description of directives `fFuIZ`)
+- `[label]:<..>`: _scoped_ recursive search - the search and match is performed in the currently selected JSON element only _among 
+values with the specified label_; directives lexemes ignore scoping; all search suffixes and quantifiers are applicable in the scoped
+searches
+- `>..<`: a _non-recursive_ search notation - the search is performed strictly _among children_ of the currently selected JSON _iterable_
+without any descend into children's children; all search suffixes and quantifiers applied here the same way, with the following
+suffixes exemptions:
+  * `>NS<sn`: _`NS`_ is the referred namespace being searched and matched against in the currently selected _JSON iterable_, however,
+  a quantifier _`n`_ here refers to a relative offset from the found match (hence _`n`_ may be negative, effectively allowing selecting
+  a _sibling_ of the found element)
+  * `>NS<tn`: the same definitions applies as above, but the match is performed agains a label (for objects), or index (for arrays),
+  plus this lexeme cannot have a _scoped_ notation (obviously)
+  * `>..<L`: the _non-recursive_ REGEX label match _cannot_ be scoped as well
+- `<NS>S`: some search lexemes and some directives allow _capturing_ a currently walked/matched JSON into a namespace _`NS`_:
+  * if _`S`_ is a suffix any of _`PNbnaoicewqQgGvfF`_, then the namespace _`NS`_ will be populated upon a successful match (for searches)
+  or upong walking (for directives)
+  * for the rest of the searches (_`rRdDlLjst`_), the lexeme defines a _search context_ (rather than the namespace reference), 
+  * for  for the rest of directives (_`kzuIZW`_) the behavior varies - refer to a respective directive description
+- `<NS:JSON_value>S`: the same searches and directives allowing _capturing_ JSON values, allow setting custom _`JSON_value`s_ 
+**instead** of capturing (the same rules apply)
+
+
+### Summary of walk options
 
 
 ## Modifying JSON
