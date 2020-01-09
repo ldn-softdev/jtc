@@ -3,7 +3,7 @@
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
    * [Compact printing (`-r`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#compact-printing)
-   * [Semi-compact printing (`-tNc`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#semi-compact-printing)   
+   * [Semi-compact printing (`-tNc`,`-tc`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#semi-compact-printing)   
    * [Printing JSON size (`-z`, `-zz`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#printing-json-size)
    * [Validating JSON (`-d`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#validating-json)
    * [Forcing strict solidus parsing (`-q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-strict-solidus-parsing)
