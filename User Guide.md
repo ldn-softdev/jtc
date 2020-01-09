@@ -1594,12 +1594,14 @@ bash $
 
 ### Summary of walk lexemes
 - `[]`: matches an _empty label_ in a currently walked JSON element (e.g.: like in `{ "": "empty label" }`)
-- `[text]`: matches an _exact label_ in a currently walked JSON element (e.g.: like in `{ "text": "a label" }`)
-- `[N]`: matches _`N`th_ child (zero based) in a currently walked JSON _iterable_
+- `[text]`: matches an _exact label_ in a currently walked JSON element (e.g.: like in `{ "text": "is a label" }`)
+- `[N]`: matches _`N`th_ child (all indices are zero based in `jtc`) in a currently walked JSON _iterable_
+- `[-N]`: selects _`N`th_ parent for a currently walked JSON node/element referring from the node itself
+- `[^N]`: selects _`N`th_ parent for a currently walked JSON node though referring the parent from the JSON root (rather than from a node)
 - `[+N]`: matches _every child_ in a currently walked JSON _iterable_ starting from _`N`th_ child
 - `[N:M:S]`: matches _every child_ in a currently walked JSON _iterable_ starting from _`N`th_ child up till, but not including _`M`th_
 with the step of _`S`_ (`N`,`M` could be negative defining the start/end of the slice from the end of the _iterable_ rather than from
-the start, while `S` can only be positive); either of positional parameters could be omitted (e.g.: 
+the start, while _`S`_ can only be positive); either of positional parameters could be omitted (e.g.: 
 `[:]`, `[::]`, `[1:]`, `[:-2]`, `[::3]`, etc)
 - `<>`: finds recursively the first _empty string_ (e.g.: like in `{ "empty string": "" }`)
 - `<text>`: finds _recursively_ the first string _`"text"`_ (e.g.: like in `[ "text" ]`)
@@ -1638,6 +1640,34 @@ suffixes exemptions:
 
 
 ### Summary of walk options
+- `-w`: defines a _walk-path_ (multiple walks supported), by default the results produced from multiple walks are _interleaved_
+- `-l`: when used w/o `-j` just _prints labels_ for those walked JSONS which have one
+- `-ll`: when used w/o `-j` prints all JSON objects _"naked"_, i.e. _removes Json object encasement_ and then uses _inner_ labels; 
+for the rest of JSON types the behavior is the same like with the single `-l`
+- `-n`: turns on a _sequential_ behavior for walk-paths (process first all the results from the first walk, then from then second, etc),
+- `-nn`: when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
+- `-nn`: also triggers a _round-robin templates_ application when a number of templates (`-T`) and walks (`-w`) is the same but 
+a _round_robing_ template application must be favored over a default _per-walk_'s in this situation
+- `-j`: arranges all walked elements (from all walk-paths) into a _JSON array_
+- `-jl`: arranges all walked elements (from all walk-paths) into a _JSON array_, puts labeled nodes into _separate JSON objects_, 
+any clashing labels will be aggregated (into _JSON arrays_) within those objects
+- `-jln`: arranges all walked elements into a _JSON array_, each labeled element will be placed into _own JSON object_, thus dodging
+possible label clashing
+- `jlnn`: arranges all walked elements into a _JSON array_, _all labeled values_ placed into a _single JSON object_, all clashing
+labels are aggregated
+- `-jj`: arranges all walked elements into a _JSON object_ (i.e. all walked elements which do not have labels will be ignored), the
+values with clashing labels will _override the prior_ values (_note:_ `-l`,`-n` and `-nn` with `-jj` have no effect)
+- `-jjm`: alters behavior of `-jj` by enabling the aggregation of the values with the clashing labels into _JSON arrays_ 
+- `-jjll`: combined behavior of `-jj` and `-ll`
+- `-jjllm`: combined behavior of `-jj` and `-ll` and `-m`
+- `-x`,`-y`: facilitates breaking walk-paths (`-w`) into a common (`-x`) and variables parts (`-y`); i.e. an argument of each `-x` will be
+combined with every subsequent argument of `-y` (if any), e.g.: `-xA` `-yB` `-yC` `-xD` `-yE` `-yF` result in 4 walk-paths:
+`-wAB` `-wAC` `-wDE` `-wDF` - thus `-x`/`-y` notation provides more succinct notation (than `-w`) for multiple walk-paths with 
+a common head (and varying tails)
+- `-xN/M`: controls which walk result(s) get(s) printed: print each _`N`th_ walk starting with _`M`th_ (_`M`_ is an index and hence is
+zero based); `-xN` prints every _`N`th_ walk result (same as `-xN/M`, where `M`=`N`-`1`), `-x/M` prints a single _`M`th_ walk
+(same as `-x0/M`); special handling for `-x0` or `-x/-1` - it _ensures_ that the very last walk result is always gets printed
+(but not duplicated)
 
 
 ## Modifying JSON
