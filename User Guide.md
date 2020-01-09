@@ -1571,7 +1571,7 @@ bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4
 4
 8
 bash $ 
- ```bash
+ ```
 To display _every 4th walk starting from 3rd one_, use this notation:
 ```bash
 bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
