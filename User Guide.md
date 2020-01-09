@@ -43,7 +43,13 @@
      * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
    * [Summary of walk lexemes](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-lexemes)
    * [Summary of walk options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-options)
-3. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
+3. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
+   * [Interpolation token types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types)
+   * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
+   * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
+   * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+     * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
+4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
@@ -60,14 +66,8 @@
    * [Use of mixed arguments for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c)
    * [Use of mixed arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-with--e)
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
-4. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
+5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
-5. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
-   * [Interpolation types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-types)
-   * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
-   * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
-   * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
-     * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
 6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
    * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
    * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
@@ -1647,7 +1647,7 @@ for the rest of JSON types the behavior is the same like with the single `-l`
 - `-n`: turns on a _sequential_ behavior for walk-paths (process first all the results from the first walk, then from then second, etc),
 - `-nn`: when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
 - `-nn`: also triggers a _round-robin templates_ application when a number of templates (`-T`) and walks (`-w`) is the same but 
-a _round_robing_ template application must be favored over a default _per-walk_'s in this situation
+a _round_robin_ template application must be favored over a default _per-walk_'s in this situation
 - `-j`: arranges all walked elements (from all walk-paths) into a _JSON array_
 - `-jl`: arranges all walked elements (from all walk-paths) into a _JSON array_, puts labeled nodes into _separate JSON objects_, 
 any clashing labels will be aggregated (into _JSON arrays_) within those objects
@@ -1668,6 +1668,406 @@ a common head (and varying tails)
 zero based); `-xN` prints every _`N`th_ walk result (same as `-xN/M`, where `M`=`N`-`1`), `-x/M` prints a single _`M`th_ walk
 (same as `-x0/M`); special handling for `-x0` or `-x/-1` - it _ensures_ that the very last walk result is always gets printed
 (but not duplicated)
+
+
+## Interpolation
+Interpolation may occur in any of the following cases:
+- in templates (`-T ...`) for walk/update/insert/compare type of operations
+- for the argument undergoing a
+[shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
+(`-e` + insert/update operation, e.g.: `-eu ... \;`),
+- in the lexeme `<..>u` applying a shell evaluation on its content
+- in the lexeme `<..>j` where lexeme is expressed as a template
+- for any search lexeme where a quantifier is expressed through interpolation, e.g.: `<>a{N}`
+
+Interpolation occurs either from the namespace, or from a currently walked JSON element. Every occurrence of tokens `{..}` or `{{..}}`
+will trigger the interpolation attempt:
+- if the content under braces is empty (`{}`, `{{}}`) then the currently walked JSON element is getting substituted
+- if the content is non-empty (e.g.: `{val}`, `{{val}}`) then interpolation is attempted from the referred namespace
+
+Whenever template interpolation (`-T ...`) occurs the result of interpolation must always be a valid JSON, otherwise the template
+will fail to get applied
+
+
+### Interpolation token types
+The difference between single `{}` and double `{{}}` notations: 
+- double notation `{{..}}` interpolates JSON elements exactly, so it's always a safe type
+- a single notation `{..}` interpolates _JSON strings_, _JSON arrays_, _JSON objects_ differently:
+  * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
+  `blah`. Thus, it makes sense to use this interpolation inside double quotation markss
+  * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
+  will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided,
+  e.g.: `-T'[ 0, {}, 4, 5 ]'`
+  * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
+  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "key": "new" }'`
+
+A string interpolation w/o outer quotes is handy when there's a requirement to alter an existing string,
+here's example of altering JSON label:
+```bash
+bash $ JSN='{ "label": "value" }'
+bash $ <<<$JSN jtc -w'<label>l<>k' -u'<label>l<>k' -T'"new {}"'
+{
+   "new label": "value"
+}
+bash $ 
+```
+There, in above example the template token `{}` refers to the result of walking `-u` rather than `-w` (the same holds for insert `-i` and
+compare `-c` operators). The walk `-w` points to the destination update location(s) for the update (which is the label, 
+as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
+Alternatively, the same could be achieved like this, in a but more succinct way:
+```bash
+bash $ <<<$JSN jtc -w'<label>l<L>k<>k' -u0 -T'"new {L}"'
+{
+   "new label": "value"
+}
+bash $ 
+```
+The update argument (`-u0`) in this case is a dummy JSON (`0` is taken just as one of the shortest JSON values), its value will be unused
+in the template and hence irrelevant to the operation. Template now will refer to the value `L` from  the namespace, which will be 
+populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
+Why `<>k` lexeme 
+is used twice? As per the lexeme design, when it's empty (and only then) it lets reinterpreting currently walked element's label as
+a value (which is being updated in this case), Thus, the first lexeme `<L>k` only preserves the label in the namespace, while 
+the second lexeme allows pointing to the label as the destination point for the update - which will be the template-interpolated
+JSON value `'"new label"'`.
+
+
+Here's an illustration when double braces are handier (e.g., swapping around labels and values):
+```
+bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
+bash $ <<<$JSN jtc
+{
+   "pi": 3.14,
+   "type": "irrational"
+}
+bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
+{
+   "3.14": "pi",
+   "irrational": "type"
+}
+bash $ 
+```
+
+An array interpolation using a single brace notation `{..}` is handy when there's a need extending the array _during_
+interpolation. 
+There's a special case though - template-extending of an empty array. Let's consider a following example:
+```
+bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
+bash $ <<<$JSN jtc
+[
+   {
+      "Func": "x + y",
+      "args": [
+         123
+      ]
+   },
+   {
+      "Func": "a * b",
+      "args": []
+   }
+]
+bash $ 
+```
+And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
+```
+bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
+[
+   {
+      "Func": "x + y",
+      "args": [
+         123,
+         "x",
+         "y"
+      ]
+   },
+   {
+      "Func": "a * b",
+      "args": [
+         "a",
+         "b"
+      ]
+   }
+]
+bash $ 
+```
+
+When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
+initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid
+JSON. However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
+without producing failures.
+
+All the same applies for when interpolating _JSON objects_ and _JSON strings_. For _JSON objects_ such null-interpolation is aware
+of enumerations occurring over of either of `,` or `;`
+
+
+### Namespaces with interleaved walks
+When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_), 
+they populate namespaces in the order the walks appear:
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
+"John"
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Ivan", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+That is a correct result (though might not reflect what possibly was intended), let review the result:
+1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
+thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
+2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
+(template is a _valid JSON_ here)
+3. in the third line, the result is also correct, albeit might be not the expected one - upon next _interleaved_ walk, the 
+namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
+4. _etc._
+
+By now it should be clear why is such result.
+
+Going by the notion of the provided template, apparently, the expected result were to have all records pairs for each person with 
+each own child. That way, for example, `Ivan` should not be even listed (he has no children), `John`'s record should appear only
+once and `Jane` should have 2 records (she has 2 kids).
+
+The situation could be easily rectified if for each walk we use own template and assign a dummy one for the first one: 
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
+""
+{ "Parent": "John", "child": "Olivia" }
+""
+""
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
+those annoying empty _JSON strings_ `""`? Those will be gone if `-qq` option is thrown in:
+```
+bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+\- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
+
+Yet, the same could have been achieved even a simpler way (using just one walk):
+```
+bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
+{ "Parent": "John", "child": "Olivia" }
+{ "Parent": "Jane", "child": "Robert" }
+{ "Parent": "Jane", "child": "Lila" }
+bash $ 
+```
+
+
+### Search quantifiers interpolation
+Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
+index value stored `item`:
+```
+bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
+bash $ <<<$JSN jtc
+{
+   "item": 2,
+   "list": {
+      "bread": 1.20,
+      "cheese": 2.90,
+      "milk": 0.90
+   }
+}
+bash $ 
+```
+To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
+"milk": 0.90
+bash $ 
+```
+It should be quite easy to read/understand such walk path (predicated one is familiar with suffixes / directives). Let's see
+how the walk-path works in a slow-mo:
+1. `[item]` selects the value by label `item`:
+```
+bash $ <<<$JSN jtc -w'[item]'
+2
+bash $ 
+```
+2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v'
+2
+bash $ 
+```
+3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
+the root of the input JSON:
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
+{
+   "item": 2,
+   "list": {
+      "bread": 1.20,
+      "cheese": 2.90,
+      "milk": 0.90
+   }
+}
+bash $ 
+```
+4. `[list]` selects the object value by label `list`:
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
+{
+   "bread": 1.20,
+   "cheese": 2.90,
+   "milk": 0.90
+}
+bash $ 
+```
+5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
+(which is `2`) gives us the required value.
+
+_Alternatively_, the same ask could be achieved using a slightly different query:
+```
+bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
+"milk": 0.90
+bash $ 
+```
+- `>idx<t` lexeme here will utilize namespace `idx` to find the offset (index).
+
+There's a subtle difference how the lexeme `t` treats and uses referred namespace:
+- in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
+respective label. I.e., even if the value in the namespace is numerical value `0`, it will search for a label `"0"` instead
+- in `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try matching the label
+(as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
+in the searched JSON node
+
+
+### Cross-referenced lookups
+One use-case that namespaces facilitate quite neatly, is when insert/update/purge/compare operation refer to different JSONs 
+(i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
+types of operations) but one requires a reference from another.
+
+Say, we have 2 JSONs:
+1. `main.json`:
+```
+bash $ <main.json jtc
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+2. `id.json`:
+```
+bash $ <id.json jtc
+[
+   {
+      "id": 3,
+      "title": "Smoke on the Water"
+   },
+   {
+      "id": 1,
+      "title": "The Winner Takes It All"
+   },
+   {
+      "id": 2,
+      "title": "The Show Must Go On"
+   }
+]
+bash $ 
+```
+
+The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.  
+The way to do it:
+- first walk `main.json` finding and memorizing (each) `rec` value 
+- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
+
+The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
+insert respective `title`:
+```
+bash $ <main.json jtc -w'[:][rec]<Record>v[-1][songs]' -mi id.json -i'[id]:<Record>s[-1][title]'
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": [
+         "The Winner Takes It All"
+      ]
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": [
+         "Smoke on the Water"
+      ]
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": [
+         "The Show Must Go On"
+      ]
+   }
+]
+bash $ 
+```
+
+For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is walked first). When dst. walk 
+finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
+when walking its source JSON (`id.json`) with the lexeme `[id]:<Record>s` - that will find a respective `id`. The rest should be obvious
+by now.
+
+
+#### Cross-referenced purge
+`jtc` does not have a "walk" argument for `-p` (purge) operation (`-p` is a standalone option, when it's used only with `-w`
+it will purge every resulted/walked entry).  
+So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
+
+The trick is to use a dummy `-u`/`-i` operation and apply `-p`.  
+When the cli is given in this notation:  
+`<<<dst.json jtc -w... -u <src.json> -u... -p`,  
+purging will be applied to walked destinations, but only predicated by a successful source walk:
+```
+bash $ <main.json jtc -w'[:][rec]<Record>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Record>s' -p
+[
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+
+The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
+```
+bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' -T'{{Entry}}' -pp
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   }
+]
+bash $ 
+```
+\- memorizing the whole `Entry` is required because update operation w/o the template only replaced records (and purge everything else),
+but that's not the goal - goal is to retain all the entries, hence replacing the updating entries with the template for the entire entry.
 
 
 ## Modifying JSON
@@ -2546,383 +2946,6 @@ bash $ <ab.json jtc -w'<>k'
 jtc json exception: walk_root_has_no_label
 bash $ 
 ```
-
-## Interpolation
-Interpolation may occur in following cases:
-- for template arguments (`-T ...`) in walk/update/insert/compare type of operations
-- for the argument undergoing a
-[shell evaluation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-(`-e` + insert/update operation, e.g.: `-eu ... \;`),
-- in the lexeme `<..>u` applying a shell evaluation on its content
-- in the lexeme `<..>j` where lexeme content is expressed as a template
-- for any search lexeme where a quantifier is expressed through interpolation, e.g.: `<>a{N}`
-
-Interpolation occurs either from the namespaces, or from currently walked JSON element. Every occurrence (in the templates or in
-shell cli) of tokens `{}` or `{{}}` will trigger interpolation:
-- if the content under braces is empty (`{}`, `{{}}`) then the currently walked JSON element is getting interpolated
-- if the content is present (e.g.: `{val}`, `{{val}}`) then interpolation occurs from the respective namespace
-
-
-### Interpolation types
-The difference between single `{}` and double `{{}}` notations: 
-- double notation `{{..}}` interpolate JSON elements exactly, so it's always a safe type
-- a single notation `{..}` interpolate _JSON strings_, _JSON arrays_, _JSON objects_ differently:
-  * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
-  `blah`. Thus, it makes sense to use this interpolation inside double quotations (the interpolated value still has to be a valid JSON)
-  * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
-  will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided - `-T'[ {} ]'`
-  * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
-  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T{ {}, "key": "new" }`
-
-A string interpolation w/o outer quotes is handy when it's required altering an existing string, here's example of altering JSON label:
-```
-bash $ <<<'{ "label": "value" }' jtc
-{
-   "label": "value"
-}
-bash $ <<<'{ "label": "value" }' jtc -w'<label>l<>k' -u'<label>l<L>k' -T'"new {L}"'
-{
-   "new label": "value"
-}
-bash $ 
-```
-Here's an illustration when double braces are handier (e.g., swapping around labels and values):
-```
-bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
-bash $ <<<$JSN jtc
-{
-   "pi": 3.14,
-   "type": "irrational"
-}
-bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
-{
-   "3.14": "pi",
-   "irrational": "type"
-}
-bash $ 
-```
-
-An array interpolation using a single brace notation `{..}` is handy when there's a need extending the array _during_
-interpolation. 
-There's a special case though - template-extending of an empty array. Let's consider a following example:
-```
-bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
-bash $ <<<$JSN jtc
-[
-   {
-      "Func": "x + y",
-      "args": [
-         123
-      ]
-   },
-   {
-      "Func": "a * b",
-      "args": []
-   }
-]
-bash $ 
-```
-And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
-```
-bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
-[
-   {
-      "Func": "x + y",
-      "args": [
-         123,
-         "x",
-         "y"
-      ]
-   },
-   {
-      "Func": "a * b",
-      "args": [
-         "a",
-         "b"
-      ]
-   }
-]
-bash $ 
-```
-
-When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
-initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid
-JSON. However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
-without producing failures.
-
-All the same applies for when interpolating _JSON objects_ and _JSON strings_. For _JSON objects_ such null-interpolation is aware
-of enumerations occurring over of either of `,` or `;`
-
-
-### Namespaces with interleaved walks
-When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_), 
-they populate namespaces in the order the walks appear:
-```
-bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
-"John"
-{ "Parent": "John", "child": "Olivia" }
-{ "Parent": "Ivan", "child": "Olivia" }
-{ "Parent": "Jane", "child": "Olivia" }
-{ "Parent": "Jane", "child": "Robert" }
-{ "Parent": "Jane", "child": "Lila" }
-bash $ 
-```
-That is a correct result (though might not reflect what possibly was intended), let review the result:
-1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
-thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
-2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
-(template is a _valid JSON_ here)
-3. in the third line, the result is also correct, albeit might be not the expected one - upon next _interleaved_ walk, the 
-namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
-4. _etc._
-
-By now it should be clear why is such result.
-
-Going by the notion of the provided template, apparently, the expected result were to have all records pairs for each person with 
-each own child. That way, for example, `Ivan` should not be even listed (he has no children), `John`'s record should appear only
-once and `Jane` should have 2 records (she has 2 kids).
-
-The situation could be easily rectified if for each walk we use own template and assign a dummy one for the first one: 
-```
-bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
-""
-{ "Parent": "John", "child": "Olivia" }
-""
-""
-{ "Parent": "Jane", "child": "Robert" }
-{ "Parent": "Jane", "child": "Lila" }
-bash $ 
-```
-Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
-those annoying empty _JSON strings_ `""`? Those will be gone if `-qq` option is thrown in:
-```
-bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
-{ "Parent": "John", "child": "Olivia" }
-{ "Parent": "Jane", "child": "Robert" }
-{ "Parent": "Jane", "child": "Lila" }
-bash $ 
-```
-\- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
-
-Yet, the same could have been achieved even a simpler way (using just one walk):
-```
-bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
-{ "Parent": "John", "child": "Olivia" }
-{ "Parent": "Jane", "child": "Robert" }
-{ "Parent": "Jane", "child": "Lila" }
-bash $ 
-```
-
-
-### Search quantifiers interpolation
-Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
-index value stored `item`:
-```
-bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
-bash $ <<<$JSN jtc
-{
-   "item": 2,
-   "list": {
-      "bread": 1.20,
-      "cheese": 2.90,
-      "milk": 0.90
-   }
-}
-bash $ 
-```
-To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
-```
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
-"milk": 0.90
-bash $ 
-```
-It should be quite easy to read/understand such walk path (predicated one is familiar with suffixes / directives). Let's see
-how the walk-path works in a slow-mo:
-1. `[item]` selects the value by label `item`:
-```
-bash $ <<<$JSN jtc -w'[item]'
-2
-bash $ 
-```
-2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
-```
-bash $ <<<$JSN jtc -w'[item]<idx>v'
-2
-bash $ 
-```
-3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
-the root of the input JSON:
-```
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
-{
-   "item": 2,
-   "list": {
-      "bread": 1.20,
-      "cheese": 2.90,
-      "milk": 0.90
-   }
-}
-bash $ 
-```
-4. `[list]` selects the object value by label `list`:
-```
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
-{
-   "bread": 1.20,
-   "cheese": 2.90,
-   "milk": 0.90
-}
-bash $ 
-```
-5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
-(which is `2`) gives us the required value.
-
-_Alternatively_, the same ask could be achieved using a slightly different query:
-```
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
-"milk": 0.90
-bash $ 
-```
-- `>idx<t` lexeme here will utilize namespace `idx` to find the offset (index).
-
-There's a subtle difference how the lexeme `t` treats and uses referred namespace:
-- in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
-respective label. I.e., even if the value in the namespace is numerical value `0`, it will search for a label `"0"` instead
-- in `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try matching the label
-(as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
-in the searched JSON node
-
-
-### Cross-referenced lookups
-One use-case that namespaces facilitate quite neatly, is when insert/update/purge/compare operation refer to different JSONs 
-(i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
-types of operations) but one requires a reference from another.
-
-Say, we have 2 JSONs:
-1. `main.json`:
-```
-bash $ <main.json jtc
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": []
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": []
-   },
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": []
-   }
-]
-bash $ 
-```
-2. `id.json`:
-```
-bash $ <id.json jtc
-[
-   {
-      "id": 3,
-      "title": "Smoke on the Water"
-   },
-   {
-      "id": 1,
-      "title": "The Winner Takes It All"
-   },
-   {
-      "id": 2,
-      "title": "The Show Must Go On"
-   }
-]
-bash $ 
-```
-
-The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.  
-The way to do it:
-- first walk `main.json` finding and memorizing (each) `rec` value 
-- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
-
-The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
-insert respective `title`:
-```
-bash $ <main.json jtc -w'[:][rec]<Record>v[-1][songs]' -mi id.json -i'[id]:<Record>s[-1][title]'
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": [
-         "The Winner Takes It All"
-      ]
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": [
-         "Smoke on the Water"
-      ]
-   },
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": [
-         "The Show Must Go On"
-      ]
-   }
-]
-bash $ 
-```
-
-For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is walked first). When dst. walk 
-finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
-when walking its source JSON (`id.json`) with the lexeme `[id]:<Record>s` - that will find a respective `id`. The rest should be obvious
-by now.
-
-
-#### Cross-referenced purge
-`jtc` does not have a "walk" argument for `-p` (purge) operation (`-p` is a standalone option, when it's used only with `-w`
-it will purge every resulted/walked entry).  
-So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
-
-The trick is to use a dummy `-u`/`-i` operation and apply `-p`.  
-When the cli is given in this notation:  
-`<<<dst.json jtc -w... -u <src.json> -u... -p`,  
-purging will be applied to walked destinations, but only predicated by a successful source walk:
-```
-bash $ <main.json jtc -w'[:][rec]<Record>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Record>s' -p
-[
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": []
-   }
-]
-bash $ 
-```
-
-The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
-```
-bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' -T'{{Entry}}' -pp
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": []
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": []
-   }
-]
-bash $ 
-```
-\- memorizing the whole `Entry` is required because update operation w/o the template only replaced records (and purge everything else),
-but that's not the goal - goal is to retain all the entries, hence replacing the updating entries with the template for the entire entry.
-
 
 
 ## Templates
