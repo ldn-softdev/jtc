@@ -1624,11 +1624,12 @@ searches
 - `>..<`: a _non-recursive_ search notation - the search is performed strictly _among children_ of the currently selected JSON _iterable_
 without any descend into children's children; all search suffixes and quantifiers applied here the same way, with the following
 suffixes exemptions:
-  * `>NS<sn`: _`NS`_ is the referred namespace being searched and matched against in the currently selected _JSON iterable_, however,
+  * `>NS<sn`: _`NS`_ is the referred namespace being searched and matched against in the currently selected _JSON iterable_
+  * `>NS<tn`: the same definitions applies as above, but the match is performed agains a label (for objects), or index (for arrays),
+  plus this lexeme cannot have a _scoped_ notation (obviously), however,
   a quantifier _`n`_ here refers to a relative offset from the found match (hence _`n`_ may be negative, effectively allowing selecting
   a _sibling_ of the found element)
-  * `>NS<tn`: the same definitions applies as above, but the match is performed agains a label (for objects), or index (for arrays),
-  plus this lexeme cannot have a _scoped_ notation (obviously)
+  * `>..<l`: the _non-recursive_ exact label match _cannot_ be scoped as well, however _`n`_ also may go negative here
   * `>..<L`: the _non-recursive_ REGEX label match _cannot_ be scoped as well
 - `<NS>S`: some search lexemes and some directives allow _capturing_ a currently walked/matched JSON into a namespace _`NS`_:
   * if _`S`_ is a suffix any of _`PNbnaoicewqQgGvfF`_, then the namespace _`NS`_ will be populated upon a successful match (for searches)
