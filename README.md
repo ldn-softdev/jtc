@@ -40,13 +40,13 @@ remove, copy, move, compare, transform, swap around and many other operations).
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-The _walk path_ feature is easy to understand - it's only made of 2 types of lexemes:
+The _walk-path_ feature is easy to understand - it's only made of 2 types of lexemes:
   - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards and **upwards (!)**
   - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively); search lexemes facilitate various match criteria defined by an optional suffix and/or quantifier.
 
 Both types of lexemes cab be _iterable_ - **subscripts** let iterating over children of currently addressed JSON iterables
 nodes (arrays/objects), while iterable **search lexemes** let iterating over all matches for a given search criteria.
-A _walk path_ may have an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
+A _walk-path_ may have an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 
@@ -94,7 +94,7 @@ See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
 
 ## Quick-start guide:
-*run `jtc -g` for walk path explanations, usage notes and additional usage examples*
+*run `jtc -g` for walk-path explanations, usage notes and additional usage examples*
 ##
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
 ```json
@@ -161,7 +161,7 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-here the walk path `<Work>[-1][children][:][name]` is made of following lexemes:
+here the walk-path `<Work>[-1][children][:][name]` is made of following lexemes:
 
 a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
 b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
@@ -170,7 +170,7 @@ d. `[:]`: select **each node** in the array
 e. `[name]`: select/address a node whose label is `"name"` 
 
 
-in order to understand better how the walk path works, let's run a series of cli in a slow-motion, gradually adding lexemes
+in order to understand better how the walk-path works, let's run a series of cli in a slow-motion, gradually adding lexemes
 to the path one by one, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```bash
@@ -240,7 +240,7 @@ bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-this walk path `<url>l:[-1][name]`:
+this walk-path `<url>l:[-1][name]`:
 
  - finds recursively (encasement `<`, `>`) each (`:`) JSON element with a label (`l`) matching `url`
  - then for an each found JSON element, select its parent (`[-1]`)
@@ -542,6 +542,64 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory/resourses leaks** 
  (at least one class of the problems is off the table) - **STL guaranty**.  
  Also, `jtc` is written in a very portable way, it should not cause problems compiling it under any unix like system.
+
+
+### solutions input invariance
+\- most of `jtc` solutions are input invariant (hardly the same could be stated for **jq**). Not that it's impossible to come up with
+invariant solutions in **jq**, it's just a lot more harder, while `jtc` with its walk-path model prompts for invariant solutions.
+I.e., the invariant solution will keep working even once the JSON outer format changes (invariant solution only would stop working once 
+the relationship between walked JSON elements changes).  
+E.g.: consider a following query, extract format `[ "name", "surname" ]` from 2 types of JSON:
+```bash
+bash $ case1='{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}'
+bash $ case2='[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29},{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}]'
+```
+a natural, idiomatic `jtc` solution would be:
+```bash
+bash $ <<<$case1 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
+[ "Patrick", "Lynch" ]
+bash $ <<<$case2 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
+[ "Patrick", "Lynch" ]
+[ "Alice", "Price" ]
+```
+While one of the most probable **jq** solution would be:
+```bash
+bash $ <<<$case1 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
+["Patrick","Lynch"]
+bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
+["Patrick","Lynch"]
+["Alice","Price"]
+```
+The both solutions work correctly, however, any change in the outer encapsulation will break **jq**'s solution , 
+while `jtc` will keep working even if JSON is reshaped into an _irregular_ structure, e.g.:
+```bash
+#jtc:
+bash $ case3='[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}, {"closed circle":[{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}, {"Name":"Rebecca", "Surname":"Hernandez", "gender":"female", "age":28}]}]'
+bash $ <<<$case3 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
+[ "Patrick", "Lynch" ]
+[ "Alice", "Price" ]
+[ "Rebecca", "Hernandez" ]
+
+#jq:
+bash $ <<<$case3 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
+["Patrick","Lynch"]
+[null,null]
+```
+The same property makes `jtc` solutions resistant to cases of incomplete data, e.g.: if we  drop `"Name"` entry from one of the 
+entries in case 2, `jtc` solution still works correctly:
+```bash
+#jtc:
+bash $ case2='[{"Surname":"Lynch", "gender":"male", "age":29},{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}]'
+bash $ <<<$case2 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
+[ "Alice", "Price" ]
+
+#jq:
+bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
+[null,"Lynch"]
+["Alice","Price"]
+```
+\- i.e. `jtc` will not assume that user would require some default substitution in case of incomplete data (but if such handling is 
+required then the walk-path can be easily enhanced)
 
 
 ### JSON numerical fidelity:
