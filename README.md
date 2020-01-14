@@ -164,7 +164,7 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 here the walk-path `<Work>[-1][children][:][name]` is made of following lexemes:
 
 a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
-b. `[-1]`: **step up** one tier in the JSON tree structure (i.e. address an immediate parent of the found JSON element)  
+b. `[-1]`: **step up** one tier in the JSON tree structure (i.e., address an immediate parent of the found JSON element)  
 c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
 d. `[:]`: select **each node** in the array  
 e. `[name]`: select/address a node whose label is `"name"` 
@@ -283,9 +283,9 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 ### 5. Subscripts (offsets) and Searches explained
 In short:
 - Subscript lexemes (`[..]`) facilitate:
-    - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e. traverse JSON structure downward
+    - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e., traverse JSON structure downward
     from the root (toward leaves), e.g.: `[2]`, `[id]` 
-    - addressing parents (immediate and distant) - i.e. traverse JSON structure **upwards**, toward the the root (from leaves),
+    - addressing parents (immediate and distant) - i.e., traverse JSON structure **upwards**, toward the the root (from leaves),
     e.g.:  `[-1]` (tier offset from the currently walked/found element), `[^2]` (tier offset from the root towards walked/found element)
     - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1:2]` 
 - Search lexemes (`<..>`, `>..<`) facilitate:
@@ -297,7 +297,7 @@ In short:
     if one present) - let selecting match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`;
     if no quantifier present `0` is assumed - first match)
 - a subscript lexeme could be grouped with a search lexeme over ':' to facilitate a **_scoped search_**, e.g.: `[id]:<value>` is a single
-   lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e. `"id": "value"`
+   lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e., `"id": "value"`
 - Directives: there are a few suffixes which turn a search lexeme into a directive:
     - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
     like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation
@@ -505,7 +505,7 @@ aiming to provide a user tool which would let attaining the desired result in a 
  performs one major operation at a time (like insertion, update, swap, etc), however multiple operations could be chained
  using `/` delimiter
 
-**jq** is non-idiomatic in a _unix way_, e.g., one can write a program in **jq** language that even has nothing to do with JSON.
+**jq** is non-idiomatic in a _unix way_, e.g.: one can write a program in **jq** language that even has nothing to do with JSON.
 Most of the requests (if not all) to manipulate JSONs are _ad hoc_ type of tasks, and learning **jq**'s DSL for _ad hoc_ type of tasks 
 is an overkill (that purpose is best facilitated with
 [GPL](https://en.wikipedia.org/wiki/General-purpose_language)).  
@@ -598,7 +598,7 @@ bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surnam
 [null,"Lynch"]
 ["Alice","Price"]
 ```
-\- i.e. `jtc` will not assume that user would require some default substitution in case of incomplete data (but if such handling is 
+\- i.e., `jtc` will not assume that user would require some default substitution in case of incomplete data (but if such handling is 
 required then the walk-path can be easily enhanced)
 
 
