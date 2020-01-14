@@ -1690,7 +1690,7 @@ allowing extending even empty arrays and objects without producing failures.
 All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
-### Interpolating flat iterables into a string template
+#### Interpolating flat iterables into a string template
 If a currently interpolated JSON iterable is made of atomic values only and/or empty iterables (`{}`, `[]`) and is getting
 interpolated into a string template (using the _stripped_ token notation), then it values get fully enumerated within the string, e.g.:
 ```bash
