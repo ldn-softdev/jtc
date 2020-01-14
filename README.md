@@ -545,10 +545,10 @@ one at a time, provides an immediate visual feedback and let coming up with the 
 
 
 ### solutions input invariance
-\- most of `jtc` solutions are input invariant (hardly the same could be stated for **jq**). Not that it's impossible to come up with
-invariant solutions in **jq**, it's just a lot more harder, while `jtc` with its walk-path model prompts for invariant solutions.
-I.e., the invariant solution will keep working even once the JSON outer format changes (invariant solution only would stop working once 
-the relationship between walked JSON elements changes).  
+\- most of `jtc` solutions would be input invariant (hardly the same could be stated for **jq**). Not that it's impossible to come up
+with invariant solutions in **jq**, it's just a lot more harder, while `jtc` with its walk-path model prompts for invariant solutions.
+I.e., the invariant solution will keep working even once the JSON outer format changes (the invariant solution only would stop working 
+once the relationship between walked JSON elements changes).  
 E.g.: consider a following query, extract format `[ "name", "surname" ]` from 2 types of JSON:
 ```bash
 bash $ case1='{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}'
