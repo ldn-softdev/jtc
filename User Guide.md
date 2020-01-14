@@ -17,11 +17,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
-     * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
-       * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
-       * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
-       * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
+     * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
        * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#examples-sporting-fail-safe-using-namespaces-and-interpolation)
        * [Uses of `Fn` directive with non-default quantifiers (`<>Fn`, `><Fn`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Uses-of-Fn-directive-with-non-default-quantifiers)
@@ -45,6 +41,10 @@
    * [Summary of walk options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-options)
 3. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
    * [Interpolation token types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types)
+   * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
+       * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
+       * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
+       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
@@ -607,133 +607,14 @@ for the currently walked JSON elements, these are _directives_:
   * `W` saves into the provided namespace a currently walked JSON's walk-path as a _JSON array_ (e.g.: `<wp>W`)
 
 
-#### Namespace
-A _namespace_ is a container within `jtc`, which allows storing JSON elements (nodes) programmatically while walking JSON.
-
-Stored in the namespace values could be reused later in the same or different walk-paths and 
-[interpolated](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation) in 
-[templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
-for a shell evaluation.
-
-Beside user provided names, `jtc` features a number of internally generated/supported tokens and names that have various applications:
-  - `$N` namespace, where `N` is a number - typically that would be a reference to the result of a REGEX matched group
-  (however, could be (re)used be a user as well)
-  - `$a`, `$b`, `$c`, etc - auto generated tokens when the interpolated value is an iterable (an array or an object),
-  where `$a` refers to the first element in the iterable, `$b` to the second, etc
-  - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an an object,
-  where `$A` refers to the first element's label, `$B` to the second's label, etc
-  - `$PATH` - an auto generated token, used in templates when requires to interpolate a path (set of indices/labels)
-  to the walked point as a JSON array
-  - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
-  - `$_` - a namespace, holding a string value that is used when the elements during `{$path}` interpolation are getting concatenated 
-  (default value `_`) 
-  - `$#` - a namespace, holding a string value that is used as a separator when a _JSON array_ or _object_ is getting
-  template-interpolated into a string (default value `, `)
-  - `$?` - a token, referring to the result of a prior successful walk, thus it's used to expand multiple walks into a string
-  or an array
-  - `$$?` - a namespace holding a string separator considered when expanding walks using `{$?}` token into a string
-  (default value is `,`) 
-
-
-##### Cross-lookups using namespace 
-Directives `<>v`, `<>k` (as well as all other lexemes allowing capturing and setting namespace) and search lexemes `<>s`, `<>t` 
-let facilitating cross-lookups. Say, we have a following JSON:
-```bash
-bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
-bash $ <<<$JSN jtc -tc
-{
-   "item": "bread",
-   "list": { "bread": 1.20, "milk": 0.90 }
-}
-bash $ 
-```
-the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
-Using namespaces it becomes a trivial task:
-```bash
-bash $ <<<$JSN jtc -w'[item]<Itm>v[^0]<Itm>t' -l
-"bread": 1.20
-bash $ 
-```
-- `[item]` - selects a value by label `item`
-- `<Itm>v` - stores currently walked (selected) value (`bread`) it in the namespace `Itm`
-- `[^0]` - resets the walk path back to the root
-- `<Itm>t` - searches (recursively) for a (first) label matching the value stored in the namespace `Itm` (which is `bread`)
-
-The similar way (like in `<Itm>v`) labels/indices could be accessed and stored in the namespace using directive `<>k`.
-The empty directive lets reinterpreting label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ 
-value respectively.  
-Say, we want to list all labels in the `address` record:
-```bash
-bash $ <ab.json jtc -w'<address>l[:]<>k'
-"city"
-"postal code"
-"state"
-"street address"
-bash $ 
-```
-
-
-##### Setting a custom JSON value into a namespace
-The lexeme `<..>v` (and all others that allow _namespaces_ - `P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`v`,`k`,`f`,`F`) 
-allows setting up a custom JSON value (in lieu of currently walked JSON) - if the lexeme's value is given in the format:  
-- `<name:JSON_value>v`
-then upon walking such syntax the `JSON_value` will be preserved in the namespace `name` instead of a currently walked JSON.
-
-
-##### Path namespace example
-Here are both of the path tokens demonstrated:
-```bash
-bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
-[ "Directory", 2, "name" ]
-bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
-"Directory_0_address_state"
-bash $ 
-```
-_to play safe with the templates, always surround them with single quotes (to dodge shell interpolation)_  
-
-here's an example how to join path tokens using a custom separator:
-```bash
-bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
-Directory       0       address state
-bash $ 
-```
-
-
-##### Prior Walk token
-A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
-to build up JSON 'historical' records:
-```bash
-bash $ <<<'["a","b","c"]' jtc -w[:]
-"a"
-"b"
-"c"
-bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
-[ "a" ]
-[ "a", "b" ]
-[ "a", "b", "c" ]
-bash $ 
-```
-When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk), or when interpolation of `$?` fails,
-then the value of this token is reset to an empty string (`""`). 
-
-
-When expanding values into a string (rather than into an array), the separator used by a user is arbitrary, e.g.:
-```bash
-bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"' 
-" | a"
-" | a | b"
-" | a | b | c"
-bash $ 
-```
-The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artefact 
-the namespace `$$?` holds the value which `jtc` consiers as a separator (if it matches user's):
-```bash
-bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
-"a"
-"a | b"
-"a | b | c"
-bash $ 
-```
+#### Setting a custom JSON value into a namespace
+There's a set of lexemes which may reference a name in the
+[_namespace_](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace) for capturing a currently walked JSON elements:
+`P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`v`,`k`,`f`,`F`.
+All of those lexemes also allow capturing a custom JSON value in lieu of currently walked JSON - if the lexeme's value is given in
+the format, e.g.:  
+\- `<name:JSON_value>v`  
+then upon walking such syntax the `JSON_value` will be preserved in the namespace `name` instead of a currently walked JSON
 
 
 #### Fail-safe and Forward-Stop directives
@@ -1692,8 +1573,9 @@ will fail to get applied
 
 ### Interpolation token types
 The difference between single `{}` and double `{{}}` notations: 
-- double notation `{{..}}` interpolates JSON elements exactly, so it's always a safe type
-- a single notation `{..}` interpolates _JSON strings_, _JSON arrays_, _JSON objects_ differently:
+- double notation (a.k.a. _dressed notation_) `{{..}}` interpolates JSON elements exactly, so it's always a safe type
+- a single notation (a.k.a. _stripped notation_) `{..}` "strips" the interpolated object and interpolates
+_JSON strings_, _JSON arrays_, _JSON objects_ differently:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
   `blah`. Thus, it makes sense to use this interpolation inside double quotation markss
   * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
@@ -1702,38 +1584,40 @@ The difference between single `{}` and double `{{}}` notations:
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
   will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "key": "new" }'`
 
-A string interpolation w/o outer quotes is handy when there's a requirement to alter an existing string,
+#### String interpolation example
+A _string_ interpolation using a _stripped notation_ is handy when there's a requirement to alter/extend an existing string,
 here's example of altering JSON label:
 ```bash
-bash $ JSN='{ "label": "value" }'
-bash $ <<<$JSN jtc -w'<label>l<>k' -u'<label>l<>k' -T'"new {}"'
+bash $ JSN='{ "label1": "value1", "label2": "value2" }'
+bash $ <<<$JSN jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
 {
-   "new label": "value"
+   "new label1": "value1",
+   "new label2": "value2"
 }
 bash $ 
 ```
 There, in above example the template token `{}` refers to the result of walking `-u` rather than `-w` (the same holds for insert `-i` and
 compare `-c` operators). The walk `-w` points to the destination update location(s) for the update (which is the label, 
 as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
-Alternatively, the same could be achieved like this, in a but more succinct way:
+Alternatively, the same could be achieved like this, in a bit more succinct way:
 ```bash
-bash $ <<<$JSN jtc -w'<label>l<L>k<>k' -u0 -T'"new {L}"'
+bash $ <<<$JSN jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
 {
-   "new label": "value"
+   "new label1": "value1",
+   "new label2": "value2"
 }
 bash $ 
 ```
-The update argument (`-u0`) in this case is a dummy JSON (`0` is taken just as one of the shortest JSON values), its value will be unused
-in the template and hence irrelevant to the operation. Template now will refer to the value `L` from  the namespace, which will be 
-populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
-Why `<>k` lexeme 
-is used twice? As per the lexeme design, when it's empty (and only then) it lets reinterpreting currently walked element's label as
-a value (which is being updated in this case), Thus, the first lexeme `<L>k` only preserves the label in the namespace, while 
-the second lexeme allows pointing to the label as the destination point for the update - which will be the template-interpolated
-JSON value `'"new label"'`.
+The update argument (`-u0`) in this case is a dummy JSON (`0` is taken just as one of the shortest JSON values), its value will be
+unused in the template and hence is irrelevant to the operation. Template now will refer to the value `T` from  the namespace, which
+will be  populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
+Why `<..>k` lexeme is used twice? As per the lexeme design, when it's empty (and only then) it lets reinterpreting currently walked 
+element's label as a value (which is being updated in this case), Thus, the first lexeme `<L>k` only preserves the label in the
+namespace, while  the second lexeme allows pointing to the label as the destination point for the update - which will be the
+template-interpolated JSON value `'"new label"'`.
 
 
-Here's an illustration when double braces are handier (e.g., swapping around labels and values):
+Here's an illustration when a _stripped notation_ is required:
 ```
 bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
 bash $ <<<$JSN jtc
@@ -1748,8 +1632,15 @@ bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
 }
 bash $ 
 ```
+there, values getting into the namespace `Val` will be different types in each pass: the first time it's a numeric value `3.14`,
+in the second pass it'll be a string `"irrational"`. Therefore, in the template, where `Val` is used with the label semantic,
+we have to ensure that the interpolation occurs of the stripped value (otherwise, if dressed notation was used - `{{Val}}: ...` then
+numerical value would be substituted w/o quotation marks resulting in the invalid label and thus failing the template).  
+The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work both ways. 
 
-An array interpolation using a single brace notation `{..}` is handy when there's a need extending the array _during_
+
+#### Array interpolation example
+An array interpolation using a single brace notation `{..}` is handy when there's a requirement to extend the array _during_
 interpolation. 
 There's a special case though - template-extending of an empty array. Let's consider a following example:
 ```
@@ -1791,14 +1682,160 @@ bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[
 ]
 bash $ 
 ```
+When interpolating the second record (the one with `"Func": "a * b"`), the interpolation in fact, would result in the invalid JSON:
+the _array_ in `args` is empty initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes 
+`[, "a", "b"]` - which is an invalid JSON. However, `jtc` is aware of such empty iterables and handles them properly, 
+allowing extending even empty arrays and objects without producing failures.
 
-When interpolating the second record, the interpolation in fact, would result in the invalid JSON: the _array_ in `args` is empty
-initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes `[, "a", "b"]` - which is an invalid
-JSON. However, `jtc` is aware of such empty iterables and handles them properly, allowing extending even empty arrays and objects
-without producing failures.
+All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
-All the same applies for when interpolating _JSON objects_ and _JSON strings_. For _JSON objects_ such null-interpolation is aware
-of enumerations occurring over of either of `,` or `;`
+
+### Interpolating flat iterables into a string template
+If a currently interpolated JSON iterable is made of atomic values only and/or empty iterables (`{}`, `[]`) and is getting
+interpolated into a string template (using the _stripped_ token notation), then it values get fully enumerated within the string, e.g.:
+```bash
+#flat array:
+bash $ <<<'{"array":[null,1,true,{},[],"five"]}' jtc -w[array] -T'"stringified array: {}"'
+"enumerated array: null, 1, true, {}, [], five"
+bash $ 
+
+#flat object:
+bash $ <<<'{"str":"a string", "bool":false, "null": null, "empty":[]}' jtc -T'"stringified object: {}"'
+"stringified object: false, [], null, a string"
+bash $ 
+```
+
+By default, for such interpolations (stringifying flat iterables) the enumeration separator used is held in the namespace `$#` 
+(default value `, `), which means, it could be altered by a user:
+```bash
+bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
+good for TSV conversion:
+1       2       3       4       5
+bash $ 
+```
+
+
+### Namespace
+A _namespace_ is a container within `jtc`, which allows storing JSON elements (nodes) programmatically while walking JSON.
+
+Stored in the namespace values could be reused later in the same or different walk-paths and 
+[interpolated](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation) in 
+[templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
+for a shell evaluation.
+
+Beside user provided names, `jtc` features a number of internally generated/supported tokens and names that have various applications:
+  - `$N` namespace, where `N` is a number - typically that would be a reference to the result of a REGEX matched group
+  (however, could be (re)used be a user as well)
+  - `$a`, `$b`, `$c`, etc - auto generated tokens when the interpolated value is an iterable (an array or an object),
+  where `$a` refers to the first element in the iterable, `$b` to the second, etc
+  - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an an object,
+  where `$A` refers to the first element's label, `$B` to the second's label, etc
+  - `$PATH` - an auto generated token, used in templates when requires to interpolate a path (set of indices/labels)
+  to the walked point as a JSON array
+  - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
+  - `$_` - a namespace, holding a string value that is used when the elements during `{$path}` interpolation are getting concatenated 
+  (default value `_`) 
+  - `$#` - a namespace, holding a string value that is used as a separator when a _JSON array_ or _object_ is getting
+  template-interpolated into a string (default value `, `)
+  - `$?` - a token, referring to the result of a prior successful walk, thus it's used to expand multiple walks into a string
+  or an array
+  - `$$?` - a namespace holding a string separator considered when expanding walks using `{$?}` token into a string
+  (default value is `,`) 
+
+
+##### Cross-lookups using namespace 
+Directives `<>v`, `<>k` (as well as all other lexemes allowing capturing and setting namespace) and search lexemes `<>s`, `<>t` 
+let facilitating cross-lookups. Say, we have a following JSON:
+```bash
+bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
+bash $ <<<$JSN jtc -tc
+{
+   "item": "bread",
+   "list": { "bread": 1.20, "milk": 0.90 }
+}
+bash $ 
+```
+the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
+Using namespaces it becomes a trivial task:
+```bash
+bash $ <<<$JSN jtc -w'[item]<Itm>v[^0]<Itm>t' -l
+"bread": 1.20
+bash $ 
+```
+- `[item]` - selects a value by label `item`
+- `<Itm>v` - stores currently walked (selected) value (`bread`) it in the namespace `Itm`
+- `[^0]` - resets the walk path back to the root
+- `<Itm>t` - searches (recursively) for a (first) label matching the value stored in the namespace `Itm` (which is `bread`)
+
+The similar way (like in `<Itm>v`) labels/indices could be accessed and stored in the namespace using directive `<>k`.
+The empty directive lets reinterpreting label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ 
+value respectively.  
+Say, we want to list all labels in the `address` record:
+```bash
+bash $ <ab.json jtc -w'<address>l[:]<>k'
+"city"
+"postal code"
+"state"
+"street address"
+bash $ 
+```
+
+
+##### Path namespace example
+Here are both of the path tokens demonstrated:
+```bash
+bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
+[ "Directory", 2, "name" ]
+bash $ <ab.json jtc -w'<NY>' -T'{{$path}}'
+"Directory_0_address_state"
+bash $ 
+```
+_to play safe with the templates, always surround them with single quotes (to dodge shell interpolation)_  
+
+here's an example how to join path tokens using a custom separator:
+```bash
+bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
+Directory       0       address state
+bash $ 
+```
+
+
+##### Prior Walk token
+A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
+to build up JSON 'historical' records:
+```bash
+bash $ <<<'["a","b","c"]' jtc -w[:]
+"a"
+"b"
+"c"
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
+[ "a" ]
+[ "a", "b" ]
+[ "a", "b", "c" ]
+bash $ 
+```
+When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk), or when interpolation of `$?` fails,
+then the value of this token is reset to an empty string (`""`). 
+
+
+When expanding values into a string (rather than into an array), the separator used by a user is arbitrary, e.g.:
+```bash
+bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"' 
+" | a"
+" | a | b"
+" | a | b | c"
+bash $ 
+```
+The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artefact 
+the namespace `$$?` holds the value which `jtc` consiers as a separator (if it matches user's):
+```bash
+bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
+"a"
+"a | b"
+"a | b | c"
+bash $ 
+```
+
 
 
 ### Namespaces with interleaved walks
