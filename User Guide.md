@@ -1690,22 +1690,31 @@ allowing extending even empty arrays and objects without producing failures.
 All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
-#### Interpolating flat iterables into a string template
-If a currently interpolated JSON iterable is made of atomic values only and/or empty iterables (`{}`, `[]`) and is getting
-interpolated into a string template (using the _stripped_ token notation), then it values get fully enumerated within the string, e.g.:
+#### Interpolating JSON iterables into a string template
+If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _stripped_
+token notation), then its values get fully enumerated within the string one by one and as long they are _string-interpolatable_:
 ```bash
-#flat array:
+# array:
 bash $ <<<'{"array":[null,1,true,{},[],"five"]}' jtc -w[array] -T'"stringified array: {}"'
-"enumerated array: null, 1, true, {}, [], five"
+"stringified array: null, 1, true, {}, [], five"
 bash $ 
 
-#flat object:
+# object:
 bash $ <<<'{"str":"a string", "bool":false, "null": null, "empty":[]}' jtc -T'"stringified object: {}"'
 "stringified object: false, [], null, a string"
 bash $ 
 ```
+However, if any of children hold nested string types, then such interpolation would fail:
+```bash
+bash $ <<<'{"array":[null,1,true,{},["string"],"five"]}' jtc -w[array] -T'"stringified array: {}"' -r
+[ null, 1, true, {}, [ "string" ], "five" ]
+bash $ 
+```
+\- it fails because interpolated value `[ "string" ]` would render the template an invalid JSON string,
+namely: `"stringified array: null, 1, true, {}, [ "string" ], five"`
 
-By default, for such interpolations (stringifying flat iterables) the enumeration separator used is held in the namespace `$#` 
+
+By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
 (default value `, `), which means, it could be altered by a user:
 ```bash
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
