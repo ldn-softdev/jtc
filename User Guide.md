@@ -41,6 +41,9 @@
    * [Summary of walk options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-options)
 3. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
    * [Interpolation token types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types)
+      * [String interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#string-interpolation)
+      * [Interpolation of iterables](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-of-iterables)
+        * [Interpolation of iterables into a string template](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Interpolation-of-iterables-into-a-string-template)
    * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
@@ -1567,8 +1570,8 @@ will trigger the interpolation attempt:
 - if the content under braces is empty (`{}`, `{{}}`) then the currently walked JSON element is getting substituted
 - if the content is non-empty (e.g.: `{val}`, `{{val}}`) then interpolation is attempted from the referred namespace
 
-Whenever template interpolation (`-T ...`) occurs the result of interpolation must always be a valid JSON, otherwise the template
-will fail to get applied
+Whenever template interpolation (`-T ...`, `<..>j`) occurs, the result of interpolation must always be a valid JSON,
+otherwise the template will fail to get applied
 
 
 ### Interpolation token types
@@ -1577,14 +1580,16 @@ The difference between single `{}` and double `{{}}` notations:
 - a single notation (a.k.a. _stripped notation_) `{..}` "strips" the interpolated object and interpolates
 _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
-  `blah`. Thus, it makes sense to use this interpolation inside double quotation markss
-  * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,2,3]` 
-  will be interpolated as `1,2,3` (which is invalid JSON), thus to keep it valid the outer brackets must be provided,
-  e.g.: `-T'[ 0, {}, 4, 5 ]'`
+  `blah`. Thus, it makes sense to use this interpolation inside double quotation marks
+  * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,"2",{}]` 
+  will be interpolated as `1,"2",{}` (which is invalid JSON), thus, to keep it valid the outer brackets must be provided,
+  e.g.: `-T'[ 0, {}, 4, [] ]'`
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
-  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "key": "new" }'`
+  will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "type": "irrational" }'`
+  * if you meant to insert in a template an empty object `{}` rather than a _stripped_ token (which has the same notation), 
+  then spell it over space: `{ }` 
 
-#### String interpolation example
+#### String interpolation
 A _string_ interpolation using a _stripped notation_ is handy when there's a requirement to alter/extend an existing string,
 here's example of altering JSON label:
 ```bash
@@ -1596,8 +1601,9 @@ bash $ <<<$JSN jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
 }
 bash $ 
 ```
-There, in above example the template token `{}` refers to the result of walking `-u` rather than `-w` (the same holds for insert `-i` and
-compare `-c` operators). The walk `-w` points to the destination update location(s) for the update (which is the label, 
+There, in the example above, the template token `{}` refers to the result of walking `-u` rather than `-w` 
+(the same holds true for insert `-i` and compare `-c` operators). 
+The walk `-w` points to the destination location(s) for the update (which is the label, 
 as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
 Alternatively, the same could be achieved like this, in a bit more succinct way:
 ```bash
@@ -1618,7 +1624,7 @@ template-interpolated JSON value `'"new label"'`.
 
 
 Here's an illustration when a _stripped notation_ is required:
-```
+```bash
 bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
 bash $ <<<$JSN jtc
 {
@@ -1639,11 +1645,11 @@ numerical value would be substituted w/o quotation marks resulting in the invali
 The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work both ways. 
 
 
-#### Array interpolation example
-An array interpolation using a single brace notation `{..}` is handy when there's a requirement to extend the array _during_
-interpolation. 
+#### Interpolation of iterables
+An array interpolation using a stripped notation (`{..}`) is handy when there's a requirement to extend the array during
+template interpolation. 
 There's a special case though - template-extending of an empty array. Let's consider a following example:
-```
+```bash
 bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
 bash $ <<<$JSN jtc
 [
@@ -1661,7 +1667,7 @@ bash $ <<<$JSN jtc
 bash $ 
 ```
 And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
-```
+```bash
 bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
 [
    {
@@ -1683,14 +1689,14 @@ bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[
 bash $ 
 ```
 When interpolating the second record (the one with `"Func": "a * b"`), the interpolation in fact, would result in the invalid JSON:
-the _array_ in `args` is empty initially (`[]`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes 
+the _array_ in `args` is empty initially (`"args": []`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes 
 `[, "a", "b"]` - which is an invalid JSON. However, `jtc` is aware of such empty iterables and handles them properly, 
 allowing extending even empty arrays and objects without producing failures.
 
 All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
-#### Interpolating JSON iterables into a string template
+##### Interpolation of iterables into a string template
 If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _stripped_
 token notation), then its values get fully enumerated within the string one by one and as long they are _string-interpolatable_:
 ```bash
@@ -1704,19 +1710,22 @@ bash $ <<<'{"str":"a string", "bool":false, "null": null, "empty":[]}' jtc -T'"s
 "stringified object: false, [], null, a string"
 bash $ 
 ```
+Note that string values (`"five"`, `"a string"`) also get stripped (because during such kind of interpolation a stripped notation
+token `{}` gets applied onto each value of the iterable one by one).
+
 However, if any of children hold nested string types, then such interpolation would fail:
 ```bash
 bash $ <<<'{"array":[null,1,true,{},["string"],"five"]}' jtc -w[array] -T'"stringified array: {}"' -r
 [ null, 1, true, {}, [ "string" ], "five" ]
 bash $ 
 ```
-\- it fails because interpolated value `[ "string" ]` would render the template an invalid JSON string,
-namely: `"stringified array: null, 1, true, {}, [ "string" ], five"`
+\- it fails because the interpolated value `[ "string" ]` would render the template an invalid JSON string,
+namely: `"stringified array: null, 1, true, {}, [ "string" ], five"` (inner quotation marks are not quoted)
 
 
 By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
 (default value `, `), which means, it could be altered by a user:
-```bash
+```json
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
 good for TSV conversion:
 1       2       3       4       5
