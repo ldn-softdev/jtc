@@ -12,7 +12,8 @@
    * [Summary of display options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-display-options)
 2. [Walking JSON (`-w`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
    * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
-     * [Selecting multiple subscripted JSON elements (`[+n], [n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
+     * [Selecting multiple subscripted JSON elements (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
+     * [Subscript slice notation (`[n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#subscript-slice-notation)
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
@@ -462,7 +463,7 @@ bash $ <ab.json jtc -w'[Directory][+1][address][+2]'
 bash $
 ```
 
-##### Subscript slice notation
+#### Subscript slice notation
 Another way to select multiple subscripts is to use a slice notation `[N:M:S]`. In that notation `N` and `M` could be either positive
 or negative, while `S` must be strictly positive. Any of positions (as well as position separator `:`) could be omitted.
 The first position (`N`) designates a beginning of the slice selection, the position (`M`) designates the end of the 
@@ -510,15 +511,47 @@ bash $
 
 #### Searching JSON with RE
 Optionally, search lexemes may accept _one-letter suffixes_: a single character following the lexeme's closing bracket.
-These suffixes alter the meaning of the search, e.g. suffix `R` instruct to perform a _regex search_ among string values:
+These suffixes alter the search behaviors.  
+There 3 suffixes that facilitate _REGEX_ types of search:
+- `R`: performs a _REGEX search_ only among JSON _string_ values
+- `D`: performs a _REGEX search_ only among JSON _numerical_ values
+- `L`: performs a _REGEX search_ only among JSON _labels_
+
+E.g., a following query finds recursively the first _string_ entry with the REGEX:
 ```bash
 bash $ <ab.json jtc -w'<^N>R'
 "New York"
 bash $
 ```
 
+REGEX lexemes optionally may have flags altering RE search behavior
+([cppreference](https://en.cppreference.com/w/cpp/regex/syntax_option_type)):
+- `I` (icase): - Character matching should be performed without regard to case 
+- `N` (nosubs): - sub-expressions (expr) are treated as non-marking sub-expressions (?:expr)
+- `O` (optimize): - make matching faster, with the potential cost of making construction slower
+- `C` (collate): - Character ranges of the form "[a-b]" will be locale sensitive
+> option _multiline_ is unsupported due to JSON not permitting multiline strings
+
+Also, following REGEX grammars are supported:
+- `E`: modified `ECMAScript` regular expression grammar (default)
+- `S`: basic POSIX regular expression grammar
+- `X`: extended POSIX regular expression grammar
+- `A`: grammar used by the `awk` utility in POSIX
+- `G`: grammar used by the `grep` utility in POSIX
+- `P`: regular expression grammar used by the `egrep` utility
+
+All of the above flags may be given as _quoted trailing characters_ in the lexeme:
+```bash
+bash $ <ab.json jtc -w'<^new york\I>R'
+"New York"
+bash $ 
+```
+> that way multiple options could be given, however, if multiple grammars specified, only the first one will take the effect, e.g.:
+`<...\G\A>R` - between `awk` and `grep` grammars the latter wins (because it's given first)
+
+
 #### Search suffixes
-This is the list of suffixes that control search behavior: 
+This is the complete list of suffixes that control _search_ behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ values (e.g.: `<CO>`, `<CO>r`)
   * `R`: the lexeme is a search RE, only _JSON string_ values searched (e.g.: `<^N+*>R`)
   * `P`: matches _any_ string values, same like `<.*>R`, just faster (e.g.: `<>P`)
