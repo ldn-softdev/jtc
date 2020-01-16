@@ -816,7 +816,7 @@ there are couple other uses for `Fn` lexeme with a non-zero (non-default) quanti
 RE search lexemes (`R`, `L`, `D`) also auto-populate the namespace with following names:
 - `$0` is auto-generated for an entire RE match,
 - `$1` for a first RE subgroup,
-- `$2` for a second RE subgroup, and so on
+- `$2` for a second RE subgroup, and so on (_predicated no `\N` flag was given_)
 ```bash
 bash $ <ab.json jtc -w'<^J(.*)>R:'
 "John"
