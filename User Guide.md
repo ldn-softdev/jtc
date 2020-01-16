@@ -17,6 +17,7 @@
    * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
+       * [Cached Search](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cached-search)
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
@@ -527,7 +528,7 @@ bash $
 REGEX lexemes optionally may have flags altering RE search behavior
 ([cppreference](https://en.cppreference.com/w/cpp/regex/syntax_option_type)):
 - `I` (icase): - Character matching should be performed without regard to case 
-- `N` (nosubs): - sub-expressions (expr) are treated as non-marking sub-expressions (?:expr)
+- `N` (nosubs): - sub-expressions `(expr)` are treated as non-marking sub-expressions `(?:expr)`
 - `O` (optimize): - make matching faster, with the potential cost of making construction slower
 - `C` (collate): - Character ranges of the form "[a-b]" will be locale sensitive
 > option _multiline_ is unsupported due to JSON not permitting multiline strings
@@ -608,9 +609,9 @@ cacheing is required, both recursive and non-recursive) and thus all subsequent 
 Though, there couple cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
 resolution of the search is dependent on the _namespace_ value.  
 Here's the list of such search types:
-  * recursive `<..>s`,`<..>t`: the lexemes are using _namespaces_ when performing search and hence could not cached
+  * recursive `<..>s`,`<..>t`: the lexemes are using _namespaces_ when performing search and hence could not be cached
   * JSON match when the lexeme is a template, e.g.: `<{ "label": {{val}} }>j`: templates typically require _namespace_ for interpolation
-  and hence are also non-cacheable, though `<..>j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j`)
+  and hence are also non-cacheable, though `<..>j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j` is cacheable)
 
 \- all the above cases are exempt from cacheing and hence the exponential decay might become noticeable, so be aware when building a 
 query for very large JSON structures (order of hundred thousands of nodes)
@@ -630,8 +631,8 @@ for the currently walked JSON elements, these are _directives_:
          walking (of the same walk-path) may continue if `><F` directive is present (past the failing point)
   * `F`: Forward-Stop: behavior of the directive is dependent on spelling:
     * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
-    without ending the walk;
-    * `><F` - when the directive is reached, the walk successfully ends for the output processing    
+    without ending the walk (like _`continue`_ loop operator in some programming languages)
+    * `><F` - when the directive is reached, the walk successfully ends for the output processing (similar to _`break`_ loop operator)
   * `u`: user evaluation of the walk-path: the lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
@@ -698,7 +699,7 @@ A _walk-path_ may contain multiple _fail-safe_, only the respective fail-safe wi
 one to the failing point)
 
 
-##### Examples sporting _fail-safe_ using namespaces and interpolation:
+##### \* Examples sporting _fail-safe_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
 this format  
 `<Name> has children: true/false`
@@ -802,7 +803,7 @@ bash $
 ```
 
 
-##### Uses of `Fn` directive with non-default quantifiers
+##### \* Uses of `Fn` directive with non-default quantifiers
 there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifier:
   - `<>Fn` - this variant of the lexeme acts as a 'jump' instructions for the walk path - i.e. once walked, it will jump to the `n`th 
   lexeme (from the lexeme `<>F`) and continues walking from there. E.g.: `<>F1` does not do anything - it continues walking from the 1st 
