@@ -53,8 +53,6 @@
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
-   * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
-     * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
@@ -71,6 +69,8 @@
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
    * [Use of mixed arguments for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c)
    * [Use of mixed arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-with--e)
+   * [Cross-referenced insert, update](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Cross-referenced-insert-update)
+     * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
@@ -2090,132 +2090,8 @@ respective label. I.e., even if the value in the namespace is numerical value `0
 in the searched JSON node
 
 
-### Cross-referenced lookups
-One use-case that namespaces facilitate quite nicely, is when insert/update/purge/compare operation refer to different JSONs 
-(i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
-types of operations) but one requires a reference from another.
-
-Say, we have 2 JSONs:
-1. `main.json`:
-```bash
-bash $ <main.json jtc
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": []
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": []
-   },
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": []
-   }
-]
-bash $ 
-```
-2. `id.json`:
-```bash
-bash $ <id.json jtc
-[
-   {
-      "id": 3,
-      "title": "Smoke on the Water"
-   },
-   {
-      "id": 1,
-      "title": "The Winner Takes It All"
-   },
-   {
-      "id": 2,
-      "title": "The Show Must Go On"
-   }
-]
-bash $ 
-```
-
-The ask here is to insert songs titles from `id.json` into `main.json` cross-referencing respective `rec` to `id` values.  
-The way to do it:
-- first walk `main.json` finding and memorizing (each) `rec` value 
-- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
-
-The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
-insert respective `title`:
-```bash
-bash $ <main.json jtc -w'<rec>l:<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]' -tc
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": [ "The Winner Takes It All" ]
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": [ "Smoke on the Water" ]
-   },
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": [ "The Show Must Go On" ]
-   }
-]
-bash $ 
-```
-For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When dst. walk 
-finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
-when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. The rest should be obvious
-by now.
-
-
-#### Cross-referenced purge
-`jtc` does not have a "walk" argument for `-p` (purge) operation (`-p` is a standalone option, when it's used only with `-w`
-it will purge every resulted/walked entry).  
-So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
-
-The trick is to use update/insert `-u`/`-i` operation together with `-p`. When the cli is given in this notation:  
-`<<<dst.json jtc -w... -u <src.json> -u... -p`,  
-purging will be applied to walked destinations, but only predicated by a successful source walk:
-```
-bash $ <main.json jtc -w'<rec>l:<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
-[
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": []
-   }
-]
-bash $ 
-```
-
-The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
-```
-bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
-[
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": []
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": []
-   }
-]
-bash $ 
-```
-\- memorizing the whole entry (in `E`) is required because update operation w/o the template only replaces records (and 
-purge everything else), but that's not the goal - the goal is to retain all the entries, hence replacing the updated entries
-with the template for the entire entry.
-
-
 ## Modifying JSON
-there are a few options which let modifying input JSON:
+there are a few options that let modifying input JSON:
 - `-i` - insert (copy-insert, copy-merge, move) new elements to JSON
 - `-u` - update (rewrite, rewrite-merge, move) elements to JSON
 - `-s` - swap around pair(s) of JSON elements
@@ -2228,14 +2104,14 @@ facilitates _move_ semantic, those cases reviewed in the respective chapters.
 Each of options requires one or multiple `-w` to be given to operate on. Options `-i` and `-u` require an argument, which comes in
 different flavors, one of them is the `walk-path` per-se.
 
-`jtc` will execute any of operations only once, if multiple operations required, then `jtc` needs to be invoked in a successive order
-(e.g., daisy-chained through the pipe `|`)
+`jtc` will execute any of those operations only once, if multiple operations required, then those could be combined in multiple
+optoins chain sets daisy-chained through the separator `/`.
 
 
 ### In-place JSON modification 
-By default `jtc` will expect input from `stdin`. If the standalone argument `json_file` is given, then `jtc` will read
+By default `jtc` will expect input from `stdin`. If the standalone argument `args` is given, then `jtc` will read
 input from the file (ignoring `stdin`), see below:
-```
+```bash
 bash $ cat file.json 
 [
    "JSON",
@@ -2257,7 +2133,7 @@ bash $ <<<'[ "<stdin>", "JSON" ]' jtc file.json
 ]
 bash $
 ```
-If option `-f` is given (together with a _single_ `json_file` argument) then `jtc` will apply (redirect) its output of the operations
+If option `-f` is given (together with a _single_ argument) then `jtc` will apply (redirect) its output of the operations
 into the file (instead of `stdout`):
 ```
 bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f file.json
@@ -2969,6 +2845,130 @@ bash $
 
 In case if only a single option instance (`-eu`/`-ei`) is used, then both the source (of interpolation) and the destination
 (of operation) would be provided with `-w` option argument
+
+
+### Cross-referenced insert, update
+One use-case that namespaces facilitate quite nicely, is when insert/update/purge/compare operation refer to different JSONs 
+(i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
+types of operations) but one requires a reference from another.
+
+Say, we have 2 JSONs:
+1. `main.json`:
+```bash
+bash $ <main.json jtc
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+2. `id.json`:
+```bash
+bash $ <id.json jtc
+[
+   {
+      "id": 3,
+      "title": "Smoke on the Water"
+   },
+   {
+      "id": 1,
+      "title": "The Winner Takes It All"
+   },
+   {
+      "id": 2,
+      "title": "The Show Must Go On"
+   }
+]
+bash $ 
+```
+
+The ask here is to insert songs titles from `id.json` into `main.json` cross-referencing respective `rec` to `id` values.  
+The way to do it:
+- first walk `main.json` finding and memorizing (each) `rec` value 
+- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
+
+The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
+insert respective `title`:
+```bash
+bash $ <main.json jtc -w'<rec>l:<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]' -tc
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": [ "The Winner Takes It All" ]
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": [ "Smoke on the Water" ]
+   },
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": [ "The Show Must Go On" ]
+   }
+]
+bash $ 
+```
+For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When dst. 
+walk  finishes walking, the namespace will be populated with a respective value from the `rec` entry. That value will be reused
+by insert-walk when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. 
+The rest should be obvious by now.
+
+
+#### Cross-referenced purge
+`jtc` does not have a "walk" argument for `-p` (purge) operation (`-p` is a standalone option, when it's used only with `-w`
+it will purge every resulted/walked entry).  
+So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
+
+The trick is to use update/insert `-u`/`-i` operation together with `-p`. When the cli is given in this notation:  
+`<<<dst.json jtc -w... -u <src.json> -u... -p`,  
+purging will be applied to walked destinations, but only predicated by a successful source walk:
+```bash
+bash $ <main.json jtc -w'<rec>l:<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
+[
+   {
+      "name": "Queen",
+      "rec": 2,
+      "songs": []
+   }
+]
+bash $ 
+```
+
+The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
+```bash
+bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
+[
+   {
+      "name": "Abba",
+      "rec": 1,
+      "songs": []
+   },
+   {
+      "name": "Deep Purple",
+      "rec": 3,
+      "songs": []
+   }
+]
+bash $ 
+```
+\- memorizing the whole entry (in `E`) is required because update operation w/o the template only replaces records (and 
+purge everything else), but that's not the goal - the goal is to retain all the entries, hence replacing the updated entries
+with the template for the entire entry.
 
 
 ### Summary of modes of operations
