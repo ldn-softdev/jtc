@@ -53,6 +53,10 @@
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
+   * [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
+     * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
+     * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
+   * [Summary of interpolation operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-interpolation-operations) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
@@ -74,14 +78,11 @@
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
-6. [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
-   * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
-   * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`) ](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
-7. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
+6. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
-8. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
      * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
@@ -1662,7 +1663,7 @@ otherwise the template will fail to get applied
 ### Interpolation token types
 The difference between single `{}` and double `{{}}` notations: 
 - double notation (a.k.a. _dressed notation_) `{{..}}` interpolates JSON elements exactly, so it's always a safe type
-- a single notation (a.k.a. _stripped notation_) `{..}` "strips" the interpolated object and interpolates
+- a single notation (a.k.a. _naked notation_) `{..}` "strips" the interpolated object and interpolates
 _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   * when interpolating _JSON string_, the outer quotation marks are dropped, e.g., instead of `"blah"`, it will be interpolated as 
   `blah`. Thus, it makes sense to use this interpolation inside double quotation marks
@@ -1671,11 +1672,11 @@ _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   e.g.: `-T'[ 0, {}, 4, [] ]'` after becomes `[ 0, 1, "2", {}, 4, [] ]`
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
   will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "type": "irrational" }'`
-  * if you meant to insert in a template an empty object `{}` rather than a _stripped_ token (which has the same notation), 
+  * if you meant to insert in a template an empty object `{}` rather than a _naked_ token (which has the same notation), 
   then spell it over space: `{ }`
 
 #### String interpolation
-A _string_ interpolation using a _stripped notation_ is handy when there's a requirement to alter/extend an existing string,
+A _string_ interpolation using a _naked notation_ is handy when there's a requirement to alter/extend an existing string,
 here's example of altering JSON label:
 ```bash
 bash $ JSN='{ "label1": "value1", "label2": "value2" }'
@@ -1707,7 +1708,7 @@ namespace, while  the second lexeme allows pointing to the label as the destinat
 template-interpolated JSON value `'"new label"'`.
 
 
-Here's an illustration when a _stripped notation_ is required:
+Here's an illustration when a _naked notation_ is required:
 ```bash
 bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
 bash $ <<<$JSN jtc
@@ -1726,13 +1727,13 @@ bash $
 ```
 there, values getting into the namespace `Val` will be different types in each pass: the first time it's a numeric value `3.14`,
 in the second pass it'll be a string `"irrational"`. Therefore, in the template, where `Val` is used with the label semantic,
-we have to ensure that the interpolation occurs of the stripped value (otherwise, if dressed notation was used - `{{Val}}: ...` then
+we have to ensure that the interpolation occurs of the naked value (otherwise, if dressed notation was used - `{{Val}}: ...` then
 numerical value would be substituted w/o quotation marks resulting in the invalid label and thus failing the template).  
 The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work both ways. 
 
 
 #### Interpolation of iterables
-An array interpolation using a stripped notation (`{..}`) is handy when there's a requirement to extend the array during
+An array interpolation using a naked notation (`{..}`) is handy when there's a requirement to extend the array during
 template interpolation. 
 There's a special case though - template-extending of an empty array. Let's consider a following example:
 ```bash
@@ -1783,7 +1784,7 @@ All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
 ##### \* Interpolation of iterables into a string template
-If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _stripped_
+If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _naked_
 token notation), then its values get fully enumerated within the string _**one by one**_ and as long they are _string-interpolatable_:
 ```bash
 # array:
@@ -1796,7 +1797,7 @@ bash $ <<<'{"str":"a string", "bool":false, "null": null, "empty":[]}' jtc -T'"s
 "stringified object: false, [], null, a string"
 bash $ 
 ```
-Note that string values (`"five"`, `"a string"`) also get stripped (because during such kind of interpolation a stripped notation
+Note that string values (`"five"`, `"a string"`) also get naked (because during such kind of interpolation a naked notation
 token `{}` gets applied onto each value of the iterable one by one).
 
 However, if any of children hold nested string types, then such interpolation would fail:
@@ -2088,6 +2089,160 @@ respective label. I.e., even if the value in the namespace is numerical value `0
 - in `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try matching the label
 (as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
 in the searched JSON node
+
+
+### Templates
+Template (an argument to `-T`, or in lexeme `<..>j`) is a literal JSON optionally containing tokens for interpolation. 
+Templates can be used upon walking, insertion, updates and when comparing. The result of template interpolation still must
+be a valid JSON. If a template (`-T`) is given then it's a template value (after interpolation) will be used for the operations,
+not the source walk (unless the resulting template is invalid JSON, in such case the source walk will be used).
+
+When walking is a standalone operation, then template interpolation occurs from the walk-path (`-w`):
+```bash
+bash $ <ab.json jtc -w'[0][0]<number>l:' 
+"112-555-1234"
+"113-123-2368"
+bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
+"+1 112-555-1234"
+"+1 113-123-2368"
+bash $ 
+```
+
+For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
+never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with source walks in operations (`-i`, `-u`, `-c`)
+\- that way 
+[cross-referenced insertions and updates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+are possible. Logically, for each destination walk (`-w`) there will be a respective subsequent source walk 
+(e.g.: `-c <src-walk>`), thus source walk may utilize the namespaces populated during destination walk (`-w`). 
+Template-interpolation will be attempted only once source walk is successful
+
+Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
+altering the `phone` label at the same time via template):
+```bash
+bash $ <ab.json jtc -w'[0][0]<phone>l'
+[
+   {
+      "number": "112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "number": "113-123-2368",
+      "type": "mobile"
+   }
+]
+bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<V>v' -T'{ "phone number": "+1 {V}" }' / -w'[0][0]<phone>l'
+[
+   {
+      "phone number": "+1 112-555-1234",
+      "type": "mobile"
+   },
+   {
+      "phone number": "+1 113-123-2368",
+      "type": "mobile"
+   }
+]
+bash $ 
+```
+Explanations:
+- `-w'[0][0]<phone>l[:]'` - that's our destinations which we will be updating (i.e., all phone records in the first `Directory` entry)
+- `-pi'[0][0]<number>l:<val>v'` - we'll walk (logically, synchronously with `-w`) all the `number` records and memorize `number`
+values in the namespace `V`; option `-p` turns _insert_ operation into _move_
+- `-T'{ "phone number": "+1 {val}" }'` after each source walk argument in `-i` a template interpolations occurs - a new 
+JSON entry is generated from the template and namespace `V`, and the new entry is then used for insertion into the respective
+destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON entry into a new one.
+
+> there might be a confusion how purge (`-p`) is applied when used together with `-i`, `-u`, `-c`: 
+>- when the argument of the options is a source walk and not a static JSON and/or a file (i.e. when options `-i`,`-u`,`-c` are walking
+the  source/input JSON), then the purge is applied to the source walked elements
+>- when the argument of the options is either a static JSON and/or a file, then the purge is applied to the destination walked 
+(`-w`) elements
+
+
+#### Multiple templates and walks
+When _multiple_ templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>` to which templates applied)
+**is the same**, then templates are pertain to each walk. In all other cases templates are applied in a round-robin fashion.  
+In the case where a round-robin behavior is required while a number of templates and walks matches, use `-nn` notation -
+it will ensure round-robin templates application onto sequential walks
+
+Compare:
+```bash
+# templates are pertain to walks:
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -r
+{ "Person": "John" }
+{ "Age": 25 }
+{ "Person": "Ivan" }
+{ "Age": 31 }
+{ "Person": "Jane" }
+{ "Age": 25 }
+bash $ 
+
+# templates are pertain to walks, while walks go sequential (non-interleaved):
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rn
+{ "Person": "John" }
+{ "Person": "Ivan" }
+{ "Person": "Jane" }
+{ "Age": 25 }
+{ "Age": 31 }
+{ "Age": 25 }
+bash $ 
+
+# templates applied round-robin, while walks go sequential (non-interleaved):
+bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rnnn
+{ "Person": "John" }
+{ "Age": "Ivan" }
+{ "Person": "Jane" }
+{ "Age": 25 }
+{ "Person": 31 }
+{ "Age": 25 }
+bash $ 
+
+```
+The mess in the above last example is explained by `-nn` usage: templates are forced to get applied in the round-robin fashion while
+walks are sequential.
+
+
+One use-case of multiple round-robin templates would be this example:
+```bash
+bash $ <<<'[1,2,3,4,5,6,7,8,9,10]' jtc -w[:] -T'""' -T{} -T'""' -qq
+2
+5
+8
+bash $ 
+```
+\- in the above example printed every 3rd element from source JSON starting from the 2nd one (recall: when unquoting an empty
+JSON string ("") the resulted blank lines are not getting printed). Though a much handier way to achieve the same is to use -xn/N
+option.
+
+
+#### Stringifying JSON, Jsonizing stringified
+There's one more token combination in templates allowing _stringification_ and _jsonization_ of values:
+- `<..>`, `<<..>>` will attempt "expanding" a string value into a JSON
+- `>..<`, `>>..<<` will take a current JSON value and stringify it
+
+The token notation follows the same rule as for regular tokens (`{}`, `{{}}`):
+- single angular bracket notation (`<..>`, `>..<`) will result in a "naked" JSON value (without quotation marks, curly braces
+or square brackets for strings, objects and arrays respectively)
+- double token notation (`<<..>>`, `>>..<<`) is always a safe type and the result of operation while be a complete JSON type.
+
+This little demo illustrates the tokens usage:
+```bash
+bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
+"[ \"a\", \"b\" ]"
+```
+\- because the single form of angular token notation was used, the outer quotation marks were necessary for a successful interpolation.
+The same could have been achieved with the template: `-T'>>{{}}<<'`
+
+That was the example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
+```
+bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' / -T'[ <{{}}>, "c"]' -r
+[ "a", "b", "c" ]
+bash $ 
+```
+\- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON array at the same time
+
+
+### Summary of interpolation operations
+
 
 
 ## Modifying JSON
@@ -3090,144 +3245,6 @@ bash $ <ab.json jtc -w'<>k'
 jtc json exception: walk_root_has_no_label
 bash $ 
 ```
-
-
-## Templates
-Template, an argument to `-T` is a literal JSON optionally containing tokens for
-[interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). Templates can be used upon walking, 
-insertion, updates and when comparing. The result of template interpolation still must be a valid JSON. If a template (`-T`) is given
-then it's a template value (after interpolation) will be used for the operations, not the source walk (unless the resulting template is
-invalid JSON, in such case the source walk will be used).
-
-When walking only is in process, then template interpolation occurs from the walk-path (`-w`):
-```
-bash $ <ab.json jtc -w'[0][0]<number>l:' 
-"112-555-1234"
-"113-123-2368"
-bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
-"+1 112-555-1234"
-"+1 113-123-2368"
-bash $ 
-```
-
-For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
-never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with source walks in operations (`-i`, `-u`, `-c`)
-\- that way 
-[cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
- are possible.
-Logically, for each destination walk (`-w`) there will be a respective subsequent source walk (e.g.: `-c<src-walk>`), thus source walk
-may utilize the namespaces populated during destination walk (`-w`). Template-interpolation will be attempted only once source walk is
-successful
-
-Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
-altering the `phone` label at the same time via template):
-```
-bash $ <ab.json jtc -w'[0][0]<phone>l'
-[
-   {
-      "number": "112-555-1234",
-      "type": "mobile"
-   },
-   {
-      "number": "113-123-2368",
-      "type": "mobile"
-   }
-]
-bash $ <<<$(<ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<val>v' -T'{ "phone number": "+1 {val}" }') jtc -w'[0][0]<phone>l'
-[
-   {
-      "phone number": "+1 112-555-1234",
-      "type": "mobile"
-   },
-   {
-      "phone number": "+1 113-123-2368",
-      "type": "mobile"
-   }
-]
-bash $ 
-```
-Explanations:
-- `-w'[0][0]<phone>l[:]'` - that's our destination which we will be updating (i.e., all phone records in the first `Directory` entry)
-- `-pi'[0][0]<number>l:<val>v'` - we'll walk (synchronously with `-w`) all the `number` records and memorize `number` values in the
-namespace `val`; option `-p` turns _insert_ operation into _move_
-- `-T'{ "phone number": "+1 {val}" }'` after each source walk argument in `-i`, a template interpolations occurs - a new 
-JSON entry is generated from the template and namespace `val` and the new entry is then used for insertion into the respective
-destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON into a new one.
-
-
-### Multiple templates and walks
-When multiple templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>`) **is matching** the number of templates
-(i.e., more than one walk is present) then templates are pertain per each walk. In all other cases templates are applied in a
-round-robin fashion.  
-In the case when round-robin behavior is required when number of templates and walks matches, use `-nn` notation - it will ensure
-round-robin templates application onto sequential walks
-
-Compare:
-```
-bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -r
-{ "Person": "John" }
-{ "Age": 25 }
-{ "Person": "Ivan" }
-{ "Age": 31 }
-{ "Person": "Jane" }
-{ "Age": 25 }
-bash $ 
-bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rn
-{ "Person": "John" }
-{ "Person": "Ivan" }
-{ "Person": "Jane" }
-{ "Age": 25 }
-{ "Age": 31 }
-{ "Age": 25 }
-bash $ <ab.json jtc -x[0][:] -y[name] -T'{"Person":{{}}}' -y[age] -T'{"Age":{{}}}' -rnn
-{ "Person": "John" }
-{ "Age": "Ivan" }
-{ "Person": "Jane" }
-{ "Age": 25 }
-{ "Person": 31 }
-{ "Age": 25 }
-bash $ 
-
-```
-The mess in the above's last example is explained by `-nn` usage: templates are forced to apply in the round-robin fashion
-
-
-One handy use-case of multiple round-robin templates would be this example:
-```
-bash $ <<<'[1,2,3,4,5,6,7,8,9,10]' jtc -w[:] -T'""' -T{} -T'""' -qq
-2
-5
-8
-bash $ 
-```
-\- in the above example printed every 3rd element from source JSON starting from the 2nd one (recall: when unquoting an empty
-JSON string ("") the resulted blank lines are not getting printed).
-
-
-### Stringifying JSON, Jsonizing stringified
-There's one more token combination in templates allowing _stringification_ and _jsonization_ of values:
-- `<..>` will try "expanding" a string value into a JSON
-- `>..<` will take a current JSON value and stringify it
-
-The token notation follows the same rule as for regular tokens (`{}`, `{{}}`), i.e. single angular bracket notation will result
-in a "naked" JSON value (i.e. without quotation marks, curly braces or square brackets for strings, objects and arrays
-respectively). While double token notation is always a safe type and result of operation while be a complete JSON type.
-
-This little demo illustrates the tokens usage:
-```
-bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
-"[ \"a\", \"b\" ]"
-```
-\- because a single form of angular token notation was used, the outer quotation marks were necessary for a successful interpolation.
-The same could have been achieved with the template: `-T'>>{{}}<<'`
-
-That was an example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
-```
-bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' | jtc -T'[ <{{}}>, "c"]' -r
-[ "a", "b", "c" ]
-bash $ 
-```
-\- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON array at the same time
 
 
 ## Processing multiple input JSONs
