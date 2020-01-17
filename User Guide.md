@@ -52,11 +52,11 @@
        * [Prior walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
-   * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
+   * [Search quantifiers interpolation (`<..,>S{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
      * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
      * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
-   * [Summary of interpolation operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-interpolation-operations) 
+   * [Summary of interpolation token types](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-interpolation-operations) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
@@ -2241,8 +2241,15 @@ bash $
 \- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON array at the same time
 
 
-### Summary of interpolation operations
-
+### Summary of interpolation token types
+- `{}`: a token used in _templates_ resulting in a "naked" type of interpolation from the currently walked JSON
+- `{NS}`: same as `{}`, but interpolation occurs from the _namespace_ `NS`
+- `{{}}`: a token used in _templates_ resulting in a "dressed" type of interpolation from the currently walked JSON
+- `{{NS}}`: same as `{{}}`, but interpolation occurs from the _namespace_ `NS`
+- `<json_str>`: a token notation for a jsonization request of the stringified JSON `json_str`, the result is a "naked" JSON value
+- `<<json_str>>`: same as `<json_str>`, however  the result is a complete ("dressed") JSON value
+- `>json<`: a token notation for a stringification request of a JSON `json`, the result is a "naked" _JSON string_ value
+- `>>json<<`: same as `>json<`, however the result is a complete ("dressed") _JSON string_ value
 
 
 ## Modifying JSON
