@@ -2075,7 +2075,7 @@ bash $
 5. `><a{idx}` - a non-recursive search of atomic values (`><a`) indexed by a quantifier with the stored in the namespace `idx`
 (which is `2`) gives us the required value.
 
-_Alternatively_, the same ask could be achieved using a slightly different query:
+**_Alternatively_**, the same ask could have been achieved using a slightly different query:
 ```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
