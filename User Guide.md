@@ -14,10 +14,10 @@
    * [Walking with subscripts (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes)
      * [Selecting multiple subscripted JSON elements (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements)
      * [Subscript slice notation (`[n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#subscript-slice-notation)
-   * [Searching JSON (`<..>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
+   * [Searching JSON (`<..>`, `>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json)
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
-       * [Cached Search](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cached-search)
+       * [Cached Search](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-cached-search)
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
@@ -25,7 +25,7 @@
        * [Uses of `Fn` directive with non-default quantifiers (`<>Fn`, `><Fn`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-uses-of-fn-directive-with-non-default-quantifiers)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:m:s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
-       * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-with-relative-offset-semantic)
+       * [Search quantifiers with relative offset semantic (`>..<t`, `>..<l`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-search-quantifiers-with-relative-offset-semantic)
      * [Scoped search `[..]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search)
      * [Non-recursive search (`>..<`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
    * [Addressing parents (`[-n]`, `[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents)
@@ -176,7 +176,7 @@ bash $
 ```
 option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
 ```bash
-bash $ <ab.json jtc -t 10
+bash $ <ab.json jtc -t10
 {
           "Directory": [
                     {
@@ -352,10 +352,9 @@ true
 bash $ 
 ```
 
-NOTE: _the option notation `-qq` will not engulf a single option notation `-q`, if both behaviors are required then both variants have
+> NOTE: _the option notation `-qq` will not engulf a single option notation `-q`, if both behaviors are required then both variants have
 to be spelled (e.g. `jtc -q -qq`, or `jtc -qqq`)_  
-
-Also, `-qq` is incompatible with `-j`, `-J` options, because of a risk of ill-formed JSON, thus, when sighted together
+> Also, `-qq` is incompatible with `-j`, `-J` options, because of a risk of ill-formed JSON, thus, when sighted together
 option `-qq` is silently ignored
 
 
@@ -374,7 +373,7 @@ bash $ <<<'[ "JSON", "example" ]' jtc -rr
 bash $
 ```
 
-B.t.w, both _string unquoting_ and _JSON stringification_ also could be achieved via 
+B.t.w., both _string unquoting_ and _JSON stringification_ also could be achieved via 
 [template operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified).
 
 
@@ -401,15 +400,16 @@ inquote (embed) JSON (walked elements) into a JSON string values
 
 
 ## Walking JSON
-Whenever there's a need to select only one or multiple JSON elements, walk-paths (`-w`) tell how to do it. A walk path
-(an argument of `-w` option) can be made of an arbitrary number of lexemes. Though there are only 2 types of the lexemes:
+Whenever there's a requirement to select (extract) only one or multiple JSON elements, walk-paths (`-w`) tell how to do it.
+A walk path (an argument of `-w` option) can be made of an arbitrary number of lexemes. Though there are only 2 kinds of the
+lexemes:
 - offset lexeme (`[..]`)
 - search lexeme (`<..>`, `>..<`)
 
 ### Walking with subscripts (offset lexemes)
 Offsets are always enclosed into square brackets `[..]`. Selecting JSON elements always begins from the root.
-Both arrays and objects can be subscripted using numerical offseta, though it's best to utilize literal offsets to subscript objects.
-E.g. let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
+Both arrays and objects can be subscripted using numerical offsets, though it's best to utilize literal offsets to subscript objects.
+E.g., let's select `address` of the 2nd (all the indices in the walk-path are zero-based) record in the above JSON:
 ```bash
 bash $ <ab.json jtc -w'[Directory][1][address]'
 {
@@ -420,8 +420,8 @@ bash $ <ab.json jtc -w'[Directory][1][address]'
 }
 bash $
 ```
-or, equally could be done like in below example, but the former syntax is preferable (for your own good - when giving indices you'd need 
-to _guess_ the index of a labeled entry, which might be prone  to mistakes):
+or equally, it could be done like in below example, but the former syntax is preferable (for your own good - when giving indices
+you'd need to _guess_ the index of a labeled entry, which might be prone  to mistakes):
 ```bash
 bash $ <ab.json jtc -w'[0][1][0]'
 {
@@ -435,14 +435,14 @@ bash $
 
 #### Selecting multiple subscripted JSON elements
 if a numerical subscript index is prepended with `+`, then all the subsequent subscripted elements will be selected as well
-(a.k.a _iterable_ lexeme), e.g., a following example prints all the names out of the address book, starting from the 2nd record:
+(it makes the lexeme _iterable_), e.g., a following example prints all names out of the address book, starting from the 2nd record:
 ```bash
 bash $ <ab.json jtc -w'[Directory][+1][name]'
 "Ivan"
 "Jane"
 bash $
 ```
-Any numerical offset could be subscripted that way, and any number of such lexemes could appear in the walk-path, e.g.:
+Any JSON iterable could be subscripted that way, and any number of such lexemes could appear in the walk-path, e.g.:
 ```bash
 bash $ <ab.json jtc -w'[Directory][+0][phone][+1][number]'
 "113-123-2368"
@@ -450,8 +450,8 @@ bash $ <ab.json jtc -w'[Directory][+0][phone][+1][number]'
 "333-638-0238"
 bash $
 ```
-Here, all records (`[+0]`) from the `Directory` have been selected and then in every record all `phone` sub-records selected starting from
-the 2nd entry (`[+1]`)
+There, all records (`[+0]`) from the `Directory` have been selected and then in every record all `phone` sub-records selected
+starting from the 2nd entry (`[+1]`)
 
 The same way object elements could be subscripted, here's an example where all address entries starting from the 2nd one are printed,
 each one stating from the 3rd entry: 
@@ -465,21 +465,21 @@ bash $
 ```
 
 #### Subscript slice notation
-Another way to select multiple subscripts is to use a slice notation `[N:M:S]`. In that notation `N` and `M` could be either positive
-or negative, while `S` must be strictly positive. Any of positions (as well as position separator `:`) could be omitted.
-The first position (`N`) designates a beginning of the slice selection, the position (`M`) designates the end of the 
-slice exclusively (i.e., not including the indexed element itself), the last position (`S`) designates a step.
+Another way to select multiple JSON elements is to use a slice notation `[N:M:S]`. In that notation `N` and `M` could be either
+positive or negative, while `S` must be strictly positive. Any of positions (as well as position separator `:`) may be omitted.
+The first position (`N`) designates a beginning of the slice selection, the position (`M`) designates the end of the  slice
+exclusively (i.e., not including the indexed element `M` itself), the last position (`S`) designates a step.
 - positive `N` (and `M`) refers to `N`th element offset from the beginning of the iterable (whether it's an array or an object)
 - negative `N` (and `M`) refers to the `N`th element offset from the end of the iterable.
-- empty (missed `N` and `M`) tells to address either from the the beginning of the collection (in the first position), or from the end
-(last position) 
+- empty (missed `N` and `M`) tells to address either from the the beginning of the collection (in the first position),
+or from the end (last position) 
 - `S` position indicates a step value when iterating over the selected slice, the default value is obviously `1`
 
 Thus, multiple notations with the same semantics are possible, e.g.:
 - `[:]`, `[0:]`, `[0::]` will select all the element in the collection and is equivalent of `[+0]` notation
 - `[0:1]`, `[:1]`, will select only the first element and is the same as `[0]`
-- `[:-1]` will select all the elements except the last one
-- `[-2:]` will select last 2 elements in the collection 
+- `[:-1]`, `[:-1:]` will select all the elements except the last one
+- `[-2:]`, `[-2::1]` will select last 2 elements in the collection 
 - `[::2]` -will select every other element in the collection
 
 E.g., let's print all phone numbers for the last 2 records in the `Directory`:
@@ -493,9 +493,9 @@ bash $
 ```
 
 ### Searching JSON
-Walk-path lexemes enclosed into `<..>` braces instruct to perform a _recursive_ search off the value under a currently selected JSON node. 
-I.e., if a search lexeme appears as the first one in the walk-path, then the search will be done from the root, otherwise from the node
-in JSON where a prior lexeme has stopped.
+Walk-path lexemes enclosed into `<..>` braces instruct to perform a _recursive_ search off the value under a currently selected
+JSON node. I.e., if a search lexeme appears as the first one in the walk-path, then the search will be perfromed off the root,
+otherwise off the node in JSON where a prior lexeme has stopped.
 
 By default (if no suffix is given), a search lexeme will perform a search among _JSON string_ values only (i.e., it won't match 
 _JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search produces a match:
@@ -504,7 +504,7 @@ bash $ <ab.json jtc -w'<New York>'
 "New York"
 bash $
 ```
-while this one doesn't have a match (the string value `New York` is found only in the first `Directory` record): 
+while this one doesn't produce a match (the string value `New York` is found only in the first `Directory` record): 
 ```bash
 bash $ <ab.json jtc -w'[Directory][1:]<New York>'
 bash $
@@ -518,7 +518,7 @@ There 3 suffixes that facilitate _REGEX_ types of search:
 - `D`: performs a _REGEX search_ only among JSON _numerical_ values
 - `L`: performs a _REGEX search_ only among JSON _labels_
 
-E.g., a following query finds recursively the first _string_ entry with the REGEX:
+E.g., a following query finds recursively the first _string_ entry with the RE:
 ```bash
 bash $ <ab.json jtc -w'<^N>R'
 "New York"
@@ -548,7 +548,7 @@ bash $ <ab.json jtc -w'<^new york\I>R'
 bash $ 
 ```
 > that way multiple options could be given, however, if multiple grammars specified, only the first one will take the effect, e.g.:
-`<...\G\A>R` - between `awk` and `grep` grammars the latter wins (because it's given first)
+`<...\G\A>R` - between `awk` and `grep` grammars the latter wins, because it's given first
 
 
 #### Search suffixes
@@ -590,23 +590,22 @@ Some search lexemes (and
 require their content is set and be **non-empty** (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`v`,`z`,`u`,`I`,`Z`,`W`), otherwise an exception 
 _`walk_empty_lexeme`_ will be thrown
 
-A few of search lexemes might be left empty, but then they cary a semantic of an **empty search** (`r`,`l`,`b`):
+A few of search lexemes might be left empty, but then they cary a semantic of an **empty match** (`r`,`l`,`b`):
   - `<>` (same as `<>r`) - will match an empty _JSON string_
   - `<>l` - will match an entry with the empty _JSON label_
-  - `<>b` will match any boolean value.
 
-The rest of the lexemes (search and directives - `P`,`N`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`k`,`f`,`F`) also might be left
-empty. However, if those lexemes are non-empty, then the content points to a
-[**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
-where the found value (result of a match) will be stored, e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the
-namespace `array`
+The rest of the lexemes (search: `P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G` and directives: `k`,`f`,`F`) also might
+be left empty - all the search lexemes carry semantic of **any match**. However, if those lexemes are non-empty, then their content
+points to a [**namespace**](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
+where the found value (result of a match - for search lexemes, or currently walked JSON - for directives) will be stored,
+e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the namespace `array`
 
 
-##### Cached Search
+##### \* Cached Search
 `jtc` is super efficient searching recursively even huge JSONs structures - normally no exponential search decay will be observed
 (which is very typical for such kind of operations). The decay is avoided because `jtc` builds a cache for all searches (whenever
 cacheing is required, both recursive and non-recursive) and thus all subsequent matches are taken from the cache.  
-Though, there couple cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
+Though, there're couple cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
 resolution of the search is dependent on the _namespace_ value.  
 Here's the list of such search types:
   * recursive `<..>s`,`<..>t`: the lexemes are using _namespaces_ when performing search and hence could not be cached
@@ -636,7 +635,7 @@ for the currently walked JSON elements, these are _directives_:
   * `u`: user evaluation of the walk-path: the lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
-  * `I`: increment/multiply lexeme; the lexeme let incrementing and/or multiplying the namespace value pointed by the lexeme, 
+  * `I`: increment/multiply lexeme; the lexeme lets incrementing and/or multiplying the namespace value pointed by the lexeme, 
   e.g.: `<val>I3:2` - a JSON numerical stored in the namespace `val` will be incremented by 3 and then multiplied by 2.
   * `Z`: saved into a provided namespace a size of a currently walked JSON (recursive and non-recursive notations produces different
   effects - the former calculates the entire JSON size, while the latter does only the number of children); with the quantifier of `1`
@@ -652,7 +651,8 @@ All of those lexemes also allow capturing a custom JSON value in lieu of current
 the format, e.g.:  
 \- `<name:JSON_value>v`  
 then upon walking such syntax the `JSON_value` will be preserved in the namespace `name` instead of a currently walked JSON
-
+> Normally, `JSON_value` must be a valid JSON, otherwise it'll be promoted to a JSON string. If it still fails then an exception 
+will be thrown (`json_lexeme_invalid`)
 
 #### Fail-safe and Forward-Stop directives
 All the lexemes in the _walk-path_ are bound by a logical `AND` - only once all succeed then the walk-path succeeds too (and printed
@@ -695,14 +695,14 @@ further walking fails, there:
      * if it's found, we step back up (`[-1]`) again to finish walking and display the whole record
      * if not found (i.e., walking indeed fails), a fail-safe is engaged and preserved location is recalled and displayed
 
-A _walk-path_ may contain multiple _fail-safe_, only the respective fail-safe will be engaged (more specific one and closest 
+> A _walk-path_ may contain multiple _fail-safe_, only the respective fail-safe will be engaged (more specific one and closest 
 one to the failing point)
 
 
 ##### \* Examples sporting _fail-safe_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
-this format  
-`<Name> has children: true/false`
+this format:  
+  `<Name> has children: true/false`
 
 Thus, we need to build a single path, which will find the `name`, then inspect `children` record and transform it into
 `true` if there at least 1 child, or `false` otherwise:
@@ -744,8 +744,7 @@ Ivan has children: false
 Jane has children: true
 bash $ 
 ```
-
-
+##
 Now, let's consider another example, say, we have a following JSON:
 ```bash
 bash $ JSN='[{"ip":"1.1.1.1", "name":"server"}, {"ip":"1.1.1.100"}, {"ip":"1.1.1.2", "name":"printer"}, {"ip":"1.1.1.101"}]'
@@ -761,7 +760,7 @@ bash $
 How do we list only those records which **don't have** `name` and skip those which do? Well, one apparent solution then would be
 to walk all those entries, which do have `name` labels and purge them:
 ```bash
-bash $ <<<$JSN jtc -w'<name>l:[-1]' -ptc
+bash $ <<<$JSN jtc -pw'<name>l:[-1]' -tc
 [
    { "ip": "1.1.1.100" },
    { "ip": "1.1.1.101" }
@@ -769,14 +768,13 @@ bash $ <<<$JSN jtc -w'<name>l:[-1]' -ptc
 bash $ 
 ```
 But what if we want to walk entries rather than purging (e.g., for reason of template-interpolating the entries at the output)?  
-The prior solution would require piping the output to the next `jtc` cli, however, it's possible to achieve the same using this 
-simple query:
+The prior solution would require chaining the output to the next option set (which is quite a reasonable solution too),
+however, it's possible to achieve the same using this simple query:
 ```bash
 bash $ <<<$JSN jtc -w'[:]<>f[name]<>F' -tc
 { "ip": "1.1.1.100" }
 { "ip": "1.1.1.101" }
 bash $ 
-
 ```
 Without `<>F` directive at the end, the walk would look like this:
 ```bash
@@ -804,8 +802,8 @@ bash $
 
 
 ##### \* Uses of `Fn` directive with non-default quantifiers
-there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifier:
-  - `<>Fn` - this variant of the lexeme acts as a 'jump' instructions for the walk path - i.e. once walked, it will jump to the `n`th 
+there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifiers:
+  - `<>Fn` - that variant of the lexeme acts as a 'jump' instruction for the walk path - i.e., once walked, it will jump to the `n`th 
   lexeme (from the lexeme `<>F`) and continues walking from there. E.g.: `<>F1` does not do anything - it continues walking from the 1st 
   lexeme after `<>F1`, `<>F2` will jump over one lexeme and continues walking from the 2nd one, and so on and so forth.  
   - `><Fn` - this variant will repeat the same walk up to the lexeme additionally `n` times - that is useful when there's a need to
@@ -844,25 +842,34 @@ matches would be produced, so it's impossible to select a range/slice based off 
 
 To illustrate the quantifiers (with suffixes), let's dump all the _JSON arrays_ in the `Directory`, except the top one:
 ```bash
-bash $ <ab.json jtc -w'<>i1:' -r
+bash $ <ab.json jtc -w'<>i1:' -tc
 [ "Olivia" ]
-[ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ]
+[
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
+]
 []
-[ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ]
+[
+   { "number": "273-923-6483", "type": "home" },
+   { "number": "223-283-0372", "type": "mobile" }
+]
 [ "Robert", "Lila" ]
-[ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ]
+[
+   { "number": "358-303-0373", "type": "office" },
+   { "number": "333-638-0238", "type": "home" }
+]
 bash $
 ```
 \- the trailing `1:` in the walk path is the slice quantifier, which selects (prints) all the matches (we are matching
 _JSON arrays_ here - suffix `i`) starting from second one (all quantifiers and indices are zero-based)
 
 
-##### Search quantifiers with relative offset semantic 
+##### \* Search quantifiers with relative offset semantic 
 There are two search lexemes types where matching non-first instance does not make sense, namely: `>..<l` and `>..<t`.
 Those 
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
 will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
-to address only one **single** label or index, there could not be any other, e.g. in this JSON:
+to address only one **single** label or index, there could not be any other, e.g., in this JSON:
 ```
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -r
 { "a": 1, "b": 2, "c": 3, "d": 4, "e": 6 }
@@ -871,8 +878,8 @@ bash $
 there could be only one label `"b"`, thus normally trying to match a second, third, etc instance of the label `"b"` would not
 make much of a sense: `<<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2'`
 
-Thus the semantic of quantifiers only in those searches was altered (to extend use cases) - there, the quantifiers provide a
-_relative offset_ meaning from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
+Thus, the semantic of quantifiers only in those searches was enhanced (to extend use cases) - there, the quantifiers provide a
+_relative offset_ from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
 then its second (successive) neighbor value will be selected:
 ```
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2' -l
@@ -892,31 +899,42 @@ bash $
 #### Scoped search
 Search lexemes perform a _recursive_ search across the entire JSON tree off the point where it's invoked (i.e., the JSON node
 selected by walking all the prior lexemes). However, sometimes there's a need to limit searching scope only to the specific label.
-Here is the dump of all the _JSON strings_, where symbol `5` is sighted:
+Here is the dump of all the _JSON strings_ containing at least one digit:
 ```bash
-bash $ <ab.json jtc -w'<5>R:' -l
+bash $ <ab.json jtc -w'<\d>R:' -l
 "street address": "599 Lafayette St"
 "number": "112-555-1234"
+"number": "113-123-2368"
 "street address": "5423 Madison St"
+"number": "273-923-6483"
+"number": "223-283-0372"
+"street address": "6213 E Colfax Ave"
 "number": "358-303-0373"
+"number": "333-638-0238"
+bash $ 
 bash $ 
 ```
 Some of the values are `street address`es, some are the phone `number`s. Say, we want to dump only the phone records. Knowing the label
 of the phone numbers (`"number"`), it's achievable via this notation:
 ```bash
-bash $ <ab.json jtc -w'[number]:<5>R:' -l
+bash $ <ab.json jtc -w'[number]:<\d>R:' -l
 "number": "112-555-1234"
+"number": "113-123-2368"
+"number": "273-923-6483"
+"number": "223-283-0372"
 "number": "358-303-0373"
+"number": "333-638-0238"
 bash $ 
 ```
-I.e., once the literal subscript lexeme is attached to the search lexeme over `:` symbol, it makes a scoped search (`[..]:<..>`).
+I.e., once the literal subscript lexeme is attached to the search lexeme over `:`, it makes a scoped search:  
+  (`[..]:<..>`).
 
 
 #### Non-recursive search
-Sometimes there's a need to apply a non-recursive search onto iterable JSON nodes (arrays, objects) - i.e., find a value within
-immediate children of the node and do not descend recursively. The notation facilitating such search is the same one, but
-angular brackets to be put inside-out, i.e.: `>..<`.  
-To illustrate that: say, we want to find all string values in the 1st `Directory` record containing the letter `o`. 
+Sometimes there's a reqiurement to apply a non-recursive search onto iterable JSON nodes (arrays, objects) - i.e., find a value
+within immediate children of the node and do not descend recursively. The notation facilitating such search is the same one, but
+angular brackets to be placed inside-out: `>..<`.  
+To illustrate that, say, we want to find all string values in the 1st `Directory` record containing the letter `o`. 
 If we do this using a recursive search, then all following entries will be found:
 ```bash
 bash $ <ab.json jtc -w'[Directory][0]<o>R:'
@@ -932,11 +950,15 @@ bash $ <ab.json jtc -w'[Directory][0]>o<R:'
 "John"
 bash $
 ```
+> One subtle but crucial difference between _recursive_ `<..>` and _non-recursive_ `>..<` searches:  
+> \- the former starts a recursive search from a currently walked/selected element itself, i.e., if a currently selected JSON is `"pi"`,
+then this walk-path still matches: `<pi><pi><pi><pi>` and so on. For the latter case the _non-recursive_ search performs matching
+strictly among currently walked JSON iterable's children 
 
 
 ### Addressing parents
-One of the charming features of `jtc` is the ability to address parents (any ancestors up till the root) of the found JSON nodes.
-Typically, addressing parents would be requierd after search lexemes (but can occur anywhere in the walk-path). Parents can
+One of the charming features of `jtc` is the ability to address parents (any ancestors up till the root) off the found JSON nodes.
+Typically, addressing parents would be requierd after search lexemes (but may occur anywhere in the walk-path). Parents can
 be addressed using notation `[-n]`. This feature allows building queries that answer quite complex queries.
 
 Let's dump all the names from the `Directory` whose records have a `home` phone entry:
@@ -946,9 +968,9 @@ bash $ <ab.json jtc -w'[type]:<home>:[-3][name]'
 "Jane"
 bash $
 ```
-The magic which happens here (let's break down the walk-path into the lexemes) is revealed:
-  1. `[type]:<home>:` - this lexeme instructs to find _each_ (ending quantifier `:`) string `home` scoped by label `"type"` (`[type]:` -
-  is attached scope), thus all such phone records values will be selected:
+The magic which happens here (let's break down the walk-path into the lexemes):
+  1. `[type]:<home>:` - this lexeme instructs to find _each_ (ending quantifier `:`) string `home` scoped by the label `"type"`
+  (`[type]:` - is attached scope), thus all such phone records values will be selected:
   ```bash
   bash $ <ab.json jtc -w'[type]:<home>:'
   "home"
@@ -958,10 +980,13 @@ The magic which happens here (let's break down the walk-path into the lexemes) i
   2. `[-3]` - starting off an each found JSON element a 3rd ancestor will be selected. Let's see a parent selection in a slow-mo,
   one by one:
   ```bash
+  # select 1st immediate parent:
   bash $ <ab.json jtc -w'[type]:<home>: [-1]' -tc
   { "number": "273-923-6483", "type": "home" }
   { "number": "333-638-0238", "type": "home" }
   bash $ 
+
+  # select 2nd parent:
   bash $ <ab.json jtc -w'[type]:<home>: [-2]' -tc
   [
      { "number": "273-923-6483", "type": "home" },
@@ -972,6 +997,8 @@ The magic which happens here (let's break down the walk-path into the lexemes) i
      { "number": "333-638-0238", "type": "home" }
   ]
   bash $ 
+
+  # select 3rd parent:
   bash $ <ab.json jtc -w'[type]:<home>: [-3]' -tc
   {
      "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
@@ -1091,7 +1118,7 @@ bash $
 
 
 #### Displaying walks with labels
-if resulted walks have labels in the input JSON (i.e., they were inside _JSON objects_), then `-l` let dumping their labels too:
+if resulted walks have labels in the input JSON (i.e., they were inside _JSON objects_), then `-l` lets dumping their labels too:
 ```bash
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -nl
 "name": "John"
@@ -1166,7 +1193,7 @@ bash $
 Those look interleaved, though it does not appear that they relate to each other properly: e.g.: number `"113-123-2368"`
 belong to `"John"` and preferably should be displayed before `"Ivan"` and so does apply to others. `jtc` is capable of 
 processing/printing relevant entries, though it needs a little hint from the walk-paths: the latter supposed to express the
-relevance between themselves.
+relation between themselves.
 
 Right now both paths (`<name>l:` and `<number>l:`) do not have common base lexemes, thus it's unclear how to relate resulting walks
 (hence they just interleaved one by one). Though if we provide walk-paths relating each of those searches to their own record,
@@ -1203,12 +1230,26 @@ bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -j
 ]
 bash $ 
 ```
+B.t.w, the relation between walks could be also expressed in a _relative_ (rather than via _absolute_, as above) path way:
+```bash
+bash $ <ab.json jtc -w '<name>l:' -w'<name>l:[-1]<number>l:'
+"John"
+"112-555-1234"
+"113-123-2368"
+"Ivan"
+"273-923-6483"
+"223-283-0372"
+"Jane"
+"358-303-0373"
+"333-638-0238"
+bash $ 
+```
 
 
 #### Aggregating walks
-the walks also could be aggregated (per label), option `-nn` facilitates the ask:
+the walks results that have labels also could be aggregated (per label), option `-nn` facilitates the ask:
 ```bash
-bash $ <ab.json jtc -w '[Directory][:]<name>l:' -w'[Directory][:] <number>l:' -jlnn
+bash $ <ab.json jtc -w'[Directory][:]<name>l:' -w'[Directory][:]<number>l:' -jlnn
 [
    {
       "name": [
@@ -1274,18 +1315,19 @@ bash $ <ab.json jtc -w'<Jane>[-1]<>a:' -jjm
 }
 bash $ 
 ```
-As one can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output, that is
-because they are enlisted in _JSON array_ and therefore have no labels (and hence ignored in `-jj` option, which only considers
+As one can see, even though `Jane` has 2 lovely children (`Robert` and `Lila`), they were not listed on the resulting output, 
+that is because they are enlisted in _JSON array_ and therefore have no labels (and hence ignored in `-jj` option, which considers
 values with labels only).
 
 
 #### Extracting labeled values
 Sometimes, when displaying outputs wrapped into an object, it's desirable to extract the labeled value from the object.
-This become especially handy when dealing with templates. Let's consider a following exercise:
+This become especially handy when dealing with templates.
 
+Let's consider a following query:  
 Say, the ask here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
-```json
+```bash
 [
    { "name": "John", "has children": "yes" },
    ...
@@ -1322,7 +1364,7 @@ bash $
 subsequent walk fails
 - [namespaces](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces)
 (`<C:no>f`, `<C:yes>v`): both lexemes setup the _namespace_ `C`, initially to value `"no"` then to value `"yes"`; 
-the latter value will override the former only if walking `[0]` was successful (i.e., if the person indeed has at least one child,
+the latter value will override the former only if walking `[0]` was successful (i.e., if a person indeed has at least one child,
 b/c if array `children` were empty, that walk would fail)
 
 3\. by now, each time when second walk finishes iteration, the namespace `C` should be correctly set to the respective values reflecting
@@ -1345,11 +1387,11 @@ jtc jnode exception: label_accessed_not_via_iterator
 bash $ 
 ```
 Bummer! The exception (rightfully) occurs here because trying to find an outer label of an interpolated JSON 
-`{ "has children": "yes" }` fails - indeed it's a standalone JSON, and root does not have any label attached - hence the exception.
-In the situations like this, we'd rather want to reach out inside the object for the labeled value rather than find an outer label.
-The option `-ll` facilitates that need:
+`{ "has children": "yes" }` fails - indeed it's a standalone JSON, and root does not have any label attached - hence the 
+exception. In the situations like this, we'd rather want to reach out inside the object for a labeled value rather than 
+finding an outer label. The option `-ll` facilitates that requirement:
 ```bash
-bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:no">f[0]<C:yes>v' -T'{"has children": {{C}}}' -llj -tc
+bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -llj -tc
 [
    { "has children": "yes", "name": "John" },
    { "has children": "no", "name": "Ivan" },
@@ -1357,13 +1399,13 @@ bash $ <ab.json jtc -w'<name>l:' -TT -w'<children>l: <C:no">f[0]<C:yes>v' -T'{"h
 ]
 bash $ 
 ```
-Finally, what's `-TT` in there? It's a dummy template (one which surely fails). It needed because if it wasn't here, then 
-a single template would apply to both walks (and we don't want our template to apply onto the first walk). So, we'd need to provide 
-a dummy one so that each 
-[template would relate to own walk](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks)
-. If templates fails (and `-TT` surely does) then no interpolation applied and walked iteration result is used as it is.
+Finally, what's `-TT` in there? It's a dummy template (one which surely fails). It's needed because if it wasn't here, then 
+a single template would apply to both walks (and we don't want our template to apply onto the first walk). So, we'd rather
+provide a dummy one so that each 
+[template would relate to own walk](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-interleaved-walks).
+If template fails (and `-TT` surely does) then no interpolation applied and walk iteration result is used as it is.
 
-if that dummy template (`-TT`) discomforts you, there's a way to go without one: keep in mind that template gets applied only once it
+If that dummy template discomforts you, there's a way to go without one: keep in mind that template gets applied only once it
 results in a legit JSON after the interpolation occurs (shall one occurs). Let's see what the result would be w/o that dummy template:
 ```bash
 bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -tc
@@ -1375,10 +1417,11 @@ bash $ <ab.json jtc -w'<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has ch
 { "has children": "yes" }
 bash $ 
 ```
-Now, the same template (`-T'{"has children": {{C}}}'`) gets applied to each walk, and while for the 1st walk the template interpolation
-definitely fails (while walking the 1st walk for the 1st time the name `C` does not exist yet in the namespace) and therefore the very
-1st walk is getting displayed as it is, for all the subsequent iterations of the 1st walk template interpolation would succeed (because 
-the namespace `C` now holds the value from the 2nd walk) and therefore unwanted template substitution occurs.  
+Now, the same template (`-T'{"has children": {{C}}}'`) gets applied to each walk, and while for the 1st walk the template
+interpolation definitely fails (while walking the 1st walk iteration for the 1st time, the name `C` does not exist yet in
+the namespace) and therefore the very 1st walk is getting displayed as it is, for all the subsequent iterations of the 1st
+walk the template interpolation would succeed (because  the namespace `C` now holds the value from the 2nd walk) and therefore
+unwanted template substitution occurs.  
 To fix that problem easily, we can erase the namespace `C` right at the beginning of the 1st walk:
 ```bash
 bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"has children": {{C}}}' -tc
@@ -1404,33 +1447,40 @@ bash $
 
 #### Succinct walk-path syntax
 If you look at the prior example
-([Interleaved walk processing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interleaved-walk-processing))
-, you may notice that a common part of both walk-paths (`[Directory][:]`) had been given twice. There's a way to express it in more 
+([Aggregating walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks)),
+you may notice that a common part of both walk-paths (`[Directory][:]`) had been given twice. There's a way to express it in more 
 succinct syntax: options `-x` and `-y` allows rearrange walk-paths so that `-x` takes an initial common part of the walk-path, 
-whereas `-y` would take care of the individuals trailing pars. Thus the same example cold have been written like this:
+whereas `-y` would take care of the varying trailing pars. Thus the same example cold have been written like this:
 ```bash
-bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:'
-"John"
-"112-555-1234"
-"113-123-2368"
-"Ivan"
-"273-923-6483"
-"223-283-0372"
-"Jane"
-"358-303-0373"
-"333-638-0238"
-bash $
+bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -jlnn
+[
+   {
+      "name": [
+         "John",
+         "Ivan",
+         "Jane"
+      ],
+      "number": [
+         "112-555-1234",
+         "113-123-2368",
+         "273-923-6483",
+         "223-283-0372",
+         "358-303-0373",
+         "333-638-0238"
+      ]
+   }
+]
 ```
 \- each occurrence of `-x` will be reconciled with all subsequent `-y` (until next `-x` is faced). Options `-x`, `-y` is merely
-a syntactical sugar and do not apply any walk-path parsing or validation, instead they just result in the respective `-w` options 
+a syntactical sugar and do not apply any walk-path parsing or validation, instead they just reconcile into respective `-w` options 
 creations (internally), then the latter get processed. Thus, it's even possible to write it with what it seems a broken syntax at first:
 ```bash
-bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:'
+bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:' -jlnn
 ...
 ```
 However, if a reinstatement of the options results in a valid walk-path - that's all what matters.
 
-It's possible to combine both syntaxes (i.e., `-w` with `-x` and `-y`), however, given that the processing of `-x` and `-y`
+It's possible to combine both syntaxes (e.g.: `-w` with `-x` and `-y`), however, given that the processing of `-x` and `-y`
 internally reinstates respective options `-w`, the former will be appended after any of given `-w` options (which will affect the 
 order of processing/outputting) even though the order of their appearance is different:
 ```bash
@@ -1454,18 +1504,18 @@ bash $
 
 #### Controlling displayed walks
 By default all walks (`-w`) will be displayed (unless `jtc` carries any of modification operations like insert/update/swap/purge, then
-the entire JSON will be displayed). However, there's a way to control which ones will be displayed - option `-x` is overloaded to provide
+the entire JSON will be displayed). However, there's a way to control which ones are displayed - option `-x` is overloaded to provide
 such capability.
 
 If argument of option `-x` is given in any of notations: `-xn`, `-xn/N`, `-x/N` - where `n` and `N` are numbers, then it controls
-a frequency of the displayed walks (and does not represent a common portion of a walk-path).  
+a frequency and offset of the displayed walks (and then `-x` does not represent a common portion of a walk-path).  
 The first number `n` in that notation tells to display every `n`th walk. if `n` is `0` it tells to display `N`th walk once (and in such
 case `0` - a default value - can be omitted resulting in the syntax `-x/N`)
 The second (optional) number `N` tells to begin displaying walks starting from `N`th one (`N` is an index and thus is zero based, default
 value is `0`).
 
 Both `n` and `N` are generally positive numbers, though there's a special notation `-x/-1` (or equally `-x0`) - in such case 
-_the last walk_  is _ensured_ to be displayed
+_the last walk_ is _ensured_ to be displayed (if it wasn't displayed yet)
 
 Say, we want to display _every 4th walk_ of the below JSON:
 ```bash
@@ -1497,7 +1547,7 @@ bash $ <<<'[1,2,3,4,5,6,7,8,9]' jtc -w[:] -x4/2
 7
 bash $ 
 ```
-\- reminder: the second number in the option is an index and thus is zero based.  
+> remember: the second number in the option is an index and thus is zero based
 
 Lets add to the output the very first walk and the last one:
 ```bash
@@ -1535,7 +1585,7 @@ and one additiona liberation: either of parameters _`n`_,_`m`_,_`s`_ could be _i
 - `<..>Sn`, `<..>S+n`, `<..>Sn:m:s`: 
   * if _`S`_ is a search lexeme suffix, then quantifier notations apply exactly the same way as per in above `text` search quantifiers
   * if _`S`_ is a directive lexeme suffix, then the quantifier behavior is either ignored (like in directives `vkzW`), 
-  or is specific for the given directive (refer to the relevant description of directives `fFuIZ`)
+  or is specific for the given directive (refer to the relevant description of directives: `fFuIZ`)
 - `[label]:<..>`: _scoped_ recursive search - the search and match is performed in the currently selected JSON element only _among 
 values with the specified label_; directives lexemes ignore scoping; all search suffixes and quantifiers are applicable in the scoped
 searches
@@ -1617,11 +1667,11 @@ _JSON strings_, _JSON arrays_, _JSON objects_ differently:
   `blah`. Thus, it makes sense to use this interpolation inside double quotation marks
   * when interpolating _JSON array_, then enclosing brackets `[`, `]` are dropped (allows extending arrays); e.g., `[1,"2",{}]` 
   will be interpolated as `1,"2",{}` (which is invalid JSON), thus, to keep it valid the outer brackets must be provided,
-  e.g.: `-T'[ 0, {}, 4, [] ]'`
+  e.g.: `-T'[ 0, {}, 4, [] ]'` after becomes `[ 0, 1, "2", {}, 4, [] ]`
   * when interpolating _JSON object_, then enclosing braces `{`, `}` are dropped (allows extending objects), e.g., `{"pi":3.14}` 
   will be interpolated as `"pi": 3.14`, so to keep it valid the outer braces must be provided, e.g., `-T'{ {}, "type": "irrational" }'`
   * if you meant to insert in a template an empty object `{}` rather than a _stripped_ token (which has the same notation), 
-  then spell it over space: `{ }` 
+  then spell it over space: `{ }`
 
 #### String interpolation
 A _string_ interpolation using a _stripped notation_ is handy when there's a requirement to alter/extend an existing string,
@@ -1635,10 +1685,9 @@ bash $ <<<$JSN jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
 }
 bash $ 
 ```
-There, in the example above, the template token `{}` refers to the result of walking `-u` rather than `-w` 
-(the same holds true for insert `-i` and compare `-c` operators). 
-The walk `-w` points to the destination location(s) for the update (which is the label, 
-as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
+There, in the example above, the template token `{}` refers to the result of walking `-u` rather than `-w` (the same holds
+true for insert `-i` and compare `-c` operators). The walk `-w` points to the destination location(s) for the update (which
+is the label,  as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
 Alternatively, the same could be achieved like this, in a bit more succinct way:
 ```bash
 bash $ <<<$JSN jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
@@ -1649,8 +1698,8 @@ bash $ <<<$JSN jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
 bash $ 
 ```
 The update argument (`-u0`) in this case is a dummy JSON (`0` is taken just as one of the shortest JSON values), its value will be
-unused in the template and hence is irrelevant to the operation. Template now will refer to the value `T` from  the namespace, which
-will be  populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
+unused in the template and hence is irrelevant to the operation. The template now will refer to the value `T` from  the namespace,
+which will be  populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
 Why `<..>k` lexeme is used twice? As per the lexeme design, when it's empty (and only then) it lets reinterpreting currently walked 
 element's label as a value (which is being updated in this case), Thus, the first lexeme `<L>k` only preserves the label in the
 namespace, while  the second lexeme allows pointing to the label as the destination point for the update - which will be the
@@ -1665,6 +1714,8 @@ bash $ <<<$JSN jtc
    "pi": 3.14,
    "type": "irrational"
 }
+bash $ 
+bash $ 
 bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
 {
    "3.14": "pi",
@@ -1700,7 +1751,7 @@ bash $ <<<$JSN jtc
 ]
 bash $ 
 ```
-And the ask here would be to augment all arrays in each `args` with the arguments from respective `Func`:
+And the ask here would be to extend all arrays in each `args` with the arguments from the respective `Func`:
 ```bash
 bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
 [
@@ -1723,8 +1774,8 @@ bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[
 bash $ 
 ```
 When interpolating the second record (the one with `"Func": "a * b"`), the interpolation in fact, would result in the invalid JSON:
-the _array_ in `args` is empty initially (`"args": []`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it becomes 
-`[, "a", "b"]` - which is an invalid JSON. However, `jtc` is aware of such empty iterables and handles them properly, 
+the _array_ in `args` is empty initially (`"args": []`), thus when it gets interpolated via template `[{}, {{$1}}, {{$2}}]` it
+becomes `[, "a", "b"]` - which is an invalid JSON array. However, `jtc` is aware of such empty iterables and handles them properly, 
 allowing extending even empty arrays and objects without producing failures.
 
 All the same applies when interpolating _JSON objects_ and _JSON strings_.
@@ -1732,7 +1783,7 @@ All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 ##### Interpolation of iterables into a string template
 If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _stripped_
-token notation), then its values get fully enumerated within the string one by one and as long they are _string-interpolatable_:
+token notation), then its values get fully enumerated within the string _**one by one**_ and as long they are _string-interpolatable_:
 ```bash
 # array:
 bash $ <<<'{"array":[null,1,true,{},[],"five"]}' jtc -w[array] -T'"stringified array: {}"'
@@ -1756,9 +1807,8 @@ bash $
 \- it fails because the interpolated value `[ "string" ]` would render the template an invalid JSON string,
 namely: `"stringified array: null, 1, true, {}, [ "string" ], five"` (inner quotation marks are not quoted)
 
-
 By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
-(default value `, `), which means, it could be altered by a user:
+(default value `", "`), which means, it could be altered by a user:
 ```json
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
 good for TSV conversion:
@@ -1903,7 +1953,7 @@ bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Par
 { "Parent": "Jane", "child": "Lila" }
 bash $ 
 ```
-That is a correct result (though might not reflect what possibly was intended), let review the result:
+That is a correct result (though might not reflect what possibly was intended), let's review it:
 1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
 thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
 2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
@@ -3220,7 +3270,7 @@ bash $
 ```
 
 ### Wrap all processed JSONs
-option `-J` let wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
+option `-J` lets wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
 ```
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -J -w'<json>R'
 notice: option -J cancels streaming input
