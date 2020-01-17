@@ -45,11 +45,12 @@
    * [Interpolation token types (`{}` vs `{{}}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types)
       * [String interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#string-interpolation)
       * [Interpolation of iterables](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-of-iterables)
-        * [Interpolation of iterables into a string template](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Interpolation-of-iterables-into-a-string-template)
+        * [Interpolation of iterables into a string template](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-interpolation-of-iterables-into-a-string-template)
    * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Prior Walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
+       * [Prior walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
+       * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
    * [Search quantifiers interpolation (`<..>{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Cross-referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
@@ -1781,7 +1782,7 @@ allowing extending even empty arrays and objects without producing failures.
 All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
-##### Interpolation of iterables into a string template
+##### \* Interpolation of iterables into a string template
 If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _stripped_
 token notation), then its values get fully enumerated within the string _**one by one**_ and as long they are _string-interpolatable_:
 ```bash
@@ -1827,7 +1828,7 @@ for a shell evaluation.
 
 Beside user provided names, `jtc` features a number of internally generated/supported tokens and names that have various applications:
   - `$N` namespace, where `N` is a number - typically that would be a reference to the result of a REGEX matched group
-  (however, could be (re)used be a user as well)
+  (however, could be (re)used by a user as well)
   - `$a`, `$b`, `$c`, etc - auto generated tokens when the interpolated value is an iterable (an array or an object),
   where `$a` refers to the first element in the iterable, `$b` to the second, etc
   - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an an object,
@@ -1836,16 +1837,16 @@ Beside user provided names, `jtc` features a number of internally generated/supp
   to the walked point as a JSON array
   - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
   - `$_` - a namespace, holding a string value that is used when the elements during `{$path}` interpolation are getting concatenated 
-  (default value `_`) 
+  (default value `"_"`) 
   - `$#` - a namespace, holding a string value that is used as a separator when a _JSON array_ or _object_ is getting
-  template-interpolated into a string (default value `, `)
+  template-interpolated into a string (default value `", "`)
   - `$?` - a token, referring to the result of a prior successful walk, thus it's used to expand multiple walks into a string
   or an array
   - `$$?` - a namespace holding a string separator considered when expanding walks using `{$?}` token into a string
-  (default value is `,`) 
+  (default value is `","`) 
 
 
-##### Cross-lookups using namespace 
+#### Cross-lookups using namespace 
 Directives `<>v`, `<>k` (as well as all other lexemes allowing capturing and setting namespace) and search lexemes `<>s`, `<>t` 
 let facilitating cross-lookups. Say, we have a following JSON:
 ```bash
@@ -1883,7 +1884,7 @@ bash $
 ```
 
 
-##### Path namespace example
+#### Path namespace example
 Here are both of the path tokens demonstrated:
 ```bash
 bash $ <ab.json jtc -w'<Jane>' -T'{{$PATH}}' -r
@@ -1902,7 +1903,7 @@ bash $
 ```
 
 
-##### Prior Walk token
+#### Prior walk token
 A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
 to build up JSON 'historical' records:
 ```bash
@@ -1929,7 +1930,7 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"'
 bash $ 
 ```
 The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artefact 
-the namespace `$$?` holds the value which `jtc` consiers as a separator (if it matches user's):
+the namespace `$$?` holds the value which `jtc` considers as a separator (if it matches user's):
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
 "a"
@@ -1938,12 +1939,22 @@ bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
 bash $ 
 ```
 
+#### Iterables auto tokens
+Once a JSON iterable is the last walked element, then it generates auto-tokens which could be used in a template-interpolation. 
+Each value in the iterable could be referred by a respective token: first value referred by `$a`, second by `$b`, and so on. In the 
+unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the last walked iterable
+is a JSON object, then its labels also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
+```bash
+bash $ <<<'["This", "is", "example"]' jtc -T'"{$a} {$b} an {$c}!"'
+"This is an example!"
+bash $ 
+```
 
 
 ### Namespaces with interleaved walks
 When multiple _interleaved_ walks (`-w`) present (obviously there must be multiple walks - a single one cannot be _interleaved_), 
 they populate namespaces in the order the walks appear:
-```
+```bash
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
 "John"
 { "Parent": "John", "child": "Olivia" }
@@ -1954,11 +1965,11 @@ bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -y'[children][:]<chld>v' -T'{ "Par
 bash $ 
 ```
 That is a correct result (though might not reflect what possibly was intended), let's review it:
-1. first line contains only result `"John"` - because template interpolation here failed (namespace `chld` does not yet exist yet,
+1. first line contains only result `"John"` - because template interpolation fails here (namespace `chld` does not yet exist yet,
 thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
-2. upon next (_interleaved_) walk, we see a correct result of template interpolation: `Parent`'s and `child`'s records are filled right
-(template is a _valid JSON_ here)
-3. in the third line, the result is also correct, albeit might be not the expected one - upon next _interleaved_ walk, the 
+2. upon next (_interleaved_) walk, we see a correct result of a template interpolation: `Parent`'s and `child`'s records are filled
+right (template is a _valid JSON_ here)
+3. in the third line, the result is also correct, albeit might not be the expected one - upon next _interleaved_ walk, the 
 namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
 4. _etc._
 
@@ -1969,7 +1980,7 @@ each own child. That way, for example, `Ivan` should not be even listed (he has 
 once and `Jane` should have 2 records (she has 2 kids).
 
 The situation could be easily rectified if for each walk we use own template and assign a dummy one for the first one: 
-```
+```bash
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -r
 ""
 { "Parent": "John", "child": "Olivia" }
@@ -1981,7 +1992,7 @@ bash $
 ```
 Now the result looks closer to the intended one (no records for `Ivan`, one for `John` and 2 for `Jane`, as expected). But what about
 those annoying empty _JSON strings_ `""`? Those will be gone if `-qq` option is thrown in:
-```
+```bash
 bash $ <ab.json jtc -x[0][:] -y'[name]<pnt>v' -T'""' -y'[children][:]<chld>v' -T'{ "Parent": {{pnt}}, "child": {{chld}} }' -rqq
 { "Parent": "John", "child": "Olivia" }
 { "Parent": "Jane", "child": "Robert" }
@@ -1991,8 +2002,8 @@ bash $
 \- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
 
 Yet, the same could have been achieved even a simpler way (using just one walk):
-```
-bash $ <ab.json jtc -w'[0][:][name]<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
+```bash
+bash $ <ab.json jtc -w'<name>l:<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
 { "Parent": "John", "child": "Olivia" }
 { "Parent": "Jane", "child": "Robert" }
 { "Parent": "Jane", "child": "Lila" }
@@ -2003,7 +2014,7 @@ bash $
 ### Search quantifiers interpolation
 Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
 index value stored `item`:
-```
+```bash
 bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
 bash $ <<<$JSN jtc
 {
@@ -2016,29 +2027,29 @@ bash $ <<<$JSN jtc
 }
 bash $ 
 ```
-To achieve that, we need to memorize the value of index in the namespace first, then select a value from the list by the index:
-```
+To achieve that, we need to memorize the value of `item` in the namespace first, then select a value from the list by the index:
+```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
 "milk": 0.90
 bash $ 
 ```
 It should be quite easy to read/understand such walk path (predicated one is familiar with suffixes / directives). Let's see
 how the walk-path works in a slow-mo:
-1. `[item]` selects the value by label `item`:
-```
+1. `[item]`: selects the value by label `item`:
+```bash
 bash $ <<<$JSN jtc -w'[item]'
 2
 bash $ 
 ```
-2. `<idx>v` the directive memorizes selected value (`2`) in the namespace `idx`
-```
+2. `<idx>v`: the directive memorizes selected value (`2`) in the namespace `idx`
+```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v'
 2
 bash $ 
 ```
-3. `[-1]` steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
+3. `[-1]`: steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
 the root of the input JSON:
-```
+```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
 {
    "item": 2,
@@ -2050,8 +2061,8 @@ bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
 }
 bash $ 
 ```
-4. `[list]` selects the object value by label `list`:
-```
+4. `[list]`: selects the object value by label `list`:
+```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
 {
    "bread": 1.20,
@@ -2064,7 +2075,7 @@ bash $
 (which is `2`) gives us the required value.
 
 _Alternatively_, the same ask could be achieved using a slightly different query:
-```
+```bash
 bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
 bash $ 
@@ -2080,13 +2091,13 @@ in the searched JSON node
 
 
 ### Cross-referenced lookups
-One use-case that namespaces facilitate quite neatly, is when insert/update/purge/compare operation refer to different JSONs 
+One use-case that namespaces facilitate quite nicely, is when insert/update/purge/compare operation refer to different JSONs 
 (i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
 types of operations) but one requires a reference from another.
 
 Say, we have 2 JSONs:
 1. `main.json`:
-```
+```bash
 bash $ <main.json jtc
 [
    {
@@ -2108,7 +2119,7 @@ bash $ <main.json jtc
 bash $ 
 ```
 2. `id.json`:
-```
+```bash
 bash $ <id.json jtc
 [
    {
@@ -2127,44 +2138,37 @@ bash $ <id.json jtc
 bash $ 
 ```
 
-The ask here is to insert songs titles from `id.json` into main.json cross-referencing respective `rec` to `id` values.  
+The ask here is to insert songs titles from `id.json` into `main.json` cross-referencing respective `rec` to `id` values.  
 The way to do it:
 - first walk `main.json` finding and memorizing (each) `rec` value 
 - then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
 
 The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
 insert respective `title`:
-```
-bash $ <main.json jtc -w'[:][rec]<Record>v[-1][songs]' -mi id.json -i'[id]:<Record>s[-1][title]'
+```bash
+bash $ <main.json jtc -w'<rec>l:<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]' -tc
 [
    {
       "name": "Abba",
       "rec": 1,
-      "songs": [
-         "The Winner Takes It All"
-      ]
+      "songs": [ "The Winner Takes It All" ]
    },
    {
       "name": "Deep Purple",
       "rec": 3,
-      "songs": [
-         "Smoke on the Water"
-      ]
+      "songs": [ "Smoke on the Water" ]
    },
    {
       "name": "Queen",
       "rec": 2,
-      "songs": [
-         "The Show Must Go On"
-      ]
+      "songs": [ "The Show Must Go On" ]
    }
 ]
 bash $ 
 ```
-
-For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is walked first). When dst. walk 
+For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When dst. walk 
 finishes walking, the namespace will be populated with respective value from the `rec` entry. That value will be reused by insert-walk
-when walking its source JSON (`id.json`) with the lexeme `[id]:<Record>s` - that will find a respective `id`. The rest should be obvious
+when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. The rest should be obvious
 by now.
 
 
@@ -2173,12 +2177,11 @@ by now.
 it will purge every resulted/walked entry).  
 So, how to facilitate a cross-referenced purge then? (i.e., when purging ids are located in a separate file)  
 
-The trick is to use a dummy `-u`/`-i` operation and apply `-p`.  
-When the cli is given in this notation:  
+The trick is to use update/insert `-u`/`-i` operation together with `-p`. When the cli is given in this notation:  
 `<<<dst.json jtc -w... -u <src.json> -u... -p`,  
 purging will be applied to walked destinations, but only predicated by a successful source walk:
 ```
-bash $ <main.json jtc -w'[:][rec]<Record>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Record>s' -p
+bash $ <main.json jtc -w'<rec>l:<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
 [
    {
       "name": "Queen",
@@ -2191,7 +2194,7 @@ bash $
 
 The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
 ```
-bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' -T'{{Entry}}' -pp
+bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
 [
    {
       "name": "Abba",
@@ -2206,8 +2209,9 @@ bash $ <main.json jtc -w'[rec]:<Record>N:[-1]<Entry>v' -u'[1, 3]' -u'<Record>s' 
 ]
 bash $ 
 ```
-\- memorizing the whole `Entry` is required because update operation w/o the template only replaced records (and purge everything else),
-but that's not the goal - goal is to retain all the entries, hence replacing the updating entries with the template for the entire entry.
+\- memorizing the whole entry (in `E`) is required because update operation w/o the template only replaces records (and 
+purge everything else), but that's not the goal - the goal is to retain all the entries, hence replacing the updated entries
+with the template for the entire entry.
 
 
 ## Modifying JSON
