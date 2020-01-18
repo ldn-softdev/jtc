@@ -1907,7 +1907,7 @@ bash $
 
 #### Prior walk token
 A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
-to build up JSON 'historical' records:
+to build/join up JSON records:
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w[:]
 "a"
@@ -2277,27 +2277,23 @@ there are a few options that let modifying input JSON:
 - `-s` - swap around pair(s) of JSON elements
 - `-p` - purge (remove) elements from JSON
 
-Typically, those options are mutually exclusive and if sighted together, only one type of operations will be executed (the above list
-is given in the priority order of operation selection). However, there is a certain combination of options `-i`,`-u` and `-p`, which
+Typically, those options are mutually exclusive and if sighted together only one operation will be executed (the above list
+is given in the priority order of operation selection). However, there is a combination of options `-i`,`-u` and `-p`, which
 facilitates _move_ semantic, those cases reviewed in the respective chapters.
 
-Each of options requires one or multiple `-w` to be given to operate on. Options `-i` and `-u` require an argument, which comes in
-different flavors, one of them is the `walk-path` per-se.
+Each of options requires one or multiple `-w` to be given to operate on (a.k.a. destination walk). Options `-i` and `-u` require
+an argument, which comes in different flavors, one of them is the `walk-path` per-se (a.k.a. source walk)
 
 `jtc` will execute any of those operations only once, if multiple operations required, then those could be combined in multiple
-optoins chain sets daisy-chained through the separator `/`.
+option chain sets, daisy-chained through the separator `/`.
 
 
 ### In-place JSON modification 
-By default `jtc` will expect input from `stdin`. If the standalone argument `args` is given, then `jtc` will read
-input from the file (ignoring `stdin`), see below:
+By default `jtc` expects the input from `stdin`. If the standalone argument(s) `args` is given then `jtc` will read input from the 
+file (ignoring `stdin`), see below:
 ```bash
 bash $ cat file.json 
-[
-   "JSON",
-   "in",
-   "file"
-]
+[ "JSON", "in", "file" ]
 bash $ 
 bash $ <<<'[ "<stdin>", "JSON" ]' jtc
 [
@@ -2313,9 +2309,8 @@ bash $ <<<'[ "<stdin>", "JSON" ]' jtc file.json
 ]
 bash $
 ```
-If option `-f` is given (together with a _single_ argument) then `jtc` will apply (redirect) its output of the operations
-into the file (instead of `stdout`):
-```
+The option `-f` (together with a _single_ argument) redirects (forces) the output of the operation into the file (instead of `stdout`):
+```bash
 bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f file.json
 bash $ cat file.json 
 [
@@ -2327,8 +2322,8 @@ bash $
 ```
 In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored).
 
-The bare hyphen (`-`) overrides a file input and ensured that the input is read from the `stdin`:
-```
+The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
+```bash
 bash $ <<<'[ "input", "JSON" ]' jtc -f - file.json
 bash $ cat file.json
 [
@@ -2340,72 +2335,53 @@ bash $
 
 
 ### Purging JSON
-`-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from address book (for the sake
-of example) all the `home` and `office` phones records (effectively leaving only `mobile` types):
-```
-bash $ <<<$(<ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p) jtc -w'<phone>l:' -l
+`-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from the address book (for the sake
+of an example) all the `home` and `office` phones records (effectively leaving only `mobile` phone records):
+```bash
+bash $ <ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p / -w'<phone>l:' -l -tc
 "phone": [
-   {
-      "number": "112-555-1234",
-      "type": "mobile"
-   },
-   {
-      "number": "113-123-2368",
-      "type": "mobile"
-   }
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
 ]
 "phone": [
-   {
-      "number": "223-283-0372",
-      "type": "mobile"
-   }
+   { "number": "223-283-0372", "type": "mobile" }
 ]
 "phone": []
-bash $
+bash $ 
 ```
-Of course there's a more succinct syntax:
-````
-bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p
-````
+Of course there's a bit more succinct syntax:
+```bash
+bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p  / -w'<phone>l:' -ltc
+```
 or, using even a single walk-path:
-````
-bash $ <ab.json jtc -w'[type]:<(?:home)|(?:office)>R: [-1]' -p
-````
+```bash
+bash $ <ab.json jtc -w'[type]:<home|office>R:[-1]' -p / -w'<phone>l:' -ltc
+```
 
-
-Another use-case exist: remove all the JSON elements _except_ walked ones (while preserving original JSON structure) - that's
-the feat for plural option notation: `-pp`. Let's drop all entries (in all records) but the `name` and `spouse`:
-````
-bash $ <ab.json jtc -w'<(?:name)|(?:spouse)>L:' -pp
+Another use-case example: remove all the JSON elements _except_ walked ones, while preserving original JSON structure - that's
+a feat for a plural option notation: `-pp`. E.g.: let's drop all the entries (in all records) but `name` and `spouse`:
+```bash
+bash $ <ab.json jtc -w'<name|spouse>L:' -pp -tc
 {
    "Directory": [
-      {
-         "name": "John",
-         "spouse": "Martha"
-      },
-      {
-         "name": "Ivan",
-         "spouse": null
-      },
-      {
-         "name": "Jane",
-         "spouse": "Chuck"
-      }
+      { "name": "John", "spouse": "Martha" },
+      { "name": "Ivan", "spouse": null },
+      { "name": "Jane", "spouse": "Chuck" }
    ]
 }
-bash $
-````
-Here, `(?:name)|(?:spouse)` is an RE (indicated by capitalized label search suffix `L`) matching labels containing either `"name"` or
+bash $ 
+```
+Here, `name|spouse` is an RE (indicated by the RE label search suffix `L`) matching labels containing either `"name"` or
 `"spouse"`
 
 
 ### Swapping JSON elements
-`-s` requires walk-paths (`-w`) to be given in pairs. Paired walk-path will be walked concurrently (thus, ensure they are consistent)
+`-s` requires walk-paths (`-w`) to be given in pairs. Paired walk-path will be walked concurrently (so, ensure they are consistent)
 and resulted JSON elements will be swapped around.
 
-E.g., here's an example of swapping around `name` and `spouse` for all records on the address book:
-```
-bash $ <<<$(<ab.json jtc -w'<name>l:' -w'<spouse>l:' -s) jtc -w'<(?:name)|(?:spouse)>L:' -l
+E.g., here's the way of swapping around `name` and `spouse` for all records on the address book:
+```bash
+bash $ <ab.json jtc -w'<name>l:' -w'<spouse>l:' -s / -w'<name|spouse>L:' -l
 "name": "Martha"
 "spouse": "John"
 "name": null
@@ -2414,13 +2390,13 @@ bash $ <<<$(<ab.json jtc -w'<name>l:' -w'<spouse>l:' -s) jtc -w'<(?:name)|(?:spo
 "spouse": "Jane"
 bash $
 ```
-_\- for the sake of example brevity, swapped elements only sorted out_
+> _\- for the sake of output brevity, swapped elements only displayed_
 
 
-Possibly, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
-For the sake of example, let's remove _array_ encapsulation from phone records, leaving only the last phone in it:
+Probably, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
+E.g., let's remove _array_ encapsulation from phone records, leaving only _the last phone record_ in it:
 ```
-bash $ <<<$(<ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s) jtc -w'<phone>l:' -l
+bash $ <ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s / -w'<phone>l:' -l
 "phone": {
    "number": "113-123-2368",
    "type": "mobile"
@@ -2435,9 +2411,9 @@ bash $ <<<$(<ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s) jtc -w'<phone>l:' 
 }
 bash $
 ```
-_\- again, for brevity, only phone records are displayed_
+_\- again, for tje brevity, only phone records are displayed_
 
-Finally, using `-s` more than one pair of walks (-w) could be swapped out. In fact, as many *pairs* of walks given will be swapped
+Finally, more than just one pair of walks (-w) could be swapped out. In fact, as many *pairs* of walks given will be swapped
 (predicated walks did not become invalid during prior walk pair swap operations)
 
 
