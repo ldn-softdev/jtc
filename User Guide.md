@@ -2267,7 +2267,7 @@ to a label of each respecitve ordinal value in the object
 - `$_`: a name holding a separator used when expanding token `$path`, default value is `"_"`
 - `$#`: a name holding a separator used when a _JSON intterable_ is explanded into a _JSON string_, default value is `", "`
 - `$?`: a token referring to the result of a prior last successful walk
-- `$$?`: a namespace holding a string separator considered when expanding walks using {$?} token, default value is `","`
+- `$$?`: a namespace holding a string separator considered when expanding walks using `$?` token, default value is `","`
 
 
 ## Modifying JSON
