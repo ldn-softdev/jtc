@@ -2395,7 +2395,7 @@ bash $
 
 Probably, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
 E.g., let's remove _array_ encapsulation from phone records, leaving only _the last phone record_ in it:
-```
+```bash
 bash $ <ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s / -w'<phone>l:' -l
 "phone": {
    "number": "113-123-2368",
@@ -2448,29 +2448,31 @@ options `-i`, `-u`, `-c` the JSON argument is expected to have no trailing white
 #### Destination driven insertion
 The destination insertion point(s) (`-w`) controls how insertion is done:
 - if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single point location - then 
-all the supplied sources are attempted to get inserted into a single destination location:
-```
+_all_ the supplied sources are attempted to get inserted into a _single_ destination location:
+```bash
 bash $ <ab.json jtc -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": []
 "children": [ "Robert", "Lila" ]
 bash $
-bash $ <<<$(<ab.json jtc -w'[name]:<Ivan>[-1][children]' -i'"Maggie"' -i'"Bruce"') jtc -w'<children>l:' -lr
+bash $ <ab.json jtc -w'[name]:<Ivan>[-1][children]' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": [ "Maggie", "Bruce" ]
 "children": [ "Robert", "Lila" ]
 bash $
 ```
+
 - if a given destination insertion point is iterable or multiple are given, then all sources (`-i` arguments) are inserted one
-by one in a circular fashion (if source runs out of JSON elements, but destination has more room to iterate, then source
-is wrapped to the beginning element):
-```
-bash $ <<<$(<ab.json jtc -w'<children>l:' -i'"Maggie"' -i'"Bruce"') jtc -w'<children>l:' -lr
+by one in a round-robin fashion (if source runs out of JSON elements, but destination has more room to iterate, then source
+is wrapped to the first element):
+```bash
+bash $ <ab.json jtc -w'<children>l:' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia", "Maggie" ]
 "children": [ "Bruce" ]
 "children": [ "Robert", "Lila", "Maggie" ]
 bash $
 ```
+
 
 #### Inserting objects into objects
 while insertion into arrays is obvious (well, so far), insertion into object requires clarification:
