@@ -2287,6 +2287,7 @@ an argument, which comes in different flavors, one of them is the `walk-path` pe
 `jtc` will execute any of those operations only once, if multiple operations required, then those could be combined in multiple
 option chain sets, daisy-chained through the separator `/`.
 
+Once the modificatoin operation is complete, the entire resulting JSON is displayed.
 
 ### In-place JSON modification 
 By default `jtc` expects the input from `stdin`. If the standalone argument(s) `args` is given then `jtc` will read input from the 
@@ -2320,7 +2321,8 @@ bash $ cat file.json
 ]
 bash $ 
 ```
-In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored).
+In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored) - note to the altered
+format of the file.
 
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
 ```bash
@@ -2371,7 +2373,7 @@ bash $ <ab.json jtc -w'<name|spouse>L:' -pp -tc
 }
 bash $ 
 ```
-Here, `name|spouse` is an RE (indicated by the RE label search suffix `L`) matching labels containing either `"name"` or
+Here, `name|spouse` is the RE (indicated by the RE label search suffix `L`) matching labels containing either `"name"` or
 `"spouse"`
 
 
@@ -2423,13 +2425,20 @@ when either of insert (`-i`) of update (`-u`) operation is carried, there 2 type
  - one facilitating points (elements) being inserted/updated, a.k.a. _source walks_ (faciliated with respecitve `-i`, `-u` options)
 
 The _destination points_ of insertion are always given using `-w` option(s), while the argument under `-i` designates the source 
-of the insertion (multiple `-i` options could be given). The source of insertion must _always_ be a valid JSON.
+of the insertions (multiple `-i` options could be given). The source of insertion must _always_ be a valid JSON.
 
 Insert operations never result in overwriting destination JSON elements (though the destination could be extended).
-There are 3 different flavors of insertion arguments (i.e., sources of insertion):
-- `-i <static_json>`: a JSON being inserted is either read from a file or spelled literraly
-- `-i <static_json> -i<walk-path>`: here the `walk-path` actualy walks `static_json` rather than the input (source) JSON
-- `-i <walk-path>` - the argument `walk-path` walks the input (source) JSON
+There are 5 different flavors of insertion arguments (i.e., sources of insertion):
+- `-i <static_json> ...`: a JSON being inserted is either read from a file or spelled literally, multiple of such insert options allowed 
+- `-i <static_json> -i<walk-path> ...`: here the `walk-path` actually walks `static_json` rather than the input (source) JSON; only one
+option with `static_json` argument is allowed (will be processed) while multiple options with `walk-path` may be given
+- `-i <walk-path>`: the argument `walk-path` walks the input (source) JSON, multiple allowed
+- `-ei <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` to be shell evaluated, 
+optionally containing interpolation tokens; tokens `{}`,`{{}}` will be referring to JSONs pointed by `-w` (destination) walk; the 
+returned value (predicated the evaluation was a success) has to be a valid JSON, otherwise it'll be promoted to a _JSON string_.
+- `-ei <shell_cli> \; -i<walk-path>`: `walk-path` here walks the input (source) JSON and tokens `{}`,`{{}}` will be referring
+to `-i<walk-path>` rather than to `-w`
+
 
 How does `jtc` know which argument is supplied? The disambiguation path is like this:
 1. initially a `file` argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
@@ -2475,11 +2484,11 @@ bash $
 
 
 #### Inserting objects into objects
-while insertion into arrays is obvious (well, so far), insertion into object requires clarification:
-- objects merged always recursively
-- in case of clashing labels - destination is preserved while source is discarded
+while insertion into arrays is obvious (well, so far), insertion into objects requires clarification:
+- objects always merged recursively
+- in case of the clashing labels, by default, the destination is preserved while source of insertion is discarded
 
-To illustrate: let's insert a JSON structure: `{ "PO box": null, "street address": null }` into the last record's `address`:
+To illustrate, let's insert a JSON structure: `{ "PO box": null, "street address": null }` into the last record's `address`:
 ```
 bash $ <ab.json jtc -w'[0][-1:][address]' -l
 "address": {
@@ -2489,7 +2498,7 @@ bash $ <ab.json jtc -w'[0][-1:][address]' -l
    "street address": "6213 E Colfax Ave"
 }
 bash $
-bash $ <<<$(<ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street address": null }') jtc -w'[0][-1:][address]' -l
+bash $ <ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street address": null }' / -w'[0][-1:][address]' -l
 "address": {
    "PO box": null,
    "city": "Denver",
@@ -2499,11 +2508,11 @@ bash $ <<<$(<ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street addr
 }
 bash $
 ```
-\- as one can see, the `"PO box"` label was inserted, but the destination object's value in the `"street address"` was preserved
+\- the `"PO box"` label got inserted, but the destination object's value in the `"street address"` has been preserved
 
 
 #### Insertion matrix without merging
-Source (JSON being inserted) and destination (JSON point where insertion occurs) elements might represent different types:
+The source (a JSON being inserted) and the destination (a JSON point where insertion occurs) elements might represent different types:
 _JSON array_, _JSON object_, _JSON atomic_. Thus there's a number of variants of insertions of one type of elements into others. 
 All such variants are shown in the below matrix table:
 ```
@@ -2513,18 +2522,18 @@ All such variants are shown in the below matrix table:
 {"a":1,"b":2}|    {"a":1,"b":2}    |  {"a":1,"b":2,"c":4}  |  {"a":1,"b":2,"c":4}  |{"a":1,"b":2}
     "a"      |         "a"         |          "a"          |          "a"          |     "a"
 ```
-_\- the values in the 4th column header (namely `"a":3,"c":4`) do not look like valid JSON - those are JSON object's elements
-when pointed to by the `-i <walk-path>`, i.e., they are JSON elements in objects, i.e., with labels_
+> _\- the values in the 4th column header (namely `"a":3,"c":4`) do not look like valid JSON - those are JSON object's elements
+when pointed to by the `-i <walk-path>`, i.e., they are JSON values in objects (the values with labels_)
 
 as follows from the table:
 - insertion cannot occur into the atomic JSON elements
-- when inserting into array, whole JSON element is getting inserted (no array expansion occurs)
-- labeled elements inserted as JSON objects
-- when inserting objects into object, upon label clashing the destination's label is preserved (source's ignored)
+- when inserting into an array, the whole JSON value is getting inserted (no array expansion occurs)
+- labeled values are getting inserted into arrays as standalone JSON objects
+- when inserting objects into objects, upon label clashing the destination's label is preserved (source's ignored)
 
 #### Insertion matrix with merging
-One might wonder: if insertion of an array into another array happens without merging arrays, how to achieve then merged result upon
-insertion? (or other similar questions may rise).
+if insertion of an array into another array happens without merging arrays, how then to achieve the merged result upon
+insertion?
 
 option `-m` (merge) alters the behavior of insert operation into following:
 ```
