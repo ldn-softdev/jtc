@@ -2450,7 +2450,7 @@ How does `jtc` know which argument is supplied? The disambiguation path is like 
 in an iterable), hence such argument will be treated as JSON.  
 > To pass it as a walk-path, modify it to a range-type of walk, e.g.: `[0:1]` - that is still a valid walk-path (selecting only the
 first element) but is invalid JSON.  
-> **Alternatively**, add a trailing space at the end of the walk-lexeme: `[0] ` - then the argument will be treated as a walk-path (in 
+> **Alternatively**, add a trailing space at the end of the walk-lexeme: `'[0] '` - then the argument will be treated as a walk-path (in 
 options `-i`, `-u`, `-c` the JSON argument is expected to have no trailing white spaces or other characters)_
 
 
