@@ -60,6 +60,7 @@
    * [Summary of namespace tokens](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-namespace-tokens) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
+     * [Ensuring input read from `stdin`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-read-from-stdin)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
@@ -72,10 +73,11 @@
      * [Updating labels](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#updating-labels)
    * [Insert, Update with move semantic (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-   * [Use of mixed arguments for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c)
-   * [Use of mixed arguments with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-with--e)
+   * [Use of mixed argument types for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-for--i--u--c)
+   * [Use of mixed argument types with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-with--e)
    * [Cross-referenced insert, update](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Cross-referenced-insert-update)
      * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
+   * [Summary of modification options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modification-options)
    * [Summary of modes of operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modes-of-operations)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
@@ -2325,6 +2327,7 @@ bash $
 In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored) - note the altered
 format of the file.
 
+#### Ensuring input read from `stdin`
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
 ```bash
 bash $ <<<'[ "input", "JSON" ]' jtc -f - file.json
@@ -2434,12 +2437,11 @@ There are 5 different flavors of insertion arguments (i.e., sources of insertion
 - `-i <static_json> -i<walk-path> ...`: here the `walk-path` actually walks `static_json` rather than the input (source) JSON; only one
 option with `static_json` argument is allowed (will be processed) while multiple options with `walk-path` may be given
 - `-i <walk-path> ...`: the argument `walk-path` walks the input (source) JSON, multiple allowed
-- `-ei <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` to be shell evaluated, 
+- `-ei <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` destination walks (`-w`) to be shell evaluated, 
 optionally containing interpolation tokens; tokens `{}`,`{{}}` will be referring to JSONs pointed by `-w` (destination) walk; the 
 returned value (predicated the evaluation was a success) has to be a valid JSON, otherwise it'll be promoted to a _JSON string_.
-- `-ei <shell_cli> \; -i<walk-path>`: `walk-path` here walks the input (source) JSON and tokens `{}`,`{{}}` will be referring
-to `-i<walk-path>` rather than to `-w`
-
+- `-ei <shell_cli> \; -i<walk-path>` ...: `walk-path` here walks the input (source) JSON and tokens `{}`,`{{}}` will be referring
+to `-i<walk-path>`, the shell evaluation occurs for the each of `-i<walk-path>` rather than for destination walks (`-w`).
 
 How does `jtc` know which argument is supplied? The disambiguation path is like this:
 1. initially a `file` argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
@@ -2607,10 +2609,10 @@ bash $ <ab.json jtc -w'<address>l:[:]<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:
 bash $ 
 ```
 
-The Destination walk-path will not become invalid after the parent's label has been altered, thus allowing altering labels even 
+The destination walk-path will not become invalid after the parent's label has been altered, thus allowing altering labels even 
 of the nested elements in the same recursive update: 
 ```bash
-# list all the labels of the John's record
+# list all the labels of the John's record:
 bash $ <ab.json jtc -w'[name]:<John>[-1]<.*>L:<>k'
 "address"
 "city"
@@ -2699,13 +2701,15 @@ bash $
 An argument for _insert_ and _update_ operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by preceding 
 option `-e`).  
 E.g., let's capitalize all the `name` entries in the address book:
-```
+```bash
+# dump all the names:
 bash $ <ab.json jtc -w'<name>l:' 
 "John"
 "Ivan"
 "Jane"
 bash $
-bash $ <<<$(<ab.json jtc -w'<name>l:' -eu '<<<{{}}' tr "[:lower:]" "[:upper:]" \;) jtc -w'<name>l:'
+# capitalize the names through update using shell evaluation:
+bash $ <ab.json jtc -w'<name>l:' -eu '<<<{{}}' tr "[:lower:]" "[:upper:]" \; / -w'<name>l:'
 "JOHN"
 "IVAN"
 "JANE"
@@ -2713,156 +2717,27 @@ bash $
 ```
 Once options `-e` and `-u`(`-i`) are used together, following rules must be observed:
 - option `-e` must precede first occurrence of `-i`/`-u`
-- cli arguments sequence following option `-i`/`-u` must be terminated with the escaped semicolon: `\;`
+- cli arguments sequence following option `-i`/`-u` must be terminated with the _standalone_ escaped semicolon: `\;`
 - the cli is also subjected for namespace interpolation before it gets shell evaluated
-- the cli in the argument do not require any additional escaping (except those which would normally be required by bash shell)
-- if piping in the cli is required then pipe symbol itself has to be escaped and spelled standalone: ` \| `
-- returned result of a shell evaluation must be either a valid JSON, or non-empty and non-error (in the latter case it's
-promoted to a _JSON string_ value)
+- the cli in the argument do not require any additional escaping (except those which would normally be required by a shell)
+- if piping in the cli is required then pipe symbol itself has to be escaped and spelled _standalone_: ` \| `
+- returned result of a shell evaluation must be either a valid JSON, or non-empty and non-error (in the latter case it'll
+be promoted to a _JSON string_ value)
 - failed (those returning non-zero exit code) or empty results of the shell evaluations are ignored
 (then JSON entry wont be updated/inserted, rather proceed to the next walked entry for another/next update attempt)
-- templates (`-T`) are ignored (unused) - template-interpolation already occurs during the _cli evaluation_
+- templates (`-T`) / template-interpolation occurs and applies after shell evaluation returns the result
 
-if shell cli does not deliver expected result for some reason, it's easy to see why with `-dd` option, e.g, say, we want to 
-truncate all kid's names to 3 letters only (just for fun):
-```
-bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu <<<{} sed -E 's/(...).*/\1/' \; -dd
-.read_inputs(), reading json from <stdin>
-..demux_opt(), option: '-u', hits: 3
-..ready_params_(), total jsons: 0, ordinal position of option -u walks: [], jit source: src_input
-..walk(), walk string: '[:]'
-..walk(), dump of completed lexemes:
-..walk(), [0]: WalkStep.. search_type():"numeric_offset", lexeme:"[:]", ws_type():"range_walk", ofst():"0", range():"[:]", label():"N/A", json():"N/A"
-..walk(), initial walk requires iteration
-..walk_interleaved_(), multi-walk: false
-..walk_interleaved_(), interleaved walk-path instances (-w: 1):
-..walk_interleaved_(), instance: 0, iterators: 0
-.write_json(), outputting json to <stdout>
-{}
-bash $ 
-```
-\- It did not work, because `jtc` received at the input only just this `{}`. Obviously `<<<{}` was interpolated by shell -  
-`jtc` got that, thus, we have to quote it:
-```
-bash $ <ab.jsonbash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{}' sed -E 's/(...).*/\1/' \; -dd
-.read_inputs(), reading json from <stdin>
-..demux_opt(), option: '-u', hits: 4
-..ready_params_(), total jsons: 0, ordinal position of option -u walks: [], jit source: src_input
-..walk(), walk string: '[:]'
-..walk(), dump of completed lexemes:
-..walk(), [0]: WalkStep.. search_type():"numeric_offset", lexeme:"[:]", ws_type():"range_walk", ofst():"0", range():"[:]", label():"N/A", json():"N/A"
-..walk(), initial walk: successful match
-..walk_interleaved_(), multi-walk: true
-..walk_interleaved_(), interleaved walk-path instances (-w: 1):
-..walk_interleaved_(), instance: 0, iterators: 3
-..reconcile_ui_(), interpolated & quoted string: '<<<Olivia sed \-E s\/(...).*\/\1\/'
-..system(), executing cmd '<<<Olivia sed \-E s\/(...).*\/\1\/'
-sh: -c: line 0: syntax error near unexpected token `('
-sh: -c: line 0: `<<<Olivia sed \-E s\/(...).*\/\1\/'
-..system(), return 512: ''
-error: shell returned error (512)
-..reconcile_ui_(), interpolated & quoted string: '<<<Robert sed \-E s\/(...).*\/\1\/'
-..system(), executing cmd '<<<Robert sed \-E s\/(...).*\/\1\/'
-sh: -c: line 0: syntax error near unexpected token `('
-sh: -c: line 0: `<<<Robert sed \-E s\/(...).*\/\1\/'
-..system(), return 512: ''
-error: shell returned error (512)
-..reconcile_ui_(), interpolated & quoted string: '<<<Lila sed \-E s\/(...).*\/\1\/'
-..system(), executing cmd '<<<Lila sed \-E s\/(...).*\/\1\/'
-sh: -c: line 0: syntax error near unexpected token `('
-sh: -c: line 0: `<<<Lila sed \-E s\/(...).*\/\1\/'
-..system(), return 512: ''
-error: shell returned error (512)
-.write_json(), outputting json to <stdout>
-[
-   "Olivia",
-   "Robert",
-   "Lila"
-]
-bash $ 
-```
-\- Now it did not work, because `jtc` received `sed`'s argument without single quotations (again those have been eaten by bash 
-before passing to `jtc` -  something `jtc` is unable to control - shell arguments evaluation of its own arguments). Thus, 
-let's double quote it now:
-```
-bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{}' sed -E "'s/(...).*/\1/'" \; -dd
-.read_inputs(), reading json from <stdin>
-..demux_opt(), option: '-u', hits: 4
-..ready_params_(), total jsons: 0, ordinal position of option -u walks: [], jit source: src_input
-..walk(), walk string: '[:]'
-..walk(), dump of completed lexemes:
-..walk(), [0]: WalkStep.. search_type():"numeric_offset", lexeme:"[:]", ws_type():"range_walk", ofst():"0", range():"[:]", label():"N/A", json():"N/A"
-..walk(), initial walk: successful match
-..walk_interleaved_(), multi-walk: true
-..walk_interleaved_(), interleaved walk-path instances (-w: 1):
-..walk_interleaved_(), instance: 0, iterators: 3
-..reconcile_ui_(), interpolated & quoted string: '<<<Olivia sed \-E 's/(...).*/\1/''
-..system(), executing cmd '<<<Olivia sed \-E 's/(...).*/\1/''
-..system(), return 0: 'Oli
-'
-..walk(), walk string: ''
-..walk(), dump of completed lexemes:
-..walk(), invalidated search cache
-..walk(), initial walk: successful match
-..reconcile_ui_(), interpolated & quoted string: '<<<Robert sed \-E 's/(...).*/\1/''
-..system(), executing cmd '<<<Robert sed \-E 's/(...).*/\1/''
-..system(), return 0: 'Rob
-'
-..walk(), walk string: ''
-..walk(), dump of completed lexemes:
-..walk(), invalidated search cache
-..walk(), initial walk: successful match
-..reconcile_ui_(), interpolated & quoted string: '<<<Lila sed \-E 's/(...).*/\1/''
-..system(), executing cmd '<<<Lila sed \-E 's/(...).*/\1/''
-..system(), return 0: 'Lil
-'
-..walk(), walk string: ''
-..walk(), dump of completed lexemes:
-..walk(), invalidated search cache
-..walk(), initial walk: successful match
-.write_json(), outputting json to <stdout>
-[
-   "Oli",
-   "Rob",
-   "Lil"
-]
-bash $ 
-```
-Now it worked!
-
-Actually, the whole _cli_ could have been coded like this:
-```
-bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w[:] -eu '<<<{} sed -E "s/(...).*/\1/";' 
-[
-   "Oli",
-   "Rob",
-   "Lil"
-]
-bash $ 
-```
-Of course, the above way of solving the ask is entirely academic - it's always best to avoid using _shell cli_ evaluation and 
-default to it only as a last resort.  
-A much better (efficient) way achieving the same ask would be to use RE and template interpolation:
-```
-bash $ <<<$(<ab.json jtc -w'<children>l:[:]' -j) jtc -w'<(...)>R:' -T'"{$1}"' -j
-[
-   "Oli",
-   "Rob",
-   "Lil"
-]
-bash $ 
-```
+>if shell cli does not deliver expected result for some reason, it's debuggable with `-dd` options.
 
 
-### Use of mixed arguments for `-i`, `-u`, `-c` 
-options `-c`, `-u`, `-i` allow two *kinds* of their arguments:
+### Use of mixed argument types for `-i`, `-u`, `-c` 
+options `-i`, `-u`, `-c` allow two *kinds* of their arguments:
 1. static JSONs (i.e., `<file>`, `<JSON>`)
 2. walk-path (i.e., `<walk-path>`)
 
-\- when those used together, namely a `<walk-path>` argument(s) follows either of statics, e.g.: 
-```
-jtc -u file.json -u'[Root][:]'`
-```
+\- when those used together, namely a `<walk-path>` argument(s) follows either of statics, e.g.:  
+`jtc -u file.json -u'[Root][:]'`
+
 then all `<walk-path>` arguments (here `[Root][:]`) apply onto the static argument (here `file.json`).
 \- When both kinds of arguments are used together, then only one (the first) static JSON argument is accepted, while 
 multiple walk-path may be given
@@ -2876,14 +2751,14 @@ That rule is in play to facilitate a walking capability over the specified stati
 )
 
 
-### Use of mixed arguments with `-e`
+### Use of mixed argument types with `-e`
 options `-u`, `-i` when used together with `-e` also allow specifying multiple instances of the option usage:
-1. first option occurrence must prove a shell cli line, terminated with `;`
-2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation.
-However, in the case if mixed option arguments usage is detected (in presence of `-e`), then the semantic of the `jtc` arguments would
-be like this (e.g., for option `-u`):  
+1. first option occurrence must prove a shell cli line, terminated with the standalone spelling of a semicolon `\;`
+2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation
+(occurring before shell evaluation happens). However, in the case if mixed option arguments usage is detected (in presence of `-e`),
+then the semantic of the `jtc` arguments would be like this (e.g., for option `-u`):  
 `jtc -w'<dst>' -eu <shell cli ...> \; -u'<src>'`  
-Here, both `<dst>` and `<src>` walks the same input JSON. _Shell cli_ evaluation / interpolation occurs from walking `<src>`
+Here, both `<dst>` and `<src>` walk the same input JSON. _Shell cli_ evaluation / interpolation occurs from walking `<src>`
 That way it's possible to decouple source(s) (of interpolation) from the destination(s): all trailing (subsequent) arguments of `-u`
 will be used in every shell evaluation (interpolating respective JSON elements), while arguments pointed by (all) `-w` option(s)
 will point where returned/evaluated resulting JSONs should be placed.
@@ -2895,7 +2770,7 @@ Hopefully this example will clarify:
 - say (just for the sake of example), we want to add to every record's `children` the `name` of the person, but not just - we
 want to add it in all capitals (i.e., transform the record).
 ```
-bash $ <<<$(<ab.json jtc -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \; -i'<name>l:' -w'<children>l:') jtc -lrw'<name>l:' -w'<children>l:'
+bash $ <ab.json jtc -w'<children>l:' -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \; -i'<name>l:' / -lrw'<name>l:' -w'<children>l:'
 "name": "John"
 "children": [ "Olivia", "JOHN" ]
 "name": "Ivan"
@@ -2904,11 +2779,11 @@ bash $ <<<$(<ab.json jtc -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \; -i'<name>l:
 "children": [ "Robert", "Lila", "JANE" ]
 bash $ 
 ```
-- there, the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'`), while the destination were `children`
-(given with `-w'<children>l:'`)
+- there, the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'`), while the destinations were
+`children` (given with `-w'<children>l:'`)
 
-In case if only a single option instance (`-eu`/`-ei`) is used, then both the source (of interpolation) and the destination
-(of operation) would be provided with `-w` option argument
+In case if a single option instance (`-eu`/`-ei`) is used (w/o trailing options with walk arguments), then both the source
+(of interpolation) and the destination (of operation) would be provided with `-w` option argument
 
 
 ### Cross-referenced insert, update
@@ -2919,42 +2794,21 @@ types of operations) but one requires a reference from another.
 Say, we have 2 JSONs:
 1. `main.json`:
 ```bash
-bash $ <main.json jtc
+bash $ <main.json jtc -tc
 [
-   {
-      "name": "Abba",
-      "rec": 1,
-      "songs": []
-   },
-   {
-      "name": "Deep Purple",
-      "rec": 3,
-      "songs": []
-   },
-   {
-      "name": "Queen",
-      "rec": 2,
-      "songs": []
-   }
+   { "name": "Abba", "rec": 1, "songs": [] },
+   { "name": "Deep Purple", "rec": 3, "songs": [] },
+   { "name": "Queen", "rec": 2, "songs": [] }
 ]
 bash $ 
 ```
 2. `id.json`:
 ```bash
-bash $ <id.json jtc
+bash $ <id.json jtc -tc
 [
-   {
-      "id": 3,
-      "title": "Smoke on the Water"
-   },
-   {
-      "id": 1,
-      "title": "The Winner Takes It All"
-   },
-   {
-      "id": 2,
-      "title": "The Show Must Go On"
-   }
+   { "id": 3, "title": "Smoke on the Water" },
+   { "id": 1, "title": "The Winner Takes It All" },
+   { "id": 2, "title": "The Show Must Go On" }
 ]
 bash $ 
 ```
@@ -2989,7 +2843,7 @@ bash $
 ```
 For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When dst. 
 walk  finishes walking, the namespace will be populated with a respective value from the `rec` entry. That value will be reused
-by insert-walk when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` - that will find a respective `id`. 
+by insert-walk when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` that will find a respective `id`. 
 The rest should be obvious by now.
 
 
@@ -3013,7 +2867,7 @@ bash $ <main.json jtc -w'<rec>l:<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s'
 bash $ 
 ```
 
-The "complemented" purge operation (i.e. when you want to delete everything except referenced) is facilitated using `-pp`:
+The "complemented" purge operation (i.e. when we want to delete everything except referenced) is facilitated using `-pp`:
 ```bash
 bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
 [
@@ -3035,33 +2889,30 @@ purge everything else), but that's not the goal - the goal is to retain all the 
 with the template for the entire entry.
 
 
-### Summary of modes of operations
-`jtc` supports multiple update (and insertion) modes, at first it's easy to get confused, so let's recap here all the options:
+### Summary of modification options
+- `-`: bare qualifier (hyphen), ensures that read occurs from `stdin` regardless of present filename arguments
+- `-f`: ensures that the output is redirected to the filename (if one given) instead of `stdout`
+- `-p`: purges all walked (`-w`) JSON elements from the JSON tree
+- `-pp`: purges all JSON elements _except_ walked ones (`-w`) from the JSON tree
+- `-s`: swaps around JSON elements in the JSON tree pointed by the _pairs_ of walks
+- `-i<static_json>`: inserts `static_json` (which is either a file, or a literally spelled) into the destinations pointed by `-w`; 
+multiple arguments allowed
+- `-i<static_json> -i<walk-path>`: inserts JSON elements walked `static_json` with `walk-path` into the destinations pointed by `-w`; 
+only a single `static_json` and multiple `walk-path` arguments are supported
+- `-i<walk-path>`: insert-copies JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+multiple arguments allowed
+- `-pi<walk-path>`: insert-moves JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+multiple arguments allowed
+- `-ppi<walk-path>`: inserts JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`, 
+while purging all other (non-walked) elements from the JSON tree
+- `-ei <shell_cli> \;`: inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
+by `-w`; `shell_cli` is run for every successful destination walk (`-w`)
+- `-ei <shell_cli> \; -i<walk-path>`: inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
+by `-w`; `shell_cli` is run for every successful source `walk-path` walking input (source) JSON; multiple options with `walk-path`
+argument allowed
+- `u...`: update (rewrite) operations, all the same option modes and copbinations as for `-i` are applied
+- `-m`: modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
 
-##### 1. _Update JSON from other locations of the same JSON:_  
-`<file.json jtc -w<dst_wlk> -u<src_wlk>`  
-\- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` of the same file (JSON) 
-
-##### 2. _Update JSON with a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static_json>`  
-\- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `static_json` (a file, or a literal JSON)
-
-##### 3. _Update JSON from some locations of a static JSON (either from file, or a spelled literally):_
-`<file.json jtc -w<dst_wlk> -u<static_json> -u<src_wlk>`  
-\- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from `src_wlk` walked `static_json`
-
-##### 4. _Update JSON with the transformed JSON elements via shell cli:_
-`<file.json jtc -w<dst_wlk> -eu <cli> \;`  
-\- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluation of `cli`. `cli` here is subjected for
-interpolation from namespaces and/or JSON elements pointed by `dst_wlk` itself.
-
-##### 5. _Update JSON from some locations of the transformed JSON via shell cli:_
-`<file.json jtc -w<dst_wlk> -e -u <cli> \; -u<src_wlk>`  
-\- destination(s) (in `file.json` pointed by `dst_wlk`) is updated from shell-evaluated `cli`. `cli` here is subjected for 
-interpolation from namespaces and/or JSON elements pointed by `src_wlk` walking `file.json`.
-
-_NOTE: if destination walk (`-w`) is pointing to the root of JSON then it can be entirely dismissed (in any of the above
-examples) - root is always assumed_
 
 ## Comparing JSONs
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
