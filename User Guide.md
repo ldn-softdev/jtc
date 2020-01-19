@@ -2432,7 +2432,7 @@ There are 5 different flavors of insertion arguments (i.e., sources of insertion
 - `-i <static_json> ...`: a JSON being inserted is either read from a file or spelled literally, multiple of such insert options allowed 
 - `-i <static_json> -i<walk-path> ...`: here the `walk-path` actually walks `static_json` rather than the input (source) JSON; only one
 option with `static_json` argument is allowed (will be processed) while multiple options with `walk-path` may be given
-- `-i <walk-path>`: the argument `walk-path` walks the input (source) JSON, multiple allowed
+- `-i <walk-path> ...`: the argument `walk-path` walks the input (source) JSON, multiple allowed
 - `-ei <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` to be shell evaluated, 
 optionally containing interpolation tokens; tokens `{}`,`{{}}` will be referring to JSONs pointed by `-w` (destination) walk; the 
 returned value (predicated the evaluation was a success) has to be a valid JSON, otherwise it'll be promoted to a _JSON string_.
