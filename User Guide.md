@@ -2321,7 +2321,7 @@ bash $ cat file.json
 ]
 bash $ 
 ```
-In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored) - note to the altered
+In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored) - note the altered
 format of the file.
 
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
