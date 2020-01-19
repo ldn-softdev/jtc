@@ -60,7 +60,7 @@
    * [Summary of namespace tokens](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-namespace-tokens) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
-     * [Ensuring input read from `stdin`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin)
+     * [Ensuring input read from `stdin` (`-`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
@@ -80,7 +80,8 @@
    * [Summary of modification options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modification-options)
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
-6. [Processing multiple input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-multiple-input-jsons)
+6. [Processing input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-input-jsons)
+   * [Parse ill-formed JSONs with clashing labels (`-m`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#parse-ill-formed-JSONs-with-clashing-labels)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
@@ -2915,8 +2916,8 @@ argument allowed
 
 ## Comparing JSONs
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
-Let's compare `phone` records from the first and  the second entries of the address book:
-```
+Let's compare `phone` records from the first and the second entries of the address book:
+```bash
 bash $ <ab.json jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 "json_1": [
    {
@@ -2939,7 +2940,7 @@ bash $ <ab.json jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
 bash $
 ```
 When both JSONs are equal, an empty set is displayed and return code is 0.
-```
+```bash
 bash $ <<<'123' jtc -c'123' -l
 "json_1": {}
 "json_2": {}
@@ -2948,7 +2949,7 @@ bash $ echo $?
 bash $
 ```
 Otherwise (JSONs are different) a non-zero code is returned:
-```
+```bash
 bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr
 "json_1": [ 1, 2, 3 ]
 "json_2": [ 2, 3 ]
@@ -2965,8 +2966,8 @@ different contents (leaf data), while their structures could be the same (though
 validate types of the leaf data as well).
 
 E.g., if we add/insert a child into `Ivan`'s record, then the record would be different from the original:
-```
-bash $ <<<$(<ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"') jtc -w'<Ivan>[-1]' -c'ab.json' -c'<Ivan>[-1]' -l
+```bash
+bash $ <ab.json jtc -w'<Ivan>[-1][children]' -i'"Norma"' / -w'<Ivan>[-1]' -c ab.json -c'<Ivan>[-1]' -l
 "json_1": {
    "children": [
       "Norma"
@@ -2978,8 +2979,8 @@ bash $
 
 However, their schemas would be the same. To compare schemas of two JSONs (loosely, with applied exemption on checking leaves data types),
 label directive `<>k` used together with `<>c` search suffix come handy:
-```
-bash $ <<<$(<ab.json jtc -w'<Ivan>[-1] [children]' -i'"Norma"') jtc -w'<Ivan>[-1]<>c:<>k' -c'ab.json' -c'<Ivan>[-1]<>c:<>k' -l
+```bash
+bash $ <ab.json jtc -w'<Ivan>[-1][children]' -i'"Norma"' / -w'<Ivan>[-1]<>c:<>k' -c'ab.json' -c'<Ivan>[-1]<>c:<>k' -l
 "json_1": {}
 "json_2": {}
 "json_1": {}
@@ -2996,30 +2997,60 @@ bash $ echo $?
 0
 bash $
 ```
-
-NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
+> NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print a label of the root always results in the exception:_
+>```bash
+>bash $ <ab.json jtc -w'<>k'
+>jtc json exception: walk_root_has_no_label
+>bash $ 
+>```
+
+
+## Processing input JSONs
+
+### Parse ill-formed JSONs with clashing labels 
+_JSON objects_ by definition cannot have multiple clashing labels, otherwise it would render addressing by label impossible.
+`jtc` in such case by default parses and retains the first label only:
+```bash
+bash $ cat ill.json 
+{
+ "label": "first entry",
+ "label": "second entry"
+}
+bash $ 
+# parse ill-formend json:
+bash $ jtc ill.json 
+{
+   "label": "first entry"
+}
+bash $ 
 ```
-bash $ <ab.json jtc -w'<>k'
-jtc json exception: walk_root_has_no_label
+However, sometimes there's a requirement to parse in such ill-formed JSONs and retain all the values. Option `-mm` allows
+merging the values with clashing labels into a JSON array:
+```bash
+bash $ jtc -mm ill.json 
+{
+   "label": [
+      "first entry",
+      "second entry"
+   ]
+}
 bash $ 
 ```
 
 
-## Processing multiple input JSONs
-Normally `jtc` would process only a single input JSON. If multiple input JSONs given - the fist JSON will be processed and the 
+### Process all input JSONs
+Normally `jtc` would process only a _single_ input JSON. If multiple input JSONs given - the fist JSON will be processed and the 
 rest of the inputs will be silently ignored:
-```
+```bash
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -r
 [ "1st json" ]
 bash $ 
 ```
 Couple options allow altering the behavior and process all the input JSONs:
 
-
-### Process all input JSONs
-Option `-a` instructs to process all the input JSONS:
-```
+Option `-a` instructs to process each of the input JSONS:
+```bash
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 [ "1st json" ]
 { "2nd": "json" }
@@ -3027,34 +3058,32 @@ bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 bash $ 
 ```
 \- respected processing (of all given options) will occur for all of the input JSONs:
-```
+```bash
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "1st json"
 "json"
-notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
 "3rd json"
 bash $ 
 ```
 All the input JSONs will be processed as long they are valid - processing will stops upon parsing failure:
-```
+```bash
 bash $ <<<'[ "1st json" ] { "2nd": json" } "3rd json"' jtc -ad
+.display_opts(), option set[0]: -a -d (internally imposed: )
 .read_inputs(), reading json from <stdin>
 .write_json(), outputting json to <stdout>
 [
    "1st json"
 ]
-.parsejson(), exception locus: [ "1st json" ] { "2nd": j
+.location_(), exception locus: [ "1st json" ] { "2nd": j
 .location_(), exception spot: ------------------------>| (offset: 24)
-jtc json exception: expected_json_value
+jtc json parsing exception (<stdin>:24): expected_json_value
 bash $ 
 ```
 
 ### Wrap all processed JSONs
-option `-J` lets wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
-```
+option `-J` allows wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
+```bash
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -J -w'<json>R'
-notice: option -J cancels streaming input
-notice: input atomic JSON is non-iterable, ignoring all walk-paths (-w)
 [
    "1st json",
    "json",
@@ -3064,7 +3093,8 @@ bash $
 ```
 option `-J` also implicitly imposes `-j` thus it could be used safely even with a single JSON at the input with the same effect.  
 Though, when walking multiple input JSONs, each of the option would have its own effect, this example clarifies:
-```
+```bash
+# process and wrap each input JSON into an array:
 bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
 [
    "John",
@@ -3077,6 +3107,7 @@ bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
    "Jane"
 ]
 bash $ 
+# process all input JSONs and wrap them into an array:
 bash $ jtc -w'[0][:][name]' -J ab.json ab.json
 [
    "John",
@@ -3087,6 +3118,7 @@ bash $ jtc -w'[0][:][name]' -J ab.json ab.json
    "Jane"
 ]
 bash $ 
+# process and wrap each input JSON into an array and then wrap all the processed into a super array:
 bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 [
    [
@@ -3102,9 +3134,8 @@ bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 ]
 bash $ 
 ```
-
-_Note: `jtc` supports unlimited number of files that can be supplied as standalone arguments (after all options given). When 
-multiple input files are given, options `-a` is assumed_
+> _Note: `jtc` supports an unlimited number of files that can be supplied via standalone arguments (after all options given). 
+When multiple input files are given, options `-a` is assumed_ automatically.
 
 
 ### Buffered vs Streamed read
@@ -3112,44 +3143,53 @@ multiple input files are given, options `-a` is assumed_
 - _**buffered read**_
 - _**streamed read**_
 
-In the _buffered read_ mode (which is default), entire file (or `<stdin>`) input is read into memory and only then JSON parsing is
+In the _buffered read_ mode (which is default), the entire file (or `<stdin>`) input is read into memory and only then JSON parsing is
 attempted (with all subsequent due processing).  
-In the _streamed read_ mode JSON parsing begins immediately as the the first character is read (so, no memory wasted to hold input JSON).
+In the _streamed read_ mode JSON parsing begins immediately as the the first character is read (so, no memory wasted to hold input
+literal JSON).
 
 The _streamed read_ is activated when:
-- option `-a` given *AND* input source is `<stdin>`  
-- option `-J` overrides _streamed read_ (reverting to _buffered_): _streamed read_ might be endless, while option `-J` assumes a finite
-number of inputs to be processed and then displayed
+- option `-a` given **_AND_** input source is `<stdin>`  
+
+The option `-J` overrides _streamed read_ (reverting to _buffered_): the _streamed read_ might be endless, while option `-J`
+assumes a finite number of inputs to be processed and then displayed
 
 From the JSON result point of view there's no difference between _buffered_ and _streamed_ reads - the result will be 100% consistent
-across those types of reads. However, _streamed read_ finds its application when streamed data are there (typically would be
+across both types of reads. However, _streamed read_ finds its application when the streamed data are there (typically would be
 a network-based streaming)
 
 We can see the difference in the parsing when debugging `jtc`:
-\- in a _buffered read_ mode, the debug will show the _parsing point_ with data after:
-```
+\- in a _buffered read_ mode, the debug will show the _parsing point_ with the data following behind it:
+```bash
 bash $ <ab.json jtc -dddddd 
+.display_opts(), option set[0]: -d -d -d -d -d -d (internally imposed: )
 .read_inputs(), reading json from <stdin>
-......parse_(), parsing point ->{|  "Directory": [|    {|       "name": "John",|       "ag...
-......parse_(), parsing point ->"Directory": [|    {|       "name": "John",|       "age": ...
-......parse_(), parsing point ->[|    {|       "name": "John",|       "age": 25,|       "a...
-......parse_(), parsing point ->{|       "name": "John",|       "age": 25,|       "address...
+..ss_init_(), initializing: buffered_cin
+..ss_init_(), read file: <stdin> (1674 bytes)
+..run_decomposed(), pass for set[0]
+......parse_(), parsing point ->{|   "Directory": [|      {|         "address": {|        ...
+......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "...
+......parse_(), parsing point ->[|      {|         "address": {|            "city": "New Y...
+......parse_(), parsing point ->{|         "address": {|            "city": "New York",|  ...
 ...
 ```
 \- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
-```
+```bash
 bash $ <ab.json jtc -dddddd -a
+.display_opts(), option set[0]: -d -d -d -d -d -d -a (internally imposed: )
 .read_inputs(), reading json from <stdin>
-..ss_init_(), initializing: stream
+..ss_init_(), initializing: streamed_cin
+..run_decomposed(), pass for set[0]
 ......parse_(), {<- parsing point
-......parse_(), {|  "<- parsing point
-......parse_(), {|  "Directory": [<- parsing point
-......parse_(), {|  "Directory": [|    {<- parsing point
+......parse_(), {|   "<- parsing point
+......parse_(), {|   "Directory": [<- parsing point
+......parse_(), {|   "Directory": [|      {<- parsing point
+......parse_(), {|   "Directory": [|      {|         "<- parsing point
 ...
 ```
 
 Here's an example of how _streamed read_ works in `jtc`:
-```
+```bash
 |                       Screen 1                       |                       Screen 2                       |
 | ---------------------------------------------------- | ---------------------------------------------------- |
 | bash $ nc -lk localhost 3000 | jtc -ra               | bash $ <ab.json jtc -w'<address>l:' | nc localhost 3 |
