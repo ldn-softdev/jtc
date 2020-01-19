@@ -2411,46 +2411,38 @@ bash $ <ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s / -w'<phone>l:' -l
 }
 bash $
 ```
-_\- again, for tje brevity, only phone records are displayed_
+> _\- again, for tje brevity, only phone records are displayed_
 
 Finally, more than just one pair of walks (-w) could be swapped out. In fact, as many *pairs* of walks given will be swapped
 (predicated walks did not become invalid during prior walk pair swap operations)
 
 
 ### Insert operations
-when either of insert (`-i`) of update (`-u`) operation is carried, there could exist 2 types of walks:
- - one facilitating insert/update points, a.k.a destination walks
- - one facilitating points (elements) being inserted/updated, a.k.a. source walks 
+when either of insert (`-i`) of update (`-u`) operation is carried, there 2 types of walks exist:
+ - one facilitating insert/update points, a.k.a. _destination walks_ (always facilitated with `-w` options)
+ - one facilitating points (elements) being inserted/updated, a.k.a. _source walks_ (faciliated with respecitve `-i`, `-u` options)
 
-for insert (`-i`) operations, the destination points of insertion are given using `-w` option(s) while the argument under `-i`
-itself is the source of the insertion (multiple `-i` options could be given). The source of insertion must _always_ be
-a valid JSON.
+The _destination points_ of insertion are always given using `-w` option(s), while the argument under `-i` designates the source 
+of the insertion (multiple `-i` options could be given). The source of insertion must _always_ be a valid JSON.
 
 Insert operations never result in overwriting destination JSON elements (though the destination could be extended).
-There are 3 different flavors of insertion arguments:
-- `-i <file>` - JSON being inserted is read from the file
-- `-i <JSON>` - the argument itself a JSON string
-- `-i <walk-path>` - the argument is a walk-path in the input JSON
-all 3 flavors of of insert arguments could be mixed and used together (with some limitation, covered in 
-[use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) section)
-)  
-If option arguments types are **not** mixed, then for the first two cases (`<file>` and `<JSON>`) source of the operation are external
-to the input JSON. In the latter case (`<walk-path>`), both destination (`-w`) and source walk the same input JSON.
-
-
+There are 3 different flavors of insertion arguments (i.e., sources of insertion):
+- `-i <static_json>`: a JSON being inserted is either read from a file or spelled literraly
+- `-i <static_json> -i<walk-path>`: here the `walk-path` actualy walks `static_json` rather than the input (source) JSON
+- `-i <walk-path>` - the argument `walk-path` walks the input (source) JSON
 
 How does `jtc` know which argument is supplied? The disambiguation path is like this:
-1. initially a `<file>` argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
-2. `<JSON>` string is assumed and attempted to be parsed. If JSON parsing fails, then
-3. `<walk-path>` is assumed and parsed - if that fails too, a short exception message is displayed (`walk_expect_lexeme`)
+1. initially a `file` argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
+2. a literally spelled JSON is assumed and attempted to be parsed. If JSON parsing fails, then
+3. a `walk-path` is assumed and parsed - if that fails too, a short exception message is thrown (`walk_expect_lexeme`)
 
-_Attention is required when passing a `<walk-path>` type argument: some walk-paths look exactly like JSON, e.g:
+> _Attention is required when passing a `<walk-path>` type argument: some walk-paths look exactly like JSON, e.g:
 `[0]` - this is both a valid JSON array (made of a single numeric value `0`) and a valid walk-path (addressing the first element
 in an iterable), hence such argument will be treated as JSON.  
-To pass it as a walk-path, modify it to a range-type of walk, e.g.: `[0:1]` - that is still a valid walk-path (selecting only the
+> To pass it as a walk-path, modify it to a range-type of walk, e.g.: `[0:1]` - that is still a valid walk-path (selecting only the
 first element) but is invalid JSON.  
-Alternatively, add a trailing space at the end of the walk-lexeme: `[0] ` - then the argument will be treated as a walk-path (in 
-`-i`, `-u` arguments the `<JSON>` argument is expected to have no trailing white spaces)_
+> **Alternatively**, add a trailing space at the end of the walk-lexeme: `[0] ` - then the argument will be treated as a walk-path (in 
+options `-i`, `-u`, `-c` the JSON argument is expected to have no trailing white spaces or other characters)_
 
 
 #### Destination driven insertion
