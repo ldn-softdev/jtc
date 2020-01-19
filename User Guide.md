@@ -1095,6 +1095,7 @@ will be displaying resulted successful walks in an _interleaved_ manner, but fir
 #### Sequential walk processing
 option `-n` ensures that all given walk-paths (`-w`) will be processed (and printed) sequentially in the order they given:
 ```bash
+# dump names first and then phone numbers:
 bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n
 "John"
 "Ivan"
@@ -1106,6 +1107,7 @@ bash $ <ab.json jtc -w'<name>l:' -w'<number>l:' -n
 "358-303-0373"
 "333-638-0238"
 bash $
+# dump names first the phone numbers and then the names:
 bash $ <ab.json jtc -w'<number>l:' -w'<name>l:' -n
 "112-555-1234"
 "113-123-2368"
@@ -1718,7 +1720,7 @@ bash $ <<<$JSN jtc
    "type": "irrational"
 }
 bash $ 
-bash $ 
+# swap around values and labels:
 bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
 {
    "3.14": "pi",
@@ -2120,6 +2122,7 @@ Template-interpolation will be attempted only once source walk is successful
 Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
 altering the `phone` label at the same time via template):
 ```bash
+# dump phones of the 1st record in the Directory 
 bash $ <ab.json jtc -w'[0][0]<phone>l'
 [
    {
@@ -2131,6 +2134,8 @@ bash $ <ab.json jtc -w'[0][0]<phone>l'
       "type": "mobile"
    }
 ]
+bash $
+# transform phone records: append country-code and update labels at the same time
 bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<V>v' -T'{ "phone number": "+1 {V}" }' / -w'[0][0]<phone>l'
 [
    {
@@ -2293,15 +2298,11 @@ Once the modificatoin operation is complete, the entire resulting JSON is displa
 By default `jtc` expects the input from `stdin`. If the standalone argument(s) `args` is given then `jtc` will read input from the 
 file (ignoring `stdin`), see below:
 ```bash
+# show content of the file:
 bash $ cat file.json 
 [ "JSON", "in", "file" ]
 bash $ 
-bash $ <<<'[ "<stdin>", "JSON" ]' jtc
-[
-   "<stdin>",
-   "JSON"
-]
-bash $ 
+# both input sources present: stdin and file 
 bash $ <<<'[ "<stdin>", "JSON" ]' jtc file.json
 [
    "JSON",
@@ -2459,11 +2460,13 @@ The destination insertion point(s) (`-w`) controls how insertion is done:
 - if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single point location - then 
 _all_ the supplied sources are attempted to get inserted into a _single_ destination location:
 ```bash
+# list all children records
 bash $ <ab.json jtc -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": []
 "children": [ "Robert", "Lila" ]
 bash $
+# make couple insertions in a single destinaton record
 bash $ <ab.json jtc -w'[name]:<Ivan>[-1][children]' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": [ "Maggie", "Bruce" ]
@@ -2475,6 +2478,7 @@ bash $
 by one in a round-robin fashion (if source runs out of JSON elements, but destination has more room to iterate, then source
 is wrapped to the first element):
 ```bash
+# make insertion in a round-robin fashion
 bash $ <ab.json jtc -w'<children>l:' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia", "Maggie" ]
 "children": [ "Bruce" ]
@@ -2489,7 +2493,8 @@ while insertion into arrays is obvious (well, so far), insertion into objects re
 - in case of the clashing labels, by default, the destination is preserved while source of insertion is discarded
 
 To illustrate, let's insert a JSON structure: `{ "PO box": null, "street address": null }` into the last record's `address`:
-```
+```bash
+# dump the first address record in Directory  
 bash $ <ab.json jtc -w'[0][-1:][address]' -l
 "address": {
    "city": "Denver",
@@ -2498,6 +2503,7 @@ bash $ <ab.json jtc -w'[0][-1:][address]' -l
    "street address": "6213 E Colfax Ave"
 }
 bash $
+# insert custom entries into the first address record 
 bash $ <ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street address": null }' / -w'[0][-1:][address]' -l
 "address": {
    "PO box": null,
@@ -2582,217 +2588,116 @@ Here's the matrix table for update operations with and without merging:
     "a"      |        [3,4]        |     {"a":3,"c":4}     |         {"a":3}       |      3
 ```
 - when updating without `-m`, the operation is straightforward - a source overwrites the destination
-- when objects merge-updated, for clashing labels, a source does overwrite the destination (unlike with insertion)
+- when objects are merge-updated, for clashing labels the source does overwrite the destination (unlike with insertion)
 
 
 #### Updating labels
-A directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
+The directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
 
-Another function featured by the lexeme is that the label is reinterpreted as a _JSON string_ value, that allows rewriting labels
-using update operation (insert into labels is not possible even semantically). however, that only applies if `<>k` lexeme is the
-last lexeme in the walk-path and if it's empty.
+Another function featured by the lexeme is that the label could be is reinterpreted as a _JSON string_ value, that allows rewriting
+labels using update operation (insert into labels is not possible even semantically). However, that only applies if `<>k` lexeme 
+is the last lexeme in the walk-path and if the lexeme is empty.
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
-```
-bash $ <<<$(<ab.json jtc -w'<address>l:[:]<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \;) jtc -w'<address>l:' -rl
+```bash
+bash $ <ab.json jtc -w'<address>l:[:]<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \; / -w'<address>l:' -rl
 "address": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" }
 "address": { "CITY": "Seattle", "POSTAL CODE": 98104, "STATE": "WA", "STREET ADDRESS": "5423 Madison St" }
 "address": { "CITY": "Denver", "POSTAL CODE": 80206, "STATE": "CO", "STREET ADDRESS": "6213 E Colfax Ave" }
 bash $ 
 ```
 
-NOTE: _mind the caveat - destination walk-path may become invalid (namely, when altering labels of the nested elements after
-the parent's label has been altered), in such case the update operation won't be applied due to invalidated destination_:
-```
-bash $ <ab.json jtc -x[Directory][0][address] -y'<>k' -y'[:]<>k'
+The Destination walk-path will not become invalid after the parent's label has been altered, thus allowing altering labels even 
+of the nested elements in the same recursive update: 
+```bash
+# list all the labels of the John's record
+bash $ <ab.json jtc -w'[name]:<John>[-1]<.*>L:<>k'
 "address"
 "city"
 "postal code"
 "state"
 "street address"
+"age"
+"children"
+"name"
+"phone"
+"number"
+"type"
+"number"
+"type"
+"spouse"
 bash $ 
-bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'<>k' -y'[:]<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \;) jtc -w'[Directory][0]'
-error: destination walk became invalid, skipping update
-error: destination walk became invalid, skipping update
-error: destination walk became invalid, skipping update
-error: destination walk became invalid, skipping update
+# capitalize all the labels in it:
+bash $ <ab.json jtc -w'<John>[-1]<.*>L:<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \; / -w'<John>[-1]' -tc
 {
-   "ADDRESS": {
-      "city": "New York",
-      "postal code": 10012,
-      "state": "NY",
-      "street address": "599 Lafayette St"
-   },
-   "age": 25,
-   "children": [
-      "Olivia"
+   "ADDRESS": { "CITY": "New York", "POSTAL CODE": 10012, "STATE": "NY", "STREET ADDRESS": "599 Lafayette St" },
+   "AGE": 25,
+   "CHILDREN": [ "Olivia" ],
+   "NAME": "John",
+   "PHONE": [
+      { "NUMBER": "112-555-1234", "TYPE": "mobile" },
+      { "NUMBER": "113-123-2368", "TYPE": "mobile" }
    ],
-   "name": "John",
-   "phone": [
-      {
-         "number": "112-555-1234",
-         "type": "mobile"
-      },
-      {
-         "number": "113-123-2368",
-         "type": "mobile"
-      }
-   ],
-   "spouse": "Martha"
+   "SPOUSE": "Martha"
 }
 bash $ 
 ```
-
-to achieve what's intended, first the most inner labels have to be walked/processed and then the outers:
-```
-bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'[:]<>k' -y'<>k' -eu '<<<{{}}' tr '[:lower:]' '[:upper:]' \;) jtc -w'[Directory][0]'
-{
-   "ADDRESS": {
-      "CITY": "New York",
-      "POSTAL CODE": 10012,
-      "STATE": "NY",
-      "STREET ADDRESS": "599 Lafayette St"
-   },
-   "age": 25,
-   "children": [
-      "Olivia"
-   ],
-   "name": "John",
-   "phone": [
-      {
-         "number": "112-555-1234",
-         "type": "mobile"
-      },
-      {
-         "number": "113-123-2368",
-         "type": "mobile"
-      }
-   ],
-   "spouse": "Martha"
-}
-bash $ 
-```
-
-**The above caveat is applicable only when label is being updated using _cli evaluation_.**
-When labels updated without _cli evaluation_ then recursive update is not a problem:
-```
-bash $ <<<$(<ab.json jtc -x[Directory][0][address] -y'<L>k<>k' -y'[:]<L>k<>k' -u0 -T'"NEW-{L}"') jtc -w'[Directory][0]'
-{
-   "NEW-address": {
-      "NEW-city": "New York",
-      "NEW-postal code": 10012,
-      "NEW-state": "NY",
-      "NEW-street address": "599 Lafayette St"
-   },
-   "age": 25,
-   "children": [
-      "Olivia"
-   ],
-   "name": "John",
-   "phone": [
-      {
-         "number": "112-555-1234",
-         "type": "mobile"
-      },
-      {
-         "number": "113-123-2368",
-         "type": "mobile"
-      }
-   ],
-   "spouse": "Martha"
-}
-bash $ 
-```
-\- double lexeme notation `<L>k<>k` is required because `<L>k` will only memorize the label in the namespace `L` but will not trigger
-label re-interpretation like a value, while second lexeme (`<>k`) - does.
-
 
 
 ### Insert, Update with move semantic 
 if a source argument for either `-i` or `-u` is given in the form of `<file>` or `<JSON>`, then those obviously cannot be moved.
-The move semantic is only applicable when the argument is given only in the form of a `<walk-path>`, then upon completing
-the operation, the source elements (referred by the source walk-path) become possible to remove (purge).
-This is achievable by specifying option `-p`.
+The move semantic is only applicable when the argument is given only in the form of a `<walk-path>` (i.e. it refers to the 
+input/source JSON), then upon completing the operation, the source elements (referred by the source walk-path) becomes possible
+to remove (purge). This is achievable by adding the option `-p`.
 
 Let's move `address` from the last `Directory` record into the first one:
-```
-bash $ <ab.json jtc -w'[Directory][0][address]' -u'[Directory][-1:][address]' -p
+```bash
+bash $ <ab.json jtc -w'[Directory][0][address]' -u'[Directory][-1:][address]' -p -tc
 {
    "Directory": [
       {
-         "address": {
-            "city": "Denver",
-            "postal code": 80206,
-            "state": "CO",
-            "street address": "6213 E Colfax Ave"
-         },
+         "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
          "age": 25,
-         "children": [
-            "Olivia"
-         ],
+         "children": [ "Olivia" ],
          "name": "John",
          "phone": [
-            {
-               "number": "112-555-1234",
-               "type": "mobile"
-            },
-            {
-               "number": "113-123-2368",
-               "type": "mobile"
-            }
+            { "number": "112-555-1234", "type": "mobile" },
+            { "number": "113-123-2368", "type": "mobile" }
          ],
          "spouse": "Martha"
       },
       {
-         "address": {
-            "city": "Seattle",
-            "postal code": 98104,
-            "state": "WA",
-            "street address": "5423 Madison St"
-         },
+         "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
          "age": 31,
          "children": [],
          "name": "Ivan",
          "phone": [
-            {
-               "number": "273-923-6483",
-               "type": "home"
-            },
-            {
-               "number": "223-283-0372",
-               "type": "mobile"
-            }
+            { "number": "273-923-6483", "type": "home" },
+            { "number": "223-283-0372", "type": "mobile" }
          ],
          "spouse": null
       },
       {
          "age": 25,
-         "children": [
-            "Robert",
-            "Lila"
-         ],
+         "children": [ "Robert", "Lila" ],
          "name": "Jane",
          "phone": [
-            {
-               "number": "358-303-0373",
-               "type": "office"
-            },
-            {
-               "number": "333-638-0238",
-               "type": "home"
-            }
+            { "number": "358-303-0373", "type": "office" },
+            { "number": "333-638-0238", "type": "home" }
          ],
          "spouse": "Chuck"
       }
    ]
 }
-bash $
+bash $ 
+
 ```
-\- That leaves `Jane` without an address, while `John` "moves" into `Jane`'s place!
+\- That leaves `Jane` "homeless", while `John` "moves" into `Jane`'s place!
 
 
 ### Insert, Update: argument shell evaluation
-An argument for _insert_ and _update_ operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by preceding `-e`). 
+An argument for _insert_ and _update_ operations (`-i`, `-u`) optionally may undergo a shell evaluation (predicated by preceding 
+option `-e`).  
 E.g., let's capitalize all the `name` entries in the address book:
 ```
 bash $ <ab.json jtc -w'<name>l:' 
