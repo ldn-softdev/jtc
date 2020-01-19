@@ -85,7 +85,8 @@
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
-7. [More Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+   * [Chaining option sets (`/`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
+8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
      * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
@@ -3221,7 +3222,42 @@ the input JSONs. It will stop once `<stdin>` is closed, but `netcat` is run usin
 In the `Screen 2`, `jtc` sends to `netcat` a few walks (JSONs), which `netcat` relays to its counterpart in the `Screen1`.
 
 
-## More Examples
+### Chaining option sets
+Like it was mentioned before, `jtc` performs one major operation at a time: _standalone walking_, _insertion_, _update_, _purging_, 
+_swapping_, _comparison_. There's a number of supplementary operations that might complement the major operations like: wrapping results 
+into JSON arays and objects, toggling various viewing and parsing modes, etc.
+
+If multiple major operations are required, one way to achieve it would be piping output of the prior operation into the input of the 
+next one, e.g:  
+- `jtc <insert...> | jtc <swap...> | etc`  
+
+However, such approach is quite suboptimal - with every piping operation a serialization (outputting) and deserialization (parsing)
+of JSON occurs and those are quite expensive (CPU cycles-wise) operations.
+
+`jtc` permits chaining multiple operations using solidus separator `/`. The above example could be collapsed into this:  
+- `jtc <insert...> / <swap...> / etc`  
+
+without any affect to the result. The sets of all options in between separators are known as _options sets_.
+
+The advantage of such approach is huge: processed JSONs now are passed from one option set to the next one in a compiled binary
+form (no CPU cycles wasted on printing / parsing). Another additional benefit is that the _namespace_ now is shared across all 
+_options sets_.
+
+There's a few options (mostly viewing and parsing) which are non-transient and may occur only in the first or in the last _option set_:
+- `-r`: compact printing - may occur only in the last option set
+- `-rr`: stringifyng output JSON - may occur only in the last option set; if such operation is required in the interrim operation -
+use template stringification instead
+- `-t`: output indentation - may occur only in the last option set
+- `-q`: parse input with a strict soludis quoting - may occur only in the initial option set
+- `-qq`: unqoting _JSON strings_, jsonizing stringified JSONs - may occur only in the last option set; if such operation is required
+in the interrim operation - use template jsonizing instead
+- `-z`: additionally printing size for the each walked JSON - may occur only in the last option set
+- `-zz`: printing size instead of JSON - may occur only in the last option set
+- `-f`: forcing (redirecting) outputs into a file  - may occur only in the last option set
+- `-`: ensuring input is read from `stdin` - may occur in any of the option sets, but affects only first one (where parsing occurs)
+
+
+## Some Examples
 ### Generating CSV from JSON
 `CSV` stands for _comma separated values_, thus to convert a JSON into a `csv` file, it's required dumping all relevant JSON walks
 line by line, while separating JSON values either with `,` or with `;` (`csv` format admits both)
