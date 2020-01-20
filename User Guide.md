@@ -86,7 +86,7 @@
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
    * [Chaining option sets (`/`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
-8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples)
+8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#some-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
      * [Remove duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#remove-duplicates)
@@ -94,6 +94,7 @@
      * [Leave only those which have no duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-only-those-which-have-no-duplicates)
      * [Leave all duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-all-duplicates)
    * [Counting with `jtc`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#counting-with-jtc)
+   * [Transposing a matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#transposing-a-matrix)
 
 ---
 
@@ -3260,97 +3261,46 @@ in the interrim operation - use template jsonizing instead
 ## Some Examples
 ### Generating CSV from JSON
 `CSV` stands for _comma separated values_, thus to convert a JSON into a `csv` file, it's required dumping all relevant JSON walks
-line by line, while separating JSON values either with `,` or with `;` (`csv` format admits both)
+line by line, while separating JSON values either with `,` or with `;` (`CSV` format admits both)
 
 There are couple tricks required to do so, but not difficult ones, so, let's walk it.
 
 Say, we want to dump into `csv` format following data from the `ab.json`:  
 `name, city, postal code, state, street address`
 
-1. First let's just dump all those entries:
-```
-bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:]
-"John"
-"New York"
-10012
-"NY"
-"599 Lafayette St"
-"Ivan"
-"Seattle"
-98104
-"WA"
-"5423 Madison St"
-"Jane"
-"Denver"
-80206
-"CO"
-"6213 E Colfax Ave"
+1. First let's build a walk going over all the names (memorizing them) and all the addresses:
+```bash
+bash $ <ab.json jtc -rw'<name>l:<N>v[-1][address]'
+{ "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }
+{ "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }
+{ "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }
 bash $ 
 ```
 \- not that difficult
 
-2. then we need to reconcile all the walks into lines, here `$?` auto-namespace comes handy:
-```
-bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -T'"{$?}, {}"'
-"John"
-"John, New York"
-"John, New York, 10012"
-"John, New York, 10012, NY"
-"John, New York, 10012, NY, 599 Lafayette St"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206, CO"
-"John, New York, 10012, NY, 599 Lafayette St, Ivan, Seattle, 98104, WA, 5423 Madison St, Jane, Denver, 80206, CO, 6213 E Colfax Ave"
+2. Now, using template it's possible to arrange all the data in the required format:
+```bash
+bash $ <ab.json jtc -rw'<name>l:<N>v[-1][address]' -qqT'"{N}, {$a}, {$b}, {$c}, {$d}"'
+John, New York, 10012, NY, 599 Lafayette St
+Ivan, Seattle, 98104, WA, 5423 Madison St
+Jane, Denver, 80206, CO, 6213 E Colfax Ave
 bash $ 
 ```
-\- hmmm, but we need such line one per record and not like above
 
-3. To ensure that we reconcile only each record (and not all of them), let's add one more walk which will fail interpolation of `$?`
-in the template (that will reset the value of `$?` back to `""`)
-```
-bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"'
-"John"
-"John, New York"
-"John, New York, 10012"
-"John, New York, 10012, NY"
-"John, New York, 10012, NY, 599 Lafayette St"
-{ "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }
-"Ivan"
-"Ivan, Seattle"
-"Ivan, Seattle, 98104"
-"Ivan, Seattle, 98104, WA"
-"Ivan, Seattle, 98104, WA, 5423 Madison St"
-{ "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }
-"Jane"
-"Jane, Denver"
-"Jane, Denver, 80206"
-"Jane, Denver, 80206, CO"
-"Jane, Denver, 80206, CO, 6213 E Colfax Ave"
-{ "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" }
+If the header is required it could be added either using unix `echo` command:
+```bash
+bash $ echo -e "name, city, postal code, state, street address\n$(<ab.json jtc -rw'<name>l:<N>v[-1][address]' -qqT'"{N}, {$a}, {$b}, {$c}, {$d}"')"
+name, city, postal code, state, street address
+John, New York, 10012, NY, 599 Lafayette St
+Ivan, Seattle, 98104, WA, 5423 Madison St
+Jane, Denver, 80206, CO, 6213 E Colfax Ave
 bash $ 
 ```
-\- that's better, now every 5th walk out of every 6 is what we need.
 
-4. Display only required walks:
-```
-bash $ <ab.json jtc -rx[0][:] -y[name] -y[address][:] -y' ' -T'"{$?}, {}"' -x6/4
-"John, New York, 10012, NY, 599 Lafayette St"
-"Ivan, Seattle, 98104, WA, 5423 Madison St"
-"Jane, Denver, 80206, CO, 6213 E Colfax Ave"
-bash $ 
-```
-\- that is our required `CSV` format! Well, almost - every line is still a JSON string, but we can undress it with `-qq` option
-
-5. just a sugar topping: let's add a header line, which could be done using `echo` unix cli:
-```
-bash $ echo -e "name, city, postal, street\n$(<ab.json jtc -x[0][:] -y[name] -y'[address][:]' -y' ' -T'"{$?}, {}"' -x6/4 -qq)"
-name, city, postal, street
+Another way to add a header is to use additional template with `jtc`: 
+```bash
+bash $ <ab.json jtc -qqrnw' ' -T'"name, city, postal code, state, street address"' -w'<name>l:<N>v[-1][address]' -T'"{N}, {$a}, {$b}, {$c}, {$d}"'
+name, city, postal code, state, street address
 John, New York, 10012, NY, 599 Lafayette St
 Ivan, Seattle, 98104, WA, 5423 Madison St
 Jane, Denver, 80206, CO, 6213 E Colfax Ave
@@ -3360,9 +3310,10 @@ DONE.
 
 
 ### Taming duplicates
-Quite very common tasks (and requests) for JSON is to process duplicates. Say, we deal with the following JSON:
-```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc 
+Quite a very common query for JSON is to process duplicates. Say, we deal with the following JSON:
+```bash
+bash $ JSN='[ "string", true, null, 3.14, "string", null ]'
+bash $ <<<$JSN jtc
 [
    "string",
    true,
@@ -3375,8 +3326,8 @@ bash $
 ```
 So, let's
 #### Remove duplicates
-```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:' -p
+```bash
+bash $ <<<$JSN jtc -w'<>Q:' -p
 [
    "string",
    true,
@@ -3388,10 +3339,23 @@ bash $
 Because switch `-p` is given, all the duplicate elements will be purged, thus leaving the list only with non-duplicate (unique) 
 elements
 
-But there's a reverse action:
-#### Remove all but duplicates
+If the JSON structure is as simple as shown, then the same could be achieved differently: walk only unique elements and jsonize 
+the output:
+```bash
+bash $ <<<$JSN jtc -w'><q:' -j
+[
+   "string",
+   true,
+   null,
+   3.14
+]
+bash $ 
 ```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:' -pp
+
+But there's a reverse action:
+#### Remove all the elements but the ones which have duplicates
+```bash
+bash $ <<<$JSN jtc -w'<>Q:' -pp
 [
    "string",
    null
@@ -3400,10 +3364,20 @@ bash $
 ```
 That one is obvious - we just reversed the prior example.
 
+Another way to achieve the same:
+```bash
+bash $ <<<$JSN jtc -w'><q:' -p
+[
+   "string",
+   null
+]
+bash $ 
+```
+
 How about:
 #### Leave only those which have no duplicates
-```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<.>s:' -p 
+```bash
+bash $ <<<$JSN jtc -w'<Dup>Q:[^0]<Dup>s:' -p
 [
    true,
    3.14
@@ -3411,15 +3385,15 @@ bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<
 bash $ 
 ```
 it's just a tiny bit more complex:
-- `<.>Q:` - for each duplicate element, we'll memorize it into `.` namespace, then
-- `[^0]<.>s:` reset the search path back to the root and now find all the elements (i.e., all duplicates).
+- `<Dup>Q:` - for each duplicate element, we'll memorize it into `Dup` namespace, then
+- `[^0]<Dup>s:` reset the search path back to the root and now find all the elements (i.e., all duplicates).
 
 that way all duplicates (and their origins) will be removed, leaving the array only with those which have no duplicates.
 
 and finally
 #### Leave all duplicates
-```
-bash $ echo '[ "string", true, null, 3.14, "string", null ]' | jtc -w'<.>Q:[^0]<.>s:' -pp
+```bash
+bash $ <<<$JSN jtc -w'<Dup>Q:[^0]<Dup>s:' -pp
 [
    "string",
    null,
@@ -3430,31 +3404,27 @@ bash $
 ```
 it's just a reverse action.
 
-**CAUTION:** _be aware that directives `<..>q`, `<..>Q` are dynamic types, which means they are exempted for cacheing,
-implying that on very big JSONs an **exponential decay** will become noticeable. Plus, both directives are quite memory hungry._  
-Thus use them cautiously when dealing with big JSONs (around or above hundreds of thousand of nodes - subjected to a spec of your machine)
-
 
 ### Counting with `jtc`
 Counting any number of properties is JSON could be done using exteral `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
-```
+```bash
 bash $ <ab.json jtc -w'<number>l:' | wc -l
        6
 bash $ 
 ```
 
-The same is possible to achieve using only `jtc` capability - using `<..>I` lexeme:
-```
+However, the same is possible to achieve using `jtc` capability - with `<..>I` lexeme:
+```bash
 bash $ <ab.json jtc -w'<number>l:<cnt>I1' -T{cnt} -x/-1
 6
 bash $ 
 ```
 - `<cnt>I1` will arrange a namespace var `cnt` counting values starting from `0` with increment of `1` upon each walk pass (iteration)
 - `-T{cnt}` will interpolate it
-- `-x/-1` will display on the last walk
+- `-x/-1` will display the last walk only
 
-Say, now we want to count the same phone numbers, but for some reason starting from `100`:
-```
+Say, now we want to count the same phone numbers, but for some reason starting from the offset `100`:
+```bash
 bash $ <ab.json jtc -w'<cnt:100>f[]<>F<number>l:<cnt>I1' -T{cnt} -x/-1
 106
 bash $ 
@@ -3465,14 +3435,89 @@ continue walking past `<>F` lexeme - that will ensure that initial offset of the
 
 
 Finally, let's count home numbers and mobile numbers separately:
-```
-bash $ <ab.json jtc -x'<phone>l:' -y'<home>:<hn>I1'  -y'<mobile>:<mn>I1' -T'{"total home numbers": {hn}, "total mobile numbers": {mn}}' -x/-1
+```bash
+bash $ <ab.json jtc -x'<phone>l:' -y'<home>:<hn>I1' -y'<mobile>:<mn>I1' -T'{"total home numbers":{hn},"total mobile numbers":{mn}}' -x/-1
 {
    "total home numbers": 2,
    "total mobile numbers": 3
 }
 bash $ 
 ```
+
+
+### Transposing a matrix
+Say, we have a matrix to transpose:
+```bash
+bash $ MTX='[[0,1,2,3,4],["a","b","c","d","e"],[null,true,2,"3",[4]]]'
+bash $ <<<$MTX jtc -tc
+[
+   [ 0, 1, 2, 3, 4 ],
+   [ "a", "b", "c", "d", "e" ],
+   [
+      null,
+      true,
+      2,
+      "3",
+      [ 4 ]
+   ]
+]
+bash $ 
+```
+
+We can arrange walking through each slice using incremental index from the 1st one:
+```bash
+bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -jr
+[ 0, "a", null, 1, "b", true, 2, "c", 2, 3, "d", "3", 4, "e", [ 4 ] ]
+bash $ 
+```
+
+However, we need to re-arrange such output per each new, transposed matrix with number of columns <-> rows.
+That could be facilitated we we label each value with the row index:
+```bash
+bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -r
+{ "0": 0 }
+{ "0": "a" }
+{ "0": null }
+{ "1": 1 }
+{ "1": "b" }
+{ "1": true }
+{ "2": 2 }
+{ "2": "c" }
+{ "2": 2 }
+{ "3": 3 }
+{ "3": "d" }
+{ "3": "3" }
+{ "4": 4 }
+{ "4": "e" }
+{ "4": [ 4 ] }
+bash $ 
+```
+
+The last step is to reach out for labels inside each object (`-ll`) and then regroup the output per each new group:
+```bash
+bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -ll / -jw[:] -tc
+[
+   [ 0, "a", null ],
+   [ 1, "b", true ],
+   [ 2, "c", 2 ],
+   [ 3, "d", "3" ],
+   [
+      4,
+      "e",
+      [ 4 ]
+   ]
+]
+bash $ 
+```
+DONE.
+
+
+
+
+
+
+
+
 
 
 
