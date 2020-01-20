@@ -281,7 +281,7 @@ void Signal::demangle_(const char *bt, size_t n) {
   for(size_t i = 0; i < offset; ++i) {                          // extract all symbolic parts
    auto next_prt = strchr(prtptr, ' ');                         // skip to end of part
    if(next_prt == nullptr) break;                               // unexpected
-   std::string part(prtptr, next_prt);
+   std::string part(prtptr, next_prt - prtptr);
 
    while(*next_prt == ' ') ++next_prt;                          // find a a next part
    if(next_prt == nullptr) break;                               // unexpected

@@ -126,7 +126,7 @@ class Streamstr {
 
     Strmod              mod_;
     std::string         buf_;
-std::deque<std::string> fn_;                                    // source file names container                        ;
+std::deque<std::string> fn_;                                    // source file names container
     std::string         cf_;                                    // file being read;
     size_t              cnt_{0};                                // offset from beginning of stream
 
