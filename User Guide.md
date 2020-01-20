@@ -1,4 +1,4 @@
-# User Guide: [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75c, being updated_)
+# User Guide: [`jtc`](https://github.com/ldn-softdev/jtc). Examples and Use-cases (_v.1.75d_)
 
 1. [Displaying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-json)
    * [Pretty printing (`-t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#pretty-printing)
@@ -307,15 +307,15 @@ In that particular failure instance, `jtc` found the end of a line, while _JSON 
 permit multi-line strings). To fix that, the missing quotation mark to be added
 
 ### Forcing strict solidus parsing
-JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. solidus notation - it admits
+JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. parsing solidus notation - it admits
 both unescaped and escaped appearances:
 ```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc
 {
-   "escaped": "\/",
+   "escaped": "/",
    "unescaped": "/"
 }
-bash $
+bash $ 
 ```
 If there's a need for a strict solidus parsing, option `-q` facilitates the need. It also will throw an exception upon facing
 a non-escaped notation:
@@ -1845,6 +1845,7 @@ Beside user provided names, `jtc` features a number of internally generated/supp
   - `$PATH` - an auto generated token, used in templates when requires to interpolate a path (set of indices/labels)
   to the walked point as a JSON array
   - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
+  - `$file` - a namespace, holding currently processed filename (if one given, otherwise empty)
   - `$_` - a namespace, holding a string value that is used when the elements during `{$path}` interpolation are getting concatenated 
   (default value `"_"`) 
   - `$#` - a namespace, holding a string value that is used as a separator when a _JSON array_ or _object_ is getting
@@ -1907,6 +1908,12 @@ _to play safe with the templates, always surround them with single quotes (to do
 here's an example how to join path tokens using a custom separator:
 ```bash
 bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
+Directory       0       address state
+bash $ 
+```
+Equally, the same could be achived with the `$PATH` token:
+```bash
+bash $ <ab.json jtc -w'<$#:\t>v<NY>' -qqT'"{$PATH}"'
 Directory       0       address state
 bash $ 
 ```
@@ -3022,7 +3029,7 @@ bash $ cat ill.json
 }
 bash $ 
 # parse ill-formend json:
-bash $ jtc ill.json 
+bash $ <ill.json jtc 
 {
    "label": "first entry"
 }
@@ -3031,7 +3038,7 @@ bash $
 However, sometimes there's a requirement to parse in such ill-formed JSONs and retain all the values. Option `-mm` allows
 merging the values with clashing labels into a JSON array:
 ```bash
-bash $ jtc -mm ill.json 
+bash $ <ill.json jtc -mm
 {
    "label": [
       "first entry",
