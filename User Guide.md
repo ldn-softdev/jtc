@@ -81,7 +81,7 @@
 5. [Comparing JSONs (`-c`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-jsons)
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 6. [Processing input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-input-jsons)
-   * [Parse ill-formed JSONs with clashing labels (`-m`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#parse-ill-formed-JSONs-with-clashing-labels)
+   * [Parse ill-formed JSONs with clashing labels (`-mm`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#parse-ill-formed-JSONs-with-clashing-labels)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
