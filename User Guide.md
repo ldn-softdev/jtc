@@ -3301,7 +3301,8 @@ bash $
 
 If the header is required it could be added either using unix `echo` command:
 ```bash
-bash $ echo -e "name, city, postal code, state, street address\n$(<ab.json jtc -rw'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"')"
+bash $ hdr='name, city, postal code, state, street address'
+bash $ echo -e "$hdr\n$(<ab.json jtc -rw'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"')"
 name, city, postal code, state, street address
 John, New York, 10012, NY, 599 Lafayette St
 Ivan, Seattle, 98104, WA, 5423 Madison St
@@ -3311,7 +3312,7 @@ bash $
 
 Another way to add a header is to use additional template with `jtc`: 
 ```bash
-bash $ <ab.json jtc -nqqw' ' -T'"name, city, postal code, state, street address"' -w'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"'
+bash $ <ab.json jtc -nqqw' ' -T"\"$hdr\"" -w'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"'
 name, city, postal code, state, street address
 John, New York, 10012, NY, 599 Lafayette St
 Ivan, Seattle, 98104, WA, 5423 Madison St
