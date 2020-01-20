@@ -95,6 +95,7 @@
      * [Leave all duplicates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#leave-all-duplicates)
    * [Counting with `jtc`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#counting-with-jtc)
    * [Transposing a matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#transposing-a-matrix)
+   * [Sorting JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sorting-jsons)
 
 ---
 
@@ -3512,6 +3513,72 @@ bash $
 DONE.
 
 
+### Sorting JSONs
+Search Lexemes `<>g`, `<>G` allow walk and thus sort entries in an ascending or descending order respectively. Let's sort
+entries in the Directory of `ab.json` by `city` in the ascending order.
+
+First, let's walk `city`es in the ascending order:
+```bash
+bash $ <ab.json jtc -w'[city]:<>g:'
+"Denver"
+"New York"
+"Seattle"
+bash $ 
+```
+
+Sorting is achieved with the insert-move operations of the entries in the sorted order:
+```bash
+bash $ <ab.json jtc -w'[Directory]' -pi'[city]:<>g:[-2]' -tc
+{
+   "Directory": [
+      {
+         "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" },
+         "age": 25,
+         "children": [ "Robert", "Lila" ],
+         "name": "Jane",
+         "phone": [
+            { "number": "358-303-0373", "type": "office" },
+            { "number": "333-638-0238", "type": "home" }
+         ],
+         "spouse": "Chuck"
+      },
+      {
+         "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" },
+         "age": 25,
+         "children": [ "Olivia" ],
+         "name": "John",
+         "phone": [
+            { "number": "112-555-1234", "type": "mobile" },
+            { "number": "113-123-2368", "type": "mobile" }
+         ],
+         "spouse": "Martha"
+      },
+      {
+         "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" },
+         "age": 31,
+         "children": [],
+         "name": "Ivan",
+         "phone": [
+            { "number": "273-923-6483", "type": "home" },
+            { "number": "223-283-0372", "type": "mobile" }
+         ],
+         "spouse": null
+      }
+   ]
+}
+bash $ 
+```
+
+When walking lexemes `<>g`, `<>G` the sorting order occurs for JSONs using the following priority resolution order:  
+_null JSON_ < _boolean JSON_ < _numerical JSON_ < _string JSON_ < _JSON array_ < _JSON object_  
+E.g.: an empty _JSON object_ `{}` wins (has a better weight) over any array of any size, and so on.
+
+When comparing the same iterable types (comparing atomic values is trivial) the following priority resolution order is applied:
+- an iterable of the bigger size wins, otherwise (sizes are the same):
+- deeper JSON wins over the shallower one, otherwise (both have the same nestedness):
+- compared values child-by-child defines a winner, otherwise (all children values are the same):
+- if it's an object then the labels are compared, otherwise (if it's an array, or all the labels are the same):
+- JSON values are equal
 
 
 
