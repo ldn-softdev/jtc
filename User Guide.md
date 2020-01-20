@@ -3471,8 +3471,8 @@ bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -jr
 bash $ 
 ```
 
-However, we need to re-arrange such output per each new, transposed matrix with number of columns <-> rows.
-That could be facilitated we we label each value with the row index:
+However, we need to re-arrange such output per each new, transposed matrix with number of columns `<->` rows.
+That could be facilitated if we label each value with the row index:
 ```bash
 bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -r
 { "0": 0 }
