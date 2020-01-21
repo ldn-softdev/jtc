@@ -10,6 +10,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc#linux-and-macos-precompiled-binaries-are-available-for-download)
     * [Installing via MacPorts](https://github.com/ldn-softdev/jtc#installing-via-macports)
+    * [Installation on Linux distributions](https://github.com/ldn-softdev/jtc#installation-on-linux-distributions)
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
     * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
 
@@ -73,6 +74,28 @@ On MacOS, you can install `jtc` via the [MacPorts](https://macports.org) package
 $ sudo port selfupdate
 $ sudo port install jtc
 ```
+
+### Installation on Linux distributions
+
+`jtc` is packaged in the following Linux distributions and can be installed via the package manager.
+
+#### Fedora
+
+`jtc` is present in Fedora 31 and later:
+
+``` ShellSession
+$ dnf install jtc
+```
+
+#### openSUSE
+
+`jtc` can be installed on openSUSE Tumbleweed via `zypper`:
+
+``` ShellSession
+$ zypper in jtc
+```
+
+or on Leap 15.0 and later by adding the (utilities)[https://build.opensuse.org/project/show/utilities] repository and installing `jtc` via zypper.
 
 
 ### Compile and install instructions:
