@@ -878,7 +878,7 @@ Those
 [non-recursive searches](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-recursive-search)
 will uniquely match label or index. Indeed, in a plain _JSON array_ or an _object_ it's possible
 to address only one **single** label or index, there could not be any other, e.g., in this JSON:
-```
+```bash
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -r
 { "a": 1, "b": 2, "c": 3, "d": 4, "e": 6 }
 bash $ 
@@ -889,7 +889,7 @@ make much of a sense: `<<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2'
 Thus, the semantic of quantifiers only in those searches was enhanced (to extend use cases) - there, the quantifiers provide a
 _relative offset_ from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
 then its second (successive) neighbor value will be selected:
-```
+```bash
 bash $ <<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2' -l
 "d": 4
 bash $ 
@@ -2251,7 +2251,7 @@ bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
 The same could have been achieved with the template: `-T'>>{{}}<<'`
 
 That was the example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
-```
+```bash
 bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' / -T'[ <{{}}>, "c"]' -r
 [ "a", "b", "c" ]
 bash $ 
@@ -2779,7 +2779,7 @@ a destination
 Hopefully this example will clarify:
 - say (just for the sake of example), we want to add to every record's `children` the `name` of the person, but not just - we
 want to add it in all capitals (i.e., transform the record).
-```
+```bash
 bash $ <ab.json jtc -w'<children>l:' -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \; -i'<name>l:' / -lrw'<name>l:' -w'<children>l:'
 "name": "John"
 "children": [ "Olivia", "JOHN" ]
@@ -3236,8 +3236,8 @@ Like it was mentioned before, `jtc` performs one major operation at a time: _sta
 _swapping_, _comparison_. There's a number of supplementary operations that might complement the major operations like: wrapping results 
 into JSON arays and objects, toggling various viewing and parsing modes, etc.
 
-If multiple major operations are required, one way to achieve it would be piping output of the prior operation into the input of the 
-next one, e.g:  
+If multiple major operations are required, one way to achieve it would be piping an output of the prior operation into the input
+of the next one, e.g:  
 - `jtc <insert...> | jtc <swap...> | etc`  
 
 However, such approach is quite suboptimal - with every piping operation a serialization (outputting) and deserialization (parsing)
