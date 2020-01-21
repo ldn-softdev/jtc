@@ -102,7 +102,7 @@
 ## Displaying JSON
 ### Pretty printing
 If no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the 
-argumen(t). `jtc` will parse and validate input JSON and upon a successful validation will output:
+argument(s). `jtc` will parse and validate input JSON and upon a successful validation will output:
 ```bash
 bash $ <ab.json jtc
 {
@@ -210,7 +210,7 @@ bash $ <ab.json jtc -r
 bash $
 ```
 
-By default, the compact prniting view will use a single space as a spacer between all tokens, that also could be controlled if `-r` and `-t` used together, e.g. to print the above JSON w/o spacer:
+By default, the compact printing view will use a single space as a spacer between all tokens, that also could be controlled if `-r` and `-t` used together, e.g. to print the above JSON w/o spacer:
 ```bash
 bash $ <ab.json jtc -rt0
 {"Directory":[{"address":{"city":"New York","postal code":10012,"state":"NY","street address":"599 Lafayette St"},"age":25,"children":["Olivia"],"name":"John","phone":[{"number":"112-555-1234","type":"mobile"},{"number":"113-123-2368","type":"mobile"}],"spouse":"Martha"},{"address":{"city":"Seattle","postal code":98104,"state":"WA","street address":"5423 Madison St"},"age":31,"children":[],"name":"Ivan","phone":[{"number":"273-923-6483","type":"home"},{"number":"223-283-0372","type":"mobile"}],"spouse":null},{"address":{"city":"Denver","postal code":80206,"state":"CO","street address":"6213 E Colfax Ave"},"age":25,"children":["Robert","Lila"],"name":"Jane","phone":[{"number":"358-303-0373","type":"office"},{"number":"333-638-0238","type":"home"}],"spouse":"Chuck"}]}
@@ -502,7 +502,7 @@ bash $
 
 ### Searching JSON
 Walk-path lexemes enclosed into `<..>` braces instruct to perform a _recursive_ search off the value under a currently selected
-JSON node. I.e., if a search lexeme appears as the first one in the walk-path, then the search will be perfromed off the root,
+JSON node. I.e., if a search lexeme appears as the first one in the walk-path, then the search will be performed off the root,
 otherwise off the node in JSON where a prior lexeme has stopped.
 
 By default (if no suffix is given), a search lexeme will perform a search among _JSON string_ values only (i.e., it won't match 
@@ -939,7 +939,7 @@ I.e., once the literal subscript lexeme is attached to the search lexeme over `:
 
 
 #### Non-recursive search
-Sometimes there's a reqiurement to apply a non-recursive search onto iterable JSON nodes (arrays, objects) - i.e., find a value
+Sometimes there's a requirement to apply a non-recursive search onto iterable JSON nodes (arrays, objects) - i.e., find a value
 within immediate children of the node and do not descend recursively. The notation facilitating such search is the same one, but
 angular brackets to be placed inside-out: `>..<`.  
 To illustrate that, say, we want to find all string values in the 1st `Directory` record containing the letter `o`. 
@@ -966,7 +966,7 @@ strictly among currently walked JSON iterable's children
 
 ### Addressing parents
 One of the charming features of `jtc` is the ability to address parents (any ancestors up till the root) off the found JSON nodes.
-Typically, addressing parents would be requierd after search lexemes (but may occur anywhere in the walk-path). Parents can
+Typically, addressing parents would be required after search lexemes (but may occur anywhere in the walk-path). Parents can
 be addressed using notation `[-n]`. This feature allows building queries that answer quite complex queries.
 
 Let's dump all the names from the `Directory` whose records have a `home` phone entry:
@@ -1591,7 +1591,7 @@ the start, while _`S`_ can only be positive); either of positional parameters co
 - `<text>+n`: finds recursively _each occurrence_ of _`"text"`_ in a currently walked JSON element starting from _`n`th_ occurrence
 - `<text>n:m:s`: finds recursively _each occurrence_ of `"text"` in a currently walked JSON element for the selected slice,
 where _`n`_,_`m`_,_`s`_ parameters comply with all `[N:M:S]` rules with an additional limitation: _`n`_ and _`m`_ cannot go negative
-and one additiona liberation: either of parameters _`n`_,_`m`_,_`s`_ could be _interpolated_ from the namespace
+and one additional liberation: either of parameters _`n`_,_`m`_,_`s`_ could be _interpolated_ from the namespace
 - `<..>Sn`, `<..>S+n`, `<..>Sn:m:s`: 
   * if _`S`_ is a search lexeme suffix, then quantifier notations apply exactly the same way as per in above `text` search quantifiers
   * if _`S`_ is a directive lexeme suffix, then the quantifier behavior is either ignored (like in directives `vkzW`), 
@@ -1621,7 +1621,7 @@ suffixes exemptions:
 ### Summary of walk options
 - `-w`: defines a _walk-path_ (multiple walks supported), by default the results produced from multiple walks are _interleaved_
 - `-l`: when used w/o `-j` just _prints labels_ for those walked JSONS which have one
-- `-ll`: when used w/o `-j` prints all JSON objects _"naked"_, i.e. _removes Json object encasement_ and then uses _inner_ labels; 
+- `-ll`: when used w/o `-j` prints all JSON objects _"naked"_, i.e. _removes JSON object encasement_ and then uses _inner_ labels; 
 for the rest of JSON types the behavior is the same like with the single `-l`
 - `-n`: turns on a _sequential_ behavior for walk-paths (process first all the results from the first walk, then from then second, etc),
 - `-nn`: when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
@@ -1945,7 +1945,7 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"'
 " | a | b | c"
 bash $ 
 ```
-The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artefact 
+The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artifact 
 the namespace `$$?` holds the value which `jtc` considers as a separator (if it matches user's):
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
@@ -2278,11 +2278,11 @@ the _JSON string_ definition
 - `$a`, `$b` .. `$z`, `$aa`, `$ab`, .. : auto generated tokens when the interpolated JSON is an iterable, each token corresponds
 to a respective ordinal value in the iterable
 - `$A`, `$B` .. `$Z`, `$AA`, `$AB`, .. : auto generated tokens when the interpolated JSON is an object, each token corresponds
-to a label of each respecitve ordinal value in the object
-- `$PATH`: a token expanding into a _JSON array_ holding a path (set of lables and indices) towards currently walked JSON element
-- `$path`: a token expanding into a _JSON string_ represending a path towards currently walked JSON element
+to a label of each respective ordinal value in the object
+- `$PATH`: a token expanding into a _JSON array_ holding a path (set of labels and indices) towards currently walked JSON element
+- `$path`: a token expanding into a _JSON string_ representing a path towards currently walked JSON element
 - `$_`: a name holding a separator used when expanding token `$path`, default value is `"_"`
-- `$#`: a name holding a separator used when a _JSON intterable_ is explanded into a _JSON string_, default value is `", "`
+- `$#`: a name holding a separator used when a _JSON iterable_ is expanded into a _JSON string_, default value is `", "`
 - `$?`: a token referring to the result of a prior last successful walk
 - `$$?`: a namespace holding a string separator considered when expanding walks using `$?` token, default value is `","`
 
@@ -2304,7 +2304,7 @@ an argument, which comes in different flavors, one of them is the `walk-path` pe
 `jtc` will execute any of those operations only once, if multiple operations required, then those could be combined in multiple
 option chain sets, daisy-chained through the separator `/`.
 
-Once the modificatoin operation is complete, the entire resulting JSON is displayed.
+Once the modification operation is complete, the entire resulting JSON is displayed.
 
 ### In-place JSON modification 
 By default `jtc` expects the input from `stdin`. If the standalone argument(s) `args` is given then `jtc` will read input from the 
@@ -2436,7 +2436,7 @@ Finally, more than just one pair of walks (-w) could be swapped out. In fact, as
 ### Insert operations
 when either of insert (`-i`) of update (`-u`) operation is carried, there 2 types of walks exist:
  - one facilitating insert/update points, a.k.a. _destination walks_ (always facilitated with `-w` options)
- - one facilitating points (elements) being inserted/updated, a.k.a. _source walks_ (faciliated with respecitve `-i`, `-u` options)
+ - one facilitating points (elements) being inserted/updated, a.k.a. _source walks_ (facilitated with respective `-i`, `-u` options)
 
 The _destination points_ of insertion are always given using `-w` option(s), while the argument under `-i` designates the source 
 of the insertions (multiple `-i` options could be given). The source of insertion must _always_ be a valid JSON.
@@ -2478,7 +2478,7 @@ bash $ <ab.json jtc -w'<children>l:' -lr
 "children": []
 "children": [ "Robert", "Lila" ]
 bash $
-# make couple insertions in a single destinaton record
+# make couple insertions in a single destination record
 bash $ <ab.json jtc -w'[name]:<Ivan>[-1][children]' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": [ "Maggie", "Bruce" ]
@@ -2920,7 +2920,7 @@ by `-w`; `shell_cli` is run for every successful destination walk (`-w`)
 - `-ei <shell_cli> \; -i<walk-path>`: inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
 by `-w`; `shell_cli` is run for every successful source `walk-path` walking input (source) JSON; multiple options with `walk-path`
 argument allowed
-- `u...`: update (rewrite) operations, all the same option modes and copbinations as for `-i` are applied
+- `u...`: update (rewrite) operations, all the same option modes and combinations as for `-i` are applied
 - `-m`: modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
 
 
@@ -3257,9 +3257,9 @@ There's a few options (mostly viewing and parsing) which are non-transient and m
 - `-rr`: stringifyng output JSON - may occur only in the last option set; if such operation is required in the interrim operation -
 use template stringification instead
 - `-t`: output indentation - may occur only in the last option set
-- `-q`: parse input with a strict soludis quoting - may occur only in the initial option set
-- `-qq`: unqoting _JSON strings_, jsonizing stringified JSONs - may occur only in the last option set; if such operation is required
-in the interrim operation - use template jsonizing instead
+- `-q`: parse input with a strict solidus quoting - may occur only in the initial option set
+- `-qq`: unquoting _JSON strings_, jsonizing stringified JSONs - may occur only in the last option set; if such operation is required
+in the interim operation - use template jsonizing instead
 - `-z`: additionally printing size for the each walked JSON - may occur only in the last option set
 - `-zz`: printing size instead of JSON - may occur only in the last option set
 - `-f`: forcing (redirecting) outputs into a file  - may occur only in the last option set
@@ -3294,7 +3294,7 @@ Ivan, Seattle, 98104, WA, 5423 Madison St
 Jane, Denver, 80206, CO, 6213 E Colfax Ave
 bash $ 
 ```
-The template above is demo'ing iterable auto tokens - those are good when it's requird to extract iterables members individually, 
+The template above is demo'ing iterable auto tokens - those are good when it's required to extract iterables members individually, 
 or in a different order. In our case the query's order of items matches those in the array, hence it's possible to simplify our
 template:
 ```bash
@@ -3426,7 +3426,7 @@ it's just a reverse action.
 
 
 ### Counting with `jtc`
-Counting any number of properties is JSON could be done using exteral `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
+Counting any number of properties is JSON could be done using external `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
 ```bash
 bash $ <ab.json jtc -w'<number>l:' | wc -l
        6
@@ -3594,8 +3594,6 @@ When comparing the same iterable types (comparing atomic values is trivial) the 
 - compared values child-by-child defines a winner, otherwise (all children values are the same):
 - if it's an object then the labels are compared, otherwise (if it's an array, or all the labels are the same):
 - JSON values are equal
-
-
 
 
 
