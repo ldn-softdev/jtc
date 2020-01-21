@@ -76,27 +76,17 @@ $ sudo port install jtc
 ```
 
 ### Installation on Linux distributions
-
 `jtc` is packaged in the following Linux distributions and can be installed via the package manager.
-
-#### Fedora
-
-`jtc` is present in Fedora 31 and later:
-
+- **Fedora**: `jtc` is present in Fedora 31 and later:
 ``` ShellSession
 $ dnf install jtc
 ```
-
-#### openSUSE
-
-`jtc` can be installed on openSUSE Tumbleweed via `zypper`:
-
+- **openSUSE**: `jtc` can be installed on openSUSE Tumbleweed via `zypper`:
 ``` ShellSession
 $ zypper in jtc
 ```
-
-or on Leap 15.0 and later by adding the (utilities)[https://build.opensuse.org/project/show/utilities] repository and installing `jtc` via zypper.
-
+or on Leap 15.0 and later by adding the
+[utilities](https://build.opensuse.org/project/show/utilities) repository and installing `jtc` via zypper.
 
 ### Compile and install instructions:
 
