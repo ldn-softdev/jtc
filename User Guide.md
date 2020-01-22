@@ -82,6 +82,7 @@
    * [Comparing JSON schemas](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#comparing-json-schemas)
 6. [Processing input JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#processing-input-jsons)
    * [Parse ill-formed JSONs with clashing labels (`-mm`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#parse-ill-formed-JSONs-with-clashing-labels)
+   * [A word on ordering within JSON objects](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#a-word-on-ordering-within-JSON-objects)
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
@@ -3019,8 +3020,15 @@ attempting to print a label of the root always results in the exception:_
 ## Processing input JSONs
 
 ### Parse ill-formed JSONs with clashing labels 
-_JSON objects_ by definition cannot have multiple clashing labels, otherwise it would render addressing by label impossible.
-`jtc` in such case by default parses and retains the first label only:
+[ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf) is relaxed w.r.t. the uniqueness of labels:
+> _The JSON syntax does not impose any restrictions on the strings used as names, does not require that name strings be unique_ ...
+
+Whie JSON [RFC 7158](https://tools.ietf.org/html/rfc7158) is strict on the label uniqueness:
+> _... The names within an object SHOULD be unique._
+
+`jtc` follows the RFC (and so considers JSONs with clashing labels to be ill-formed), because logically, labels must provide
+an addressing mechanism within objects and non-unique (clashing) labels break the addressing. In case if the source JSON holds
+duplicate labels, by default `jtc` parses and retains the first label only:
 ```bash
 bash $ cat ill.json 
 {
@@ -3028,7 +3036,7 @@ bash $ cat ill.json
  "label": "second entry"
 }
 bash $ 
-# parse ill-formend json:
+# parse ill-formed json:
 bash $ <ill.json jtc 
 {
    "label": "first entry"
@@ -3047,6 +3055,16 @@ bash $ <ill.json jtc -mm
 }
 bash $ 
 ```
+> Note: option `-mm` will not engulf a single one `-m` and thus, if both behaviors are required then both to be provided (e.g.: `-mmm`)
+
+
+### A word on ordering within JSON objects
+both _`ECMA-404`_ and _`RFC 7158`_ agree that JSON spec does not assign any significance to the ordering of name/value pairs within
+objects (unlike with the arrays, which are ordered sequences) - thus, it's free up to a JSON parser to handle it in any preferable way.
+
+`jtc`, while being relaxed upon parsing in object values coming in any order, will always re-arrange objects by labels sorted
+in the descending order - that provides some benefits when handling JSON manipulations queries, e.g.: auto-generated tokens when
+an object gets interpolated into a template-string allows operating with object values deterministically.
 
 
 ### Process all input JSONs
