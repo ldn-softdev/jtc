@@ -35,6 +35,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
   - support _Regular Expressions_ when searching source JSON (various _RE grammars_ supported)
   - fast and efficient processing of very large JSON files (built-in search cache)
   - insert/update operations optionally may undergo _shell cli_ evaluation
+  - support in-place modifications of the input/source JSON file
   - features namespaces, interpolation from namespaces in templates 
   - supports _buffered_ and _streamed_ modes of input reads
   - written entirely in _C++14_, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
