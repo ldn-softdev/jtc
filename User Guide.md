@@ -2901,26 +2901,27 @@ with the template for the entire entry.
 
 
 ### Summary of modification options
-- `-`: bare qualifier (hyphen), ensures that read occurs from `stdin` regardless of present filename arguments
-- `-f`: ensures that the output is redirected to the filename (if one given) instead of `stdout`
-- `-p`: purges all walked (`-w`) JSON elements from the JSON tree
-- `-pp`: purges all JSON elements _except_ walked ones (`-w`) from the JSON tree
-- `-s`: swaps around JSON elements in the JSON tree pointed by the _pairs_ of walks
-- `-i<static_json>`: inserts `static_json` (which is either a file, or a literally spelled) into the destinations pointed by `-w`; 
-multiple arguments allowed
+- `-`: bare qualifier (hyphen), ensures that input read occurs from `stdin` regardless of present filename arguments
+- `-f`: ensures that the final output is redirected to the filename (if one given) instead of `stdout`
+- `-p`: purges all walked (`-w`) JSON elements from a JSON tree
+- `-pp`: purges all JSON elements _except_ walked ones (`-w`) from a JSON tree
+- `-s`: swaps around JSON elements in a JSON tree pointed by the _pairs_ of walks (i.e. at least 2 -w must be given)
+- `-i<static_json>`: inserts `static_json` (which is either a file, or a literally spelled JSON) into the destinations pointed by `-w`; 
+multiple options with such arguments allowed
 - `-i<static_json> -i<walk-path>`: inserts JSON elements walked `static_json` with `walk-path` into the destinations pointed by `-w`; 
-only a single `static_json` and multiple `walk-path` arguments are supported
+only a single option with `static_json` and multiple options with `walk-path` arguments are supported
 - `-i<walk-path>`: insert-copies JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
-multiple arguments allowed
+multiple options with such arguments allowed
 - `-pi<walk-path>`: insert-moves JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
-multiple arguments allowed
+multiple options with such arguments allowed
 - `-ppi<walk-path>`: inserts JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`, 
-while purging all other (non-walked) elements from the JSON tree
+while purging all other (non-walked) elements from a JSON tree
 - `-ei <shell_cli> \;`: inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
-by `-w`; `shell_cli` is run for every successful destination walk (`-w`)
+by `-w`; `shell_cli` is run for every successful destination walk (`-w`) iteration; only a sigle invocation _per the option chain-set_ is
+supported
 - `-ei <shell_cli> \; -i<walk-path>`: inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
-by `-w`; `shell_cli` is run for every successful source `walk-path` walking input (source) JSON; multiple options with `walk-path`
-argument allowed
+by `-w`; `shell_cli` is run for every successful source `walk-path` iteration walking input (source) JSON; multiple options with
+`walk-path` argument are supported
 - `u...`: update (rewrite) operations, all the same option modes and combinations as for `-i` are applied
 - `-m`: modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
 
