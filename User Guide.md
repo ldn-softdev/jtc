@@ -1633,7 +1633,7 @@ the start, while _`S`_ can only be positive); either of positional parameters co
 finds recursively the first _empty string_ (e.g.: like in `{ "empty string": "" }`)
 - [`<text>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json):
 finds _recursively_ the first string _`"text"`_ (e.g.: like in `[ "text" ]`)
-- [`<..>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json):
+- [`<..>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes):
 _`S`_ is an optional one-letter suffix altering the behavior of the lexeme:  
   * if _`S`_ is any of _`rRPdDNbnlLaoicewjstqQgG`_ - then it's a _search_ matching a first occurrence of the lexeme, as per the 
   suffix description      
