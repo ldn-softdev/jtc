@@ -1676,7 +1676,7 @@ some search lexemes and some directives allow _capturing_ a currently walked/mat
   * for  for the rest of directives (_`kzuIZW`_) the behavior varies - refer to a respective directive description
 - [`<NS:JSON_value>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
 the same searches and directives allowing _capturing_ JSON values, allow setting custom _`JSON_value`s_ 
-**instead** of capturing (the same rules apply)
+_instead_ of capturing (the same rules apply)
 
 
 ### Summary of walk options
