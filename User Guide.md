@@ -340,11 +340,11 @@ bash $ jsn='"{ \"JSON\": \"example of an embedded JSON\" }"'
 bash $ <<<$jsn jtc 
 "{ \"JSON\": \"example of an embedded JSON\" }"
 bash $ 
-# unqote (jsonize) embedded json:
+# unquote (jsonize) embedded json:
 bash $ <<<$jsn jtc -qq
 { "JSON": "example of an embedded JSON" }
 bash $ 
-# unqote (jsonize) embedded json and re-parse it:
+# unquote (jsonize) embedded json and re-parse it:
 bash $ <<<$jsn jtc -qq | jtc
 {
    "JSON": "example of an embedded JSON"
@@ -506,7 +506,7 @@ bash $
 Walk-path lexemes enclosed into `<..>` braces instruct to perform a _recursive_ search off the value under a currently selected
 JSON node. I.e., if a search lexeme appears as the first one in the walk-path, then the search will be performed off the root,
 otherwise off the node in JSON where a prior lexeme has stopped.
-
+ 
 By default (if no suffix is given), a search lexeme will perform a search among _JSON string_ values only (i.e., it won't match 
 _JSON numerical_ or _JSON boolean_ or _JSON null_ values). E.g., following search produces a match:
 ```bash
@@ -1084,7 +1084,7 @@ us again up to the person's record level
 6. `[name]` - finally select the name
 
 
-#### Addressing parents offesting from root
+#### Addressing parents offsetting from root
 There's another way to address parents - through `[^n]` notation, compare: the following walk-path achieves exactly the same ask:
 ```bash
 bash $ <ab.json jtc -w'<children>l:[0][^2][type]:<mobile>[^2][name]'
@@ -1244,7 +1244,7 @@ bash $ <ab.json jtc -w '[Directory][:] <name>l:' -w'[Directory][:] <number>l:'
 "333-638-0238"
 bash $
 ```
-And now, applying options `-j` together with `-l` gives a lot better result (we achive grouping of relevant walks):
+And now, applying options `-j` together with `-l` gives a lot better result (we achieve grouping of relevant walks):
 ```bash
 bash $ <ab.json jtc -w'[Directory][:]<name>l:' -w'[Directory][:]<number>l:' -jl -tc
 [
@@ -1671,7 +1671,7 @@ suffixes exemptions:
 - [`<NS>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
 some search lexemes and some directives allow _capturing_ a currently walked/matched JSON into a namespace _`NS`_:
   * if _`S`_ is a suffix any of _`PNbnaoicewqQgGvfF`_, then the namespace _`NS`_ will be populated upon a successful match (for searches)
-  or upong walking (for directives)
+  or upon walking (for directives)
   * for the rest of the searches (_`rRdDlLjst`_), the lexeme defines a _search context_ (rather than the namespace reference), 
   * for  for the rest of directives (_`kzuIZW`_) the behavior varies - refer to a respective directive description
 - [`<NS:JSON_value>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
@@ -1761,8 +1761,8 @@ _JSON strings_, _JSON arrays_, _JSON objects_ differently:
 A _string_ interpolation using a _naked notation_ is handy when there's a requirement to alter/extend an existing string,
 here's example of altering JSON label:
 ```bash
-bash $ JSN='{ "label1": "value1", "label2": "value2" }'
-bash $ <<<$JSN jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
+bash $ jsn='{ "label1": "value1", "label2": "value2" }'
+bash $ <<<$jsn jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
 {
    "new label1": "value1",
    "new label2": "value2"
@@ -1774,7 +1774,7 @@ true for insert `-i` and compare `-c` operators). The walk `-w` points to the de
 is the label,  as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
 Alternatively, the same could be achieved like this, in a bit more succinct way:
 ```bash
-bash $ <<<$JSN jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
+bash $ <<<$jsn jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
 {
    "new label1": "value1",
    "new label2": "value2"
@@ -1792,15 +1792,15 @@ template-interpolated JSON value `'"new label"'`.
 
 Here's an illustration when a _naked notation_ is required:
 ```bash
-bash $ JSN='{ "pi": 3.14, "type": "irrational" }'
-bash $ <<<$JSN jtc
+bash $ jsn='{ "pi": 3.14, "type": "irrational" }'
+bash $ <<<$jsn jtc
 {
    "pi": 3.14,
    "type": "irrational"
 }
 bash $ 
 # swap around values and labels:
-bash $ <<<$JSN jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
+bash $ <<<$jsn jtc -i'[:]<Key>k<Val>v' -T'{ "{Val}": {{Key}} }' -p
 {
    "3.14": "pi",
    "irrational": "type"
@@ -1819,8 +1819,8 @@ An array interpolation using a naked notation (`{..}`) is handy when there's a r
 template interpolation. 
 There's a special case though - template-extending of an empty array. Let's consider a following example:
 ```bash
-bash $ JSN='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
-bash $ <<<$JSN jtc
+bash $ jsn='[ {"args": [123],"Func": "x + y"}, { "args":[], "Func":"a * b" }  ]'
+bash $ <<<$jsn jtc
 [
    {
       "Func": "x + y",
@@ -1837,7 +1837,7 @@ bash $
 ```
 And the ask here would be to extend all arrays in each `args` with the arguments from the respective `Func`:
 ```bash
-bash $ <<<$JSN jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
+bash $ <<<$jsn jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
 [
    {
       "Func": "x + y",
@@ -1934,8 +1934,8 @@ Beside user provided names, `jtc` features a number of internally generated/supp
 Directives `<>v`, `<>k` (as well as all other lexemes allowing capturing and setting namespace) and search lexemes `<>s`, `<>t` 
 let facilitating cross-lookups. Say, we have a following JSON:
 ```bash
-bash $ JSN='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
-bash $ <<<$JSN jtc -tc
+bash $ jsn='{ "item": "bread", "list":{ "milk": 0.90, "bread": 1.20 } }'
+bash $ <<<$jsn jtc -tc
 {
    "item": "bread",
    "list": { "bread": 1.20, "milk": 0.90 }
@@ -1945,7 +1945,7 @@ bash $
 the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
 Using namespaces it becomes a trivial task:
 ```bash
-bash $ <<<$JSN jtc -w'[item]<Itm>v[^0]<Itm>t' -l
+bash $ <<<$jsn jtc -w'[item]<Itm>v[^0]<Itm>t' -l
 "bread": 1.20
 bash $ 
 ```
@@ -2105,8 +2105,8 @@ bash $
 Interpolation may also occur in quantifiers, say we have a following JSON, where we need to select an item from `list` by the
 index value stored `item`:
 ```bash
-bash $ JSN='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
-bash $ <<<$JSN jtc
+bash $ jsn='{ "item": 2, "list": { "milk": 0.90, "bread": 1.20, "cheese": 2.90 } }'
+bash $ <<<$jsn jtc
 {
    "item": 2,
    "list": {
@@ -2119,7 +2119,7 @@ bash $
 ```
 To achieve that, we need to memorize the value of `item` in the namespace first, then select a value from the list by the index:
 ```bash
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
+bash $ <<<$jsn jtc -w'[item]<idx>v[-1][list]><a{idx}' -l
 "milk": 0.90
 bash $ 
 ```
@@ -2127,20 +2127,20 @@ It should be quite easy to read/understand such walk path (predicated one is fam
 how the walk-path works in a slow-mo:
 1. `[item]`: selects the value by label `item`:
 ```bash
-bash $ <<<$JSN jtc -w'[item]'
+bash $ <<<$jsn jtc -w'[item]'
 2
 bash $ 
 ```
 2. `<idx>v`: the directive memorizes selected value (`2`) in the namespace `idx`
 ```bash
-bash $ <<<$JSN jtc -w'[item]<idx>v'
+bash $ <<<$jsn jtc -w'[item]<idx>v'
 2
 bash $ 
 ```
 3. `[-1]`: steps up 1 level in the JSON tree off the current position (i.e., addresses the first parent of the `item` value) which is
 the root of the input JSON:
 ```bash
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1]'
+bash $ <<<$jsn jtc -w'[item]<idx>v[-1]'
 {
    "item": 2,
    "list": {
@@ -2153,7 +2153,7 @@ bash $
 ```
 4. `[list]`: selects the object value by label `list`:
 ```bash
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]'
+bash $ <<<$jsn jtc -w'[item]<idx>v[-1][list]'
 {
    "bread": 1.20,
    "cheese": 2.90,
@@ -2166,7 +2166,7 @@ bash $
 
 **_Alternatively_**, the same ask could have been achieved using a slightly different query:
 ```bash
-bash $ <<<$JSN jtc -w'[item]<idx>v[-1][list]>idx<t' -l
+bash $ <<<$jsn jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
 bash $ 
 ```
@@ -2520,7 +2520,7 @@ bash $ <ab.json jtc -w'<phone>l:' -w'<phone>l:[-1:]' -s / -w'<phone>l:' -l
 }
 bash $
 ```
-> _\- again, for tje brevity, only phone records are displayed_
+> _\- again, for the brevity, only phone records are displayed_
 
 Finally, more than just one pair of walks (-w) could be swapped out. In fact, as many *pairs* of walks given will be swapped
 (predicated walks did not become invalid during prior walk pair swap operations)
@@ -3020,7 +3020,7 @@ inserts JSON elements from the input (source) JSON pointed by `walk-path` into t
 while purging all other (non-walked) elements from a JSON tree
 - [`-ei <shell_cli> \;`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
 inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
-by `-w`; `shell_cli` is run for every successful destination walk (`-w`) iteration; only a sigle invocation _per the option chain-set_ is
+by `-w`; `shell_cli` is run for every successful destination walk (`-w`) iteration; only a single invocation _per the option chain-set_ is
 supported
 - [`-ei <shell_cli> \; -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
 inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
@@ -3130,7 +3130,7 @@ attempting to print a label of the root always results in the exception:_
 [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf) is relaxed w.r.t. the uniqueness of labels:
 > _The JSON syntax does not impose any restrictions on the strings used as names, does not require that name strings be unique_ ...
 
-Whie JSON [RFC 7158](https://tools.ietf.org/html/rfc7158) is strict on the label uniqueness:
+While JSON [RFC 7158](https://tools.ietf.org/html/rfc7158) is strict on the label uniqueness:
 > _... The names within an object SHOULD be unique._
 
 `jtc` follows the RFC (and so considers JSONs with clashing labels to be ill-formed), because logically, labels must provide
@@ -3171,7 +3171,7 @@ objects (unlike with the arrays, which are ordered sequences) - thus, it's free 
 
 `jtc`, while being relaxed upon parsing in object values coming in any order, will always re-arrange objects by labels sorted
 in the descending order - that provides some benefits when handling JSON manipulations queries, e.g.: auto-generated tokens when
-an object gets interpolated into a template-string allows operating with object values Walking JSONistically, another benefit is that 
+an object gets interpolated into a template-string allows operating with object values deterministically, another benefit is that 
 subscripting object elements with numerical indices also becomes more deterministic, etc.
 
 
@@ -3360,7 +3360,7 @@ In the `Screen 2`, `jtc` sends to `netcat` a few walks (JSONs), which `netcat` r
 ### Chaining option sets
 Like it was mentioned before, `jtc` performs one major operation at a time: _standalone walking_, _insertion_, _update_, _purging_, 
 _swapping_, _comparison_. There's a number of supplementary operations that might complement the major operations like: wrapping results 
-into JSON arays and objects, toggling various viewing and parsing modes, etc.
+into JSON arrays and objects, toggling various viewing and parsing modes, etc.
 
 If multiple major operations are required, one way to achieve it would be piping an output of the prior operation into the input
 of the next one, e.g:  
@@ -3380,7 +3380,7 @@ _options sets_.
 
 There's a few options (mostly viewing and parsing) which are non-transient and may occur only in the first or in the last _option set_:
 - `-r`: compact printing - may occur only in the last option set
-- `-rr`: stringifyng output JSON - may occur only in the last option set; if such operation is required in the interrim operation -
+- `-rr`: stringifying output JSON - may occur only in the last option set; if such operation is required in the interim operation -
 use template stringification instead
 - `-t`: output indentation - may occur only in the last option set
 - `-q`: parse input with a strict solidus quoting - may occur only in the initial option set
@@ -3458,8 +3458,8 @@ DONE.
 ### Taming duplicates
 Quite a very common query for JSON is to process duplicates. Say, we deal with the following JSON:
 ```bash
-bash $ JSN='[ "string", true, null, 3.14, "string", null ]'
-bash $ <<<$JSN jtc
+bash $ jsn='[ "string", true, null, 3.14, "string", null ]'
+bash $ <<<$jsn jtc
 [
    "string",
    true,
@@ -3473,7 +3473,7 @@ bash $
 So, let's
 #### Remove duplicates
 ```bash
-bash $ <<<$JSN jtc -w'<>Q:' -p
+bash $ <<<$jsn jtc -w'<>Q:' -p
 [
    "string",
    true,
@@ -3488,7 +3488,7 @@ elements
 If the JSON structure is as simple as shown, then the same could be achieved differently: walk only unique elements and jsonize 
 the output:
 ```bash
-bash $ <<<$JSN jtc -w'><q:' -j
+bash $ <<<$jsn jtc -w'><q:' -j
 [
    "string",
    true,
@@ -3501,7 +3501,7 @@ bash $
 But there's a reverse action:
 #### Remove all the elements but the ones which have duplicates
 ```bash
-bash $ <<<$JSN jtc -w'<>Q:' -pp
+bash $ <<<$jsn jtc -w'<>Q:' -pp
 [
    "string",
    null
@@ -3512,7 +3512,7 @@ That one is obvious - we just reversed the prior example.
 
 Another way to achieve the same:
 ```bash
-bash $ <<<$JSN jtc -w'><q:' -p
+bash $ <<<$jsn jtc -w'><q:' -p
 [
    "string",
    null
@@ -3523,7 +3523,7 @@ bash $
 How about:
 #### Leave only those which have no duplicates
 ```bash
-bash $ <<<$JSN jtc -w'<Dup>Q:[^0]<Dup>s:' -p
+bash $ <<<$jsn jtc -w'<Dup>Q:[^0]<Dup>s:' -p
 [
    true,
    3.14
@@ -3539,7 +3539,7 @@ that way all duplicates (and their origins) will be removed, leaving the array o
 and finally
 #### Leave all duplicates
 ```bash
-bash $ <<<$JSN jtc -w'<Dup>Q:[^0]<Dup>s:' -pp
+bash $ <<<$jsn jtc -w'<Dup>Q:[^0]<Dup>s:' -pp
 [
    "string",
    null,
@@ -3590,8 +3590,8 @@ bash $
 ### Transposing a matrix
 Say, we have a matrix to transpose:
 ```bash
-bash $ MTX='[[0,1,2,3,4],["a","b","c","d","e"],[null,true,2,"3",[4]]]'
-bash $ <<<$MTX jtc -tc
+bash $ mtx='[[0,1,2,3,4],["a","b","c","d","e"],[null,true,2,"3",[4]]]'
+bash $ <<<$mtx jtc -tc
 [
    [ 0, 1, 2, 3, 4 ],
    [ "a", "b", "c", "d", "e" ],
@@ -3608,7 +3608,7 @@ bash $
 
 We can arrange walking through each slice using incremental index from the 1st one:
 ```bash
-bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -jr
+bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -jr
 [ 0, "a", null, 1, "b", true, 2, "c", 2, 3, "d", "3", 4, "e", [ 4 ] ]
 bash $ 
 ```
@@ -3616,7 +3616,7 @@ bash $
 However, we need to re-arrange such output per each new, transposed matrix with number of columns `<->` rows.
 That could be facilitated if we label each value with the row index:
 ```bash
-bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -r
+bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -r
 { "0": 0 }
 { "0": "a" }
 { "0": null }
@@ -3637,7 +3637,7 @@ bash $
 
 The last step is to reach out for labels inside each object (`-ll`) and then regroup the output per each new group:
 ```bash
-bash $ <<<$MTX jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -ll / -jw[:] -tc
+bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -ll / -jw[:] -tc
 [
    [ 0, "a", null ],
    [ 1, "b", true ],
@@ -3720,11 +3720,6 @@ When comparing the same iterable types (comparing atomic values is trivial) the 
 - compared values child-by-child defines a winner, otherwise (all children values are the same):
 - if it's an object then the labels are compared, otherwise (if it's an array, or all the labels are the same):
 - JSON values are equal
-
-
-
-
-
 
 
 
