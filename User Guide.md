@@ -2993,29 +2993,43 @@ with the template for the entire entry.
 
 
 ### Summary of modification options
-- `-`: bare qualifier (hyphen), ensures that input read occurs from `stdin` regardless of present filename arguments
-- `-f`: ensures that the final output is redirected to the filename (if one given) instead of `stdout`
-- `-p`: purges all walked (`-w`) JSON elements from a JSON tree
-- `-pp`: purges all JSON elements _except_ walked ones (`-w`) from a JSON tree
-- `-s`: swaps around JSON elements in a JSON tree pointed by the _pairs_ of walks (i.e. at least 2 -w must be given)
-- `-i<static_json>`: inserts `static_json` (which is either a file, or a literally spelled JSON) into the destinations pointed by `-w`; 
+- [`-`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin):
+bare qualifier (hyphen), ensures that input read occurs from `stdin` regardless of present filename arguments
+- [`-f`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification):
+ensures that the final output is redirected to the filename (if one given) instead of `stdout`
+- [`-p`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json):
+purges all walked (`-w`) JSON elements from a JSON tree
+- [`-pp`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json):
+purges all JSON elements _except_ walked ones (`-w`) from a JSON tree
+- [`-s`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements):
+swaps around JSON elements in a JSON tree pointed by the _pairs_ of walks (i.e. at least 2 -w must be given)
+- [`-i<static_json>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
+inserts `static_json` (which is either a file, or a literally spelled JSON) into the destinations pointed by `-w`; 
 multiple options with such arguments allowed
-- `-i<static_json> -i<walk-path>`: inserts JSON elements walked `static_json` with `walk-path` into the destinations pointed by `-w`; 
+- [`-i<static_json> -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
+inserts JSON elements walked `static_json` with `walk-path` into the destinations pointed by `-w`; 
 only a single option with `static_json` and multiple options with `walk-path` arguments are supported
-- `-i<walk-path>`: insert-copies JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+- [`-i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
+insert-copies JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
 multiple options with such arguments allowed
-- `-pi<walk-path>`: insert-moves JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+- [`-pi<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic):
+insert-moves JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
 multiple options with such arguments allowed
-- `-ppi<walk-path>`: inserts JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`, 
+- [`-ppi<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic):
+inserts JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`, 
 while purging all other (non-walked) elements from a JSON tree
-- `-ei <shell_cli> \;`: inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
+- [`-ei <shell_cli> \;`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
+inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
 by `-w`; `shell_cli` is run for every successful destination walk (`-w`) iteration; only a sigle invocation _per the option chain-set_ is
 supported
-- `-ei <shell_cli> \; -i<walk-path>`: inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
+- [`-ei <shell_cli> \; -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
+inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
 by `-w`; `shell_cli` is run for every successful source `walk-path` iteration walking input (source) JSON; multiple options with
 `walk-path` argument are supported
-- `u...`: update (rewrite) operations, all the same option modes and combinations as for `-i` are applied
-- `-m`: modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
+- [`u...`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations):
+update (rewrite) operations, all the same option modes and combinations as for `-i` are applied
+- [`-m`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-with-merging):
+modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
 
 
 ## Comparing JSONs
