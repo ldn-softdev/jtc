@@ -2334,14 +2334,22 @@ bash $
 
 
 ### Summary of interpolation token types
-- `{}`: a token used in _templates_ resulting in a "naked" type of interpolation from the currently walked JSON
-- `{NS}`: same as `{}`, but interpolation occurs from the _namespace_ `NS`
-- `{{}}`: a token used in _templates_ resulting in a "dressed" type of interpolation from the currently walked JSON
-- `{{NS}}`: same as `{{}}`, but interpolation occurs from the _namespace_ `NS`
-- `<json_str>`: a token notation for a jsonization request of the stringified JSON `json_str`, the result is a "naked" JSON value
-- `<<json_str>>`: same as `<json_str>`, however  the result is a complete ("dressed") JSON value
-- `>json<`: a token notation for a stringification request of a JSON `json`, the result is a "naked" _JSON string_ value
-- `>>json<<`: same as `>json<`, however the result is a complete ("dressed") _JSON string_ value
+- [`{}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
+a token used in _templates_ resulting in a "naked" type of interpolation from the currently walked JSON
+- [`{NS}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
+same as `{}`, but interpolation occurs from the _namespace_ `NS`
+- [`{{}}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
+a token used in _templates_ resulting in a "dressed" type of interpolation from the currently walked JSON
+- [`{{NS}}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
+same as `{{}}`, but interpolation occurs from the _namespace_ `NS`
+- [`<json_str>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
+a token notation for a jsonization request of the stringified JSON `json_str`, the result is a "naked" JSON value
+- [`<<json_str>>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
+same as `<json_str>`, however  the result is a complete ("dressed") JSON value
+- [`>json<`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
+a token notation for a stringification request of a JSON `json`, the result is a "naked" _JSON string_ value
+- [`>>json<<`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
+same as `>json<`, however the result is a complete ("dressed") _JSON string_ value
 
 
 ### Summary of namespace tokens
