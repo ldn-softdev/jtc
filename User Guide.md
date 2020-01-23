@@ -1680,31 +1680,44 @@ _instead_ of capturing (the same rules apply)
 
 
 ### Summary of walk options
-- `-w`: defines a _walk-path_ (multiple walks supported), by default the results produced from multiple walks are _interleaved_
-- `-l`: when used w/o `-j` just _prints labels_ for those walked JSONS which have one
-- `-ll`: when used w/o `-j` prints all JSON objects _"naked"_, i.e. _removes JSON object encasement_ and then uses _inner_ labels; 
+- [`-w`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json):
+defines a _walk-path_ (multiple walks supported), by default the results produced from multiple walks are _interleaved_
+- [`-l`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#displaying-walks-with-labels):
+when used w/o `-j` just _prints labels_ for those walked JSONS which have one
+- [`-ll`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-values):
+when used w/o `-j` prints all JSON objects _"naked"_, i.e. _removes JSON object encasement_ and then uses _inner_ labels; 
 for the rest of JSON types the behavior is the same like with the single `-l`
-- `-n`: turns on a _sequential_ behavior for walk-paths (process first all the results from the first walk, then from then second, etc),
-- `-nn`: when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
-- `-nn`: also triggers a _round-robin templates_ application when a number of templates (`-T`) and walks (`-w`) is the same but 
+- [`-n`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sequential-walk-processing):
+turns on a _sequential_ behavior for walk-paths (process first all the results from the first walk, then from then second, etc),
+- [`-nn`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks):
+when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
+- [`-nn`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks):
+also triggers a _round-robin templates_ application when a number of templates (`-T`) and walks (`-w`) is the same but 
 a _round_robin_ template application must be favored over a default _per-walk_'s in this situation
-- `-j`: arranges all walked elements (from all walk-paths) into a _JSON array_
-- `-jl`: arranges all walked elements (from all walk-paths) into a _JSON array_, puts labeled nodes into _separate JSON objects_, 
+- [`-j`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array):
+arranges all walked elements (from all walk-paths) into a _JSON array_
+- [`-jl`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array):
+arranges all walked elements (from all walk-paths) into a _JSON array_, puts labeled nodes into _separate JSON objects_, 
 any clashing labels will be aggregated (into _JSON arrays_) within those objects
-- `-jln`: arranges all walked elements into a _JSON array_, each labeled element will be placed into _own JSON object_, thus dodging
+- [`-jln`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array):
+arranges all walked elements into a _JSON array_, each labeled element will be placed into _own JSON object_, thus dodging
 possible label clashing
-- `jlnn`: arranges all walked elements into a _JSON array_, _all labeled values_ placed into a _single JSON object_, all clashing
+- [`jlnn`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#aggregating-walks):
+arranges all walked elements into a _JSON array_, _all labeled values_ placed into a _single JSON object_, all clashing
 labels are aggregated
-- `-jj`: arranges all walked elements into a _JSON object_ (i.e. all walked elements which do not have labels will be ignored), the
+- [`-jj`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-a-json-object):
+arranges all walked elements into a _JSON object_ (i.e. all walked elements which do not have labels will be ignored), the
 values with clashing labels will _override the prior_ values (_note:_ `-l`,`-n` and `-nn` with `-jj` have no effect)
 - `-jjm`: alters behavior of `-jj` by enabling the aggregation of the values with the clashing labels into _JSON arrays_ 
 - `-jjll`: combined behavior of `-jj` and `-ll`
 - `-jjllm`: combined behavior of `-jj` and `-ll` and `-m`
-- `-x`,`-y`: facilitates breaking walk-paths (`-w`) into a common (`-x`) and variables parts (`-y`); i.e. an argument of each `-x` will be
+- [`-x`,`-y`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax):
+facilitates breaking walk-paths (`-w`) into a common (`-x`) and variables parts (`-y`); i.e. an argument of each `-x` will be
 combined with every subsequent argument of `-y` (if any), e.g.: `-xA` `-yB` `-yC` `-xD` `-yE` `-yF` result in 4 walk-paths:
 `-wAB` `-wAC` `-wDE` `-wDF` - thus `-x`/`-y` notation provides more succinct notation (than `-w`) for multiple walk-paths with 
 a common head (and varying tails)
-- `-xN/M`: controls which walk result(s) get(s) printed: print each _`N`th_ walk starting with _`M`th_ (_`M`_ is an index and hence is
+- [`-xN/M`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks):
+controls which walk result(s) get(s) printed: print each _`N`th_ walk starting with _`M`th_ (_`M`_ is an index and hence is
 zero based); `-xN` prints every _`N`th_ walk result (same as `-xN/M`, where `M`=`N`-`1`), `-x/M` prints a single _`M`th_ walk
 (same as `-x0/M`); special handling for `-x0` or `-x/-1` - it _ensures_ that the very last walk result is always gets printed
 (but not duplicated)
