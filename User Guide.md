@@ -2252,7 +2252,7 @@ the  source/input JSON), then the purge is applied to the source walked elements
 
 #### Multiple templates and walks
 When _multiple_ templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>` to which templates applied)
-**is the same**, then templates are pertain to each walk. In all other cases templates are applied in a round-robin fashion.  
+_is the same_, then templates are pertain to each walk. In all other cases templates are applied in a round-robin fashion.  
 In the case where a round-robin behavior is required while a number of templates and walks matches, use `-nn` notation -
 it will ensure round-robin templates application onto sequential walks
 
@@ -3606,38 +3606,38 @@ bash $ <<<$mtx jtc -tc
 bash $ 
 ```
 
-We can arrange walking through each slice using incremental index from the 1st one:
+We can arrange walking through each slice while memorizing incremental index within the slice, it's trivial:
 ```bash
-bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -jr
-[ 0, "a", null, 1, "b", true, 2, "c", 2, 3, "d", "3", 4, "e", [ 4 ] ]
+bash $ <<<$mtx jtc -w'[:][:]<I>k' -jr
+[ 0, 1, 2, 3, 4, "a", "b", "c", "d", "e", null, true, 2, "3", [ 4 ] ]
 bash $ 
 ```
 
 However, we need to re-arrange such output per each new, transposed matrix with number of columns `<->` rows.
 That could be facilitated if we label each value with the row index:
 ```bash
-bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -r
+bash $ <<<$mtx jtc -w'[:][:]<I>k' -T'{"{I}":{{}}}' -r
 { "0": 0 }
-{ "0": "a" }
-{ "0": null }
 { "1": 1 }
-{ "1": "b" }
-{ "1": true }
-{ "2": 2 }
-{ "2": "c" }
 { "2": 2 }
 { "3": 3 }
-{ "3": "d" }
-{ "3": "3" }
 { "4": 4 }
+{ "0": "a" }
+{ "1": "b" }
+{ "2": "c" }
+{ "3": "d" }
 { "4": "e" }
+{ "0": null }
+{ "1": true }
+{ "2": 2 }
+{ "3": "3" }
 { "4": [ 4 ] }
 bash $ 
 ```
 
 The last step is to reach out for labels inside each object (`-ll`) and then regroup the output per each new group:
 ```bash
-bash $ <<<$mtx jtc -w'[0][:]<I>k[^0][:]>I<t' -T'{"{I}":{{}}}' -ll / -jw[:] -tc
+bash $ <<<$mtx jtc -w'[:][:]<I>k' -T'{"{I}":{{}}}' -ll / -jw[:] -tc
 [
    [ 0, "a", null ],
    [ 1, "b", true ],
