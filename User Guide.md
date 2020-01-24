@@ -1620,7 +1620,7 @@ matches an _exact label_ in a currently walked JSON element (e.g.: like in `{ "t
 matches _`N`th_ child (all indices are zero based in `jtc`) in a currently walked JSON _iterable_
 - [`[-N]`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents):
 selects _`N`th_ parent for a currently walked JSON node/element referring from the node itself
-- [`[^N]`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents-offesting-from-root):
+- [`[^N]`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#addressing-parents-offsetting-from-root):
 selects _`N`th_ parent for a currently walked JSON node though referring the parent from the JSON root (rather than from a node)
 - [`[+N]`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#selecting-multiple-subscripted-json-elements):
 matches _every child_ in a currently walked JSON _iterable_ starting from _`N`th_ child
@@ -2200,7 +2200,7 @@ bash $
 For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
 never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with source walks in operations (`-i`, `-u`, `-c`)
 \- that way 
-[cross-referenced insertions and updates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
+[cross-referenced insertions and updates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-insert-update)
 are possible. Logically, for each destination walk (`-w`) there will be a respective subsequent source walk 
 (e.g.: `-c <src-walk>`), thus source walk may utilize the namespaces populated during destination walk (`-w`). 
 Template-interpolation will be attempted only once source walk is successful
@@ -2665,12 +2665,10 @@ share the same qualities:
 - both are [destination driven operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#destination-driven-insertion)
 - both merge _JSON objects_ recursively
 - both support merging (`-m`) semantic
-- both support _move_ (`-p`) semantic (
-[covered later](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move)
-)
-- both support _shell evaluation_ (`-e`) of argument 
-([covered later](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluaton)
-)
+- both support [_move_](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic)
+(`-p`) semantic
+- both support [_shell evaluation_](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
+(`-e`) of argument 
 
 #### Update operations matrix
 Here's the matrix table for update operations with and without merging:
@@ -2850,8 +2848,7 @@ That rule is in play to facilitate a walking capability over the specified stati
 `<walk-path>` arguments will be processed in a consecutive order, one by one (i.e., interleaving never occurs)_.
 
 (Also, see 
-[operations with cross referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-lookups)
-)
+[operations with cross referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-insert-update))
 
 
 ### Use of mixed argument types with `-e`
@@ -2891,8 +2888,9 @@ In case if a single option instance (`-eu`/`-ei`) is used (w/o trailing options 
 
 ### Cross-referenced insert, update
 One use-case that namespaces facilitate quite nicely, is when insert/update/purge/compare operation refer to different JSONs 
-(i.e., in [Use of mixed arguments](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-arguments-for--i--u--c) 
-types of operations) but one requires a reference from another.
+(i.e., in
+[Use of mixed argument types](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-for--i--u--c)) 
+but one requires a reference from another.
 
 Say, we have 2 JSONs:
 1. `main.json`:
