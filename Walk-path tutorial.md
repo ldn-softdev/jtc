@@ -5,6 +5,7 @@
 `Walk-path` is a way to telling `jtc` how input JSON must be walked. 
 
 1. [Walk-path Lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-path-Lexemes)
+   * [Grasping a gist of a walk-path in 1 minute](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#grasping-a-gist-of-a-walk-path-in-1-minute)
 2. [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes)
    * [Numerical offsets (`[n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
    * [Literal subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
@@ -37,27 +38,79 @@
    * [Walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)
      * [Fail-safe directive (`<..>f`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#fail-safe-directive)
 
-
 ---
 
 ## Walk-path Lexemes
 `Walk-path` is an argument of `-w` option (but not only, other options may also accept `walk-path`s).
 
 `Walk-path` is made of _lexemes_ (optionally separated with the white spaces).  
-A _lexeme_ - is an atomic walk-step that `jtc` applies when traversing JSON tree. `jtc` always begins walking of any walk-path
-starting from the _JSON root_.
+A _lexeme_ - is an atomic walk-step that `jtc` applies when traversing JSON tree. `jtc` always begins walking of a walk-path
+starting from a _JSON root_.
 
 If upon walking (i.e. applying _lexemes_, a.k.a. _walk-steps_) applying of a lexeme fails, such walk-path is considered to be empty
-(non-existent) and therefore not displayed. Only _successfully finished_ walk-paths will be displayed.  
+(non-existent) and therefore skipped (not displayed). Only _successfully finished_ walk-paths will be processed (displayed).  
 _In order to succeed walking a walk-path, all its lexemes must be walked successfully_
 
 There are only two types of lexemes:
 - [_Subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes),
-enclosed in square brackets `[`, `]`
+enclosed in square brackets `[..]`
 - [_Searches_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#search-lexemes),
-enclosed in angular brackets `<`,`>`
+enclosed in angular brackets `<..>, >..<`
 
 Though each type comes in several variants.
+
+### Grasping a gist of a walk-path in 1 minute
+1. Subscript lexemes `[..]` allow traversing JSON trees downwards and **upwards (!)**
+2. Subscript lexemes allow iterating over an arbitrary number of values in any of JSON iterables
+3. search lexemes `<..>, >..<` allow searching JSON trees recursively and non-recursively 
+4. search lexemes allow iterating over found matches in controlled ways 
+
+E.g.: say, we have a json:
+```bash
+bash $ jsn='[{"number":"111-23456","type":"mobile"},{"number":"222-34567","type":"work"},{"number":"223-45678","type":"work"},{"number":"333-45678","type":"home"}]'
+bash $ <<<$jsn jtc -tc
+[
+   { "number": "111-23456", "type": "mobile" },
+   { "number": "222-34567", "type": "work" },
+   { "number": "223-45678", "type": "work" },
+   { "number": "333-45678", "type": "home" }
+]
+bash $ 
+```
+Say, we want to extract all `work` types of numbers? Applying the explained concepts to build a walk-path is easy: 
+1. find recursively all `"type":"work"` entries,
+2. step 1 level up (from each found entry) towards the root (i.e. traverse JSON tree _upwards_)
+3. select (subscript) `number` value (for each found)
+
+So, let's do it (build a walk-path) one step at a time:
+```bash
+# 1. find recursively all `"type": "work"` entries:
+bash $ <<<$jsn jtc -w'[type]:<work>:'
+"work"
+"work"
+bash $ 
+
+# 2. step 1 level up (from each found entry) towards the root (i.e. traverse JSON tree _upwards_):
+bash $ <<<$jsn jtc -w'[type]:<work>:[-1]'
+{
+   "number": "222-34567",
+   "type": "work"
+}
+{
+   "number": "223-45678",
+   "type": "work"
+}
+bash $ 
+
+# 3. select (subscript) `number` value (for each found)
+bash $ <<<$jsn jtc -w'[type]:<work>:[-1][number]'
+"222-34567"
+"223-45678"
+bash $ 
+```
+\- see how easy it becomes to accomplish such JSON query given ability to search JSON recursively and traverse it up and down?
+
+That's it, you have it now. The rest of a tutorial you can use it just as a reference to diffent types of lexemes and their uses. 
 
 
 ## Subscript lexemes
