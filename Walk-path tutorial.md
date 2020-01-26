@@ -186,29 +186,28 @@ bash $
 bash $ <<<$jsn jtc -w[4][2][0]
 3
 ```
->_Note_: numerical offset is treated like one only if spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
+>_Note_: numerical offset is treated like one only if it's spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
 as a valid number, otherwise it's treated as a 
 [_literal subscript_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts).
-E.g.: `[ 0 ]` will address an element with the label `" 0 "`.
+E.g.: `[ 0 ]` will address an element with the label `" 0 "`. But that poses a question - how to address elements labeled with
+a numerical literals, e.g.: `"0"`? Hold on, we'll get to it.
+
 
 ##
 ### Literal subscripts
-`[text]` - literal subscripts allow addressing (selecting) elements within _JSON objects_ by their key (label)
+`[text]` - literal subscripts allow addressing (indexing) elements within _JSON objects_ with their keys (labels)
 
 There are two elements in the above JSON that are addressable with _literal subscripts_, let's get to them using _literal subscripts_.
 First, let's get to `pi`'s value:
 ```bash
-bash $ <<<$JSN jtc -w[3]
-```
-```json
+# first, get to to the object:
+bash $ <<<$jsn jtc -w[3]
 {
    "pi": 3.14
 }
-```
-```bash
-bash $ <<<$JSN jtc -w[3][pi]
-```
-```json
+
+# then idex a value within the object by its label:
+bash $ <<<$jsn jtc -w[3][pi]
 3.14
 ```
 
