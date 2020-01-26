@@ -6,7 +6,7 @@
 
 1. [Walk-path Lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-path-Lexemes)
    * [Grasping a gist of a walk-path in 1 minute](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#grasping-a-gist-of-a-walk-path-in-1-minute)
-2. [Subscript lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes)
+2. [Subscript lexemes (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes)
    * [Numerical offsets (`[n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
    * [Literal subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
    * [Range subscripts (`[n:N]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
@@ -63,7 +63,7 @@ Though each type comes in several variants.
 1. Subscript lexemes `[..]` allow traversing JSON trees downwards and **upwards (!)**
 2. Subscript lexemes allow iterating over an arbitrary number of values in any of JSON iterables
 3. search lexemes `<..>, >..<` allow searching JSON trees recursively and non-recursively 
-4. search lexemes allow iterating over found matches in controlled ways 
+4. search lexemes allow iterating over a number of found matches in a controlled way 
 
 E.g.: say, we have a json:
 ```bash
@@ -79,18 +79,18 @@ bash $
 ```
 Say, we want to extract all `work` types of numbers? Applying the explained concepts to build a walk-path is easy: 
 1. find recursively all `"type":"work"` entries,
-2. step 1 level up (from each found entry) towards the root (i.e. traverse JSON tree _upwards_)
-3. select (subscript) `number` value (for each found)
+2. step 1 level up (from the each found entry) towards the root (i.e. traverse JSON tree _upwards_)
+3. select (subscript) `number` value (for the each found record)
 
 So, let's do it (build a walk-path) one step at a time:
 ```bash
-# 1. find recursively all `"type": "work"` entries:
+# 1. find recursively all `"type":"work"` entries:
 bash $ <<<$jsn jtc -w'[type]:<work>:'
 "work"
 "work"
 bash $ 
 
-# 2. step 1 level up (from each found entry) towards the root (i.e. traverse JSON tree _upwards_):
+# 2. step 1 level up (from the each found entry) towards the root (i.e. traverse JSON tree _upwards_):
 bash $ <<<$jsn jtc -w'[type]:<work>:[-1]'
 {
    "number": "222-34567",
@@ -102,7 +102,7 @@ bash $ <<<$jsn jtc -w'[type]:<work>:[-1]'
 }
 bash $ 
 
-# 3. select (subscript) `number` value (for each found)
+# 3. select (subscript) `number` value (for the each found record)
 bash $ <<<$jsn jtc -w'[type]:<work>:[-1][number]'
 "222-34567"
 "223-45678"
@@ -110,93 +110,83 @@ bash $
 ```
 \- see how easy it becomes to accomplish such JSON query given ability to search JSON recursively and traverse it up and down?
 
-That's it, you have it now. The rest of a tutorial you can use it just as a reference to diffent types of lexemes and their uses. 
+**_That's it, you have it now!_**  
+Well, there's more to it, but you've got the most frequent use case for sure. The rest of a tutorial
+you may use it just as a reference to diffent types of lexemes and their uses
 
 
 ## Subscript lexemes
-There are few variants of _subscripts_:
+There are few variants of _subscripts_ (`[..]`):
 - [_numerical offsets_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
-- [_literal (textual) subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
+- [_literal subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
 - [_range (slice) subscripts_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
 - [_parent selects_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-parents)
 
-let's start with the most common one - _numerical offset_
+let's start with the most common one - _numerical offsets_
 
 ##
 ### Numerical offsets
-`[n]` - as like in most programming languages, in `jtc` numerical offsets let selecting `n`th instance in the currently selected
+`[n]` - like in most programming languages, in `jtc` numerical offsets let indexing `n`th instance in the currently selected
 (walked) JSON, staring from `0` (indices are always zero-based):
 
 Let's work with this JSON:
 ```bash
-bash $ JSN='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"number three": 3}] ]'
-bash $ <<<$JSN jtc
-```
-```json
+bash $ jsn='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"number three": 3}] ]'
+bash $ <<<$jsn jtc -tc
 [
    "abc",
    false,
    null,
-   {
-      "pi": 3.14
-   },
+   { "pi": 3.14 },
    [
       1,
       "two",
-      {
-         "number three": 3
-      }
+      { "number three": 3 }
    ]
 ]
+bash $ 
 ```
 
-- select _1st_ element in _JSON array_:
+- select the _1st_ element from the top _JSON array_:
 ```bash
-bash $ <<<$JSN jtc -w[0]
-```
-```json
+bash $ <<<$jsn jtc -w[0]
 "abc"
+bash $ 
 ```
 
-\- select _5th_ element in _JSON array_:
+\- select a _5th_ element in _JSON array_:
 ```bash
-bash $ <<<$JSN jtc -w[4]
-```
-```json
+bash $ <<<$jsn jtc -w[4] -tc
 [
    1,
    "two",
-   {
-      "number three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
 
-If the selected element is non-atomic (a.k.a. _iterable_), i.e., _Json array_, or _JSON object_, then you may continue digging
-further the selected (walked) JSON tree:
+If the selected element is non-atomic (a.k.a. _iterable_), i.e., a _Json array_, or a _JSON object_, then you may continue digging
+further the selected (walked, found) JSON tree:
 
-\- select _5th_ element in _JSON array_ and then _3rd_ one:
+\- select the _5th_ element in _JSON array_ and then the _3rd_ one:
 ```bash
-bash $ <<<$JSN jtc -w[4][2]
-```
-```json
-{
-   "number three": 3
-}
+bash $ <<<$jsn jtc -w[4][2] -tc
+{ "number three": 3 }
+bash $ 
 ```
 
-If we try selecting a 2nd element from the resulted JSON (which has only single element), walking will fail and the output
+If we try selecting a 2nd element from the resulted JSON (which has only a single element), walking will fail and the output
 will be blank:
 ```bash
-bash $ <<<$JSN jtc -w[4][2][1]
-bash $ 
-bash $ <<<$JSN jtc -w[4][2][0]
-```
-```json
+# selecting further the 2nd element fails:
+bash $ <<<$jsn jtc -w[4][2][1]
+bash $
+
+# while selecting the 1st one yields the result:
+bash $ <<<$jsn jtc -w[4][2][0]
 3
 ```
-##
-_Note_: numerical offset is treated like one only if spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
+>_Note_: numerical offset is treated like one only if spelled like shown (`[n]`) - no white space allowed and `n` must be spelled
 as a valid number, otherwise it's treated as a 
 [_literal subscript_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts).
 E.g.: `[ 0 ]` will address an element with the label `" 0 "`.
