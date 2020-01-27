@@ -9,7 +9,7 @@
 2. [Subscript lexemes (`[..]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#subscript-lexemes)
    * [Numerical offsets (`[n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#numerical-offsets)
    * [Literal subscripts (`[text]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#literal-subscripts)
-   * [Range subscripts (`[n:N]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
+   * [Range subscripts (`[n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
      * [Default range indices (`[:]`, `[n:]`, `[:n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-range-indices)
        * [Alternative range notation (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#alternative-range-notation)
      * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
@@ -65,7 +65,7 @@ Though each type comes in several variants.
 3. search lexemes `<..>, >..<` allow searching JSON trees recursively and non-recursively 
 4. search lexemes allow iterating over a number of found matches in a controlled way 
 
-E.g.: say, we have a json:
+E.g.: say, we have a JSON:
 ```bash
 bash $ jsn='[{"number":"111-23456","type":"mobile"},{"number":"222-34567","type":"work"},{"number":"223-45678","type":"work"},{"number":"333-45678","type":"home"}]'
 bash $ <<<$jsn jtc -tc
@@ -78,20 +78,20 @@ bash $ <<<$jsn jtc -tc
 bash $ 
 ```
 Say, we want to extract all `work` types of numbers? Applying the explained concepts to build a walk-path is easy: 
-1. find recursively all `"type":"work"` entries,
+1. find recursively all `"work"` entries,
 2. step 1 level up (from the each found entry) towards the root (i.e. traverse JSON tree _upwards_)
 3. select (subscript) `number` value (for the each found record)
 
 So, let's do it (build a walk-path) one step at a time:
 ```bash
-# 1. find recursively all `"type":"work"` entries:
-bash $ <<<$jsn jtc -w'[type]:<work>:'
+# 1. find recursively all `"work"` entries:
+bash $ <<<$jsn jtc -w'<work>:'
 "work"
 "work"
 bash $ 
 
 # 2. step 1 level up (from the each found entry) towards the root (i.e. traverse JSON tree _upwards_):
-bash $ <<<$jsn jtc -w'[type]:<work>:[-1]'
+bash $ <<<$jsn jtc -w'<work>:[-1]'
 {
    "number": "222-34567",
    "type": "work"
@@ -103,7 +103,7 @@ bash $ <<<$jsn jtc -w'[type]:<work>:[-1]'
 bash $ 
 
 # 3. select (subscript) `number` value (for the each found record)
-bash $ <<<$jsn jtc -w'[type]:<work>:[-1][number]'
+bash $ <<<$jsn jtc -w'<work>:[-1][number]'
 "222-34567"
 "223-45678"
 bash $ 
@@ -178,11 +178,11 @@ bash $
 If we try selecting a 2nd element from the resulted JSON (which has only a single element), walking will fail and the output
 will be blank:
 ```bash
-# selecting further the 2nd element fails:
+# indexing further the 2nd element fails:
 bash $ <<<$jsn jtc -w[4][2][1]
 bash $
 
-# while selecting the 1st one yields the result:
+# while indexing the 1st one yields the final result:
 bash $ <<<$jsn jtc -w[4][2][0]
 3
 ```
@@ -211,65 +211,47 @@ bash $ <<<$jsn jtc -w[3][pi]
 3.14
 ```
 
-Now let's get to the `number three`'s value:
+Now, let's get to the `number three`'s value:
 ```bash
-bash $ <<<$JSN jtc -w[4]
-```
-```json
+# dig the first level:
+bash $ <<<$jsn jtc -w[4] -tc
 [
    1,
    "two",
-   {
-      "number three": 3
-   }
+   { "number three": 3 }
 ]
-```
-```bash
-bash $ <<<$JSN jtc -w[4][2]
-```
-```json
-{
-   "number three": 3
-}
-```
-```bash
-bash $ <<<$JSN jtc -w[4][2][number three]
-jtc json exception: unexpected_end_of_string
-```
-\- why? 
-\- it happens because of a _shell interpolation_. Shell treats space ('` `') as an argument separator, therefore option `-w`
-ends up only with partial argument, namely with `[4][2][number`, which is an invalid walk.
+bash $ 
 
-##
-in fact, `jtc` there complains due to a different reason: a second part of a walk (`three]`) is passed to `jtc` as a standalone argument,
-which `jtc` treats as a _filename_. It tries opening and reading it, but because such file does not exist an empty result is returned. 
-However, the empty input is an _invalid JSON_ (by JSON standard) - that why it's a JSON parsing error is given.  
-Here how walk-path parsing error looks like:
-```bash
-bash $ <<<$JSN jtc -w[4][2][number three] -
-jtc json exception: walk_offset_missing_closure
+# dig the second level:
+bash $ <<<$jsn jtc -w[4][2] -tc
+{ "number three": 3 }
+
+# dig the 3rd level:
+bash $ <<<$jsn jtc -w[4][2][number three]
+error: could not open file 'three]'
+jtc json parsing exception (three]:0): unexpected_end_of_string
 bash $ 
 ```
-##
+\- why? 
+\- it happens because of a _shell interpolation_. Shell treats space as an argument separator, therefore option `-w`
+ends up only with partial argument, namely with `[4][2][number`, while `three]` is treatated as a standalone (file) argument,
+which is an invalid (empty) read, hence the exception.
 
-To escape shell interpolation, either the whole argument must be quoted, or a space symbol (the former varian is preferred, but
+To escape the shell interpolation, either the whole argument, or a space symbol must be quoted (the former variant is preferred, but
 both will work):
 ```bash
-bash $ <<<$JSN jtc -w'[4][2][number three]'
-```
-```json
+# quote the entire walk-path (preferred)
+bash $ <<<$jsn jtc -w'[4][2][number three]'
 3
-```
-```bash
-bash $ <<<$JSN jtc -w[4][2][number\ three]
-```
-```json
+
+# quote the spacer
+bash $ <<<$jsn jtc -w[4][2][number\ three]
 3
 ```
 
 The elements within objects also could be addressed using _numerical offsets_:
 ```bash
-bash $ <<<$JSN jtc -w[4][2][0]
+bash $ <<<$jsn jtc -w[4][2][0]
 ```
 ```json
 3
@@ -279,28 +261,26 @@ of elements within _JSON objects_ are fragile**_.
 
 Say, there's a following JSON:
 ```bash
-bash $ ANML='{ "ANDEAN BEAR": "Bono", "AMUR TIGER": "Shadow", "GRIZZLY BEAR": "Goofy" }'
+bash $ anml='{ "ANDEAN BEAR": "Bono", "AMUR TIGER": "Shadow", "GRIZZLY BEAR": "Goofy" }'
 ```
 And we want to get get the name of `ANDEAN BEAR`. Being lazy one can do it by a _numerical offset_, assuming here that the index
 of the required entry would be `0` (indeed, it's listed first there in the object), let's see:
 ```bash
-bash $ <<<$ANML jtc -w[0]
-```
-```json
+bash $ <<<$anml jtc -w[0]
 "Shadow"
 ```
 Bummer! Instead of selecting the name of `ANDEAN BEAR` we got the name of `AMUR TIGER`. That's because our assumption of the index
 **was wrong**.
 
-_JSON standard defines JSON objects as ***unordered set*** of name/value pairs_.
-That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a processing program
-(and not by user, like in _JSON arrays_). Some programs will retain the same order, others will reorder them - it all boils
-down to the internal implementation specifics.
+_JSON standard defines JSON objects as an **_unordered set_** of name/value pairs_.
+That means that the order of elements (name/value pairs) within _JSON objects_ will be defined by a parser
+(and not by user, like in _JSON arrays_). Some programs will retain the same order, others will reorder them -
+it all boils down to the internal implementation specifics.
 
-`jtc` always rearranges all the elements within the _JSON objects_ by their keys (labels) in  the _alphabetical_ order, 
+`jtc` always rearranges all the elements within the _JSON objects_ by their keys (labels) in the _alphabetical_ order, 
 thus for `jtc` the above JSON looks like this:
 ```bash
-bash $ <<<$ANML jtc 
+bash $ <<<$anml jtc 
 ```
 ```json
 {
@@ -309,117 +289,98 @@ bash $ <<<$ANML jtc
    "GRIZZLY BEAR": "Goofy"
 }
 ```
-
 That is a serious enough reason to select elements in JSON objects by their keys/labels:
 ```bash
-bash $ <<<$ANML jtc -w'[ANDEAN BEAR]'
-```
-```json
+bash $ <<<$anml jtc -w'[ANDEAN BEAR]'
 "Bono"
 ```
 ##
 There's a curious case, when the label matches a numerical subscript, i.e. consider:
 ```bash
-bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc 
-```
-```json
+bash $ jsn='{ "0": 12345, "#": "abcd"}'
+bash $ <<<$jsn jtc
 {
-   "#": "abcde",
+   "#": "abcd",
    "0": 12345
 }
+bash $ 
 ```
 
-Addressing _JSON root_ with `[0]` will return `"abcde"`:
+Addressing _JSON root_ with `[0]` will return `"abcd"`:
 ```bash
-bash $ <<<'{ "0": 12345, "#": "abcde"}' jtc -w[0]
-```
-```json
-"abcde"
+bash $ <<<$jsn jtc -w[0]
+"abcd"
+bash $ 
 ````
 - How to get to the value of the label `"0"`? For that we need to use a _non-recursive search_ lexeme (namely, `>0<l`).
-
-_NOTE_: there's a generic rule for all other types of subscripts: _If parsing of a subscript does not result in either of a type
+> _NOTE_: there's a generic rule for all other types of subscripts: _If parsing of a subscript does not result in either types
 (i.e. it's neither a numerical offsets, nor a range subscript, nor addressing parents), then it's treated as a literal subscript.
 
 ##
 ### Range subscripts
-`[n:N]` - selects each element in the _iterable_, starting from `n`th index and ending with `N`th - 1, i.e. `N` 
-is the index of the element following the last in the range. Both values `n` and `N` are optional and both could be omitted
+`[n:m:s]` - selects elements in a JSON _iterable_, starting from `n`th index and ending with `m`th - 1 with the step `s`, i.e. `m` 
+is the index of the element following the last in the range. Both values `n`, `m` and `s` are optional and both could be omitted.
 
-For those who are familiar with _Python addressing_, grasping this one is easy - it's matches Python's addressing concept entirely.
+For those who are familiar with _Python addressing_, grasping this one is easy - it's matches Python's addressing concept.
 
 Range subscript makes the walk-path iterable, i.e. it's like selecting multiple elements with just one _iterable walk_ 
 instead of specifying multiple offsets, compare:
 ```bash
-bash $ <<<$JSN jtc -w[0] -w[1] -w[2]
-```
-```json
+bash $ jsn='["abc", false, null, { "pi": 3.14}, [ 1,"two", {"number three": 3}] ]'
+
+# select multiple values individually:
+bash $ <<<$jsn jtc -w[0] -w[1] -w[2]
 "abc"
 false
 null
-```
-```bash
-bash $ <<<$JSN jtc -w[0:3]
-```
-```json
+
+# select the same values using range:
+bash $ <<<$jsn jtc -w[0:3]
 "abc"
 false
 null
 ```
 ##
 #### Default range indices 
-Either of indices in the _range subscript_ `n` or `N` could be missed, then the index in the omitted position takes a _default_ value. 
+Either of indices in the _range subscript_ `n`, `m` and `s` could be omitted, then the index in the omitted position takes 
+a _default_ value:
+- a _default_ index in the first position (`n`) means: from the very first value in an _iterable_,  
+- a _default_ index in the second position (`m`) means: till the last value in the _iterable_,
+- a _default_ value in the third position (`s`) means: with the step of `1`
 
-i.e. a _default_ index in the first position means: from the very first value in the _iterable_,  
-while a _default_ index in the second position means: till the last value in the _iterable_
-
-it's quite handy when we need to select only portion of the elements in the iterable either starting form its beginning, or till it's
-last element, because sometimes we might not know upfront a number of elements in the iterable.
+it's quite handy when we need to select only portion of the elements in an iterable either form its beginning, or till it's
+last element, because sometimes we might not know upfront a number of elements in the iterable, e.g.:  
 - select 2 elements from the beginning of the _JSON root's_  iterable:
 ```bash
-bash $ <<<$JSN jtc -w[:2]
-```
-```json
+bash $ <<<$jsn jtc -w[:2]
 "abc"
 false
 ```
-- select _all_ elements staring from 3rd one:
+- select _all_ elements staring from a 3rd one:
 ```bash
-bash $ <<<$JSN jtc -w[2:]
-```
-```json
+bash $ <<<$jsn jtc -w[2:] -tc
 null
-{
-   "pi": 3.14
-}
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
-
-
 when both indices are missed `[:]` then each element in the iterable will be selected (_walked_):
 ```bash
-bash $ <<<$JSN jtc -w[:]
-```
-```json
+bash $ <<<$jsn jtc -w[:] -tc
 "abc"
 false
 null
-{
-   "pi": 3.14
-}
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
 ##
 The _range indices_ (as well as any lexemes) can appear in the walk-path _any number of times_. The above example shows iterating over
