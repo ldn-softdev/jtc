@@ -205,10 +205,12 @@ bash $ <<<$jsn jtc -w[3]
 {
    "pi": 3.14
 }
+bash $ 
 
 # then idex a value within the object by its label:
 bash $ <<<$jsn jtc -w[3][pi]
 3.14
+bash $ 
 ```
 
 Now, let's get to the `number three`'s value:
@@ -243,18 +245,19 @@ both will work):
 # quote the entire walk-path (preferred)
 bash $ <<<$jsn jtc -w'[4][2][number three]'
 3
+bash $ 
 
 # quote the spacer
 bash $ <<<$jsn jtc -w[4][2][number\ three]
 3
+bash $ 
 ```
 
 The elements within objects also could be addressed using _numerical offsets_:
 ```bash
 bash $ <<<$jsn jtc -w[4][2][0]
-```
-```json
 3
+bash $ 
 ```
 \- it seems _numerical notation_ is more succinct, why then bother using literal offsets? Because _**our assumptions of the order
 of elements within _JSON objects_ are fragile**_.
@@ -281,18 +284,18 @@ it all boils down to the internal implementation specifics.
 thus for `jtc` the above JSON looks like this:
 ```bash
 bash $ <<<$anml jtc 
-```
-```json
 {
    "AMUR TIGER": "Shadow",
    "ANDEAN BEAR": "Bono",
    "GRIZZLY BEAR": "Goofy"
 }
+bash $ 
 ```
 That is a serious enough reason to select elements in JSON objects by their keys/labels:
 ```bash
 bash $ <<<$anml jtc -w'[ANDEAN BEAR]'
 "Bono"
+bash $ 
 ```
 ##
 There's a curious case, when the label matches a numerical subscript, i.e. consider:
@@ -333,12 +336,14 @@ bash $ <<<$jsn jtc -w[0] -w[1] -w[2]
 "abc"
 false
 null
+bash $ 
 
 # select the same values using range:
 bash $ <<<$jsn jtc -w[0:3]
 "abc"
 false
 null
+bash $ 
 ```
 ##
 #### Default range indices 
@@ -355,6 +360,7 @@ last element, because sometimes we might not know upfront a number of elements i
 bash $ <<<$jsn jtc -w[:2]
 "abc"
 false
+bash $ 
 ```
 - select _all_ elements staring from a 3rd one:
 ```bash
@@ -387,201 +393,154 @@ The _range indices_ (as well as any lexemes) can appear in the walk-path _any nu
 the _top iterable_ (or, the first tier) in JSON tree hierarchy, to iterate over _all_ iterables in the second tier of the JSON tree,
 do this:
 ```bash
-bash $ <<<$JSN jtc -w[:][:]
-```
-```json
+bash $ <<<$jsn jtc -w[:][:] -tc
 3.14
 1
 "two"
-{
-   "three": 3
-}
+{ "number three": 3 }
+bash $ 
 ```
 \- an each element in the _top iterable_ will be _walked_ and then attempted to walk the _children_ of the walked element itself, 
 one by one.
 Because first three elements are not iterable, they will not be shows (they cannot be iterated over):
 ```bash
-bash $ <<<$JSN jtc -w[0][:]
+bash $ <<<$jsn jtc -w[0][:]
 bash $ 
 ```
 
 If you like to see (print) both walks of the top iterable and then each of the iterable at the second tier, then provide two walk paths:
 ```bash
-bash $ <<<$JSN jtc -w[:] -w[:][:]
-```
-```json
+bash $ <<<$jsn jtc -w[:] -w[:][:] -tc
 "abc"
 false
 null
-{
-   "pi": 3.14
-}
+{ "pi": 3.14 }
 3.14
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
 1
 "two"
-{
-   "three": 3
-}
+{ "number three": 3 }
+bash $ 
 ```
-\- Note how `jtc` _interleaves_ the walks - it puts relevant walkings in a good (relevant) order, rather than dumping results of
+>Note how `jtc` _interleaves_ the walks: it puts relevant walks in a good (relevant) order, rather than dumping results of
 the first walk and then of the second. If one prefers seeing the latter behavior, option `-n` will do the trick, compare:
-```bash
-bash $ <<<$JSN jtc -w[:] -w[:][:] -n
-```
-```json
-"abc"
-false
-null
-{
-   "pi": 3.14
-}
-[
-   1,
-   "two",
-   {
-      "three": 3
-   }
-]
-3.14
-1
-"two"
-{
-   "three": 3
-}
-```
+>```bash
+>bash $ <<<$jsn jtc -w[:] -w[:][:] -tc -n
+>"abc"
+>false
+>null
+>{ "pi": 3.14 }
+>[
+>   1,
+>   "two",
+>   { "number three": 3 }
+>]
+>3.14
+>1
+>"two"
+>{ "number three": 3 }
+>bash $ 
+>```
+
 ##
 ##### Alternative range notation
 `[+n]` is the alternative range notation for `[n:]`, they both do exactly the same thing - walk each element in the iterable starting
 from `n`th element:
 ```bash
-bash $ <<<$JSN jtc -w[+3]
-```
-```json
-{
-   "pi": 3.14
-}
+# dump all top entries starting from 4th using [+n] notation:
+bash $ <<<$jsn jtc -w[+3] -tc
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
-```
-```bash
-bash $ <<<$JSN jtc -w[3:]
-```
-```json
-{
-   "pi": 3.14
-}
+bash $ 
+
+# dump all top entries starting from 4th using [n:] notation:
+bash $ <<<$jsn jtc -w[3:] -tc
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
 Using either of notations is a matter of personal preference and has no impact onto the way of walking JSON tree
 
-
 ##
 #### Ranges with positive indices
-Positive indices (and `0`) in the range notation (`[n:N]`) always refer to the index offset _from the beginning_ of the iterable. 
+Positive indices (and `0`) in the range notation (`[n:m]`) always refer to the index offset _from the beginning_ of the iterable.
 
-When both `n` and `N` are positive, naturally `N` must be > `n`, if `N` <= `n`, it'll result in a blank output:
+When both `n` and `m` are positive, naturally `m` must be > `n`, if `m` <= `n`, it'll result in a blank output:
 ```bash
-bash $ <<<$JSN jtc -w[2:1]
+bash $ <<<$jsn jtc -w[2:1]
 bash $ 
-bash $ <<<$JSN jtc -w[2:2]
+bash $ <<<$jsn jtc -w[2:2]
 bash $ 
 ```
 
-Case where `N` = `n` + 1, e.g., `[3:4]` is equal to spelling just a _numerical offset_ alone:
+Case where `m` = `n` + 1, e.g., `[3:4]` is equal to spelling just a _numerical offset_ alone:
 ```bash
-bash $ <<<$JSN jtc -w[3:4]
-```
-```json
-{
-   "pi": 3.14
-}
-```
-```bash
-bash $ <<<$JSN jtc -w[3]
-```
-```json
-{
-   "pi": 3.14
-}
+bash $ <<<$jsn jtc -w[3:4] -tc
+{ "pi": 3.14 }
+bash $ <<<$jsn jtc -w[3] -tc
+{ "pi": 3.14 }
 ```
 
 ##
 #### Ranges with negative indices
 A negative index in the _range subscript_ refers to the offset _from the end_ of the iterable. In the range subscripts it's okay to
-mix and match positive and negative indices in any position.
+mix and match positive and negative indices in any position (except position `s`, which must stay positive).
 
 - select _last 3 elements_ from the top array:
 ```bash
-bash $ <<<$JSN jtc -w[-3:]
-```
-```json
+bash $ <<<$jsn jtc -w[-3:] -tc
 null
-{
-   "pi": 3.14
-}
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
 
-- select _all_ elements in the range _from the 2nd_ till the one _before the last one_:
+- select _all_ elements in the range _2nd from the start_ till the _2nd from the end_:
 ```bash
-bash $ <<<$JSN jtc -w[1:-1]
-```
-```json
+bash $ <<<$jsn jtc -w[1:-1]
 false
 null
 {
    "pi": 3.14
 }
+bash $ 
 ```
 
 ##
 When either of indices is given outside of the _actual range_ of the iterable, `jtc` tolerates it fine re-adjusting respective range
 indices properly to the beginning and the end of actual range of the iterable:
 ```bash
-bash $ <<<$JSN jtc -w[-100:100]
-```
-```json
+bash $ <<<$jsn jtc -w[-100:100] -tc
 "abc"
 false
 null
-{
-   "pi": 3.14
-}
+{ "pi": 3.14 }
 [
    1,
    "two",
-   {
-      "three": 3
-   }
+   { "number three": 3 }
 ]
+bash $ 
 ```
 However, when the range is unknown, it's best to use the notation with the
 [_default range_](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-range-indices)
-values (i.e., `[:]`) 
+values (i.e., `[:]`)
 
 ##
 ### Addressing parents
