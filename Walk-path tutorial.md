@@ -12,8 +12,8 @@
    * [Range subscripts (`[n:m:s]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#range-subscripts)
      * [Default range indices (`[:]`, `[n:]`, `[:n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#default-range-indices)
        * [Alternative range notation (`[+n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#alternative-range-notation)
-     * [Ranges with positive indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
-     * [Ranges with negative indices](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
+     * [Ranges with positive indices (`[n:m]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-positive-indices)
+     * [Ranges with negative indices (`[-n:-m]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#ranges-with-negative-indices)
    * [Addressing parents](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#addressing-parents)
      * [Offsetting path from a leaf (`[-n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-a-leaf)
      * [Offsetting path from the root (`[^n]`)](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#offsetting-path-from-the-root)
@@ -491,6 +491,7 @@ bash $ <<<$jsn jtc -w[3:4] -tc
 { "pi": 3.14 }
 bash $ <<<$jsn jtc -w[3] -tc
 { "pi": 3.14 }
+bash $ 
 ```
 
 ##
@@ -545,7 +546,8 @@ values (i.e., `[:]`)
 ##
 ### Addressing parents
 One of the nifty features that makes `jtc` very powerful when coming up with queries, is the ability to address parents off the walked
-elements, i.e., those JSON elements higher up in the the JSON hierarchy tree that make the path towards the currently walked element.
+elements, i.e., those JSON elements higher up in the the JSON hierarchy tree (closer to the root) that make the path towards 
+the currently walked element.
 
 There are 2 ways to address parents:
 - `[-n]` will address parent(s) in the path (made of offsets from the _JSON root_ to the currently walked element) offsetting it
@@ -555,139 +557,116 @@ from the currently walked element
 Not sure if the definition above is easy to understand, but the concept is, so it's probably much easier to show it with the example.  
 Let's see the walk path where we selected the JSON element `3`:
 ```bash
-bash $ <<<$JSN jtc -w'[4][2][number three]'
-```
-```json
+bash $ <<<$jsn jtc -w'[4][2][number three]'
 3
+bash $ 
 ```
-The _**walk path**_ from the _JSON root_ towards the element `3` is **`[4][2][number three]`**.
+The _**walk path**_ from the _JSON root_ towards the element `3` is `[4][2][number three]`.
 
 ##
 In fact, every walk at any given step (even when it's done via _recursive search_ lexemes) internally always maintains a 
-representation expressed via _subscript and literal offsets_ only.  
-E.g. the same number `3` could have been selected using a _recursive search_ walk:
+representation expressed via _subscripts and literal offsets_ only.  
+E.g., the same number `3` could have been selected using a _recursive search_ walk:
 ```bash
-bash $ <<<$JSN jtc -w'<3>d'
-```
-```json
+bash $ <<<$jsn jtc -w'<3>d'
 3
+bash $ 
 ```
 but internally, the path towards this JSON element would be built as:
 ```bash
-bash $ <<<$JSN jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
-....walk_(), built path vector: 00000004-> 00000002-> number three
-....walk_(), finished walking: with built path vector: 00000004-> 00000002-> number three
+bash $ <<<$jsn jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
+....walk_(), built path vector: [00000004]->[00000002]->[number three]
+....walk_(), finished walking: with built path vector: [00000004]->[00000002]->[number three]
+bash $ 
 ```
-i.e. it still would bve `[4][2][number three]`. That's why `jtc` is known to be a _**`walk-path`**_ based utility.
+i.e. it still would be `[4][2][number three]`. That's why `jtc` is known to be a _**`walk-path`**_ based utility.
 
 ##
 #### Offsetting path from a leaf
 Thus, if we list indices for the above walk-path starting from the leaf, it'll be like this:
 ```
-Index from the leaf:   3    2  1      0
+Index from the leaf:   -3  -2 -1      -0
           walk-path: (root)[4][2][number three]
 ```
 Thus in order to select either of parents, we just need to pick a respective index in the path. E.g.:
 - `[-1]` will address an immediate parent of the value `3` 
 - `[-2]` will address a parent of the parent of the value `3` 
 - `[-3]` wil address the _JSON root_ itself.
-_Note_: `[-0]` will address the value `3` itself, so there's no much of a point to use such addressing, while indices greater _root's 
-(in that example are `[-4]`, `[-5]`, etc will keep addressing the JSON root)_
-Take a look:
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][-1]'
-```
-```json
-{
-   "number three": 3
-}
-```
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][-2]'
-```
-```json
-[
-   1,
-   "two",
-   {
-      "number three": 3
-   }
-]
-```
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][-3]'
-```
-```json
-[
-   "abc",
-   false,
-   null,
-   {
-      "pi": 3.14
-   },
-   [
-      1,
-      "two",
-      {
-         "number three": 3
-      }
-   ]
-]
-```
+>_Note_: `[-0]` will address the value `3` itself, so there's no much of a point to use such addressing, while indices greater _root's 
+(in that example are `[-4]`, `[-5]`, etc will keep addressing the JSON root)_. Take a look:
+>```bash
+># addressing an immediate parent:
+>bash $ <<<$jsn jtc -w'[4][2][number three][-1]' -tc
+>{ "number three": 3 }
+>bash $ 
+>
+># addressing a parent of a parent:
+>bash $ <<<$jsn jtc -w'[4][2][number three][-2]' -tc
+>[
+>   1,
+>   "two",
+>   { "number three": 3 }
+>]
+>bash $ 
+>
+># addressing the next parent (which happens to be the root):
+>bash $ <<<$jsn jtc -w'[4][2][number three][-3]' -tc
+>[
+>   "abc",
+>   false,
+>   null,
+>   { "pi": 3.14 },
+>   [
+>      1,
+>      "two",
+>      { "number three": 3 }
+>   ]
+>]
+>bash $ 
+>```
 
 ##
 #### Offsetting path from the root
 Now, let's list all the indices for the same walk-path starting from the root:
 ```
-Index from the root:   0    1  2      3
+Index from the root:    0   1  2       3
           walk-path: (root)[4][2][number three]
 ```
 You must get already the idea: the addressing parent off the root takes those indices:
 ```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][^0]'
-```
-```json
+# addressing a root parent:
+bash $ <<<$jsn jtc -w'[4][2][number three][^0]' -tc
 [
    "abc",
    false,
    null,
-   {
-      "pi": 3.14
-   },
+   { "pi": 3.14 },
    [
       1,
       "two",
-      {
-         "number three": 3
-      }
+      { "number three": 3 }
    ]
 ]
-```
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][^1]'
-```
-```json
+bash $ 
+
+# addressing a parent (of the walked) next after root:
+bash $ <<<$jsn jtc -w'[4][2][number three][^1]' -tc
 [
    1,
    "two",
-   {
-      "number three": 3
-   }
+   { "number three": 3 }
 ]
-```
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][^2]'
-```
-```json
-{
-   "number three": 3
-}
-```
-```bash
-bash $ <<<$JSN jtc -w'[4][2][number three][^3]'
-```
-```json
+bash $ 
+
+# addressing a next parent after root (which happens to be an immediate parent of the last walked):
+bash $ <<<$jsn jtc -w'[4][2][number three][^2]' -tc
+{ "number three": 3 }
+bash $ 
+
+# futher addressing has no effect:
+bash $ <<<$jsn jtc -w'[4][2][number three][^3]'
 3
+bash $ 
 ```
 
 Let's recap both addressing schemas (for the given walk in the example) on the same diagram:
@@ -700,14 +679,15 @@ to address a parent from the root: [^0]   [^1]  [^2]       [^3]
                         walk-path: root > [4] > [2] > [number three]
                                     ^      ^     ^          ^
                                     |      |     |          |
-  to address a parent from a leaf: [-3]   [-2]  [-1]       [-0]
+to address a parent from the leaf: [-3]   [-2]  [-1]       [-0]
                                    [-4]
                                    etc.
 ```
 
-Yes, agree, addressing parents when a walk-path is made of only subscript, probably is a dull idea (and here it's done only for
+Yes, agree, addressing parents when a walk-path is made of subscripts only is a dull idea (and here it's done only for
 the instructive purposes) - indeed, we just walked that path from the root, why getting back using _parent addressing_
-instead of stopping it at the required place? Ergo, it makes sense to use parent addressing together with (after) _search lexemes_.
+instead of stopping it at the required place?
+Ergo, it makes sense to use parent addressing together with (after) _search lexemes_.
 
 
 ## Search lexemes
