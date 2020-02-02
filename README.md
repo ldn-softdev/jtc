@@ -673,6 +673,12 @@ Machine spec used for testing:
   Memory:                     16 GB 2400 MHz DDR4
 ```
 
+### compare *jq* based solutions with `jtc`:
+[Here](https://github.com/ldn-softdev/stackoverflow-json/blob/master/README.md)
+are published some answers for JSON queries using `jtc`, you may compare those with `jq`'s, as well as study the 
+feasibility of the solutions, test relevant peroformance, etc
+
+
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
