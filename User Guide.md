@@ -98,6 +98,7 @@
    * [Counting with `jtc`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#counting-with-jtc)
    * [Transposing a matrix](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#transposing-a-matrix)
    * [Sorting JSONs](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#sorting-jsons)
+   * [More examples and case studies](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#more-examples-and-case-studies)
 
 ---
 
@@ -3718,6 +3719,13 @@ When comparing the same iterable types (comparing atomic values is trivial) the 
 - compared values child-by-child defines a winner, otherwise (all children values are the same):
 - if it's an object then the labels are compared, otherwise (if it's an array, or all the labels are the same):
 - JSON values are equal
+
+### More examples and case studies
+[Here](https://github.com/ldn-softdev/stackoverflow-json/blob/master/README.md)
+I have published (and will keep expanding) some answers using **`jtc`** for JSON queries taken from
+[stackoverflow.com](https://stackoverflow.com/questions/tagged/jq+or+bash+json)
+
+
 
 
 
