@@ -3722,7 +3722,7 @@ When comparing the same iterable types (comparing atomic values is trivial) the 
 
 ### More examples and case studies
 [Here](https://github.com/ldn-softdev/stackoverflow-json/blob/master/README.md)
-I have published (and will keep expanding) some answers using **`jtc`** for JSON queries taken from
+you could find some answers using **`jtc`** for JSON queries taken from
 [stackoverflow.com](https://stackoverflow.com/questions/tagged/jq+or+bash+json)
 
 
