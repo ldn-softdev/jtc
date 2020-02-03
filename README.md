@@ -28,8 +28,8 @@ remove, copy, move, compare, transform, swap around and many other operations).
      * [utility ideology](https://github.com/ldn-softdev/jtc/blob/master/README.md#utility-ideology)
      * [learning curve](https://github.com/ldn-softdev/jtc/blob/master/README.md#learning-curve)
      * [handling irregular JSONs](https://github.com/ldn-softdev/jtc/blob/master/README.md#handling-irregular-jsons)
-     * [programming model](https://github.com/ldn-softdev/jtc/blob/master/README.md#programming-model)
      * [solutions input invariance](https://github.com/ldn-softdev/jtc/blob/master/README.md#solutions-input-invariance)
+     * [programming model](https://github.com/ldn-softdev/jtc/blob/master/README.md#programming-model)
      * [JSON numerical fidelity](https://github.com/ldn-softdev/jtc/blob/master/README.md#json-numerical-fidelity)
      * [performance](https://github.com/ldn-softdev/jtc/blob/master/README.md#performance)
      * [compare `jtc` based solutions with *jq*'s](https://github.com/ldn-softdev/jtc/blob/master/README.md#compare-jtc-based-solutions-with-jqs)
@@ -557,16 +557,6 @@ one at a time, provides an immediate visual feedback and let coming up with the 
  fitted into the concept of the _walk-path_, while daisy-chaining multiple operations is possible to satisfy almost every ask. 
 
 
-### programming model
- - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
- ([here's what I mean](https://github.com/ldn-softdev/cpluspus-vs-c))
- - `jtc` is written in the idiomatic _C++14_ using STL only. `jtc` does not have a single naked memory allocation operator
- (those few `new` operators required for legacy interface are implemented as _guards_),
- nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory/resourses leaks** 
- (at least one class of the problems is off the table) - **STL guaranty**.  
- Also, `jtc` is written in a very portable way, it should not cause problems compiling it under any unix like system.
-
-
 ### solutions input invariance
 \- most of `jtc` solutions would be input invariant (hardly the same could be stated for **jq**). Not that it's impossible to come up
 with invariant solutions in **jq**, it's just a lot more harder, while `jtc` with its walk-path model prompts for invariant solutions.
@@ -623,6 +613,16 @@ bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surnam
 ```
 \- i.e., `jtc` will not assume that user would require some default substitution in case of incomplete data (but if such handling is 
 required then the walk-path can be easily enhanced)
+
+
+### programming model
+ - **jq** is written in _C_, which drags all intrinsic problems the language has dated its creation
+ ([here's what I mean](https://github.com/ldn-softdev/cpluspus-vs-c))
+ - `jtc` is written in the idiomatic _C++14_ using STL only. `jtc` does not have a single naked memory allocation operator
+ (those few `new` operators required for legacy interface are implemented as _guards_),
+ nor it has a single naked pointer acting as a resource holder/owner, thus `jtc` is guaranteed to be **free of memory/resourses leaks** 
+ (at least one class of the problems is off the table) - **STL guaranty**.  
+ Also, `jtc` is written in a very portable way, it should not cause problems compiling it under any unix like system.
 
 
 ### JSON numerical fidelity:
