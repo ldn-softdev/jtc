@@ -25,14 +25,14 @@ remove, copy, move, compare, transform, swap around and many other operations).
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
 5. [`jtc` vs **jq**](https://github.com/ldn-softdev/jtc#jtc-vs-jq)
-     * [utility ideology](https://github.com/ldn-softdev/jtc/blob/master/README.md#utility-ideology)
-     * [learning curve](https://github.com/ldn-softdev/jtc/blob/master/README.md#learning-curve)
-     * [handling irregular JSONs](https://github.com/ldn-softdev/jtc/blob/master/README.md#handling-irregular-jsons)
-     * [solutions input invariance](https://github.com/ldn-softdev/jtc/blob/master/README.md#solutions-input-invariance)
-     * [programming model](https://github.com/ldn-softdev/jtc/blob/master/README.md#programming-model)
-     * [JSON numerical fidelity](https://github.com/ldn-softdev/jtc/blob/master/README.md#json-numerical-fidelity)
-     * [performance](https://github.com/ldn-softdev/jtc/blob/master/README.md#performance)
-     * [compare `jtc` based solutions with *jq*'s](https://github.com/ldn-softdev/jtc/blob/master/README.md#compare-jtc-based-solutions-with-jqs)
+     * [utility ideology](https://github.com/ldn-softdev/jtc#utility-ideology)
+     * [learning curve](https://github.com/ldn-softdev/jtc#learning-curve)
+     * [handling irregular JSONs](https://github.com/ldn-softdev/jtc#handling-irregular-jsons)
+     * [solutions input invariance](https://github.com/ldn-softdev/jtc#solutions-input-invariance)
+     * [programming model](https://github.com/ldn-softdev/jtc#programming-model)
+     * [JSON numerical fidelity](https://github.com/ldn-softdev/jtc#json-numerical-fidelity)
+     * [performance](https://github.com/ldn-softdev/jtc#performance)
+     * [compare `jtc` based solutions with *jq*'s](https://github.com/ldn-softdev/jtc#compare-jtc-based-solutions-with-jqs)
 
 ## Short description
 \- `jtc` is simple but efficient cli utility tool to manipulate JSON data
