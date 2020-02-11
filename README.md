@@ -637,7 +637,7 @@ required then the walk-path can be easily enhanced)
  Handling | `jtc` | **jq 1.6** 
  --- | ---: | :---
 Invalid Json: `[ 00 ]` | `<<<'[00]' jtc` | `<<<'[00]' jq -c .`
-_Parsing result_ | `jtc json exception: missed_prior_enumeration` | `[0]`
+_Parsing result_ | `jtc json parsing exception (<stdin>:3): missed_prior_enumeration` | `[0]`
 Precision test: | `<<<'[0.99999999999999999]' jtc -r` | `<<<'[0.99999999999999999]' jq -c .`
 _Parsing result_ | `[ 0.99999999999999999 ]` | `[1]`
 Retaining original format: | `<<<'[0.00001]' jtc -r` | `<<<'[0.00001]' jq -c .`
