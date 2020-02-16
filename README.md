@@ -587,7 +587,7 @@ The both solutions work correctly, however, any change in the outer encapsulatio
 while `jtc` will keep working even if JSON is reshaped into an _irregular_ structure, e.g.:
 ```bash
 #jtc:
-bash $ case3='[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}, {"closed circle":[{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}, {"Name":"Rebecca", "Surname":"Hernandez", "gender":"female", "age":28}]}]'
+bash $ case3='{"root":[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}, {"closed circle":[{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}, {"Name":"Rebecca", "Surname":"Hernandez", "gender":"female", "age":28}]}]}'
 bash $ <<<$case3 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
 [ "Patrick", "Lynch" ]
 [ "Alice", "Price" ]
@@ -595,7 +595,6 @@ bash $ <<<$case3 jtc -w'<Name>l:<N>v[-1][Surname]' -rT'[{{N}},{{}}]'
 
 #jq:
 bash $ <<<$case3 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
-["Patrick","Lynch"]
 [null,null]
 ```
 The same property makes `jtc` solutions resistant to cases of incomplete data, e.g.: if we  drop `"Name"` entry from one of the 
