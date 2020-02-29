@@ -1312,7 +1312,7 @@ bash $
 >Thus grouping here should be achieved differently. One way is to use only a single walk collecting required elements of the group into
 >the namespaces and then using template interpolating the latter:
 >```bash
->bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}}, {{}}]' -j -tc
+>bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}},{{}}]' -j -tc
 >[
 >   [ 0, 1 ],
 >   [ 2, 3 ],
@@ -1336,7 +1336,7 @@ bash $
 >```
 >and then re-walk dropping labels and encapsulating into the outer array:
 >```bash
->bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}": {{}}}' -ll / -jw[:] -tc
+>bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -jw[:] -tc
 >[
 >   [ 0, 1 ],
 >   [ 2, 3 ],
