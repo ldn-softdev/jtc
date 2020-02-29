@@ -1295,6 +1295,56 @@ bash $ <ab.json jtc -w '<name>l:' -w'<name>l:[-1]<number>l:' -jl -tc
 ]
 bash $ 
 ```
+>Note: such grouping is only possible with labeled values (obviously), it won't be possible to group array elements that easily,
+> e.g., let's break array into pairs:
+>```bash
+>bash $ array='[0,1,2,3,4,5,6,7,8,9]'
+>bash $ <<<$array jtc -w[::2] -w[1::2] -j -tc
+>[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+>bash $ 
+>```
+> it won't work even if we try relating walks:
+>```bash
+>bash $ <<<$array jtc -w[::2] -w'[::2]<I>k[-1]>I<t1' -j -tc
+>[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+>bash $ 
+>```
+>Thus grouping here should be achieved differently. One way is to use only a single walk collecting required elements of the group into
+>the namespaces and then using template interpolating the latter:
+>```bash
+>bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}}, {{}}]' -j -tc
+>[
+>   [ 0, 1 ],
+>   [ 2, 3 ],
+>   [ 4, 5 ],
+>   [ 6, 7 ],
+>   [ 8, 9 ]
+>]
+>bash $
+>```
+>Another way is to transofrm the walks into objects assigning labels from the first walk's index:
+>```bash
+>bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -tc
+>{
+>   "0": [ 0, 1 ],
+>   "2": [ 2, 3 ],
+>   "4": [ 4, 5 ],
+>   "6": [ 6, 7 ],
+>   "8": [ 8, 9 ]
+>}
+>bash $ 
+>```
+>and then re-walk dropping labels and encapsulating into the outer array:
+>```bash
+>bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}": {{}}}' -ll / -jw[:] -tc
+>[
+>   [ 0, 1 ],
+>   [ 2, 3 ],
+>   [ 4, 5 ],
+>   [ 6, 7 ],
+>   [ 8, 9 ]
+>]
+>bash $ 
 
 
 #### Aggregating walks
