@@ -370,17 +370,22 @@ Below is the code sample how that could be achieved using `Json.hpp` class and t
 using namespace std;
 
 
-int main(int argc, char *argv[]) {
- Json jin( {istream_iterator<char>(cin>>noskipws), istream_iterator<char>{}} );  // read and parse json from cin
- vector<string> names(jin.walk("[AddressBook][+0][Name]"), jin.walk().end());    // get all the names
- sort(names.begin(), names.end());                                               // sort the names
+int main(int argc, char *argv[]) { 
+ // read and parse json from cin:
+ Json jin{ {istream_iterator<char>{cin>>noskipws}, istream_iterator<char>{}} };
+ 
+ // get all the names into vector and sort them
+ vector<string> names{jin.walk("<Name>l:"), jin.walk().end()};
+ sort(names.begin(), names.end());
 
- Json srt = ARY{};                                                               // rebuild AB with sorted records
+ // rebuild AB with sorted records:
+ Json sorted = ARY{};
  for(const auto &name: names)
-  srt.push_back( move( *jin.walk("[AddressBook][Name]:<" + name + ">[-1]") ) );
+  sorted.push_back(move( *jin.walk("[Name]:<" + name + ">[-1]") ));
 
- jin["AddressBook"].clear().push_back( move(srt) );                             // put back into the original container
- cout << jin.tab(3) << endl;                                                    // and print using indentation 3
+ // // put back into the original container and print using indentation 3 
+ jin["AddressBook"].clear().push_back( move(sorted) ); 
+ cout << jin.tab(3) << endl;                                    // default tab is 1
 }
 ```
 
