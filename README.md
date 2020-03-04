@@ -635,6 +635,7 @@ required then the walk-path can be easily enhanced)
      - is not compliant with JSON definition of the numerical values
      - it has problems retaining required precision
      - might change original representation of numericals
+     - leads to incorrect processing of some JSON streams
  - `jtc` validates all JSON numericals per JSON standard and keep numbers internally in their original literal format, so it's free of
  all the above caveats, compare:
  
@@ -646,6 +647,8 @@ Precision test: | `<<<'[0.99999999999999999]' jtc -r` | `<<<'[0.9999999999999999
 _Parsing result_ | `[ 0.99999999999999999 ]` | `[1]`
 Retaining original format: | `<<<'[0.00001]' jtc -r` | `<<<'[0.00001]' jq -c .`
 _Parsing result_ | `[ 0.00001 ]` | `[1e-05]`
+Stream of atomic JSONs: | `<<<'{}[]"bar""foo"00123truefalsenull' jtc -Jr` | `<<<'{}[]"bar""foo"00123truefalsenull' jq -sc`
+_Parsing result_ | `[ {}, [], "bar", "foo", 0, 0, 123, true, false, null ]` | `parse error: Invalid numeric literal at line 2, column 0`
 
 
 ### performance:
