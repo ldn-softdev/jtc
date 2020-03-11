@@ -3380,7 +3380,7 @@ Here's an example of how _streamed read_ works in `jtc`:
 | bash $ nc -lk localhost 3000 | jtc -ra               | bash $ <ab.json jtc -w'<address>l:' | nc localhost 3 |
 | { "city": "New York", "postal code": 10012, "state": | 000                                                  |
 | "NY", "street address": "599 Lafayette St" }         | bash $                                               |
-| { "city": "Seattle", "postal code": 98104, "state":  | bash $ <ab.json jtc -w'<name>l:' -w'<name>l:[-1][pho | 
+| { "city": "Seattle", "postal code": 98104, "state":  | bash $ <ab.json jtc -w'<name>l:' -w'<name>l:[-1][pho |
 | "WA", "street address": "5423 Madison St" }          | ne]' | nc localhost 3000                             |
 | { "city": "Denver", "postal code": 80206, "state": " | bash $                                               |
 | CO", "street address": "6213 E Colfax Ave" }         | bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' - |
