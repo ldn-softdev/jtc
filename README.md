@@ -342,9 +342,9 @@ parsing failure point and its locus:
 ```bash
 bash $ <addressbook-sample.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
-.read_inputs(), reading json from <stdin>
-.location_(), exception locus: ...      }|       ],|       "children": [,],|       "spouse": null|    },|    {...
-.location_(), exception spot: ----------------------------------------->| (offset: 967)
+.init_inputs(), reading json from <stdin>
+.exception_locus_(), ...         }|       ],|       "children": [,],|       "spouse": null|    },|    {|  ...
+.exception_spot_(), -------------------------------------------->| (offset: 967)
 jtc json parsing exception (<stdin>:967): expected_json_value
 bash $ 
 ```
@@ -651,6 +651,11 @@ _Parsing result_ | `[ {}, [], "bar", "foo", 0, 0, 123, true, false, null ]` | `p
 
 
 ### performance:
+ - **jq** is a single-threaded process
+ - `jtc` employs _concurent_ (multi-threaded) reading/parsing when multiple files given (advantage could be observed on multi-core CPU,
+ though it become noticeable only with relatively big JSONs or with relatively big number of files processed)
+
+Comparison of single-threaded performance:
 here's a 4+ million node JSON file [standard.json](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
 bash $ time jtc -zz standard.json 
