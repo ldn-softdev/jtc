@@ -696,48 +696,49 @@ int main(int argc, char *argv[]) {
 
  opt.prolog("\n" PRGNAME "\nVersion " VERSION \
             ", developed by " CREATOR " (" EMAIL ")\n");
- opt[CHR(OPT_ALL)].desc("process all inputs (by default only the first JSON processed)");
- opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every followed -" STR(OPT_PRT)
+ opt[CHR(OPT_ALL)].desc("process all JSONs from source, or disable multithreading if multiple"
+                        " sources given");
+ opt[CHR(OPT_CMN)].desc("a common part of a walk-path, prepended to every followed -" STR(OPT_PRT)
                         " option").name("common_wp");
- opt[CHR(OPT_CMP)].desc("compare with JSON (given as file/json/walk): display delta between"
-                        " given JSONs").name("f|j|w");
+ opt[CHR(OPT_CMP)].desc("compare with JSON (given as JSON/walk/template): display delta between"
+                        " given JSONs").name("j|w|t");
  opt[CHR(OPT_DBG)].desc("turn on debugs (multiple calls increase verbosity)");
- opt[CHR(OPT_EXE)].desc("make option parameters for -" STR(OPT_INS) ", -" STR(OPT_UPD)
+ opt[CHR(OPT_EXE)].desc("make option parameters for -" STR(OPT_INS) "/-" STR(OPT_UPD)
                         " undergo a shell evaluation; see -" STR(OPT_GDE) " for more info");
- opt[CHR(OPT_FRC)].desc("apply changes into the file (instead of printing resulting JSON"
-                        " to stdout)");
+ opt[CHR(OPT_FRC)].desc("apply changes into the file argument instead of printing resulting JSON"
+                        " to stdout");
  opt[CHR(OPT_GDE)].desc("mini USER-GUIDE: explain walk path syntax, usage notes, some examples");
  opt[CHR(OPT_IND)].desc("indent for pretty printing (suffix `" STR(IND_SFX)
                          "' enforces semi-compact format)").bind("3").name("indent");
- opt[CHR(OPT_INS)].desc("insert JSON (given as either file/json/walk); see with -" STR(OPT_GDE)
-                        " for more").name("f|j|w");
+ opt[CHR(OPT_INS)].desc("insert JSON (given as JSON/walk/template); see with -" STR(OPT_GDE)
+                        " for more").name("j|w|t");
  opt[CHR(OPT_JAL)].desc("wrap all processed JSONs into an array (option -"
                         STR(OPT_ALL) " assumed, buffered read imposed)");
- opt[CHR(OPT_JSN)].desc("wrap walked JSON elements into a JSON array (-" STR(OPT_JSN) STR(OPT_JSN)
-                        " wrap into a JSON object)");
- opt[CHR(OPT_LBL)].desc("print labels (if present) for walked JSON; together with -"
+ opt[CHR(OPT_JSN)].desc("wrap all walked elements from one JSON into a JSON array (-"
+                        STR(OPT_JSN) STR(OPT_JSN) " wrap into an object)");
+ opt[CHR(OPT_LBL)].desc("print labels (if present) for walked JSONs; together with -"
                         STR(OPT_JSN) " wrap into objects");
  opt[CHR(OPT_MDF)].desc("modifier: toggle merging for options -" STR(OPT_INS) ", -" STR(OPT_UPD)
                         ", -" STR(OPT_JSN) STR(OPT_JSN) "; see with -" STR(OPT_GDE)
                         " for more info");
  opt[CHR(OPT_PRG)].desc("purge all walked JSON elements (-" STR(OPT_PRG) STR(OPT_PRG)
-                        ": purge all elements except walked)");
- opt[CHR(OPT_PRT)].desc("an individual partial path, prepended by preceding -" STR(OPT_CMN)
+                        ": purge all elements except ones walked)");
+ opt[CHR(OPT_PRT)].desc("an individual part of a walk-path, prepended by preceding -" STR(OPT_CMN)
                         " option").name("partial_wp");
- opt[CHR(OPT_QUT)].desc("enforce strict quoted solidus parsing "
-                        "(-qq: unquote isolated JSON strings)");
+ opt[CHR(OPT_QUT)].desc("enforce strict quoted solidus parsing"
+                        " (-" STR(OPT_QUT) STR(OPT_QUT) ": unquote JSON strings)");
  opt[CHR(OPT_RAW)].desc("print JSON in a raw (compact, one-line) format"
-                        " (-rr stringify resulting JSON)");
+                        " (-" STR(OPT_RAW) STR(OPT_RAW) " stringify resulting JSON)");
  opt[CHR(OPT_SEQ)].desc("do not print/process walks interleaved (i.e. print/process all walks "
                         "sequentially)");
- opt[CHR(OPT_SWP)].desc("swap around JSON elements pointed by a pair of walks");
+ opt[CHR(OPT_SWP)].desc("swap around JSON elements pointed by pairs of walks");
  opt[CHR(OPT_SZE)].desc("print size (number of nodes in JSON) at the end of output (-"
-                        STR(OPT_SZE) STR(OPT_SZE) " prints size only)");
- opt[CHR(OPT_TMP)].desc("a template to interpolate and apply upon -" STR(OPT_INS) ", -"
-                        STR(OPT_UPD) " and standalone -"
+                        STR(OPT_SZE) STR(OPT_SZE) " print size only)");
+ opt[CHR(OPT_TMP)].desc("a template to interpolate and apply upon -" STR(OPT_INS) "/"
+                        STR(OPT_UPD) "/" STR(OPT_CMP) " and standalone -"
                         STR(OPT_WLK) " operations").name("template");
- opt[CHR(OPT_UPD)].desc("update with JSON (given as either file/json/walk); see with -"
-                        STR(OPT_GDE) " for more").name("f|j|w");
+ opt[CHR(OPT_UPD)].desc("update with JSON (given as either JSON/walk/template); see with -"
+                        STR(OPT_GDE) " for more").name("j|w|t");
  opt[CHR(OPT_WLK)].desc("a standalone walk path (multiple may be given); see with -"
                         STR(OPT_GDE) " for more").name("walkpath");
  opt[0].desc("file(s) to read from, or next set of options chained over '/'").name("args")
