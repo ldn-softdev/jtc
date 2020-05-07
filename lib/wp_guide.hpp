@@ -58,7 +58,8 @@ void GuideWp::print(void) {
                {"%LXM_DRCT", [&ws](void){ return ws.is_directive(); } },
                {"%LXM_CTNT", [&ws](void){ return ws.is_lexeme_required(); } },
                {"%LXM_EMPT", [&ws](void){ return not ws.is_lexeme_required(); } },
-               {"%LXM_NSPC", [&ws](void){ return ws.is_capturing_json(); } },
+               {"%LXM_NSPC", [&ws](void){ return ws.is_json_capturing_lexeme(); } },
+               {"%LXM_REGX", [&ws](void){ return ws.is_regex(); } },
                {"%LXM_LABL", [&ws](void){ return ws.is_lbl_based(); } }
 };
 
@@ -189,6 +190,7 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
         immediate children; with the quantifier 1 ('Z1') saves into the namespace a size of the
         currently walked JSON string (or -1 if not a string)
      W: saves into the provided namespace a current walk-path as a JSON array
+     S: (re)walks preserved in a namespace path, starting from the root
 
    N: an integer quantifier specifying search match instance/range, comes in several variants
      n - a number (index), e.g. '<a text>3' - matches 4th encounter of a string "a text" within
@@ -208,9 +210,10 @@ b. search lexemes: enclosed into angular braces '<', '>', instruct to perform a 
    o  search lexemes [%LXM_SRCH]
    o  directive lexemes [%LXM_DRCT];
    o  lexemes that must not be empty [%LXM_CTNT]
-   o  lexemes that may stay empty [%LXM_EMPT]
-   o  lexemes that catch walked JSON values into namespace [%LXM_NSPC]
-   o  search lexemes that look among labels (or indices) only [%LXM_LABL]
+   o  lexemes that optionally may stay empty [%LXM_EMPT]
+   o  lexemes that may catch walked JSON values into a namespace [%LXM_NSPC]
+   o  search lexemes that search among labels (or indices) only [%LXM_LABL]
+   o  search lexemes that utilize RegExp [%LXM_REGX]
 
 All lexeme types allow specifying inner brackets, however, the closing one has to be quoted with
 the preceding backslash, e.g.: '[case[0\]]' - specifies an offset lexeme to the label "case[0]";

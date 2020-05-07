@@ -17,8 +17,8 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "extensions.hpp"
 #include "dbg.hpp"
+#include "extensions.hpp"
 
 
 
@@ -33,13 +33,14 @@ class Shell {
 
                         Shell(size_t s = 1024) { buf_.resize(s); }
 
-    Shell &             system(const std::string & cmd, const std::string & mode = "r");
+    Shell &             system(const std::string & cmd);
     const std::string & out(void) const { return out_; }
     int                 rc(void) const { return rc_; }
     size_t              buff_size(void) const { return buf_.size(); }
     Shell &             buff_size(size_t s) { buf_.resize(s); return *this; }
 
     DEBUGGABLE()
+    EXCEPTIONS(ThrowReason)                                     // see "extensions.hpp"
 
  protected:
     std::string         out_;                                   // resulting output string
@@ -47,8 +48,6 @@ class Shell {
 
  private:
     std::vector<char>   buf_;
-
-    EXCEPTIONS(ThrowReason)                                     // see "enums.hpp"
 };
 
 STRINGIFY(Shell::ThrowReason, THROWREASON)
@@ -56,25 +55,33 @@ STRINGIFY(Shell::ThrowReason, THROWREASON)
 
 
 
-Shell & Shell::system(const std::string &cmd, const std::string &mode) {
- FILE *fh = popen(cmd.c_str(), mode.c_str());
- if(fh == nullptr)
-  throw EXP(could_not_popen_file_handle);
- out_.clear();
+Shell & Shell::system(const std::string &cmd) {
+ // execute cmd: run popen and return exit code via rc_
+ FILE *fh;
+ const char * fn = __func__;
+
+ auto open_pipe = [&] {
+       fh = popen(cmd.c_str(), "r");
+       if(fh == nullptr)
+        throw EXP(could_not_popen_file_handle);
+       return true;
+      };
+ auto close_pipe = [&](bool unused) {
+       rc_ = pclose(fh);
+       if(DBG()(0, fn)) {
+        ULOCK(DBG().mutex())
+        DOUT() << "return " << rc_ << ": '" << out_ << "'" << std::endl;
+       }
+      };
+ GUARD(open_pipe, close_pipe)
 
  DBG(0) DOUT() << "executing cmd '" << cmd << "'" << std::endl;
-
- while(fgets(buf_.data(), buf_.size(), fh) != nullptr)
+ out_.clear();
+ while(fgets(buf_.data(), buf_.size() - 1, fh) != nullptr)
   out_ += buf_.data();
- rc_ = pclose(fh);
-
- DBG(0) DOUT() << "return " << rc_ << ": '" << out_ << "'" << std::endl;
 
  return *this;
 }
-
-
-
 
 
 

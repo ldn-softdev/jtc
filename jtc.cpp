@@ -1,3 +1,4 @@
+
 /*
  * Created by Dmitry Lyssenko, 2018, ldn.softdev@gmail.com
  *
@@ -11,20 +12,20 @@
 #include <climits>              // LONG_MAX
 #include <algorithm>
 #include <regex>
-#include <sys/ioctl.h>          //ioctl() and TIOCGWINSZ - for term width
-#include <unistd.h>             // for STDOUT_FILENO - for term width
+#include <functional>
+#include <unistd.h>             // STDOUT_FILENO - for term width, sysconf
 #include "lib/getoptions.hpp"
 #include "lib/Json.hpp"
 #include "lib/Streamstr.hpp"
 #include "lib/shell.hpp"
 #include "lib/dbg.hpp"
+#include "lib/ThreadMaster.hpp"
 #include "lib/signals.hpp"
-#include "lib/jtc_guide.hpp"    // above definitions are used in the file
 
 using namespace std;
 
 #define PRGNAME "JSON transformational chains"
-#define VERSION "1.75d"
+#define VERSION "1.76"
 #define CREATOR "Dmitry Lyssenko"
 #define EMAIL "ldn.softdev@gmail.com"
 
@@ -33,23 +34,22 @@ using namespace std;
 // jtc main features:
 //   o walk-path: a set of lexemes (subscripts, searches, directives) which define how
 //     jtc should walk the JSON tree (+ supported REGEX)
-//   o cache: most of the lexemes (all except few dynamic types) cached when walked,
-//     cache facilitates super fast recursive walking even huge JSON trees
+//   o cache: all of the subscripts and search lexemes cached when walked: cache facilitates
+//     super fast recursive walking even huge JSON trees
 //   o namespaces: let "memorizing" and reusing memorized JSON values later for interpolation
 //   o templating: let produce custom json out of static and previously memorized values
 //     in the namespace, allows jsonizing stringified JSONs and stringify JSONs
-//   o buffered and streamed inputs: the former provides a fast read and parsing, the latter
-//     facilitates on-fly json manipulation
 //   o provides modifications (including in-place) of source json via update/insert/purge/swap
 //     operations; the first two optionally could undergo also a shell evaluation
+//   o buffered and streamed inputs: the former provides a fast read and parsing, the latter
+//     facilitates on-fly json manipulation
+//   o employs multithreaded reading and parsing when multiple files given
+//   o chains multiple json operations via '/' separator - that replaces shell piping '|' and
+//     spares cpu cycles required for json outputting and reading/parsing in the latter case
 //  and many more others
+//
 
 // facilitate option materialization
-#define XSTR(X) #X
-#define STR(X) XSTR(X)
-#define XCHR(X) *#X
-#define CHR(X) XCHR(X)
-
 // option definitions
 #define OPT_RDT -
 #define OPT_ALL a
@@ -76,24 +76,37 @@ using namespace std;
 #define OPT_PRT y
 #define OPT_SZE z
 
+#include "lib/jtc_guide.hpp"    // don't move this line - above definitions are used in the file
+
+#define XSTR(X) #X
+#define STR(X) XSTR(X)
+#define XCHR(X) *#X
+#define CHR(X) XCHR(X)
+
+#define CHR_NULL '\0'
+#define CHR_RSLD '\\'
+#define CHR_NLNE '\n'
+#define CHR_CRTN '\r'
+#define CHR_SQTE '\''
+#define CHR_DQTE '"'
+#define CHR_SPCE ' '
+#define CHR_JILL '\x16'                                         // JSON illegal, various purposes
+#define STR_JILL "\x16"                                         // JSON illegal, various purposes
+#define STR_DCMP "/"                                            // delimiter for option sets
+#define STR_NLNE "\n"
+#define STR_DQTE "\""
 
 #define IND_SFX c
-#define DBG_APFX "_"
-#define NULL_CHR '\0'
-#define RSLD_CHR '\\'
-#define NLNE_CHR '\n'
-#define CRTN_CHR '\r'
-#define SQTE_CHR '\''
-#define DQTE_CHR '"'
-#define SPCE_CHR ' '
-#define DCMP_CHR "/"
-
+#define DBG_APFX "_"                                            // alternative debug prefix
 #define CMP_BASE "json_1"
 #define CMP_COMP "json_2"
 #define JTCS_TKN "size"
-#define WLK_HPFX "$?"
+#define USE_HPFX -1                     // gates tracking last walked value for {$?} and -x0/-1
+#define WLK_HPFX "$?"                   // token for $? interpolation, namespace to reset to dflt
+#define WLK_RSTH "#\x16"                // used as a hidden namespace flag to RESET value $? to ""
 #define FILE_NSP "$file"
-#define USE_HPFX -1
+#define SHELLSFX ";printf \"\\x16$?\\x16\"\n"
+#define SHELLRGX "([^\x16]*)\x16(\\d+)\x16"
 
 
 // various return codes
@@ -103,32 +116,35 @@ using namespace std;
         RC_WP_INV, \
         RC_SC_MISS, \
         RC_CMP_NEQ, \
+        RC_ARG_FAIL, \
         RC_END
 ENUM(ReturnCodes, RETURN_CODES)
 
 // return code exception offsets
 #define OFF_GETOPT RC_END                                       // offset for Getopt exceptions
 #define OFF_JSON (OFF_GETOPT + Getopt::end_of_throw)            // offset for Json exceptions
-#define OFF_REGEX (OFF_JSON + Jnode::end_of_throw)              // offset for Regex exceptions
+#define OFF_SHELL (OFF_JSON + Getopt::end_of_throw)             // offset for Json exceptions
+#define OFF_REGEX (OFF_SHELL + Jnode::end_of_throw)             // offset for Regex exceptions
 
-// helper macros to concatenate tokens
-#define __CONCAT_2TKN__(X,Y) X ## Y
-#define __CONCATENATE__(X,Y) __CONCAT_2TKN__(X, Y)
-
-// simple macro for to expose class aliases
-// usage: REVEAL(jtc, opt, json)
-#define __REFX__(A) auto & A = __CONCATENATE__(__reveal_class__,__LINE__).A();
-#define REVEAL(X, ARGS...) \
-        auto & __CONCATENATE__(__reveal_class__, __LINE__) = X; \
-        MACRO_TO_ARGS(__REFX__, ARGS)
-
-#define GLAMBDA(FUNC) [this](auto&&... arg) { return FUNC(std::forward<decltype(arg)>(arg)...); }
 
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
 #define OPN first                                               // range semantic
 #define CLS second                                              // instead of first/second
 #define SIZE_T(N) static_cast<size_t>(N)
+#define SGNS_T(N) static_cast<signed_size_t>(N)
+
+
+// simple macro for to expose class aliases
+// usage: REVEAL(jtc, opt, json)
+#define __REFX__(A) auto & A = STITCH_2TKNS(__reveal_class__,__LINE__).A();
+#define REVEAL(X, ARGS...) \
+        auto & STITCH_2TKNS(__reveal_class__, __LINE__) = X; \
+        MACRO_TO_ARGS(__REFX__, ARGS)
+
+// generic lambda with
+#define GLAMBDA(FUNC) [this](auto&&... arg) { return FUNC(std::forward<decltype(arg)>(arg)...); }
+
 
 typedef vector<string> v_string;
 typedef ptrdiff_t signed_size_t;
@@ -136,22 +152,133 @@ typedef ptrdiff_t signed_size_t;
 
 
 
+// Design notes for handling namespaces so that avoid unnecessary copies:
+//
+// Json class namespaces:
+//   o Json class namespace may refer to remote entries (pointed by ptr) but never updates one,
+//     instead when new entry to be recorded, even if remote entry exists, the local entry is
+//     created
+//   o walked (source) Json's NS caries transient data (for the walk duration) only,
+//
+// Jtc class holds 2 structures facilitating namespace handling:
+//  - Global NS: holds namespace values after all walks (-w) are finished in between options sets
+//  - WNS: walked namespace snapshots, holds namespaces (snapshots) resulting after each
+//         walk iteration (step)
+//
+// Initializing sequence:
+// Jtc implements an adapter for Json JnEntry class, adding 2 methods:
+//   o sync_in: sync entries into caller from the argument NS
+//   o sync_out: sync entries from the caller class into the argument NS
+//
+// - before all walking begins (walk_interleaved):
+//   o move all NS entries out of Global MS into the first WNS snapshot (by values)
+//
+// - during walking:
+//   o clear-init Json's NS with *references* from last/latest WNS snapshot
+//   o make a walk-step: Json NS will record locally only *new values*, while leaving intact
+//                       remote entries referenced
+//   o record resulted namespaces into WNS: remote entries reman remote (i.e copy pointers),
+//                                          local entries to be moved by values
+//
+// - after walking (before destroying Jtc):
+//   o move all values from the last wns snapshot to Global NS
+//
+// = that way it's ensured that all newly created JSON values will not be copied unnecessarily
+//   (only moved) for the duration of all jtc operations.
 
-class GETopt: public Getopt {
- // a trivial wrapper for Getopt accomodating user flags for imposition of options
+class map_jnse: public Json::map_jne {
+ // this is an adaptor of an Json::map_jne, extended with sync_in(), sinc_out() calls
+
  public:
 
-    struct Multiwalk {
+    #define NSOPT \
+                NsReferAll, /* reference all ns values - local and remote */\
+                NsMove,     /* move local ns values, reference remote entriess */\
+                NsMoveAll   /* move all ns values - local & remote  */
+    ENUM(NsOpType, NSOPT)
+
+    void                sync_out(Json::map_jne &to, NsOpType nsopt);
+    void                sync_in(Json::map_jne &from, NsOpType nsopt);
+};
+
+#undef NSOPT
+
+
+
+void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
+ // sync all entries from this map to Json namespace `to``
+ if(nsopt == NsOpType::NsReferAll) {                            // reference all entries
+  for(auto &ns: *this) {                                        // for all entries in this map
+   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
+   auto ip = to.emplace(ns.KEY, Json::JnEntry{});               // ip: insertion pair
+   ip.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
+  }
+  return;
+ }
+
+ // else: either NsMove or NsMoveAll
+ for(auto &ns: *this) {                                         // for all entries in this map
+  if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
+  if(ns.VALUE.is_remote() and nsopt == NsOpType::NsMove) {      // refer remote
+   auto ip = to.emplace(ns.KEY, Json::JnEntry{});               // ip: insertion pair
+   ip.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
+   continue;
+  }
+  auto found = to.find(ns.KEY);
+  if(found != to.end())                                         // found entry in `to`
+   found->VALUE = move(ns.VALUE.ref());                         // overwrite to's entry
+  else                                                          // no local entry exists
+   to.emplace(ns.KEY, move(ns.VALUE.ref()));                    // emplace new entry
+ }
+}
+
+
+void map_jnse::sync_in(Json::map_jne &from, NsOpType nsopt) {
+ // sync all entries `from` map according to given handling type `nsopt`
+ if(nsopt == NsOpType::NsReferAll) {                            // reference all entries
+  for(auto &ns: from) {                                         // for all entries in from
+   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
+   auto mp = emplace(ns.KEY, Json::JnEntry{});                  // mp: my pair
+   mp.first->VALUE.ptr(&ns.VALUE.ref());                        // override w/o version check
+  }
+  return;
+ }
+
+ // else: either NsMove or NsMoveAll
+ for(auto &ns: from) {                                          // for all entries in from
+  if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
+  if(ns.VALUE.is_remote() and nsopt == NsOpType::NsMove) {      // refer remote
+   auto mp = emplace(ns.KEY, Json::JnEntry{});                  // mp: my pair
+   mp.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
+   continue;
+  }
+  auto found = find(ns.KEY);
+  if(found != end())                                            // local entry found
+   found->VALUE = move(ns.VALUE.ref());                         // overwrite local entry
+  else                                                          // no local entry exists
+   emplace(ns.KEY, move(ns.VALUE.ref()));                       // emplace new entry
+ }
+}
+
+
+
+
+
+class GETopt: public Getopt {
+ // a trivial wrapper for Getopt accommodating user flags for imposition of options
+ public:
+
+    struct Multifactor {
         // a trivial class to pair up the walk multiplier and the first index to display:
         // only each factor'th walk will be displayed after offset's
-        friend SWAP(Multiwalk, factor, offset)
+        friend SWAP(Multifactor, factor, offset)
 
-                            Multiwalk(void) = default;
-                            Multiwalk(const Multiwalk &) = default;
-                            Multiwalk(Multiwalk && mw) noexcept { swap(*this, mw); }
-                            Multiwalk(size_t x1, signed_size_t x2):    // emplacement
+                            Multifactor(void) = default;
+                            Multifactor(const Multifactor &) = default;
+                            Multifactor(Multifactor && mw) = default;
+                            Multifactor(size_t x1, signed_size_t x2):    // emplacement
                              factor{x1}, offset{x2} { }
-        Multiwalk &         operator=(Multiwalk mw) noexcept { swap(*this, mw); return *this; }
+        Multifactor &       operator=(Multifactor mw) noexcept { swap(*this, mw); return *this; }
 
         size_t              factor;                             // display every factor'th walk
         signed_size_t       offset;                             // starting from offset (0 based)
@@ -160,15 +287,15 @@ class GETopt: public Getopt {
     #define IMPFLG \
                 Install, \
                 Erase
-    ENUM(ImpFlag, IMPFLG)
+    ENUM(ImposeOpt, IMPFLG)
     #undef IMPFLG
 
     GETopt &            reset(void)
                          { Getopt::reset(); imp_.clear(); return *this; }
     bool                imposed(char opt) const
                          { return imp_.count(opt); }
-    void                impose(char opt, ImpFlag x = Install)
-                         { if(x == Install) imp_.insert(opt); else imp_.erase(opt); }
+    void                impose(char opt, ImposeOpt x = ImposeOpt::Install)
+                         { if(x == ImposeOpt::Install) imp_.insert(opt); else imp_.erase(opt); }
     set<char> &         imp(void)
                          { return imp_; }
     auto &              wm(void)
@@ -204,9 +331,10 @@ class GETopt: public Getopt {
  private:
 
     set<char>           imp_;                                   // imposition of options
-    vector<Multiwalk>   wm_;                                    // walk factor: facilitate -xN/M
-    char                opt_eval_;
+    vector<Multifactor> wm_;                                    // walk factor: facilitate -xN/M
+    char                opt_eval_{CHR_NULL};
 };
+
 
 
 
@@ -215,6 +343,19 @@ class CommonResource {
  // the class facilitates -J option and global namespace:
  // caters user opt (which is copied to each Jtc instance), input string
  // and json for jsonization of all processed/walked jsons
+
+    struct JsonStore {
+     // facilitate JSON storage for concurrent reading/parsing
+                            JsonStore(void)
+                             { task_complete.lock(); }          // DC
+        deque<Json>         json_queue;
+        mutex               task_complete;
+        bool                await_completion{true};
+      Streamstr::Filestatus file_status;
+        size_t              err_location;
+    };
+    typedef deque<JsonStore> dequeJS;
+
  public:
 
     int                 rc(void) const { return rc_; }
@@ -223,7 +364,7 @@ class CommonResource {
                          if(x < 0 or SIZE_T(x) >= vopt_.size()) return *opp_;
                          return vopt_[x];
                         }
-    Json::map_jn &      global_ns(void) {  return gns_; }       // access to global namespaces
+    map_jnse &          global_ns(void) {  return gns_; }       // access to global namespaces
     Streamstr &         iss(void) {  return iss_; }             // access to stream class
     Json &              global_json(void) { return gjsn_; }     // access to global JSON (-J)
     size_t              elocation(void) { return elocation_; }
@@ -231,10 +372,10 @@ class CommonResource {
 
     void                decompose_opt(int argc, char *argv[]);
     void                display_opts(std::ostream & out);
-    bool                is_decomposed_first(void) { return opp_ == &vopt_.front(); }
-    bool                is_decomposed_last(void) { return opp_ == &vopt_.back(); }
+    bool                is_decomposed_front(void) { return opp_ == &vopt_.front(); }
+    bool                is_decomposed_back(void) { return opp_ == &vopt_.back(); }
     void                init_decomposed(void);
-    CommonResource &    last_decomposed(void) {  opp_ = &vopt_.back(); return *this; }
+    CommonResource &    decomposed_back(void) {  opp_ = &vopt_.back(); return *this; }
     size_t              total_decomposed(void) { return vopt_.size(); }
     size_t              decomposed_idx(void) {
                          for(size_t i = 0; i < vopt_.size(); ++i)
@@ -249,9 +390,15 @@ class CommonResource {
     char                parse_opt(v_string & args);
     void                enable_global_output(void);
     void                disable_global_output(void);
-    Streamstr &         read_inputs(void);
+    void                init_inputs(void);
     void                jsonize(Json jout);
     auto &              wm(void) { return wm_; }
+
+    ThreadMaster &      tm(void) { return tm_; }
+    void                decide_on_multithreaded_parsing(void);
+    dequeJS &           json_store(void) { return jsd_; };
+    size_t              jsq_idx(void) const { return jsq_idx_; };
+    void                jsq_idx(size_t x) { jsq_idx_ = x; };
 
  private:
     bool                is_recompile_required_(const v_string & args);
@@ -260,19 +407,27 @@ class CommonResource {
     void                convert_xyw_(void);
     bool                is_x_factor_(const char *str, signed_size_t * recursive = nullptr);
 
+    void                fetch_dispatcher_(void);
+    void                read_and_parse_json_(const string & fn, JsonStore & js);
+
     Json                gjsn_{ ARY{} };                         // global json (facilitates -J)
-    Json::map_jn        gns_;                                   // global namespaces
+    map_jnse            gns_;                                   // global namespaces
+    bool                read_from_cin_{false};                  // read from <cin>? or files
     Streamstr           iss_;                                   // input Streamstr
     GETopt              opt_;                                   // user options template
     GETopt *            opp_{&opt_};                            // pointer to a current Getopt
     vector<GETopt>      vopt_;                                  // decomposed user options
-    vector<GETopt::Multiwalk>
+    vector<GETopt::Multifactor>
                         wm_;                                    // walk factor: facilitate -xN/M
     int                 rc_{RC_OK};
     size_t              elocation_{SIZE_T(-1)};                 // exception location
 
+    ThreadMaster        tm_;
+    dequeJS             jsd_;                                   // JsonStore dequeue
+    size_t              jsq_idx_{0};
+
  public:
-    DEBUGGABLE(iss_, gjsn_)
+    DEBUGGABLE(iss_, gjsn_, tm_)
 };
 
 
@@ -280,36 +435,39 @@ class CommonResource {
 
 
 class Jtc {
+
     struct BoundJit {
      // a trivial class to pair up destination walks (-w) with source walks (-i/u/c)
      // and respective name-spaces
         friend SWAP(BoundJit, dst, src, ns, lbl)
                             BoundJit(void) = default;
                             BoundJit(const BoundJit &) = default;
-                            BoundJit(BoundJit && bj) noexcept { swap(*this, bj); }
-                            BoundJit(Json::iterator d, Json::iterator s):   // for emplacement
-                             dst{d}, src{s}, ns{src.json().ns()}, lbl{"\n"} {}
-                            BoundJit(Json::iterator d, Json::iterator s, Json::map_jn &n):
-                             dst{d}, src{s}, ns{n}, lbl{"\n"} {}
-        BoundJit &          operator=(BoundJit bj) noexcept { swap(*this, bj); return *this; }
+                            BoundJit(BoundJit && bj) = default;
+                            BoundJit(Json::iterator &d, Json::iterator &s):   // for emplacement
+                             dst{d}, src{s}, ns{src.json().ns()}, lbl{STR_JILL} {}
+                            BoundJit(Json::iterator &d, Json::iterator &s, Json::map_jne &n):
+                             dst{d}, src{s}, ns{n}, lbl{STR_JILL} {}
+        BoundJit &          operator=(BoundJit bj) noexcept
+                             { swap(*this, bj); return *this; }
 
         bool                update_lbl(void)
-                             { return lbl.empty() or lbl.front() != '\n'; }
-        void                reset_lbl(void) { lbl = "\n"; }
+                             { return lbl.empty() or lbl.front() != CHR_JILL; }
+        void                reset_lbl(void) { lbl = STR_JILL; }
 
         Json::iterator      dst;                                // -w walks (iterators) go here
         Json::iterator      src;                                // -i/u/c walks (iterators) go here
-        Json::map_jn        ns;                                 // NS from respective -i/u/c iters.
-        string              lbl{"\n"};                          // facilitates -u for label update
-                                                                // init'ed with "\n" - invalid lbl
+        Json::map_jne       ns;                                 // NS from respective -i/u/c iters.
+        string              lbl{STR_JILL};                      // facilitates -u for label update
+                                                                // invalid lbl initially
     };
 
+
     struct Grouping {
-        // facilitates a pair of group/counter values, used in jsonized_output_ary_
+     // facilitates a pair of group/counter values, used in jsonized_output_ary_
         friend SWAP(Grouping, group, counter)
                             Grouping(void) = default;
                             Grouping(const Grouping &) = default;
-                            Grouping(Grouping && gr) noexcept { swap(*this, gr); }
+                            Grouping(Grouping && gr) = default;
                             Grouping(size_t x1, size_t x2):     // emplacement
                              group{x1}, counter{x2} { }
         Grouping &          operator=(Grouping gr) noexcept { swap(*this, gr); return *this; }
@@ -321,13 +479,19 @@ class Jtc {
         size_t              counter{0};
     };
 
+
+    struct ShellReturn {
+     // keeping return result from running shell commands: string and return codes values
+            string          str;
+            int             rc;
+    };
+
+
     typedef vector<Json::iterator> vec_jit;
     typedef vector<BoundJit> vec_bjit;
     typedef deque<Json::iterator> deq_jit;
     typedef void (wlk_subscr)(Json::iterator &wi, Grouping grp);
     typedef map<size_t, Json> map_json;
-    typedef map<size_t, Json::iterator> map_jit;
-    typedef map<const Json::iterator*, Json::map_jn> map_ns;
 
     #define MERGEOBJ \
                 Preserve,   /* clashing labels of merged object not overwritten */ \
@@ -335,20 +499,28 @@ class Jtc {
     ENUM(MergeObj, MERGEOBJ)
 
     #define JSONZIZE \
-                Jsonize,        /* clashing labels of merged object not overwritten */ \
-                Dont_jsonize    /* clashing labels of merged objects overwritten */
+                Jsonize,    /* parameter for write_json() */\
+                Dont_jsonize
     ENUM(Jsonizaion, JSONZIZE)
 
-    #define JITSRC          /* type of source for iterations in -i/u/c operation*/\
+    #define JITSRC          /* type of source for iterations in -i/u/c operation */\
                 Src_input,  /* source is input JSON - jinp_: -u<walk> walks input JSON here */\
-                Src_mixed,  /* source is in jsrc[0]: -u<STATIC> -u<walk> -u... */\
-                Src_optarg  /* sources are in jsrc_: -u<STATIC> -u<STATIC>, i.e., w/o -u<walks> */
+                Src_mixed,  /* source is in jsrc_[0]: -u<JSON> -u<walk> -u... */\
+                Src_optarg  /* all sources are in jsrc_: -u<JSON> -u<FILE> -u<TMP> */
     ENUMSTR(Jitsrc, JITSRC)
+
+    #define ECLI \
+                No_exec, \
+                Per_walk_exec, \
+                Bulk_exec
+    ENUMSTR(Ecli, ECLI)
 
  public:
                         Jtc(void) = delete;
                         Jtc(CommonResource & cr): cr_{cr} {
-                         ecli_ = opt()[CHR(OPT_EXE)].hits() > 0;    // flag used by -i/-u options
+                         ecli_ = opt()[CHR(OPT_EXE)].hits() == 0?
+                                  Ecli::No_exec: opt()[CHR(OPT_EXE)].hits() == 1?
+                                                  Ecli::Bulk_exec: Ecli::Per_walk_exec;
                          merge_ = opt()[CHR(OPT_MDF)].hits() % 2 == 1;// flag used by -i/-u options
                          is_tpw_ = opt()[CHR(OPT_TMP)].hits() > 1 and   // is tmp per walk?
                                    opt()[CHR(OPT_SEQ)].hits() < 2 and   // no '-nn' given
@@ -374,6 +546,7 @@ class Jtc {
 
     // user methods
     bool                parsejson(Streamstr::const_iterator &jsp, Streamstr::const_iterator &pse);
+    bool                move_fetched_json(Streamstr::const_iterator &jsp);
     void                write_json(Json & jsn, Jsonizaion allow = Jsonize);
     bool                demux_opt(void);
     void                compare_jsons(void);
@@ -381,7 +554,7 @@ class Jtc {
     bool                upsert_json(char op);
     void                collect_itr_bindings(Json::iterator &it, Grouping = {0,0});
     void                update_by_iterator(Json::iterator &it, Grouping = {0,0});
-    bool                advance_to_next_src(signed_size_t i = -1);
+    bool                advance_to_next_src(Json::iterator &it, signed_size_t i = -1);
     void                apply_src_walks(char op);
     void                purge_json(void);
     void                swap_json(void);
@@ -389,15 +562,16 @@ class Jtc {
     void                output_by_iterator(Json::iterator &wi, Grouping = {0, 0});
     void                output_by_iterator(Json::iterator &&wi, Grouping grp = {0, 0})
                          { output_by_iterator(wi, grp); }
-    void                merge_ns(Json::map_jn &to, const Json::map_jn &from) {
-                         for(const auto & ns: from)
-                          if(ns.KEY.front() != '\n' and not ns.KEY.empty())
-                           to[ns.KEY] = ns.VALUE;
-                        }
+    map_jnse &          last_wns_snapshot(void) { return wns_[last_dwi_ptr_]; }
+    vec_bjit &          itr_pairs(void) { return psrc_; }
 
  private:
-    void                location_(Streamstr::const_iterator & start);
+    void                display_location_(Streamstr::const_iterator & start);
+    void                exception_locus_(Streamstr::const_iterator & start);
+    void                exception_spot_(Streamstr::const_iterator & start);
     void                ready_params_(char option);
+    void                parse_option_arg_(Json &, const string & arg, const string & jfile);
+    void                ready_params_walks_(const string & arg, size_t jkey);
     void                read_json_(string &jfile, const string &fname);
     void                maybe_update_lbl_(void);
     void                compare_jsons_(const Jnode &, set<const Jnode*> &,
@@ -406,13 +580,14 @@ class Jtc {
     void                merge_into_object_(Jnode &dst, const Jnode &src, MergeObj mode);
     void                merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode);
     void                update_jsons_(Json::iterator &dst, Json::iterator src, string *lbl);
-    bool                execute_cli_(Json &update, Json::iterator &jit, const Json::map_jn &ns);
-    string              interpolate_shell_str_(Json::iterator &jit, const Json::map_jn &ns);
+    vector<ShellReturn> run_bulk_shell_(void);
+    bool                execute_cli_(Json &update, Json::iterator &jit,
+                                     Json::map_jne &ns, ShellReturn *);
+    string              interpolate_shell_str_(Json::iterator &jit, Json::map_jne &ns);
     void                crop_out_(void);
     bool                remove_others_(set<const Jnode*> &ws, Jnode &jn);
     vec_jit             collect_walks_(const string &walk_path);
     void                walk_interleaved_(wlk_subscr Jtc::* subscriber);
-    void                update_wlk_history_(Json::iterator &);
     void                process_walk_iterators_(deque<deq_jit> &walk_iterators);
     size_t              build_front_grid_(vector<vector<signed_size_t>> &, const deque<deq_jit> &);
     void                process_offsets_(deque<deq_jit> &, vector<vector<signed_size_t>> &,
@@ -421,34 +596,50 @@ class Jtc {
     void                jsonized_output_(Json::iterator &, Json &jref, Grouping unused);
     void                jsonized_output_obj_(Json::iterator &, Json &jref, Grouping);
     void                jsonized_output_ary_(Json::iterator &, Json &jref, Grouping);
-    bool                shell_callback_(const std::string &lxm, Json::iterator jit) {
+    bool                shell_callback_(const std::string &lxm, Json::iterator &jit) {
                          Json tmp;
-                         DBG().increment(+2, tmp, -2);          // imbue current dbg +3 into tmp
+                         if(DBG()(0)) DBG().increment(+2, tmp, -2);     // imbue current dbg +3
                          tmp = Json::interpolate(lxm, jit, jit.json().ns(), Json::Dont_parse);
                          sh_.system( tmp.str() );
                          return sh_.rc() == 0;
                         }
+    size_t              walk_options_size_(void) const {
+                         // return a number of elements except the source itself
+                         switch(jsrt_) {
+                          case Src_input:                       // all -i<WLK> -i<WLK> ...
+                                return ecli_ == Ecli::No_exec? jsrc_.size(): jsrc_.size() - 1;
+                          case Src_mixed:                       // mix: -i<JSN> -i<WLK> ...
+                                return jsrc_.size() - 1;
+                          case Src_optarg:
+                                return jsrc_.size();
+                         }
+                         return 0;                              // covering linux compiler warning
+                        }
+    size_t              walk_options_start_idx_(void) const
+                         // return starting idx for the given type of a source
+                         { return jsrt_ == Src_optarg? 0: 1; }
 
     // private member types:
     CommonResource &    cr_;
 
     Json                jout_;                                  // json output (-j, -jj)
     Json                jinp_;                                  // input JSON for jtc
-    map_json            jsrc_;                                  // static JSONs -iuc
     vec_bjit            psrc_;                                  // binding dst walks with src's
-    vector<size_t>      wsrc_;                                  // enlist all walks in -[iuc]<walk>
+    map_json            jtmp_;                                  // for resolving <TMP> in -u/i/c
+    map_json            jsrc_;                                  // holding params of -i/u/c
     Json::iterator      jits_;                                  // current source iterator
-    Jitsrc              jitt_{Jitsrc::Src_input};               // source of jits_
-    size_t              wcur_{0};                               // current walk in wsrc_
-    map_ns              wns_;                                   // namespaces for walked (-w) paths
-    Jnode               hwlk_{ARY{STR{""}}};                    // walks history init value
-    string              cpf_;                                   // currently processed file
+    Jitsrc              jsrt_{Jitsrc::Src_input};               // source type of jits_
+    size_t              jscur_{0};                              // current walk in jsrc_
+    map<Json::iterator*, map_jnse>
+                        wns_;                                   // namespaces for walked (-w) paths
+    Json::iterator *    last_dwi_ptr_{nullptr};
+    Jnode               hwlk_{ARY{STR{}}};                      // last walked value (interpolated)
     set<string>         c2a_;                                   // used in jsonized_output_obj_()
     map<size_t, string> tpw_;                                   // tmp per walk, output_by_iterator
     bool                is_tpw_;                                // templates pertain to walks
     bool                is_multi_walk_{false};                  // multiple -w or single iterable?
     bool                convert_req_{false};                    // used in output_by_iterator
-    bool                ecli_{false};                           // -e status for insert/update
+    Ecli                ecli_{Ecli::No_exec};                   // -e status for insert/update
     bool                merge_{false};                          // -m status for insert/update
     bool                lbl_update_{false};                     // label update operation detected
     Grouping            last_;                                  // used in output_by_iterator
@@ -457,7 +648,23 @@ class Jtc {
     size_t              wcnt_{0};                               // counts number of walks
     wlk_subscr Jtc::*   subscriber_;                            // method ptr for output processor
     Shell               sh_;
+    long                arg_max_{-1};                           // shell's ARG_MAX
 
+    // output conditions:
+    bool                inquote_{opt()[CHR(OPT_RAW)].hits() >= 2};  // facilitate -rr
+    bool                unquote_{opt()[CHR(OPT_QUT)].hits() >= 2};  // facilitate -qq
+    bool                measure_{opt()[CHR(OPT_SZE)].hits() >= 1};  // facilitate -z
+    bool                write_to_file_                              // facilitate -f when file op.
+                         {opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};
+    bool                glean_lbls_{opt()[CHR(OPT_LBL)].hits()>=2}; // facilitate -ll
+    bool                size_only_{opt()[CHR(OPT_SZE)].hits() > 1}; // facilitate -zz
+    bool                use_hpfx_{opt().imposed(USE_HPFX)};         // facilitate '$?' or -x0/-1
+    ofstream            fout_                                       // open file handler if needed
+                         {write_to_file_? cr_.iss().filename().c_str(): nullptr, Jtc::mod_};
+    ostream &           xout_{write_to_file_? fout_: cout};         // demux cout/file outputs
+
+    static ios_base::openmode
+                        mod_;                                       // write to file (1st json)
  public:
 
     DEBUGGABLE(jinp_, jout_, sh_)
@@ -469,8 +676,12 @@ STRINGIFY(Jtc::Jitsrc, JITSRC)
 #undef JITSRC
 
 
+ios_base::openmode  Jtc::mod_{ios_base::out};                   // write to file (first json)
+
+
 // list of standalone calls
-void run_decomposed(CommonResource &, Streamstr::const_iterator &, Streamstr::const_iterator &);
+void run_decomposed_optsets(CommonResource &, Streamstr::const_iterator &);
+void run_single_optset(CommonResource &, Streamstr::const_iterator &, Json &in, Json &out);
 string sh_quote_str(const string &src);
 
 
@@ -485,8 +696,7 @@ int main(int argc, char *argv[]) {
 
  opt.prolog("\n" PRGNAME "\nVersion " VERSION \
             ", developed by " CREATOR " (" EMAIL ")\n");
- opt[CHR(OPT_ALL)].desc("process all inputs (by default only the first JSON processed); -"
-                        STR(OPT_FRC) " is ignored");
+ opt[CHR(OPT_ALL)].desc("process all inputs (by default only the first JSON processed)");
  opt[CHR(OPT_CMN)].desc("a common part of a path, prepended to every followed -" STR(OPT_PRT)
                         " option").name("common_wp");
  opt[CHR(OPT_CMP)].desc("compare with JSON (given as file/json/walk): display delta between"
@@ -541,8 +751,8 @@ this tool provides ability to:
  - manipulate JSON via purge/insert/copy/merge/update/replace/move/swap/interpolate operations
  - compare JSONs (print diffs)
 
-by default, input JSONs processed via buffered read (first read, then parse); streamed read (i.e.
-parse JSON immediately as data arrives) is engaged when option -)"
+by default, input JSONs processed via buffered read (first read, then parse); streamed read (i.e.,
+parse JSON immediately as data arrive) is engaged when option -)"
 STR(OPT_ALL) R"( given and <stdin> input selected
 (though -)" STR(OPT_JAL) R"( overrides the streamed read and reverts to buffered)
 
@@ -563,24 +773,33 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
       .level(cr.opt()[CHR(OPT_DBG)])
       .alt_prefix(DBG_APFX);
  #ifdef BG_mTS
-  DBG().stamped(true).stamp_ms(true);
+  DBG().stamp_ms(true);
  #endif
  #ifdef BG_uTS
-  DBG().stamped(true).stamp_ms(true).stamp_us(true);
+  DBG().stamp_us(true);
+ #endif
+ #ifdef BG_dTS
+  DBG().stamp_delta(true);
  #endif
 
  if(DBG()(0)) cr.display_opts(DOUT());
 
- // read json (ready stream buffer, or read file/cin)
- Streamstr::const_iterator jsp = cr.read_inputs().begin();      // global parse pointer
- Streamstr::const_iterator pse{jsp};                            // parsed json end iterator
+ // speedup cout & cin
+ ios_base::sync_with_stdio(false);
+ cin.tie(nullptr);
+
+ // decide if multithreaded parsing to be engaged
+ cr.init_inputs();
+ cr.decide_on_multithreaded_parsing();
+
+ // ready to read json (ready stream buffer, produce iterator)
+ Streamstr::const_iterator jsp = cr.iss().begin();              // global parse pointer
 
  // execute as per read options
  try {
-  do {
-   run_decomposed(cr, jsp, pse);
-   pse = jsp;                                                   // to verify exception
-  } while(jsp != cr.iss().end() and cr.opt()[CHR(OPT_ALL)].hits() > 0);
+  // if streamed cin, then 1st option set is processed differently: each (newly read) json
+  // will trigger processing of all subsequent option sets
+  do run_decomposed_optsets(cr, jsp); while(jsp.is_streamed() and jsp != cr.iss().end());
  }
  catch(Jnode::stdException & e) {
   DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
@@ -597,15 +816,20 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
        << ": " << e.what() << endl;
   cr.rc(e.code() + OFF_JSON);
  }
+ catch(Shell::stdException & e) {
+  DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
+  cerr << cr.opt().prog_name() << " shell exception: " << e.what() << endl;
+  cr.rc(e.code() + OFF_SHELL);
+ }
  catch(std::regex_error & e) {
   cerr << "regexp exception: " << e.what() << endl;
   cr.rc(e.code() + OFF_REGEX);
  }
 
- if(cr.global_json().empty()) exit(cr.rc());
+ if(cr.global_json().is_empty()) exit(cr.rc());
 
- Jtc jtc(cr.last_decomposed());                                 // need for access to write_json()
- for(const char *o = STR(OPT_JAL) STR(OPT_JSN) STR(OPT_QUT) STR(OPT_RAW); *o != NULL_CHR; ++o)
+ Jtc jtc(cr.decomposed_back());                                 // need for access to write_json()
+ for(const char *o = STR(OPT_JAL) STR(OPT_JSN) STR(OPT_QUT) STR(OPT_RAW); *o != CHR_NULL; ++o)
   jtc.opt()[*o].reset();                                        // above options to be ignored
  jtc.write_json(cr.global_json());
 
@@ -614,60 +838,83 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 
 
 
-void run_decomposed(CommonResource &cr,
-                    Streamstr::const_iterator &jsp, Streamstr::const_iterator &pse) {
+void run_decomposed_optsets(CommonResource &cr, Streamstr::const_iterator &jsp) {
  DEBUGGABLE()
  #include "lib/dbgflow.hpp"
  // run demux_opt for all decomposed options (in vopt_)
- Json interim;                                                  // json between decomposed passes
- interim.DBG().severity(NDBG);
- bool maybe_tampered;                                           // by operations like -u,-i,-p,-s
 
- do {
+ Json itrmi, itrmo;                                               // interim input/output
+ if(DBG()(0)) { itrmi.DBG().severity(NDBG); itrmo.DBG().severity(NDBG); }
+ cr.global_ns().clear();
+
+ do {   // do all opt sets
   DBG().level(cr.opt()[CHR(OPT_DBG)]);
   DBG(1) DOUT() << "pass for set[" << cr.decomposed_idx() << "]" << endl;
+  itrmo = ARY();                                                 // output store
+
+  // in a streamed cin option processing of -J is reduced to -j - because of a difference in
+  // the was streamed cin processed vs other modes.
+  if(jsp.is_streamed() and cr.opt()[CHR(OPT_JAL)].hits() > 0) {
+   cr.disable_global_output();
+   cr.opt()[CHR(OPT_JAL)].reset();
+   if(cr.opt()[CHR(OPT_JSN)].hits() == 0) cr.opt()[CHR(OPT_JSN)].hit();
+   cerr << "notice: in " << ENUMS(Streamstr::Strmod, Streamstr::Strmod::streamed_cin)
+        << " mode, behavior of option -" STR(OPT_JAL) " is reduced to -" STR(OPT_JSN) << endl;
+  }
+  GUARD(cr.opt())
+
+  // the output of demux_opt() could be multiple JSONs (to the console) or single json (to gjsn_),
+  // to ensure option sets processing always impose -J (redirect to gjsn_)
+  if(not cr.is_decomposed_back()) {                             // output to be redirected to -J
+   if(cr.opt()[CHR(OPT_JAL)].hits() == 0)                       // impose one if not given
+    { cr.enable_global_output(); cr.opt().impose(CHR(OPT_JAL)); }  // and indicate -J was imposed
+   else                                                         // -J given by user
+    itrmo.push_back(ARY{});                                     // provide single storage
+  }
+
+  // process all jsons either from <input>, or from interim (itrmi)
+  run_single_optset(cr, jsp, itrmi, itrmo);
+
+  itrmi = move(itrmo);
+  cr.next_decomposed();                                         // point opt() to the next set
+  DBG(1) DOUT() << "moving to processing next option set[" << cr.decomposed_idx() << "]" << endl;
+ } while(not cr.is_decomposed_front());                         // until wraps back to 1st set
+}
+
+
+
+void run_single_optset(CommonResource &cr,
+                       Streamstr::const_iterator &jsp, Json &itrmi, Json &itrmo) {
+ // process json(s) from  a single option set
+ do {
   Jtc jtc(cr);
-
-  if(cr.is_decomposed_first())                                  // in 1st decomposed pass - always
-   { if(jtc.parsejson(jsp, pse) == false) break; }              // parse json
-  else {                                                        // non-first holds output from
-   if(interim.empty()) { jsp = cr.iss().end(); break; }
-   jtc.json().root() = move(interim.front()); interim.erase(0); // a prior decomposed pass in ARY
+  if(cr.is_decomposed_front()) {                                // in optset[0] - always parse json
+   auto pse = jsp;
+   if(jtc.parsejson(jsp, pse) == false)                         // if nothing left, or streamed cin
+    break;                                                      // move to a next set
+  }
+  else {                                                        // take jsons from itrmi
+   if(itrmi.is_empty()) break;                                  // nothing left, move to next set
+   jtc.json().root() = move(itrmi.front());
+   itrmi.erase(0).normalize_idx();
   }
 
-  if(not cr.is_decomposed_last())                               // non-last output to be redirected
-   if(cr.opt()[CHR(OPT_JAL)].hits() == 0)                       // to -J, impose one if not given
-    { cr.enable_global_output(); cr.opt().impose(CHR(OPT_JAL)); }
+  bool maybe_tampered = jtc.demux_opt();                        // run jtc operations
 
-  maybe_tampered = jtc.demux_opt();                             // run jtc operations
-
-  if(cr.is_decomposed_first() and                               // first pass & -J given by user
-     cr.opt()[CHR(OPT_JAL)].hits() > 0 and not cr.opt().imposed(CHR(OPT_JAL))) {
-   DBG(1) DOUT() << "collect next input, due to processing -" STR(OPT_JAL) << endl;
-   pse = jsp;                                                   // to verify exception
-   if(jsp != cr.iss().end()) return;                            // read up all the JSONs (via main)
-  }
-
-  if(cr.opt()[CHR(OPT_ALL)].hits() > 0 and interim.has_children()) {// -a & interim has more JSONs:
-   DBG(1) DOUT() << "more jsons to process from prior step (-" << STR(OPT_ALL) << ")" << endl;
-   continue;                                                    // process all JSONs in the interim
-  }
-
-  if(not cr.is_decomposed_last()) {                             // interim decomposed step
-   if(not cr.opt().imposed(CHR(OPT_JAL)))                       // -J was given by user
-    interim = ARY{ move(cr.global_json().root()) };
-   else {                                                       // -J was imposed
-    interim = move(cr.global_json().root());
-    cr.disable_global_output();                                 // removed imposed -a, -j flags
-    cr.opt().impose(CHR(OPT_JAL), GETopt::Erase);
-   }
-   if(maybe_tampered) interim.normalize_idx();                  // sanitize arrays indices
-   DBG(1) DOUT() << "moved interim result to interim container" << endl;
+  if(not cr.is_decomposed_back()) {                             // interim decomposed step
+   if(maybe_tampered) cr.global_json().normalize_idx();         // sanitize arrays indices
+   if(cr.opt().imposed(CHR(OPT_JAL)))                           // -J was imposed
+    for(auto &v: cr.global_json().root()) itrmo.push_back(move(v));
+   else                                                         // -J given by user
+    for(auto &v: cr.global_json().root()) itrmo.front().push_back(move(v));
    cr.global_json() = ARY{};
   }
-
-  cr.next_decomposed();                                         // point opt() to the next set
- } while(not cr.is_decomposed_first());                         // until wraps back to 1st set
+  cr.global_ns().sync_in(jtc.itr_pairs().empty()? jtc.last_wns_snapshot():
+                          jtc.itr_pairs().back().ns, map_jnse::NsOpType::NsMoveAll);
+  if(cr.is_decomposed_front() and jsp.is_streamed()) break;     // if streamed cin move to next set
+ } while((cr.opt()[CHR(OPT_ALL)].hits() > 0 and not cr.opt().imposed(CHR(OPT_ALL))) or // -a given
+         (cr.opt()[CHR(OPT_JAL)].hits() > 0 and not cr.opt().imposed(CHR(OPT_JAL))) or // -J given
+         (cr.is_decomposed_front() and not cr.json_store().empty()));          // multiple files
 }
 
 
@@ -677,8 +924,8 @@ void run_decomposed(CommonResource &cr,
 //
 
 // populate vector of options (vopt_) with each decomposed GETopt
-// initially opt() will be pointing to a global opt_ (defined in main), after init_decomposed
-// it will point to first GETopt in vopt_
+// initially opt() will be pointing to a global opt_ (defined in main),
+// after init_decomposed it will point to first GETopt in vopt_
 void CommonResource::decompose_opt(int argc, char *argv[]) {
  #include "lib/dbgflow.hpp"
  // decompose options by delimiter '/' and then parse each option separately
@@ -689,7 +936,7 @@ void CommonResource::decompose_opt(int argc, char *argv[]) {
   newargs.clear();
   char chr_eval = parse_opt(args);                              // returns '\0', or 'i', or 'u'
 
-  if(opt().arguments() and opt()[0].str(1) == DCMP_CHR) {       // found '/' delimiter, decompose
+  if(opt().arguments() and opt()[0].str(1) == STR_DCMP) {       // found '/' delimiter, decompose
    newargs.push_back(move(args[0]));                            // move progname to newargs
    args.clear();
    args.push_back(newargs[0]);                                  // reinstate progname in args
@@ -734,7 +981,7 @@ void CommonResource::init_decomposed(void) {
  // - bare qualifier '-' allowed only in 1st set and not in the others
  for(auto &opt: vopt_)
   for(const char *o = STR(OPT_RAW) STR(OPT_IND) STR(OPT_QUT)
-                       STR(OPT_SZE) STR(OPT_FRC) STR(OPT_RDT); *o != NULL_CHR; ++o) {
+                       STR(OPT_SZE) STR(OPT_FRC) STR(OPT_RDT); *o != CHR_NULL; ++o) {
    if(&opt == &vopt_.front()) {                                 // handle 1st set
     if(*o == CHR(OPT_RDT)) continue;                            // '-' allowed only in 1st set
     if(*o == CHR(OPT_QUT) and opt[*o].hits() % 2 == 1) continue;// -q allowed only in 1st set
@@ -782,7 +1029,7 @@ void CommonResource::display_opts(std::ostream & out) {
     out << " '" << opt.ordinal(j).c_str() << "'";
 
   out << " (internally imposed:";
-  for(auto &i: opt.imp()) cerr << " -" << i;
+  for(auto &i: opt.imp()) out << " -" << i;
   out << " )" << endl;
  }
 }
@@ -793,7 +1040,7 @@ char CommonResource::parse_opt(v_string & args) {
  // 1. parse options, if option -e detected, rebuild -u/i's arguments and parse with rebuilt args
  // 2. reinstate -w options from -x/-y
  // 3. process options dependencies
- char opt_eval{NULL_CHR};
+ char opt_eval{CHR_NULL};                                       // holds either 'i' or 'u' for -e
  if(is_recompile_required_(args))                               // re-compiling required?
   opt_eval = recompile_args_(args);
  parse_arguments_(args);
@@ -803,22 +1050,28 @@ char CommonResource::parse_opt(v_string & args) {
 
  convert_xyw_();                                                // -x + -y... = -w ...
 
- if(opt()[CHR(OPT_JAL)].hits() > 0)                             // -J - insert -j, -a
+ if(opt()[CHR(OPT_JAL)].hits() > 0)                             // -J: insert -j, -a
   enable_global_output();
 
- for(auto &o: opt()[CHR(OPT_TMP)])
-  if(o.find(string{"{"} + WLK_HPFX + "}" ) != string::npos)
-   opt().impose(USE_HPFX);
- if(any_of(wm().begin(), wm().end(),
-    [](GETopt::Multiwalk &x){ return x.factor == 0 and x.offset == -1; }))
-  opt().impose(USE_HPFX);
+ for(auto &o: opt()[CHR(OPT_TMP)])                              // check every -T
+  if(o.find(string{"{"} + WLK_HPFX + "}" ) != string::npos)     // if {$?} detected
+   opt().impose(USE_HPFX);                                      // enable tracking last walk output
+
+ if(any_of(wm().begin(), wm().end(),                            // if any of -x is -x0/-1
+    [](GETopt::Multifactor &x){ return x.factor == 0 and x.offset == -1; }))
+  opt().impose(USE_HPFX);                                       // enable tracking last walk output
+ // detecting and imposing USE_HPFX is mere a performance optimization; for all other cases: when
+ // no {$?} or no -x0, -x/-1 given there's no need tracking last walk output - it speeds up a bit
+ // as copying last walked (and templated) JSON might be very expensive
+
  return opt_eval;
 }
 
 
 
 void CommonResource::enable_global_output(void) {
- // this patter is used multiple times - inserts -j and -a options
+ #include "lib/dbgflow.hpp"
+ // this pattern is used multiple times - inserts -j and -a options
  if(opt()[CHR(OPT_JAL)].hits() == 0) opt()[CHR(OPT_JAL)].hit();
  for(char x: {CHR(OPT_ALL), CHR(OPT_JSN)})
   if(opt()[x].hits() == 0) {                                    // if opt not given,
@@ -830,42 +1083,47 @@ void CommonResource::enable_global_output(void) {
 
 
 void CommonResource::disable_global_output(void) {
+ #include "lib/dbgflow.hpp"
  // reinstate -a, -j options as they were before -J was enabled
  opt()[CHR(OPT_JAL)].reset();
 
  for(char x: {CHR(OPT_ALL), CHR(OPT_JSN)})                      // process options -a, -j
   if(opt().imposed(x)) {                                        // if opt was imposed,
-   opt().impose(x, GETopt::Erase);                              // remove imposition flag
+   opt().impose(x, GETopt::ImposeOpt::Erase);                   // remove imposition flag
    opt()[x].reset();                                            // reset the opt
   }
 }
 
 
 
-Streamstr & CommonResource::read_inputs(void) {
+void CommonResource::init_inputs(void) {
  #include "lib/dbgflow.hpp"
- // initialize `iss` with correct read mode: streamed/cin/buffered
- bool read_from_cin{opt()[0].hits() == 0 or opt()[CHR(OPT_RDT)].hits() > 0}; // no arg, or forced '-'
+ // initialize iss_ with correct read mode: streamed/cin/buffered
+ read_from_cin_ = opt()[0].hits() == 0 or opt()[CHR(OPT_RDT)].hits() > 0;   // no files, or '-'
  DBG(0)
-  DOUT() << "reading json from " << (read_from_cin? "<stdin>": "file-arguments:") << endl;
+  DOUT() << "reading json from " << (read_from_cin_? "<stdin>": "file-arguments:") << endl;
 
- for(int arg = 1; arg <= opt().arguments(); ++arg) {
+ for(int arg = 1; arg <= opt().arguments(); ++arg) {            // register all filenames with iss
   iss_.source_file(opt()[0].str(arg));                          // will set read mode to file
-  DBG(0) DOUT() << "source file: " << opt()[0].str(arg) << endl;
+  DBG(0) DOUT() << "file argument: " << iss_.filenames()[arg - 1] << endl;
  }
- if(opt().arguments() > 1) opt()[CHR(OPT_ALL)].hit();           // turn up -a for multiple files
 
- if(read_from_cin) {                                            // either stream, or buffered
-  if(opt()[CHR(OPT_ALL)].hits() > 0 and opt()[CHR(OPT_JAL)].hits() == 0)  // -a, no -J, stream read
+ if(read_from_cin_) {                                           // <cin> either stream, or buffered
+  if(opt()[CHR(OPT_ALL)].hits() and opt()[CHR(OPT_JAL)].hits() == 0)    // -a, no -J, stream read
    iss_.reset(Streamstr::streamed_cin);
-  else {                                                        // cin buffered (all other cases)
+  else {                                                        // <cin> buffered (all other cases)
    if(opt()[CHR(OPT_JAL)].hits() > 0 and
       opt().imposed(CHR(OPT_ALL)) == false)                     // -J and -a were given by user
     cerr << "notice: option -" STR(OPT_JAL) " cancels streamed input, reverts to buffered" << endl;
    iss_.reset(Streamstr::buffered_cin);
   }
  }
- return iss_;
+
+ if(iss_.filenames().size() > 1)                                // if multiple files given:
+  if(opt()[CHR(OPT_ALL)].hits() == 0) {                         // if -a not given, impose one
+   opt()[CHR(OPT_ALL)].hit();                                   // ensure -a for multiple files
+   opt().impose(CHR(OPT_ALL));                                  // indicate it's imposed
+  }
 }
 
 
@@ -884,6 +1142,21 @@ void CommonResource::jsonize(Json jout) {
 
 
 
+void CommonResource::decide_on_multithreaded_parsing(void) {
+ #include "lib/dbgflow.hpp"
+ // if conditions are right enable multi-threaded read/parsing
+ if(tm().seats_total() == 1) return;                            // cpu should have more than 1 core
+ if(read_from_cin_ == true) return;                             // must be reading from files
+ if(opt()[CHR(OPT_ALL)].hits() - opt().imposed(CHR(OPT_ALL)) > 0) return;  // -a disables m.t.
+ if(opt()[0].hits() <= 1) return;                               // there must be more than 1 file
+
+ json_store().resize(iss().filenames().size());                 // enable multithreading
+ DBG(0) DOUT() << "starting dispatcher for json parsers in a new thread" << endl;
+ tm().run(GLAMBDA(fetch_dispatcher_));                          // fetch jsons starting from 2 file
+ iss().defer_reading_files();                                   // b/c m-thread reading is engaged
+}
+
+
 //
 // CR PRIVATE methods definitions
 //
@@ -892,19 +1165,30 @@ bool CommonResource::is_recompile_required_(const v_string & args) {
  // check if option -e is present in the arguments (if so, indicate re-parsing is required)
  char *nargv[args.size()];                                      // here, build a new argv
  auto alloc_args = [&] {                                        // populate nargv from args
-                    for(size_t i = 0; i < args.size(); ++i)
-                     { nargv[i] = new char[args[i].size()+1];
-                       strcpy(nargv[i], args[i].c_str()); }
-                    return false;
-                   };
- auto free_args = [&](bool unused) { for(size_t i = 0; i < args.size(); ++i) delete [] nargv[i]; };
+       for(size_t i = 0; i < args.size(); ++i)
+        { nargv[i] = new char[args[i].size() + 1];
+          strcpy(nargv[i], args[i].c_str()); }
+       return true;                                             // facilitate return type for GUARD
+      };
+ auto free_args = [&](bool unused)
+       { for(auto &a: nargv) delete [] a; };
 
  GUARD(alloc_args, free_args)
  try { opt().parse(args.size(), nargv); }
  catch(GETopt::stdException &e)
-  { opt().usage(); exit(e.code() + OFF_GETOPT); }               // this for Linux/GNU getop mainly
+  { opt().usage(); exit(e.code() + OFF_GETOPT); }
 
  bool irr = opt()[CHR(OPT_EXE)];
+ if(irr)
+  for(auto &o: opt().ordinal()) {
+   if(o.id() == CHR(OPT_EXE)) break;
+   if(static_cast<char>(o.id()) AMONG(static_cast<char>(CHR(OPT_INS)),CHR(OPT_UPD),CHR(OPT_CMP))) {
+    cerr << "fail: option -'" << CHR(OPT_EXE)
+         << "' must precede options -" STR(OPT_INS) ", -" STR(OPT_UPD) ", -" STR(OPT_CMP) << endl;
+    exit(RC_ARG_FAIL);
+   }
+ }
+
  opt().reset();
  return irr;
 }
@@ -916,7 +1200,7 @@ char CommonResource::recompile_args_(v_string & args) {
  // return opt_eval char ('i'/'u', or '\0')
  v_string new_args;
  bool semicolon_found = false;
- char opt_eval{NULL_CHR};
+ char opt_eval{CHR_NULL};
 
  for(auto &arg: args) {                                         // go through all args
   if(semicolon_found)                                           // -i/u already found and processed
@@ -1014,18 +1298,65 @@ bool CommonResource::is_x_factor_(const char * x_str, signed_size_t * recursive)
  x1 = strtol(x_str, &endptr, 10);
 
  if(recursive)                                                  // resolving a second value now
-  { if(*endptr == '\0')
+  { if(*endptr == CHR_NULL)
    { *recursive = x1; return true; } return false; }
 
  x2 = abs(x1) - 1;
- if(*endptr == '/' and endptr[1] != '\0')
+ if(*endptr == '/' and endptr[1] != CHR_NULL)
   { if(not is_x_factor_(endptr + 1, &x2)) return false; }       // resolve second value here
  else
-  if(*endptr != '\0') return false;
+  if(*endptr != CHR_NULL) return false;
 
  wm_.emplace_back(abs(x1), x2);
  return true;
 }
+
+
+
+void CommonResource::fetch_dispatcher_(void) {
+ // dispatch threads fetching jsons when multiple files given
+ DBG(0) DOUT() << "got " << json_store().size() << " filename(s) to fetch via dispatcher" << endl;
+ auto & fnv = iss().filenames();                                // file name vector
+
+ auto rpj = [&](auto&&... arg)
+       { read_and_parse_json_(std::forward<decltype(arg)>(arg)...); };
+
+ for(size_t i = 0; i < json_store().size(); ++i)
+  tm().run(rpj, ref(fnv[i]), ref(json_store()[i]));
+}
+
+
+
+void CommonResource::read_and_parse_json_(const string &filename, JsonStore & js) {
+ // isolated thread to read and parse all JSONs from file
+ auto dummy = [&] { return true; };                             // b/c it comes in already locked
+ auto remove_lock = [&](bool  unused) { js.task_complete.unlock(); };
+ GUARD(dummy, remove_lock)
+
+ // debugs may interfere with cout outputs (as the latter not mutex'ed), hence commented out
+ //DBG(0) DOUT() << "parsing file " << filename << endl;
+ Streamstr jstream{filename, Streamstr::Verbosity::Quiet};
+ if(DBG()(0)) jstream.DBG().severity(NDBG);
+ auto jsp = jstream.begin();
+ js.file_status = jstream.filestatuses().front();
+
+ while(jsp != jstream.end()) {
+  Json j;
+  if(DBG()(0)) j.DBG().severity(NDBG);
+  Streamstr::const_iterator jbegin = jsp;                       // for elocation only
+  j.parse_throwing(false).parse(jsp, Json::Relaxed_trailing);
+  js.json_queue.push_back(move(j));
+  if(js.json_queue.back().parsing_failed()) {                   // exception occurred
+   js.err_location = Json::utf8_adjusted(0, jstream.str(),
+                                         distance(jbegin, js.json_queue.back().exception_point()));
+   break;
+  }
+ }
+ //DBG(0) DOUT() << "finished parsing file " << filename
+ //              << ", parsed " << js.json_queue.size() << " json(s)" << endl;
+}
+
+
 
 
 
@@ -1035,26 +1366,73 @@ bool CommonResource::is_x_factor_(const char * x_str, signed_size_t * recursive)
 bool Jtc::parsejson(Streamstr::const_iterator &jsp, Streamstr::const_iterator &pse) {
  #include "lib/dbgflow.hpp"
  // parse read json text via Streamstr. Return true if actual json was parsed / false otherwise
+
+ // if parsing was in other threads, fetch those one by one
+ if(not cr_.json_store().empty())                               // concurrency was employed
+  return move_fetched_json(jsp);
+
+ if(jsp == cr_.iss().end()) return false;                       // reached end of buffer(s)
+ cr_.global_ns()[FILE_NSP] = STR{cr_.iss().filename()};         // update gns with current filename
+
  Streamstr::const_iterator jbegin = jsp;                        // for debugs / location_ only
 
- cpf_ = cr_.iss().filename();                                   // preserve current filename
  try
   { json().parse(jsp, cr_.iss().is_streamed()? Json::Relaxed_no_trail: Json::Relaxed_trailing); }
  catch(Json::stdException & e) {
   if(e.code() == Jnode::unexpected_end_of_string and jsp.is_streamed()) {
-   for(; pse.offset() < jsp.offset(); ++pse) if(*pse > ' ') break;
+   for(; pse.offset() < jsp.offset(); ++pse) if(*pse > CHR_SPCE) break;
    if(pse.offset() == jsp.offset()) {
     DBG(0) DOUT() << "suppressing exception: blank trail detected" << endl;
-    return false;
+    return false;                                               // no json parsing occurred
    }
   }
   if(e.code() > Jnode::start_of_json_parsing_exceptions and
      e.code() < Jnode::end_of_json_parsing_exceptions)
-   location_(jbegin);
+   display_location_(jbegin);
   throw;
  }
  return true;
 }
+
+
+
+bool Jtc::move_fetched_json(Streamstr::const_iterator &jsp) {
+ #include "lib/dbgflow.hpp"
+ // set json() to the fetched value in the other threads
+ size_t idx = cr_.jsq_idx();                                    // idx for currently processed jsq
+
+ while(idx < cr_.json_store().size()) {
+  cr_.global_ns()[FILE_NSP] = STR{cr_.iss().filenames()[idx]};  // update gns with current filename
+  auto & jsq = cr_.json_store()[idx];                           // currently used queue from store
+
+  if(jsq.await_completion) {                                    // checking for the first time
+   DBG(0) DOUT() << "awaiting completion of another thread parsing" << endl;
+   jsq.task_complete.lock();                                    // thread supposed to release mutex
+   jsq.await_completion = false;                                // no further sync is required
+   if(jsq.file_status == Streamstr::Filestatus::Failure)
+    cerr << "error: could not open file '" << cr_.global_ns()[FILE_NSP].str() << "'" << endl;
+  }
+
+  if(jsq.json_queue.empty())                                    // if all jsons released
+   { cr_.jsq_idx(++idx); continue; }                            // process next parsed json queue
+
+  auto & jsn = jsq.json_queue.front();
+  if(jsn.parsing_failed()) {                                    // handle failed parsing
+   cr_.elocation(jsq.err_location);
+   cr_.iss().reset(Streamstr::buffered_file).source_file(cr_.global_ns()[FILE_NSP].str());
+   throw jsn.EXP(jsn.exception_reason());
+  }
+
+  json() = move(jsn);                                           // release json to processing
+  jsq.json_queue.pop_front();
+  if(jsq.json_queue.empty() and idx == cr_.json_store().size() - 1) // if last json was released
+   jsp = cr_.iss().end();                                       // then indicate the true end
+  return true;
+ }
+ jsp = cr_.iss().end();                                         // a case when all trailing files
+ return false;                                                  // are failed to be open
+}
+
 
 
 // write_json(src_json, allow_jsonizing) prints only a **single** JSON:
@@ -1088,43 +1466,35 @@ void Jtc::write_json(Json & json, Jsonizaion allow_encap) {
  // write whole json to output (demultiplexing file and stdout), featuring:
  // inquoting/unquoting json string, putting json into array (-j), printing size to stdout
 
- bool write_to_file{opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
-      // filename is in the 1st set of arguments, while -f is in the last
- bool unquote{opt()[CHR(OPT_QUT)].hits() >= 2};                 // -qq given, unquote
- bool inquote{opt()[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
  bool global_jsn{opt()[CHR(OPT_JAL)].hits() > 0};               // -J given
 
  if(allow_encap == Jsonize and opt()[CHR(OPT_JSN)].hits() == 1) // -j given, force jsonizing
   json = ARY{ move(json) };
- if(not unquote and inquote)
+ if(not unquote_ and inquote_)
   json.root() = json.inquote_str(json.to_string(Jnode::Raw));
 
  size_t jsize{0};
  if(not global_jsn) {
-  if(opt()[CHR(OPT_SZE)].hits() > 0) jsize = json.size();       // -z or -zz
-  if(opt()[CHR(OPT_SZE)].hits() > 1) json.root() = jsize;       // -zz
+  if(measure_) jsize = json.size();                             // -z or -zz
+  if(size_only_) json.root() = jsize;                           // -zz
  }
 
  DBG(0)
   DOUT() << "outputting json to "
-         << (write_to_file?
+         << (write_to_file_?
               cr_.iss().filename():
               global_jsn? "<JSON>": opt()[CHR(OPT_JSN)]? "<json>": "<stdout>") << endl;
  if(global_jsn)                                                 // -J, jsonize to global, defer
   { cr_.jsonize(move(json)); return; }                          // output until all JSON processed
 
- static ios_base::openmode mod = ios_base::out;                 // first time re-write file
- ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr, mod};
- if(mod == ios_base::out) mod |= ios_base::app;                 // next time - append
+ Jtc::mod_ |= ios_base::app;                                    // next time will append
 
- ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
-
- if(unquote and json.is_string())
-  { if(not json.str().empty()) xout << json.unquote_str(json.str()) << endl; }
- else xout << json << endl;
+ if(unquote_ and json.is_string())
+  { if(not json.str().empty()) xout_ << json.unquote_str(json.str()) << endl; }
+ else xout_ << json << endl;
 
  if(opt()[CHR(OPT_SZE)].hits() == 1)                            // -z
-  xout << OBJ{LBL{JTCS_TKN, static_cast<double>(jsize)}} << endl;
+  xout_ << OBJ{LBL{JTCS_TKN, static_cast<double>(jsize)}} << endl;
 }
 
 
@@ -1138,7 +1508,7 @@ bool Jtc::demux_opt(void) {
 
  bool is_tampered{false};
  for(char op: STR(OPT_CMP)STR(OPT_INS)STR(OPT_UPD)STR(OPT_SWP)STR(OPT_PRG)STR(OPT_WLK)) {
-  if(op == NULL_CHR or opt()[op].hits() == 0) continue;
+  if(op == CHR_NULL or opt()[op].hits() == 0) continue;
   DBG(1) DOUT() << "option: '-" << op << "', hits: " << opt()[op].hits() << endl;
 
   switch(op) {
@@ -1185,7 +1555,7 @@ void Jtc::compare_jsons() {
 
 void Jtc::compare_bingings(void) {
  #include "lib/dbgflow.hpp"
- // compare JSONs: pairs of compared and comparing iterators (pinters) come from the
+ // compare JSONs: pairs of compared and comparing iterators (pointers) come from the
  // subscriber collect_itr_bindings() called from walk_interleaved_()
  static string lbl[2] { CMP_BASE, CMP_COMP };
  for(auto &pair: psrc_) {
@@ -1193,7 +1563,7 @@ void Jtc::compare_bingings(void) {
 
   jv.front()[lbl[0]] = *pair.dst;                               // 1st comes form walk_interleaved
   jv.back()[lbl[1]] = *pair.src;                                // 2nd comes from -c <walk-path>
-  DBG().increment(+2, jv.front(), jv.back(), -2);               // imbue current dbg +3
+  if(DBG()(0)) DBG().increment(+2, jv.front(), jv.back(), -2);  // imbue current dbg +3
 
   vector<set<const Jnode*>> node_set{2};                        // preserved different node ptrs
   compare_jsons_(jv.front()[lbl[0]], node_set.front(),
@@ -1211,7 +1581,7 @@ void Jtc::compare_bingings(void) {
 
   for(auto &json: jv) {                                         // output compared jsons
    auto jit = json.walk("[0]");
-   if(not jit->empty()) cr_.rc(RC_CMP_NEQ);
+   if(not jit->is_empty()) cr_.rc(RC_CMP_NEQ);
    output_by_iterator(jit);
   }
   if(jv.front().front().type() != jv.back().front().type())
@@ -1279,9 +1649,11 @@ bool Jtc::upsert_json(char op) {
  ready_params_(op);
 
  is_tpw_ = opt()[CHR(OPT_TMP)].hits() > 1 and opt()[CHR(OPT_SEQ)].hits() < 2 and
-           opt()[CHR(OPT_TMP)].hits() == wsrc_.size();          // tpw for insert/update walks
+           opt()[CHR(OPT_TMP)].hits() == walk_options_size_();  // tpw for insert/update walks
 
  walk_interleaved_(upsert_mtd[op == CHR(OPT_UPD)]);
+ DBG(1) DOUT() << "collected " << psrc_.size() << (op == CHR(OPT_UPD)? " update":" insert")
+               << "-walk pairs" << endl;
  apply_src_walks(op);
 
  maybe_update_lbl_();                                           // will update lbl if any pending
@@ -1301,7 +1673,7 @@ bool Jtc::upsert_json(char op) {
 // collect_itr_bindings() performs pairing of the source walked jsons and respective destinations:
 // e.g.: when inserting json: source might be an inserted files, or JSONs, or the walk-iterators
 // from the inserted file(s)/json(s) or from the input json.
-// the destination always will be a walk-intertor over input json (-w):
+// the destination always will be a walk-itertor over input json (-w):
 //   - the destinations always comes as a parameter (Json::iterator &it) from walk_interleaved_()
 //   - the sources will be demuxed in advance_to_next_src() into the jits_
 
@@ -1311,18 +1683,15 @@ void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
  // per each walked destination (-w, facilitated by &it), collect each respective source(s) (jits_)
  // Grouping arg is unused here, but is required by subscriber_'s definition
 
- merge_ns(cr_.global_ns(), wns_[&it]);                          // syncup iter's ns to global ns
  if(jits_.walk_size() > 0)                                      // walk_size > 0 means init'ed jits
-  merge_ns(jits_.json().ns(), cr_.global_ns());                 // syncup to current json source
+  wns_[&it].sync_out(jits_.json().ns(), map_jnse::NsOpType::NsReferAll);
 
- if(ecli_ and wsrc_.empty())                                    // -e ... \; alone
-  { psrc_.emplace_back(it, it, cr_.global_ns()); return; }      // collect iterator and ns
+ if(ecli_ > Ecli::No_exec and walk_options_size_() == 0)        // -e ... \; alone
+  { psrc_.emplace_back(it, it, wns_[&it]); return; }            // collect iterator and ns
 
- while(advance_to_next_src()) {
-  DBG(1) DOUT() << "optarg idx [" << wcur_ << "] out of "
-                << (jitt_ == Src_optarg? jsrc_.size(): wsrc_.size()) << " ("
-                << (jitt_ == Src_optarg? "static":opt().ordinal(wsrc_[wcur_]).c_str())
-                << ")" << endl;
+ while(advance_to_next_src(it)) {
+  DBG(2) DOUT() << "optarg idx [" << jscur_ << "] out of " << walk_options_size_()
+                << " (" << (jsrt_ == Src_optarg? "json": "walk") << ")" << endl;
   psrc_.emplace_back(it, jits_);                                // collect iterator
   if(is_multi_walk_) break;
  }
@@ -1345,43 +1714,65 @@ void Jtc::update_by_iterator(Json::iterator &it, Grouping unused) {
 
 
 
-bool Jtc::advance_to_next_src(signed_size_t i) {
+bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
  #include "lib/dbgflow.hpp"
  // iterate current (valid) walk, or begin iterating next one (if available), may come with:
- //  i = -1      - first non-recursive call
- //  i != wcur_  - must process next src,
- //  i == 0/wcur_  - all src-itr walked (loop detect for single/multi walks, recursive)
- auto idx = [&i, this] { return wcur_ = i >= 0? i: wcur_; };    // index select
+ //  i < 0          - first (non-recursive) call
+ //  i >= 0         - recursive call, index of a next source,
+ auto idx = [&i, this] { return i < 0? jscur_: i; };            // index select
 
- DBG(4) DOUT() << "type: " << ENUMS(Jitsrc, jitt_) << ", walk src: " << i << ", walk/json: '"
-               << (jitt_ == Src_optarg?
-                    jsrc_[idx()].to_string(Jnode::Raw, 1):
-                    opt().ordinal(wsrc_[idx()]).str()) << "'" << endl;
- size_t jc_size = jitt_ == Src_optarg? jsrc_.size(): wsrc_.size();  // json source container size
+ DBG(4)
+  DOUT() << (i < 0? "non-": "")  << "recusive call, type: " << ENUMS(Jtc::Jitsrc, jsrt_)
+         << ", walk src: " << idx() << ", walk/json: '"
+         << (jsrc_[idx()].is_neither()? jsrc_[idx()].val(): jsrc_[idx()].to_string(Jnode::Raw, 1))
+         << "'" << endl;
+
  if(jits_.is_valid()) {                                         // if true, walk_size must be > 0
   if((++jits_).is_valid())                                      // end() not reached yet
-   { wcur_ = idx(); return true; }
-  return advance_to_next_src(idx() + 1 >= jc_size? 0: idx() + 1); // else use next src
+   { jscur_ = idx(); return true; }
+  DBG(4) DOUT() << "source-walk increment failed, advancing to the next source" << endl;
+  return advance_to_next_src(jit, idx() + 1 > jsrc_.rbegin()->KEY?
+                                   walk_options_start_idx_(): idx() + 1);   // else use next src
  }
- // jits_ could be invalid due to: 1. init call (walk_size == 0),
+ // jits_ is invalid here, could be due to:
+ // 1. init call,
  // 2. change source (reached end, i >= 0, walk_size here is always > 0)
- if(not is_multi_walk_ and i == 0)                              // single_walk, change source
-  { jits_ = Json::iterator{}; return false; }                   // and loop => end of operations
-
- auto & srcj = jitt_ == Src_input? json(): jitt_ == Src_mixed? jsrc_[0]: jsrc_[idx()];
- if(jits_.walk_size() == 0)                                     // merge upon jits_ initialization
-  merge_ns(srcj.ns(), cr_.global_ns());                         // merge global ns to -u/i's ns
-
- switch(jitt_) {
-  case Src_input:
-  case Src_mixed:   jits_ = srcj.walk(opt().ordinal(wsrc_[idx()]).str()); break;
-  case Src_optarg:  jits_ = srcj.walk(); break;
+ if(not is_multi_walk_ and i == SGNS_T(walk_options_start_idx_())) {    // single_walk, change src
+   DBG(4) DOUT() << "single-walk all sources have been walked, ending src advancing" << endl;
+  jits_ = Json::iterator{}; return false;                       // and loop => end of operations
  }
- if(jits_.is_valid())                                           // jits_ resolved
-  { wcur_ = idx(); return true; }
- if(i == static_cast<signed_size_t>(wcur_))                     // multiwalk: no more valid itr/src
-  { jits_ = Json::iterator{}; return false; }                   // fail operation
- return advance_to_next_src(idx() + 1 >= jc_size? 0: idx() + 1);// return next src itr
+ // select type of source (json)
+ auto & srcj = jsrt_ == Src_input? json():
+               jsrt_ == Src_mixed? (jsrc_[0].is_neither()? jtmp_[jtmp_.size()]: jsrc_[0]):
+                (jsrc_[idx()].is_neither()? jtmp_[jtmp_.size()]: jsrc_[idx()]);
+
+ if(jits_.walk_size() == 0)                                     // merge upon jits_ initialization
+  wns_[&jit].sync_out(srcj.ns(), map_jnse::NsOpType::NsReferAll);   // merge global ns to -u/i's ns
+
+ jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str());
+ // if src arg is a template then resolve:
+ if(not jtmp_.empty() and &srcj == &jtmp_.rbegin()->VALUE) {
+  auto & jtmp = jtmp_.rbegin()->VALUE;
+  jtmp = Json::interpolate(jsrc_[jsrt_ == Src_mixed? 0: idx()].val(),
+                                 jit, jits_.json().ns(), Json::ParseTrailing::Relaxed_no_trail);
+  if(jtmp.is_neither())
+   { cerr << "fail: template argument failed interpolation" << endl;  exit(RC_ARG_FAIL); }
+ }
+
+
+ if(jits_.is_valid()) {                                         // jits_ resolved
+  DBG(4) DOUT() << "next selected source idx: " << idx() << endl;
+  jscur_ = idx(); return true;
+ }
+ // jits_ is invalid here
+ if(i == static_cast<signed_size_t>(jscur_)) {                  // multiwalk: no more valid itr/src
+  DBG(4) DOUT() << "all sources are invalid, failing src advancing" << endl;
+  jits_ = Json::iterator{}; return false;                       // fail operation
+ }
+
+ DBG(4) DOUT() << "new source-walk increment failed, advancing to the next source" << endl;
+ return advance_to_next_src(jit, idx() + 1 > jsrc_.rbegin()->KEY?
+                                  walk_options_start_idx_(): idx() + 1);    // return next src itr
 }
 
 
@@ -1393,40 +1784,47 @@ void Jtc::apply_src_walks(char op) {
  static ups_ptr upsert[2] = {&Jtc::merge_jsons_, &Jtc::update_jsons_};
 
  vec_bjit vsrc(psrc_.size());                                   // copy of valid iterators
+ vector<ShellReturn> vsr;
+ Json jexec;                                                    // for temp. copy of jsrc_[0]
+ if(ecli_ == Ecli::Bulk_exec) vsr = run_bulk_shell_();
 
- for(auto &pair: psrc_) {
+ for(size_t i = 0; i < psrc_.size(); ++i) {
+  auto &pair = psrc_[i];
   if(not pair.dst.is_valid())
    { cerr << "error: dst walk " << key_++ << " invalided by prior operations" << endl; continue; }
-  if(jitt_ == Src_input and not pair.src.is_valid())
+  if(jsrt_ == Src_input and not pair.src.is_valid())
    { cerr << "error: src walk " << key_++ << " invalided by prior operations" << endl; continue; }
 
-  bool is_ecli_success;
-  Json::iterator ewlk;
-  if(ecli_)
-   { is_ecli_success = execute_cli_(jsrc_[0], pair.src, pair.ns); ewlk = jsrc_[0].walk(); }
+  bool is_ecli_success{false};
+  Json::iterator ewlk;                                          // pointing to root of jsrc_[0]
+  if(ecli_ > Ecli::No_exec) {
+   jexec = jsrc_[0];
+   if(DBG()(0)) DBG().increment(+2, jexec, -2);
+   is_ecli_success = execute_cli_(jexec, pair.src, pair.ns, vsr.size()? &vsr[i]: nullptr);
+   ewlk = jexec.walk();
+  }
 
-  if(not ecli_ or is_ecli_success) {
-  // i.e.: when globally shell eval is disabled, or in a given iteration it did not fail
+  if(ecli_ == Ecli::No_exec or is_ecli_success) {
    Json tmp;
-   tmp.type(Jnode::Neither).DBG().severity(NDBG);
+   if(DBG()(0)) tmp.DBG().severity(NDBG);
+   tmp.type(Jnode::Neither);
 
    if(opt()[CHR(OPT_TMP)].hits() > 0) {                         // -T given
-    // if number of templates matches number of -[iu]<walk>s, then apply template per relevant walk
-    // otherwise apply templates round-robin
-    if(is_tpw_)                                                 // template per walk:
+    if(is_tpw_)                                                 // is template per walk? then:
      tpw_.emplace(pair.src.walk_uid(),                          // relate interleaved walks to tmp
                   tpw_.size() < opt()[CHR(OPT_TMP)].size() - 1?
                    opt()[CHR(OPT_TMP)].str(tpw_.size() + 1): "");
-    else                                                        // circular templates
+    else                                                        // circular template application
      tpw_.emplace(upst_key_ % (opt()[CHR(OPT_TMP)].size() - 1),
-                   opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
+                  opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
     size_t tmp_idx = is_tpw_?
             pair.src.walk_uid(): upst_key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
-    tmp = Json::interpolate(tpw_[tmp_idx], ecli_? ewlk: pair.src, pair.ns);
+    tmp = Json::interpolate(tpw_[tmp_idx], ecli_ > Ecli::No_exec? ewlk: pair.src, pair.ns);
    }
 
    (this->*upsert[op == CHR(OPT_UPD)])                           // demux -i and -u
-    (pair.dst, not tmp.is_neither()? tmp.walk(): ecli_? ewlk: pair.src, &pair.lbl);
+    (pair.dst, not tmp.is_neither()? tmp.walk():
+                                      ecli_ > Ecli::No_exec? ewlk: pair.src, &pair.lbl);
   }
 
   vsrc[key_] = move(psrc_[key_]);
@@ -1496,12 +1894,13 @@ void Jtc::walk_json(void) {
  if(opt()[CHR(OPT_JSN)].hits() == 1) jout_ = ARY{};             // otherwise jout_ is OBJ (i.e -jj)
  walk_interleaved_(&Jtc::output_by_iterator);
 
- if(opt().imposed(USE_HPFX) and wcnt_ > 0 and opt().process_last(wcnt_)) {  // if there was output
+ if(use_hpfx_ and wcnt_ > 0 and opt().process_last(wcnt_)) {    // if there was output
   GUARD(opt().wm())                                             // preserve multi-walk factors and
-  opt().wm().clear();                                           // do not let them interfere
-  opt()[CHR(OPT_TMP)].reset();                                  // and so do not let templates
-  Json j(hwlk_);                                                // produce a itr out of last walk
-  output_by_iterator(j.walk("[0]"));
+  GUARD(opt()[CHR(OPT_TMP)])                                    // preserve templates, and do not
+  opt().wm().clear();                                           // let them interfere inc. template
+  opt()[CHR(OPT_TMP)].reset();                                  // as value already interpolated
+  Json h(hwlk_);                                                // produce an itr out of last walk
+  output_by_iterator(h.walk("[0]"));
  }
 
  // after walking all paths
@@ -1521,7 +1920,7 @@ void Jtc::walk_json(void) {
 //  walked JSON element to the console or out jout_ (facilitating -j / -jj options)
 //
 // output_by_iterator() handles:
-//   o syncs name-space (gloabal with walked iterator's as well as last walked historical's)
+//   o syncs name-space (global with walked iterator's as well as last walked historical's)
 //   o handles -T (template interpolation) option(s)
 //   o demux output destination - to the console or to jout (facilitating -j / -jj)
 //
@@ -1535,31 +1934,33 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
  // in case of -j option: collect into provided json container rather than print to console
  Json tmp;                                                      // template-interpolation goes here
  tmp.type(Jnode::Neither);
- DBG().increment(+2, tmp, -2);                                  // imbue current dbg +3 in tmp
+ if(DBG()(0)) DBG().increment(+2, tmp, -2);                     // imbue current dbg +3 in tmp
 
- wns_[&wi][WLK_HPFX] = move(hwlk_[0]);                          // merge prior hist. into namespace
- hwlk_[0].type(Jnode::Neither);
- merge_ns(cr_.global_ns(), wns_[&wi]);
- // merge to global NS so that it could be passed to the next options set
-
+ if(use_hpfx_) {
+  auto found = wns_[&wi].find(WLK_RSTH);
+  if(found != wns_[&wi].end() and wns_[&wi].find(WLK_RSTH)->VALUE.bul() == true)
+   hwlk_[0] = STR{};
+  wns_[&wi][WLK_HPFX] = move(hwlk_[0]);
+  hwlk_[0].type(Jnode::Neither);
+ }
  if(opt()[CHR(OPT_TMP)].hits() > 0) {                           // interpolate each tmp per walk
   // in all other cases - templates are round-robin applied onto each walk iteration
   if(is_tpw_)                                                   // template per walk:
    tpw_.emplace(wi.walk_uid(),                                  // relate interleaved walks to tmp
                  tpw_.size() < opt()[CHR(OPT_TMP)].size() - 1?
                   opt()[CHR(OPT_TMP)].str(tpw_.size() + 1): "");
-  else                                                          // circular template
+  else                                                          // circular template application
    tpw_.emplace(key_ % (opt()[CHR(OPT_TMP)].size() - 1),
                  opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
   size_t tmp_idx = is_tpw_?
          wi.walk_uid(): key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
-  tmp = Json::interpolate(tpw_[tmp_idx], wi, cr_.global_ns());
-  if(opt().imposed(USE_HPFX)) hwlk_ = ARY{tmp.root()};
+  tmp = Json::interpolate(tpw_[tmp_idx], wi, wns_[&wi]);
+  if(use_hpfx_) hwlk_ = move(ARY{tmp.root()});
  }
 
- if(opt().imposed(USE_HPFX) and hwlk_[0].is_neither()) {        // templating failed or was none
-  if(wi->has_label()) hwlk_ = OBJ{ LBL{wi->label(), *wi} };     // preserve also the label if exist
-  else hwlk_ = ARY{*wi};
+ if(use_hpfx_ and hwlk_[0].is_neither()) {                      // templating failed or was none
+  if(wi->has_label()) hwlk_ = move(OBJ{LBL{wi->label(), *wi}}); // preserve also the label if exist
+  else hwlk_ = move(ARY{*wi});
  }
 
  typedef void (Jtc::*jd_ptr)(Json::iterator &, Json &, Grouping);   // demux cout and -j outputs
@@ -1575,112 +1976,227 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
 //
 // Jtc PRIVATE methods definitions
 //
-void Jtc::location_(Streamstr::const_iterator &jbegin) {
+void Jtc::display_location_(Streamstr::const_iterator &jbegin) {
  // debug show locus of the exception, unicode UTF-8 supported
- // don't alter method's name, it's adjusted for locus pringing!
- string jsrc{jbegin.str()};
- for(auto &chr: jsrc)                                           // replace non-readable with spaces
-  chr = chr AMONG(CRTN_CHR, NLNE_CHR)?                          // and \n\r with `|`
-         '|': static_cast<unsigned char>(chr) < SPCE_CHR? SPCE_CHR: chr;
-
- size_t from_start = Json::utf8_adjusted(0, jsrc, jbegin.is_streamed()?
-                                                   jsrc.size() - 1:
-                                                   distance(jbegin, json().exception_point()));
- size_t to_end = Json::utf8_adjusted(distance(jbegin, json().exception_point()), jsrc);
- size_t ptr = from_start;
-
- static string elocus{"exception locus: "}, espot{"exception spot: "}, ellipsis{"..."};
- int dw;                                                        // debug width
- static int tw{-1};                                             // terminal width
- if(tw < 0)                                                     // resolve tw
-  { struct winsize size; ioctl(STDOUT_FILENO, TIOCGWINSZ, &size); tw = size.ws_col; }
- dw = tw - DBG_PROMPT(0).size() - elocus.size() - 1;
- if(dw <= static_cast<int>(ellipsis.size() * 2)) dw = ellipsis.size() * 2 + 1;
-
-
- if(from_start + to_end > SIZE_T(dw)) {
-  if(from_start > SIZE_T(dw) / 2) {
-   jsrc = "..." + jsrc.substr(Json::byte_offset(jsrc, from_start - dw / 2 + ellipsis.size()));
-   ptr = dw / 2;
-  }
-  if(to_end > SIZE_T(dw) / 2)
-   jsrc = jsrc.substr(0, Json::byte_offset(jsrc, dw - ellipsis.size())) + ellipsis;
- }
-
- cr_.elocation(jbegin.is_streamed()? cr_.iss().stream_size() - 1: from_start);
- DBG(0)
-  DOUT() << elocus << jsrc << endl << DBG_PROMPT(0)
-         << espot << string(ptr, '-') << ">| (offset: " << cr_.elocation() << ")"
-         << endl;
+ exception_locus_(jbegin);
+ exception_spot_(jbegin);
 }
 
 
 
+void Jtc::exception_locus_(Streamstr::const_iterator &jbegin) {
+ // shows whereabouts of the exception
+ string jsrc{jbegin.str()};
+ size_t el =  jbegin.is_streamed()? jsrc.size() - 1: distance(jbegin, json().exception_point());
+ DBG(0) DOUT() << Debug::ctw(el) << jsrc << endl;
+}
+
+
+
+void Jtc::exception_spot_(Streamstr::const_iterator &jbegin) {
+ // points to the spot of the exception in the about debug (exception_locus_)
+ // this method name must be 1 char shorter then previous (exception_locus_)
+ string jsrc{jbegin.str()};
+ size_t from_start = Json::utf8_adjusted(0, jsrc, jbegin.is_streamed()?
+                                                   jsrc.size() - 1:
+                                                   distance(jbegin, json().exception_point()));
+ cr_.elocation(jbegin.is_streamed()? cr_.iss().stream_size() - 1: from_start);
+ DBG(0) DOUT() << string(DBG().ctw_adjust(), '-')
+               << ">| (offset: " << cr_.elocation() << ")" << endl;
+}
+
 // certain operations in jtc (-i, -u, and also -c) may have different types of parameters
-// and they all may refer to different types of sources. There are 3 resources which select
+// and they all may refer to different types of sources. There are 4 resources which select
 // source of operation for the operations:
-//   o type of source: jitt_, may be set to either of values: {Src_input} / Src_mixed / Src_optarg
-//   o iterator over the source: jits_ - holds a walk() Json::iterator over the respective source
-//   o the source container - that one could be a different resource depending on the type of
-//     operation, there are 5 types in total (considering -u in examples):
-//     1. -u<walk> ..., walk(s) here refers to walking source JSON (jinp_ is a src JSON container),
-//        jitt_ = Src_input; jits_ = walk() from source (i.e. jinp_.walk(...))
-//     2. -u<JSON> ..., option parameter(s) is a static JSON(s) (literally spelled, or a file)
-//        jitt_ = Src_optarg; jits_ = walk() from jsrc_ - source container,
-//        jsrc_ holds all static JSON(s)/file(s), while wcur_ points to currently walked JSON
-//     3. -u<JSON> -u<walk> ..., walk parameter here refers to walking static JSON,
-//        jitt_ = Src_mixed, jits_ = walk() from jsrc_[0] - source container (holding JSON)
-//     4. -eu ... \; - this case is not processed here, as there are no options holding argument
-//        <STAIC> or <WALK>
-//     5. -eu ... \; -u<WALK> (note, <STATIC> parameter is not allowed in such notation),
-//        walk here refers to input source JSON, thus: jitt_ = Src_input; jits_ = jinp_.walk(...)
+//   o type of source: jsrt_:
+//     may be set to either of values: [Src_input] / Src_mixed / Src_optarg
+//   o iterator over the source (Json::iterator):
+//     jits_ - holds a walk() results over the respective source
+//   o the source container (jsrc_):
+//     that one could be a different resource depending on the type of operation,
+//     there are following types in total (considering -u in examples):
+//     1. -u<WLK> -u<WLK> ...
+//        walk(s) here refers to walking source JSON (jinp_ is a src JSON container),
+//        jsrt_ = Src_input; jits_ = walk() from source (i.e. jinp_.walk(...))
+//        jscur_ points to a index in jsrc_, which holds walk strings
+//     2. -u<JSN> -u<JSN> ...
+//        option parameter(s) is either a JSON(s) (literally spelled), or a file, or a template
+//        jsrt_ = Src_optarg; jits_ = walk() from jsrc_ - source container,
+//        jsrc_ holds all JSON(s)/file(s),/template(s), while
+//        jscur_ points to currently walked JSON (index in jsrc_)
+//     3. -u<JSN> -u<WLK> -u<WLK> ...
+//        walk parameter here refers to walking a JSON,
+//        jsrt_ = Src_mixed,
+//        jits_ = walk() from either jsrc_[0] - src holding literal JSON, or read from file, or to
+//        jtmp_ - resolved json in case if jsrc[0] is a template string
+//        jscur_ points to current walk string (index in jsrc_)
+//     4. -eu <...> \;
+//        the entire cli argument <...> is stored in jsrc_[0]
+//     5. -eu <...> \; -u<WLK> -u<WLK> ...
+//        jsrt_ = Src_input;
+//        jits_ = jinp_.walk(...)
+//        jsrc_ - holds cli argument in jsrc_[0], the rest hold walk-strings
+//        jscur_ points to current walk string (index in jsrc_)
 //
+//
+// Design notes:
+// jsrc_ is a container for all kinds of option argument for -i/u/c and its type is a map of json:
+//      typedef map<size_t, Json> map_json;
+//      , where key is just an ordinal index (preserving the order of argument occurrence)
+//
+// the container must be able to hold 3 different types of arguments:
+//  a. it may hold an ordinary JSONs (read from file, or spelled literally)
+//  b. it may hold a JSON string - as a JSON template, JSON type is set to Neither
+//     (to indicate a template)
+//  c. it may hold a JSON string - as a WALK argument.
+//  storage formats per type:
+//    o Src_input: would store only <WLK>, starting from index 1
+//    o Src_optarg: would store only jsons/templates (starting from index 0)
+//    o Src_mixed: jrc_[0] would hold only json/template, while the rest are <WLK> only
+//
+// the disambiguation path for the option argument type is:
+//  1. assume the argument is a file and attempt to read and parse one
+//  2. if 1 fails (0 bytes read), assume it's a literal JSON and attempt to parse as JSON
+//  3. if 2 fails, assume it's a walk-path and attempt to compile it
+//  4. if 3 fails (exception occurs), finally assume it's a template, defer resolution until later
+//
+// Supported arguments combinations (e.g., for -i):
+//  A. -i<WLK> -i<WLK> ... -> type: Src_input -> all walks done on input json (jinp_)
+//  B. -i<JSON> -i<JSON> ..., where JSON is either a file, a literal JSON, or a template,
+//      type: Src_optarg
+//  C. -i<JSON> -i<WLK> -i<WLK> ... -> type: Src_mixed,
+//     o the type or the 1st argument(s) here is either file/literal/template
+//     o multiple walk path could be given
+//     o thus, jsrc_[0] holds the source of operation, while subsequent elements - walks
+//       of the jsrc_[0]
+//
+// when JSON is a template - the template actualization occurs during `advance_to_next_src()` call
+// (i.e. after all input JSON walking is done and therefore all namespaces are resolved) and must
+// result in a valid JSON, otherwise an exception will be thrown in that case.
+//
+// to handle advancing to a next source smoothly for all types of arguments, store policy is this:
+//  o for all <WLK> arguments, start filling jsrc_ from index 1
+//  o for all <JSON> arguments (file/literal/template), start filling jsrc_ from index 0
+//  - with that policy, it'll be programmatically easy to converge to Src_mixed type
+//
+// policy for filling arguments:
+//  o when multiple (>1) Src_optarg already given, fail shall the other arg types occur
+//  o when multiple Src_input given, may convert to Src_mixed for the 1st parsed JSON/template
+//  o when in Src_mixed mode, fail shall further json/templates occur
+
+
 void Jtc::ready_params_(char option) {
  #include "lib/dbgflow.hpp"
  // fill / prepare data:
- //  o wsrc_: to be filled with ordinal indices for all -u<WALK> / -i<WALK>
- //  o jsrc: contails all -u<STATIC> / -i<STATIC> (or 1st <STATIC> if in case of Src_mixed)
- //  o jitt_ to be set to Src_optarg (when <STATIC> args detected), or <Src_mixed> when
- //    both <STATIC> and <WALK> args detected
- if(ecli_)                                                      // -e detected
-  for(size_t i = 1; opt().opt_eval() and i < opt()[opt().opt_eval()].hits(); ++i)
-   wsrc_.push_back(opt()[opt().opt_eval()].ordinal(i + 1));     // +1 to account a default value
-   // the loop conditions work only if trailing options (-u/-i) are present
- else                                                           // no -e given
-  for(size_t arg_idx = 1; arg_idx < opt()[option].size(); ++arg_idx)
-   try {
-    auto & arg = opt()[option].str(arg_idx);
-    string jfile;
-    read_json_(jfile, arg);
-    DBG().increment(+2, jsrc_[jsrc_.size()], -2);               // create & imbue current debug +3
-    DBG(1) DOUT() << "attempting to parse parameter (" << arg << ") as static json" << endl;
-    jsrc_[jsrc_.size()-1].parse(jfile.empty()? arg: jfile,
-                                jfile.empty()? Json::Strict_no_trail: Json::Strict_trailing);
-    if(jitt_ == Jitsrc::Src_mixed) { jsrc_.erase(jsrc_.size() - 1); continue; }
-    jitt_ = Jitsrc::Src_optarg;
-   }
-   catch(Json::stdException & e) {                              // not a static json => a walk-path
-    DBG(1) DOUT() << "treating parameter as a walk-path" << endl;
-    jsrc_.erase(jsrc_.size() - 1);
-    if(jitt_ == Jitsrc::Src_optarg) {                           // mix of args: <file> <walk-path>
-     jsrc_.erase(++jsrc_.begin(), jsrc_.end());
-     jitt_ = Jitsrc::Src_mixed;
-    }
-    wsrc_.push_back(opt()[option].ordinal(arg_idx));
-   }
+ // jsrc: to fill up with respect to the jsrt_ mode
+ for(string & arg: opt()[option]) {
+  size_t jkey = jsrc_.empty()? 0: jsrc_.rbegin()->KEY + 1;
+  if(jkey == 0 and ecli_ > Ecli::No_exec)
+   { jsrc_[jkey].root() = arg; continue; }                      // preserve in jsrc_[0] -e argument
+  if(jsrt_ == Jitsrc::Src_mixed or ecli_ > Ecli::No_exec)       // preserve only <WLK>
+   { jsrc_[jkey]; ready_params_walks_(arg, jkey); continue; }
+  // first assume arg is a <FILE>, and try reading from file,
+  // if file read failed (0 bytes read) then assume it's a literal <JSON> and try parsing it
+  string jfile;
+  read_json_(jfile, arg);
+  jsrc_[jkey];                                                  // provision a place for json
+  if(DBG()(0)) DBG().increment(+2, jsrc_[jkey], -2);            // imbue current debug +3
+  DBG(1) DOUT() << "attempting to parse parameter (" << arg << ") as a static json" << endl;
 
- DBG(1) {
-  DOUT() << "total jsons: " << (jsrc_.size())
-         << ", ordinal positions of option -" << option << " walks: [";
-  string dlm;
-  for(auto w: wsrc_) { DOUT() << dlm << w; dlm = ", "; }
-  DOUT() << "], jit source: " << ENUMS(Jitsrc, jitt_) << endl;
+  parse_option_arg_(jsrc_[jkey], arg, jfile);
+  if(jsrc_[jkey].parsing_failed()) {    // it could be a <WLK>, or a <TMP>
+   if(not jfile.empty())                                        // file was read but failed parsing
+    { cerr << "fail: file '" << arg << "' holds an invalid JSON" << endl; exit(RC_ARG_FAIL); }
+   ready_params_walks_(arg, jkey);                              // process <WLK> or <TMP>
+  }
+  else {                                // parsed a valid <JSN>
+   if(jkey == 0) { jsrt_ = Jitsrc::Src_optarg; continue; }      // 1st argument: Src_optarg
+   // here it could be Src_input, or Src_optarg (Src_mixed handled above)
+   if(jsrt_ == Jitsrc::Src_input)                               // only walks recorded so far
+    { jsrc_[0].root() = move(jsrc_[jkey].root()); jsrc_.erase(jkey); jsrt_ = Src_mixed; }
+  }
+ }
+
+ jscur_ = walk_options_start_idx_();
+ DBG(1)  DOUT() << "total jsons: " << (jsrc_.size())
+                << ", arg mode: " << ENUMS(Jtc::Jitsrc, jsrt_)
+                << ", starting walk idx: " << jscur_ << endl;
+}
+
+
+
+void Jtc::parse_option_arg_(Json &jsn, const string & arg, const string & jfile) {
+ #include "lib/dbgflow.hpp"
+ // parse arg or jfile, convert jfile to JSON array if it's a stream of JSONs
+ Streamstr is;
+ Streamstr::const_iterator isp = is.source_buffer(jfile.empty()? arg: jfile).begin();
+
+ jsn.parse_throwing(false);
+ jsn.parse(isp, jfile.empty()? Json::Strict_no_trail: Json::Strict_trailing);
+
+ if(not jsn.parsing_failed()) return;                           // successful parsing
+ if(jfile.empty()) return;                                      // arg has failed parsing
+ if(jsn.exception_reason() != Jnode::ThrowReason::unexpected_trailing)
+  return;                                                       // jfile contains bad JSON
+
+ // jfile might hold a stream of JSONs - attempt to convert to array
+ Json j{ARY{}};                                                 // accumulate streamed JSONs here
+ if(DBG()(0)) j.DBG().severity(NDBG);
+
+ while(jsn.exception_reason() == Jnode::ThrowReason::unexpected_trailing) {
+  j.push_back(move(jsn.root()));
+  jsn.parse(isp, Json::Strict_trailing);
+ }
+ if(not jsn.parsing_failed()) {
+  j.push_back(move(jsn.root()));
+  jsn = move(j);
+ }
+}
+
+
+
+void Jtc::ready_params_walks_(const string &arg, size_t jkey) {
+ #include "lib/dbgflow.hpp"
+ // process walks and templates
+ DBG(1) DOUT() << "attempting to compile parameter (" << arg << ") as a walk" << endl;
+ try {
+  Json::iterator dummy;
+  json().compile_walk(arg, dummy);
+
+  if(jsrt_ == Jitsrc::Src_optarg and jsrc_.size() > 2) {
+   cerr << "fail: argument walk-type (" << arg << ") not allowed, due to mode "
+         << ENUMS(Jtc::Jitsrc, Src_optarg) << " already set" << endl;
+   exit(RC_ARG_FAIL);
+  }
+  jsrc_[jkey].root() = arg;
+  if(jkey == 0)                                                 // Src_input must start with idx 1
+   { jsrc_[1].root() = move(jsrc_[0].root()); jsrc_.erase(0); } // jsrt_ = Src_input by default
+  if(jsrt_ == Jitsrc::Src_optarg)                               // assert: jsrc_.size() == 2
+   jsrt_ = Jitsrc::Src_mixed;
+ }
+ catch (Json::stdException & e) {                               // it's a TMP then
+  if(ecli_ > Ecli::No_exec) {                                   // -e was given, only <WLK> allowed
+   cerr << "fail: non-walk argument (" << arg << ") not allowed, due to option -"
+        << CHR(OPT_EXE) << " given" << endl;
+   exit(RC_ARG_FAIL);
+  }
+  DBG(1) DOUT() << "assuming parameter (" << arg << ") is a template" << endl;
+  jsrc_[jkey].root() = arg; jsrc_[jkey].type(Jnode::Neither);   // indicate it's a <TMP>
+  if(jkey == 0) { jsrt_ = Jitsrc::Src_optarg; return; }         // 1st argument: Src_optarg
+  if(jsrt_ == Jitsrc::Src_mixed) {                              // jsrc_[0] already exists!
+   cerr << "fail: non-walk argument (" << arg << ") not allowed, due to mode "
+        << ENUMS(Jtc::Jitsrc, Src_mixed) << " already set" << endl;
+   exit(RC_ARG_FAIL);
+  }
+  if(jsrt_ == Jitsrc::Src_input)                                // only walks recorded so far
+   { jsrc_[0].root() = move(jsrc_[jkey].root()); jsrc_.erase(jkey); jsrt_ = Src_mixed; }
  }
 }
 
 
 
 void Jtc::read_json_(string &jfile, const string &fname) {
+ #include "lib/dbgflow.hpp"
  // read json from file (doing it a non-idiomatic c++ way for performance reason)
  std::ifstream fin(fname, std::ios::in);
  if(not fin) return;
@@ -1852,7 +2368,7 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
  }
                                                                 // mode == overwrite
  DBG(2) DOUT() << "overwriting destination" << endl;
- if(dst.empty()) return;
+ if(dst.is_empty()) return;
  auto di = dst.begin();
  for(auto &src_child: *src_ptr) {
   *di = src_child;
@@ -1869,8 +2385,8 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *l
   DBG(2) DOUT() << "label being updated" << endl;               // facilitate '<>k' (empty lexeme)
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }
-  if(not it_src->is_string())
-   { cerr << "error: labels could be updated only with valid JSON strings" << endl; return; }
+  if(it_src->is_iterable())
+   { cerr << "error: label could be updated only with JSON atomic value" << endl; return; }
   auto & parent = (*it_dst)[-1];
   if(not parent.is_object())
    { cerr << "error: labels could be updated in objects only" << endl; return; }
@@ -1880,7 +2396,10 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *l
   // a *delayed processing* is required (like with purging):
   //    o here, mark only labeled operation, that's it
   //    o once all processing finished - rename labels by selecting deepest walks
-  if(lbl) { *lbl = it_src->str(); return; }                     // record pending label update
+  if(lbl) {                                                     // record pending label update
+   *lbl = it_src->is_null()? "null": it_src->is_bool()? (*it_src? "true":"false"): it_src->val();
+   return;
+  }
   parent[it_src->str()] = move(parent[it_dst->str()]);          // lbl update is in fact moving to
   parent.erase(it_dst->str());                                  // a new label and erasing old one
   return;
@@ -1905,39 +2424,90 @@ void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *l
 
 
 
-bool Jtc::execute_cli_(Json &json, Json::iterator &jit, const Json::map_jn &ns) {
+vector<Jtc::ShellReturn> Jtc::run_bulk_shell_(void) {
+ #include "lib/dbgflow.hpp"
+ // build vector<ShellReturn> by trying to run all commands in one shell
+ vector<ShellReturn> vsr;
+ if(arg_max_ < 0) {
+  arg_max_ = sysconf(_SC_ARG_MAX);                              // resolve ARG_MAX
+  if(arg_max_ < 0) {                                            // resort to a legacy way
+   cerr << "notice: cannot resolve ARG_MAX: have to run shell cli one by one" << endl;
+   ecli_ = Ecli::Per_walk_exec;
+   return vsr;
+  }
+ }
+
+ vector<std::string> vcli(1);
+ for(auto &pair: psrc_) {                                       // build vector of cli strings
+  string clistr = interpolate_shell_str_(pair.src, pair.ns) + SHELLSFX;
+  if(SGNS_T(clistr.size() + vcli.back().size()) >= arg_max_/2)  // ARG_MAX is not reliable, so
+   vcli.push_back(string{});                                    // playing safe by lowering limit
+  vcli.back() += move(clistr);
+ }
+
+ GUARD(sh_.DBG().severity, sh_.DBG().severity)
+ if(DBG()(0)) sh_.DBG().severity(NDBG);
+ auto re = regex(SHELLRGX);
+ vsr.reserve(psrc_.size());
+ for(const auto &cli: vcli) {
+  sh_.system( cli );
+  for(sregex_iterator it = sregex_iterator(sh_.out().begin(), sh_.out().end(), re);
+      it != sregex_iterator(); ++it) {
+   std::smatch m = *it;
+   vsr.push_back( ShellReturn{move(m[1]), stoi(m[2])} );
+  }
+ }
+ if(vsr.size() == psrc_.size())  return vsr;
+
+ // resort to a legacy way
+ cerr << "notice: running bulk cli failed, reverting to running cli one by one" << endl;
+ ecli_ = Ecli::Per_walk_exec;
+ vsr.clear();
+ return vsr;
+}
+
+
+
+bool Jtc::execute_cli_(Json &json, Json::iterator &jit, Json::map_jne &ns, ShellReturn * srptr) {
  #include "lib/dbgflow.hpp"
  // execute cli in -i/u option (interpolating jit if required) and parse the result into json
- sh_.system( interpolate_shell_str_(jit, ns) );
- if(sh_.rc() != 0)
-  { cerr << "error: shell returned error (" << sh_.rc() << ")" << endl; return false; }
+ ShellReturn sr;
+ if(srptr == nullptr) {
+  sh_.system( interpolate_shell_str_(jit, ns) );
+  sr = ShellReturn{move(sh_.out()), sh_.rc()};
+ }
+ else
+  sr = move(*srptr);
 
- string out{sh_.out()};
- while(not out.empty() and out[out.size()-1] <= SPCE_CHR)       // remove all trailing spaces
-  out.pop_back();
- if(out.empty())
+ if(sr.rc != 0)
+  { cerr << "error: shell returned error (" << sr.rc << ")" << endl; return false; }
+
+ while(not sr.str.empty() and sr.str[sr.str.size() - 1] <= CHR_SPCE)// remove all trailing spaces
+  sr.str.pop_back();
+ if(sr.str.empty())
   { DBG(1) DOUT() << "shell returned empty result, not updating" << endl; return false; }
 
- try { json.parse(out); }
+ try { json.parse(sr.str); }
  catch(Json::stdException & e) {                                // promote output to JSON string
   if(e.code() == Jnode::unexpected_end_of_string) throw;        // sh.stdout had no valid json
-  out = json.inquote_str(out);                                  // qoute '\' and '"' chars
+  sr.str = json.inquote_str(sr.str);                            // qoute '\' and '"' chars
+  // translate \r,\n,\t and rid of dodgy characters
   typedef pair<const char*, const char*> pos;                   // pair of strings
   for(auto &p: {pos{"\r", "\\r"}, pos{"\n", "\\n"}, pos{"\t","\\t"}})
-   out = regex_replace(out, regex{p.first}, p.second);          // escape \n, \r, \t
-  out = regex_replace(out, regex{"[\01-\037]"}, "");            // remove all other dodgy spaces
-  json.parse("\"" + out + "\"");
+   sr.str = regex_replace(sr.str, regex{p.first}, p.second);    // escape \n, \r, \t
+  sr.str = regex_replace(sr.str, regex{"[\01-\037]"}, "");      // remove all other dodgy spaces
+  json.parse(STR_DQTE + sr.str + STR_DQTE);
  }
  return true;
 }
 
 
 
-string Jtc::interpolate_shell_str_(Json::iterator &jit, const Json::map_jn &ns) {
+string Jtc::interpolate_shell_str_(Json::iterator &jit, Json::map_jne &ns) {
  #include "lib/dbgflow.hpp"
  // interpolate arg for -e -i/u <arg> and escape bash shell dodgy characters
- Json ij = Json::interpolate(opt()[opt().opt_eval()].str(1), jit, ns, Json::Dont_parse);
- DBG(1) DOUT() << "interpolated & quoted string: '" << sh_quote_str(ij.str()) << "'" << endl;
+ Json ij = Json::interpolate(jsrc_[0].str(), jit, ns, Json::Dont_parse);
+ DBG(2) DOUT() << "interpoldated & quoted string: '" << sh_quote_str(ij.str()) << "'" << endl;
  return sh_quote_str(ij.str());
 }
 
@@ -1990,17 +2560,21 @@ Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
  #include "lib/dbgflow.hpp"
  // collect all walk iterations from given walk path (used by swap/purge)
  vec_jit walk_itr;
- if(opt()[CHR(OPT_INS)].hits() > 0 or opt()[CHR(OPT_UPD)].hits() > 0 ) {
-  for(auto &pair: psrc_)                                        // psrc is filled when walked -[ui]
-   walk_itr.push_back(move(jitt_ == Src_input?                  // -[iu] by collect_itr_bindings
-                            pair.src: pair.dst));
-  DBG(0) DOUT() << "source of iterations: '" << ENUMS(Jitsrc, jitt_)
+ if(opt()[CHR(OPT_INS)].hits() > 0 or opt()[CHR(OPT_UPD)].hits() > 0 ) {    // process -p -i/u
+  for(auto &pair: psrc_) {                                      // psrc is filled when walked -[ui]
+   auto &it = jsrt_ == Src_input? pair.src: pair.dst;
+   if(not it.is_valid()) continue;
+   walk_itr.push_back(move(it));
+  }
+  DBG(0) DOUT() << "source of iterations: '" << ENUMS(Jitsrc, jsrt_)
                 << "', instances: " << walk_itr.size() << endl;
   return walk_itr;
  }
 
  for(auto it = json().walk(walk_path, Json::Keep_cache); it != json().end(); ++it)
   walk_itr.push_back(it);
+ wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsMoveAll);
+
  DBG(0) DOUT() << "walk path: '" << walk_path << "', instances: " << walk_itr.size() << endl;
 
  return walk_itr;
@@ -2014,7 +2588,8 @@ Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
 //    [ [w0_i0, w0_i1, w0_iend],
 //      [w1_i0, w1_i1, w1_i2, w1_iend],
 //      [...],
-//      ... ]
+//      ...
+//    ]
 // 2. for all instances build a matrix from front iterators offsets (fom) only, for
 //    entire walk state:
 //    - iterator offset for a built walk state returns -1 if walk step is non-iterable,
@@ -2039,29 +2614,33 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
  subscriber_ = subscriber;
  deque<deq_jit> wpi;                                            // wpi holds queues of iterators
 
- for(const auto &walk_str: opt()[CHR(OPT_WLK)]) {               // process all -w arguments
-  json().clear_ns();                                            // each walk starts up blank with
-  merge_ns(json().ns(), cr_.global_ns());                       // global ns carried from prior set
-  json().ns()[FILE_NSP] = move(STR{cpf_});                      // update ns with current filename
+ cr_.global_ns().sync_out(json().ns(), map_jnse::NsOpType::NsReferAll);
 
-  wpi.push_back( {json().walk(walk_str.find_first_not_of(" ") == string::npos?
-                               "": walk_str, Json::Keep_cache)} );
+ for(const auto &walk_str: opt()[CHR(OPT_WLK)]) {               // process each -w arguments
+  // wpi: push back deq_jit init'ed with -w inited walk
+  wpi.push_back( deq_jit{json().walk(walk_str.find_first_not_of(" ") == string::npos?
+                                     "": walk_str, Json::Keep_cache)} );
   if(opt()[CHR(OPT_SEQ)].hits() % 2 == 1 and wpi.size() > 1) {  // -n and multiple -w given
    wpi.front().push_back( move(wpi.back().front()) );           // move queue to front wpi
    wpi.pop_back();                                              // drop last instance
   }
-
   auto & dwi = wpi.back();                                      // dwi: deque<Json::iterator>
   while(dwi.back() != dwi.back().end()) {                       // extend all iterators until end
-   wns_[&dwi.back()] = json().ns();                             // preserve walked iterator's ns
-   if(opt().imposed(USE_HPFX))
-    update_wlk_history_(dwi.back());                            // preserve walked namespace
+   if(wns_.empty()) wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMoveAll);
+   else wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMove);
+   if(use_hpfx_) {
+    wns_[&dwi.back()][WLK_RSTH] = BUL{wns_[&dwi.back()].erase(WLK_HPFX)? true: false};
+    if(dwi.back()->has_label()) hwlk_ = move(OBJ{ LBL{dwi.back()->label(), *dwi.back()} });
+    else hwlk_ = move(ARY{*dwi.back()});
+   }
+   wns_[&dwi.back()].sync_out(json().clear_ns().ns(), map_jnse::NsReferAll);
+   last_dwi_ptr_ = &dwi.back();
    dwi.push_back(dwi.back());                                   // make new copy (next instance)
-   ++dwi.back();                                                // and iterate
+   ++dwi.back();                                                // json.ns now is partialNsMoveAll
   }
   dwi.pop_back();                                               // remove last (->end()) iterator
  }
- hwlk_ = move(ARY{STR{""}});                                    // reset hwlk_ to init value
+ hwlk_ = move(ARY{STR{}});                                      // reset hwlk_ to init value
 
  is_multi_walk_ = opt()[CHR(OPT_WLK)].hits() > 1 or             // i.e. -w.. -w.., else (one -w..)
                   wpi.size() > 1 or                             // wpi.size > 1, otherwise:
@@ -2078,27 +2657,6 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
 }
 
 
-void Jtc::update_wlk_history_(Json::iterator & jit) {
- #include "lib/dbgflow.hpp"
- // preserve walked namespace, and add auto-ns: `$?`
- //
- // there are 4 cases of template interpolations:
- // 1. in shell_callback_: <...>u
- // 2. -u<walk> -T... (or -u static.json -u<walk> -T...)
- // 3. -w<walk> -T...
- // 4. -e -u ... \;
- // Only case 3 transform a walked output - the rest are referring to original,
- // (non-transformed) walks. Thus:
- // a) when collecting walks (walk_interleaved_), populate each walk's ns with last walk value
- // b) when walking case 3 (output_by_iterator) - ensure walks are populated from hwlk_, which
- // now stores result of interpolation
-
- wns_[&jit][WLK_HPFX] = move(hwlk_[0]);                         // add historical namespace
- if(jit->has_label()) hwlk_ = move(OBJ{ LBL{jit->label(), *jit} });
- else hwlk_ = move(ARY{*jit});
-}
-
-
 
 void Jtc::process_walk_iterators_(deque<deq_jit> &wpi) {
  #include "lib/dbgflow.hpp"
@@ -2107,6 +2665,7 @@ void Jtc::process_walk_iterators_(deque<deq_jit> &wpi) {
 
  size_t longest_walk = build_front_grid_(fom, wpi);             // build FOM here
  vector<size_t> actual_instances;                               // ai: those which not ended yet
+ actual_instances.reserve(fom.size());
  for(size_t idx = 0; idx < fom.size(); ++idx)                   // init non-empty fom indices
   if(not fom[idx].empty()) actual_instances.push_back(idx);
 
@@ -2120,16 +2679,20 @@ size_t Jtc::build_front_grid_(vector<vector<signed_size_t>> &fom, const deque<de
  // build matrix from front iterator of each walk (FOM): using iterator's counter() method
  // that way it'll be possible to group relevant walk-paths during output
  size_t longest = 0;                                            // longest row in the fom matrix
+ string dlm;                                                    // for debug output only
  for(size_t idx = 0; idx < wpi.size(); ++idx) {                 // go over all given walk paths -w
   auto & wi = wpi[idx];                                         // set of iterators for -w instance
   if(wi.empty()) continue;                                      // no more iterators in this walk
 
-  DBG(3) DOUT() << "walkpath (-w) instance " << idx;            // go over walk path counters only
-  string dlm = " front ws_counters matrix: ";                   // of the front iterator's instance
+  DBG(3) {
+   DOUT() << "walkpath (-w) instance " << idx;                  // go over walk path counters only
+   dlm = " front ws_counters matrix: ";                         // of the front iterator's instance
+  }
+  fom[idx].reserve(wi.front().walk_size());                     // optimize memory management
   for(size_t position = 0; position < wi.front().walk_size(); ++position) {
    if(wi.front().walks()[position].is_directive()) continue;
    fom[idx].push_back( wi.front().counter(position) );
-   if(DBG()(2)) { DOUT() << dlm << fom[idx].back(); dlm = ", "; }
+   if(DBG()(3)) { DOUT() << dlm << fom[idx].back(); dlm = ", "; }
   }
 
   if(fom[idx].empty()) fom[idx].push_back( -1 );                // ensure fom filled for: -w'<vv>v'
@@ -2149,13 +2712,13 @@ void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &f
  DBG(2) DOUT() << "walk offsets (longest " << longest_walk << ")";
 
  size_t grouping = 0,                                           // group size (of lowest offsets)
-        lf_counter = -1;                                        // lowest front (ws) counter
+        lf_counter = SIZE_T(-1);                                // lowest front (ws) counter
  for(size_t offset = 0; offset < longest_walk; ++offset) {      // go across all offsets
   map<size_t, size_t> pos_ai, neg_ai;                           // build new actuals in here
   signed_size_t lowest_offset = LONG_MAX, cnt = 0;              // helpers to build new actuals
   if(DBG()(2)) DOUT() << " / [" << offset << "]:";
 
-  for(auto ai: actuals) {                                       // a.inst. are with lowest offset
+  for(auto ai: actuals) {                                       // act.inst. are with lowest offset
    if(offset >= fom[ai].size() or fom[ai][offset] < 0)          // negative or short actuals offset
     { neg_ai[cnt++] = ai; continue; }                           // collected separately
    if(DBG()(2)) DOUT() << " " << ai;
@@ -2167,10 +2730,12 @@ void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &f
   if(lf_counter == SIZE_T(-1) and not pos_ai.empty())
    lf_counter = lowest_offset;
 
-  actuals.clear();
-  for(signed_size_t idx = 0; idx < cnt; ++idx)
-   if(pos_ai.count(idx)) actuals.push_back(pos_ai[idx]);
-   else if(neg_ai.count(idx)) actuals.push_back(neg_ai[idx]);
+  actuals.clear();                                              // clear and rebuild actuals
+  for(signed_size_t idx = 0; idx < cnt; ++idx) {
+   IF_FOUND(pos_ai, idx) actuals.push_back(FITR->VALUE);
+   else
+    { IF_FOUND(neg_ai, idx) actuals.push_back(FITR->VALUE); }
+  }
   grouping = actuals.size();                                    // update groping
  }
 
@@ -2196,66 +2761,59 @@ void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &f
 // thus: console_output_() is used to print only walked (-w) elements, while write_json()
 //       outputs entire (final) JSONs (like after -i/-u/-s/-p, or with -j/-J)
 
-void Jtc::console_output_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
+void Jtc::console_output_(Json::iterator &wi, Json &jtmp_, Grouping unused) {
  #include "lib/dbgflow.hpp"
  // no -j given, print out element pointed by iter wi
- // there are 3 source to chose from: 1. template (jtmp_ref); 2. current walk value (*wi);
+ // there are 3 source to chose from: 1. template (jtmp_); 2. current walk value (*wi);
  // 3. if -ll given then and conditions met (glean_lbls), then either 1. or 2. to be iterated
- auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
- bool glean_lbls{src.is_object() and src.has_children() and opt()[CHR(OPT_LBL)].hits() >= 2};
- bool inquote{opt()[CHR(OPT_RAW)].hits() >= 2};                 // -rr given, inquote
- bool measure{opt()[CHR(OPT_SZE)].hits() >= 1};                 // -z
+ auto & src = jtmp_.type() == Jnode::Neither? *wi: jtmp_.root();
+ bool glean_lbls{glean_lbls_ and src.is_object() and src.has_children()};
+ Jtc::mod_ |= ios_base::app;                                    // next time will append
  size_t size{0};
 
- bool write_to_file{opt(0)[0].hits() > 0 and opt()[CHR(OPT_FRC)].hits() > 0};  // arg and -f given
- static ios_base::openmode mod = ios_base::out;                 // first time re-write file
- ofstream fout{write_to_file? cr_.iss().filename().c_str(): nullptr, mod};
- if(mod == ios_base::out) mod |= ios_base::app;                 // next time - append
- ostream & xout = write_to_file? fout: cout;                    // demux cout/file outputs
-
- if(opt()[CHR(OPT_SZE)].hits() > 1)                             // -zz
-  { xout << wi->size() << endl; return; }
+ if(size_only_)                                                 // -zz
+  { xout_ << wi->size() << endl; return; }
 
  Jnode dummy = ARY{nullptr};
  for(auto itl = (glean_lbls? src: dummy).begin(); itl != (glean_lbls? src: dummy).end(); ++itl) {
   auto & srr = glean_lbls? *itl: src;                           // source reference
-  bool unquote{opt()[CHR(OPT_QUT)].hits() >= 2};                // -qq given, unquote
 
-  if(opt()[CHR(OPT_LBL)] and srr.has_label())                   // -l given
-   { xout << '"' << srr.label() << "\": ";  unquote = false; }  // then print label (if present)
-  if(unquote and srr.is_string())                               // don't try collapsing it into
-   { if(not srr.str().empty()) xout << json().unquote_str(srr.str()) << endl; }
+  if(opt()[CHR(OPT_LBL)] and srr.has_label())                   // -l given then print label
+   { xout_ << CHR_DQTE << srr.label() << CHR_DQTE << ": "; unquote_ = false; }  // if present
+  if(unquote_ and srr.is_string())                               // don't try collapsing it into
+   { if(not srr.str().empty()) xout_ << json().unquote_str(srr.str()) << endl; }
   else {
-   if(inquote) xout << '"' << json().inquote_str(srr.to_string(Jnode::Raw)) << '"' << endl;
-   else xout << srr << endl;                                    // a single operation!
+   if(inquote_)
+    xout_ << CHR_DQTE << json().inquote_str(srr.to_string(Jnode::Raw)) << CHR_DQTE << endl;
+   else xout_ << srr << endl;                                    // a single operation!
   }
-  if(measure) size += srr.size();
+  if(measure_) size += srr.size();
  }
 
- if(measure)                                                    // -z given
-  xout << OBJ{LBL{JTCS_TKN, static_cast<double>(size)}} << endl;
+ if(measure_)                                                    // -z given
+  xout_ << OBJ{LBL{JTCS_TKN, static_cast<double>(size)}} << endl;
 }
 
 
 
-void Jtc::jsonized_output_(Json::iterator &wi, Json &jtmp_ref, Grouping grp) {
+void Jtc::jsonized_output_(Json::iterator &wi, Json &jtmp_, Grouping grp) {
  #include "lib/dbgflow.hpp"
  // demux output based on jout_ state: either to ARY or OBJ (-j or -jj respectively)
  typedef void (Jtc::*jo_ptr)(Json::iterator &, Json &, Grouping);
  static jo_ptr jsonize[2] = {&Jtc::jsonized_output_obj_, &Jtc::jsonized_output_ary_};
 
- (this->*jsonize[jout_.is_array()])(wi, jtmp_ref, grp);
+ (this->*jsonize[jout_.is_array()])(wi, jtmp_, grp);
 }
 
 
 
-void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp_ref, Grouping unused) {
+void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp_, Grouping unused) {
  #include "lib/dbgflow.hpp"
  // if -jj option given, output into jout_ as Object (items w/o label are ignored)
  Jnode::iterator itl;                                           // to facilitate -ll
 
- auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
- bool glean_lbls{src.is_object() and src.has_children() and opt()[CHR(OPT_LBL)].hits() >= 2};
+ auto & src = jtmp_.type() == Jnode::Neither? *wi: jtmp_.root();
+ bool glean_lbls{src.is_object() and src.has_children() and glean_lbls_};
  bool collect_clashing = opt()[CHR(OPT_MDF)].hits() % 2 == 1;
 
  auto collect = [&](Jnode & sr) {
@@ -2280,13 +2838,13 @@ void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp_ref, Grouping unus
 
 
 
-void Jtc::jsonized_output_ary_(Json::iterator &wi, Json &jtmp_ref, Grouping grp) {
+void Jtc::jsonized_output_ary_(Json::iterator &wi, Json &jtmp_, Grouping grp) {
  #include "lib/dbgflow.hpp"
  // if -j option given, output into jout_ as Array
  auto create_obj = [&]{ return opt()[CHR(OPT_SEQ)].hits() == 0?  // see if new obj required
                                 grp > last_: opt()[CHR(OPT_SEQ)].hits() < 2; };
- auto & src = jtmp_ref.type() == Jnode::Neither? *wi: jtmp_ref.root();
- bool glean_lbls{src.is_object() and src.has_children() and opt()[CHR(OPT_LBL)].hits() >= 2};
+ auto & src = jtmp_.type() == Jnode::Neither? *wi: jtmp_.root();
+ bool glean_lbls{src.is_object() and src.has_children() and glean_lbls_};
 
  Jnode dummy = ARY{nullptr};
  for(auto itl = (glean_lbls? src: dummy).begin(); itl != (glean_lbls? src: dummy).end(); ++itl) {
@@ -2298,7 +2856,7 @@ void Jtc::jsonized_output_ary_(Json::iterator &wi, Json &jtmp_ref, Grouping grp)
   if(not srr.has_label())                                       // srr has no label, push to back
    { jout_.push_back(srr); continue; }
                                                                 // srr has label, merge
-  if(create_obj() or jout_.empty())                             // time to create a new object
+  if(create_obj() or jout_.is_empty())                          // time to create a new object
    { jout_.push_back( OBJ{} ); convert_req_ = false; }
   if(not jout_.back().is_object())
    jout_.push_back( OBJ{} );
@@ -2323,31 +2881,31 @@ void Jtc::jsonized_output_ary_(Json::iterator &wi, Json &jtmp_ref, Grouping grp)
 //
 // Standalone calls
 //
-#define BASH_SPECIAL "~`#$&*()\\|{};<>?!. \t"
+#define SHELL_SPECIAL "~`#$&*()\\|{};<>?!. \t"
 
 string sh_quote_str(const string &src) {
  // quote src: quote chars (which due to be quoted) outside of literals only
  // this routine is bash shell oriented
  string quoted;
- char inside_literal = NULL_CHR;
+ char inside_literal = CHR_NULL;
  short backslash_seen = 0;
  for(auto chr: src) {
   if(not backslash_seen)
-   if(chr == RSLD_CHR) backslash_seen = 1;
+   if(chr == CHR_RSLD) backslash_seen = 1;
 
-  if(chr AMONG(SQTE_CHR, DQTE_CHR)) {
+  if(chr AMONG(CHR_SQTE, CHR_DQTE)) {
    if(not backslash_seen) {                                     // not quoted ' or "
     if(chr == inside_literal)                                   // inside literal right now
-     inside_literal = NULL_CHR;                                 // exit literal (go outside)
+     inside_literal = CHR_NULL;                                 // exit literal (go outside)
     else
-     if(inside_literal == NULL_CHR)                             // outside of literal
+     if(inside_literal == CHR_NULL)                             // outside of literal
       inside_literal = chr;                                     // go inside literal w. given char
    }
   }
   else                                                          // not ' or "
-   if(inside_literal == NULL_CHR) {                             // outside of literal, quote some
-    if(not isalnum(chr)) quoted += RSLD_CHR;
-    if(strchr(BASH_SPECIAL, chr) != nullptr)                    // don't quote those
+   if(inside_literal == CHR_NULL) {                             // outside of literal, quote some
+    if(not isalnum(chr)) quoted += CHR_RSLD;
+    if(strchr(SHELL_SPECIAL, chr) != nullptr)                   // don't quote those
      quoted.pop_back();
    }
   quoted += chr;
@@ -2357,7 +2915,6 @@ string sh_quote_str(const string &src) {
  }
  return quoted;
 }
-
 
 
 

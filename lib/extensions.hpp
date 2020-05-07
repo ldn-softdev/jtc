@@ -41,7 +41,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "macrolib.h"
+#include "macrolib.hpp"
 #include <type_traits>
 
 
@@ -50,19 +50,19 @@
 #define __STR_COMMA_SEPARATED__(X) #X,
 
 
-#define ENUM(enum_class, enums...) \
-    enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) };
+#define ENUM(ENUM_CLASS, ENDEF...) \
+    enum ENUM_CLASS { MACRO_TO_ARGS(__COMMA_SEPARATED__, ENDEF) };
 
 
-#define ENUMSTR(enum_class, enums...) \
-    enum enum_class { MACRO_TO_ARGS(__COMMA_SEPARATED__, enums) }; \
-    static const char * enum_class ## _str[];
+#define ENUMSTR(ENUM_CLASS, ENDEF...) \
+    enum ENUM_CLASS { MACRO_TO_ARGS(__COMMA_SEPARATED__, ENDEF) }; \
+    static const char * ENUM_CLASS ## _str[];
 
 
-#define STRINGIFY(enum_class, enums...) \
-    const char * enum_class ## _str[] { MACRO_TO_ARGS(__STR_COMMA_SEPARATED__, enums) };
+#define STRINGIFY(ENUM_CLASS, ENDEF...) \
+    const char * ENUM_CLASS ## _str[] { MACRO_TO_ARGS(__STR_COMMA_SEPARATED__, ENDEF) };
 
-#define ENUMS(enum_class, enum_idx) enum_class ## _str[enum_idx]
+#define ENUMS(ENUM_CLASS, ENUM_IDX) ENUM_CLASS ## _str[ENUM_IDX]
 
 
 
@@ -140,8 +140,10 @@
         const char *        file_; \
         int                 line_; \
     }; \
-    stdException __exp__(THROW_ENUM reason, const char *func, const char *file, int line) const \
-        { return stdException{reason, ENUMS(THROW_ENUM, reason), func, file, line}; }
+    stdException __exp__(THROW_ENUM __reason__, const char *__funcname__, \
+                         const char *__filename__, int __line__) const \
+        { return stdException{__reason__, ENUMS(THROW_ENUM, __reason__), \
+                              __funcname__, __filename__, __line__}; }
 
 
 // for in-place throw parameter
@@ -176,20 +178,20 @@
  */
 
 template<class T>
-bool operator==(const T &a, std::vector<T> v) {
- for(auto &x: v)
-  if(x == a) return true;
+bool operator==(const T &__a__, std::vector<T> __v__) {
+ for(auto &x: __v__)
+  if(x == __a__) return true;
  return false;
 }
 
-bool operator==(const std::string &a, std::vector<const char *> b) {
- for(auto x: b)
-  if(a == x) return true;
+bool operator==(const std::string &__a__, std::vector<const char *> __b__) {
+ for(auto x: __b__)
+  if(__a__ == x) return true;
  return false;
 }
 
-#define AMONG(first, rest...) \
-    == std::vector<decltype(first)>{first, MACRO_TO_ARGS(__COMMA_SEPARATED__, rest)}
+#define AMONG(FIRST, REST...) \
+    == std::vector<decltype(FIRST)>{FIRST, MACRO_TO_ARGS(__COMMA_SEPARATED__, REST)}
 
 
 
@@ -274,23 +276,28 @@ bool operator==(const std::string &a, std::vector<const char *> b) {
 //
 // Each form of GUARD is appended __LINE__ macro to ensure uniqueness of declarations
 // allowing  multiple invocations of the macro dodging name clashing
-#define __GUARD_TKN1__(X,Y) X ## Y
-#define __GUARD_TKN2__(X,Y) __GUARD_TKN1__(X, Y)
+
+#define __STITCH_2TKNS__(X,Y) X ## Y
+#define STITCH_2TKNS(X,Y) __STITCH_2TKNS__(X, Y)
+
 #define __GUARD_1_ARG__(X) \
-    __Guard_X__<decltype(X)> __GUARD_TKN2__(__my_Guard_X__, __LINE__)(X);
+    __Guard_X__<decltype(X)> STITCH_2TKNS(__my_Guard_X__, __LINE__)(X);
 #define __GUARD_2_ARG__(X, Y) \
-    struct __GUARD_TKN2__(__Guard_GS__, __LINE__): public __Guard_X__<decltype(X())> { \
-        __GUARD_TKN2__(__Guard_GS__, __LINE__)(decltype(X()) __Guard_X_arg__, \
+    struct STITCH_2TKNS(__Guard_GS__, __LINE__): public __Guard_X__<decltype(X())> { \
+        STITCH_2TKNS(__Guard_GS__, __LINE__)(decltype(X()) __Guard_X_arg__, \
                                                std::function<void(decltype(X()))> __Guard_X_l__): \
          __Guard_X__(__Guard_X_arg__), lambda{__Guard_X_l__} { xptr_ = nullptr; } \
-       ~__GUARD_TKN2__(__Guard_GS__, __LINE__)(void) { lambda(x_); }; \
+       ~STITCH_2TKNS(__Guard_GS__, __LINE__)(void) { lambda(x_); }; \
         std::function<void (decltype(X()))> lambda; \
-    } __GUARD_TKN2__(__my_Guard_GS__, __LINE__) \
+    } STITCH_2TKNS(__my_Guard_GS__, __LINE__) \
         { X(), [&](decltype(X()) __Guard_X_arg__) { Y(__Guard_X_arg__); } };
-#define __GUARD_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
-#define __GUARD_CHOOSER__(args...) \
-    __GUARD_4TH_ARG__(dummy, ##args, __GUARD_2_ARG__, __GUARD_1_ARG__)
-#define GUARD(args...) __GUARD_CHOOSER__(args)(args)
+#define __GUARD_3RD_ARG__(ARG1, ARG2, ARG3, ...) ARG3
+#define __GUARD_CHOOSER__(ARGS...) \
+    __GUARD_3RD_ARG__(ARGS, __GUARD_2_ARG__, __GUARD_1_ARG__)
+#define GUARD(ARGS...) \
+    __GUARD_CHOOSER__(ARGS)(ARGS)
+
+
 
 
 
@@ -301,7 +308,7 @@ class __Guard_X__ {
                         __Guard_X__(void) = delete;
                         __Guard_X__(T &__Guard_X_arg__):
                          x_{__Guard_X_arg__}, xptr_{&__Guard_X_arg__} {}
-                       ~__Guard_X__(void) { if(xptr_) *xptr_ = x_; }
+                       ~__Guard_X__(void) { if(xptr_) *xptr_ = std::move(x_); }
  protected:
     typename std::remove_reference<T>::type     x_;
     typename std::remove_reference<T>::type *   xptr_;
@@ -332,7 +339,7 @@ class __Guard_X__ {
  * }
  *
  *
- * Another COPY macro defying a copy for all enumerated elements: void copy(left, const right)
+ * Another COPY macro defying a copy for all enumerated elements: void copy(to, const from)
  * - similar to SWAP, but copies by value - to facilitate copying in non-default CC:
  *
  * Synopsis:
@@ -349,34 +356,74 @@ class __Guard_X__ {
  *
  */
 
-#define __SWAP_PAIR__(X) swap(left.X, right.X);
+#define __SWAP_PAIR__(X) swap(__left__.X, __right__.X);
 
-#define SWAP(TYPE, args...) \
-    void swap(TYPE &left, TYPE &right) \
-     { using std::swap; MACRO_TO_ARGS(__SWAP_PAIR__, args) }
-
-
-
-#define __COPY_VAR__(X) left.X = right.X;
-
-#define COPY(TYPE, args...) \
-    void copy(TYPE &left, const TYPE &right) \
-     { MACRO_TO_ARGS(__COPY_VAR__, args) }
+#define SWAP(TYPE, ARGS...) \
+    void swap(TYPE &__left__, TYPE &__right__) \
+     { using std::swap; MACRO_TO_ARGS(__SWAP_PAIR__, ARGS) }
 
 
+
+#define __COPY_VAR__(X) __left__.X = __right__.X;
+
+#define COPY(TYPE, ARGS...) \
+    void copy(TYPE &__left__, const TYPE &__right__) \
+     { MACRO_TO_ARGS(__COPY_VAR__, ARGS) }
 
 
 
 
 
 
+/*
+ * A couple of definitions for mutexes:
+ * ULOCK - declared a unique_lock
+ * TLOCK - declared an operator-like lock
+ *
+ * Synopsis:
+ * {
+ *  ULOCK(mtx)
+ *  ...
+ * } // mtx will be automatically released
+ *
+ * TLOCK(mtx) { // block is executed under mtx
+ *  ...
+ * }
+ *
+ */
+#define ULOCK(MTX) \
+    std::unique_lock<std::mutex> STITCH_2TKNS(__ulck__, __LINE__){MTX};
+
+#define TLOCK(MTX) \
+    for(std::unique_lock<std::mutex> __tlck__(MTX); __tlck__.owns_lock(); __tlck__.unlock())
 
 
 
+/*
+ * Provide a shorthand for containers with find method (e.g. std::map)
+ * - quite often a temp variable found is created only for the purpose of the next check only
+ *   this shorthand will automate auto-variable creation and thus simplifies the syntax
+ *
+ * Synopsis:
+ * std::vector x{1,2,3}
+ *
+ * IF_FOUND(x, 2)
+ *  { ... }
+ *
+ * or
+ *
+ * IF_FOUND(x, 2) FITR->second = ...    // FITR (found iterator) must be on the same
+ *                                      // line with IF_FOUND
+ */
+#define FITR STITCH_2TKNS(__AIFV__,__LINE__)
 
+#define IF_FOUND(CTN, VAL) \
+ auto STITCH_2TKNS(__AIFV__,__LINE__) = CTN.find(VAL); \
+ if(STITCH_2TKNS(__AIFV__,__LINE__) != CTN.end())
 
-
-
+#define IF_NOT_FOUND(CTN, VAL) \
+ auto STITCH_2TKNS(__AIFV__,__LINE__) = CTN.find(VAL); \
+ if(STITCH_2TKNS(__AIFV__,__LINE__) == CTN.end())
 
 
 

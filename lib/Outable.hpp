@@ -45,7 +45,7 @@
 #include <string>
 #include <sstream>
 #include <type_traits>
-#include "macrolib.h"
+#include "macrolib.hpp"
 #include "extensions.hpp"
 
 

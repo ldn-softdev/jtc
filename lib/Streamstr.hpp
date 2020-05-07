@@ -7,7 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <deque>
+#include <vector>
 #include "extensions.hpp"
 #include "dbg.hpp"
 
@@ -15,6 +15,7 @@
 #define HB_SIZE 1024
 #define RB_SIZE 1024
 
+#define SIZE_T(N) static_cast<size_t>(N)
 
 
 class Streamstr {
@@ -75,60 +76,101 @@ class Streamstr {
                 buffered_file       /* facilitate multiple files, read file by file */
     ENUMSTR(Strmod, STRMOD)
 
+    #define VERBOSITY \
+                Vocal, \
+                Quiet
+    ENUMSTR(Verbosity, VERBOSITY)
+    #undef VERBOSITY
+
+    #define FILESTATUS \
+                Success, \
+                Failure
+    ENUMSTR(Filestatus, FILESTATUS)
+    #undef FILESTATUS
+
+                        Streamstr(const std::string & fn, Verbosity v): vm_{v}
+                         { source_file(fn); }
                         Streamstr(Strmod m = buffered_cin): mod_{m} {}
                         Streamstr(size_t hbs):                  // stream mode, w. hb allocation
                          mod_{streamed_cin}, hb_(hbs) {}
 
-    const std::string & buffer(void) const { return buf_; }
     bool                is_streamed(void) const { return mod_ == streamed_cin; }
     bool                is_buffered(void) const { return mod_ != streamed_cin; }
     bool                is_buffered_src(void) const { return mod_ == buffered_src; }
     bool                is_buffered_cin(void) const { return mod_ == buffered_cin; }
     bool                is_buffered_file(void) const { return mod_ == buffered_file; }
-    const std::string & filename(void) const { return cf_; }
 
+    const std::string & buffer(void) const { return buf_; }
+    std::string         str(void) const { return hb_.str(); }
+    const std::string & filename(void) const {
+                         static std::string empty_fn{};
+                         return fn_.empty()? empty_fn:
+                                 nf_idx_ >= fn_.size()? fn_.back():
+                                  nf_idx_ == 0? fn_.front():
+                                   fn_[nf_idx_ - 1];
+                        }
+    const std::vector<std::string> &
+                        filenames(void) const { return fn_; }
+    const std::vector<Filestatus> &
+                        filestatuses(void) const { return fs_; }
+    size_t              file_idx(void) const                    // current file index being read
+                         { return mod_ == buffered_file? nf_idx_ - 1: 0; };
     void                source_file(const std::string &fn) {
                          fn_.push_back(fn);
                          if(not is_buffered_file())
                           { mod_ = buffered_file; buf_.clear(); }
-                         if(cf_.empty()) cf_ = fn_.front();
                         }
     template<typename... Args>
-    void                source_file(const std::string &first, Args... rest)
+    void                source_file(std::string first, Args... rest)
                          { source_file(first); source_file(rest...); }
-
-    void                source_buffer(std::string buf) {
-                         if(is_buffered()) {
-                          mod_ = buffered_src;
-                          buf_ = std::move(buf);
-                         }
+    Streamstr &         source_buffer(std::string buf) {
+                         mod_ = buffered_src;
+                         buf_ = std::move(buf);
+                         return *this;
+                        }
+    size_t              stream_size(void) const { return cnt_; }
+    Streamstr &         reset(Strmod m, size_t cbs = HB_SIZE) {
+                         mod_ = m;
+                         buf_.clear();
+                         if(mod_ == buffered_file)
+                          { fn_.clear(); fs_.clear(); nf_idx_ = cnt_ = 0; }
+                         vm_ = Verbosity::Vocal;
+                         hb_.reset();
+                         hb_.reserve(cbs);
+                         return *this;
+                        }
+    Circular &          history_buffer(void) { return hb_; }
+    size_t              hb_size(void) const { return hb_.size(); }
+    Verbosity           verbosity(void) const { return vm_; }
+    Streamstr &         verbosity(Verbosity v) { vm_ = v; return *this; }
+    Streamstr &         defer_reading_files(bool x = true) {
+                         drf_ = x;
+                         if(x == true) return *this;
+                         std::ifstream fin(filename().c_str(), std::ios::in);
+                         read_file_(fin);
+                         return *this;
                         }
 
     const_iterator      begin(void);
     const_iterator      end(void);
 
-    size_t              stream_size(void) const { return cnt_; }
-    std::string         str(void) const { return hb_.str(); }
-    void                reset(Strmod m, size_t cbs = HB_SIZE) {
-                         mod_ = m;
-                         buf_.clear();
-                         cnt_ = 0;
-                         hb_.reset();
-                         hb_.reserve(cbs);
-                        }
-    size_t              hb_size(void) const { return hb_.size(); }
-    Circular &          hb(void) { return hb_; }
     DEBUGGABLE()
 
  protected:
 
     void                ss_init_(const_iterator &);
+    void                read_file_(std::ifstream & fin);
 
     Strmod              mod_;
     std::string         buf_;
-std::deque<std::string> fn_;                                    // source file names container
-    std::string         cf_;                                    // file being read;
+    std::vector<std::string>
+                        fn_;                                    // source file names container
+    std::vector<Filestatus>
+                        fs_;                                    // source file status
+    size_t              nf_idx_{0};                             // next fn_ idx being read
     size_t              cnt_{0};                                // offset from beginning of stream
+    bool                drf_{false};                            // defer reading file
+    Verbosity           vm_{Verbosity::Vocal};                  // verbosity mode
 
  private:
 
@@ -159,8 +201,10 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
     bool                is_buffered_src(void) const { return mod_ == Streamstr::buffered_src; }
     bool                is_buffered_cin(void) const { return mod_ == Streamstr::buffered_cin; }
     bool                is_buffered_file(void) const { return mod_ == Streamstr::buffered_file; }
-    bool                is_last_in_file(void) const             // facing current file's last char?
-                         { return is_buffered_file() and pos_ - rwd_ == ssp_->buf_.size() - 1; }
+    bool                is_back_chr(void) const                 // facing current buf's last char?
+                         { return is_buffered() and pos_ - rwd_ == ssp_->buffer().size() - 1; }
+    bool                is_front_chr(void) const                // facing current buf's 1st char?
+                         { return is_buffered() and pos_ - rwd_ == 0; }
     std::string         str(size_t len = -1) const;
     size_t              char_read(void) const { return cnt_; }
     size_t              offset(void) const { return char_read() - rwd_; }
@@ -175,8 +219,8 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
     bool                operator==(const const_iterator & rhs) const {
                          if(ssp_ != rhs.ssp_) return false;     // must be of the same Streamstr
                          if(is_streamed()) {                    // stream iterator
-                          if(pos_ != rhs.pos_) return false;    // i.e. one is end() other is not
-                          if(pos_ == static_cast<size_t>(-2)) return true;  // both are end()
+                          if(pos_ != rhs.pos_) return false;    // i.e. one is end(), other is not
+                          if(pos_ == SIZE_T(-1)) return true;   // both are end(): -1 signifies end
                           return cnt_ - rwd_ == rhs.cnt_ - rhs.rwd_;
                          }
                          return pos_ - rwd_ == rhs.pos_ - rhs.rwd_; }
@@ -193,7 +237,8 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
     Streamstr *         ssp_{nullptr};                          // pointer to host class
     size_t              pos_{0};                                // curr. read pos. of ssp_->buf_
     size_t              cnt_{0};                                // offset from beginning of itr.
-    size_t              rwd_{0};
+    size_t              rwd_{0};                                // possible back off
+
  private:
 
     const_iterator &    read_next_(void);
@@ -214,34 +259,50 @@ Streamstr::const_iterator Streamstr::begin(void) {
 
 Streamstr::const_iterator Streamstr::end(void) {
  if(is_streamed()) {
-  const_iterator it{mod_, this, static_cast<size_t>(-2)};
+  const_iterator it{mod_, this, SIZE_T(-1)};
   it.cnt_ = cnt_;
   return it;
  }
- return {mod_, this, buf_.size()};
+ return const_iterator{mod_, this, drf_? SIZE_T(-1): buffer().size()};
 }
 
 
 
 void Streamstr::ss_init_(const_iterator &it) {
- DBG(0) DOUT() << "initializing: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
- if(is_buffered_src()) return;                                  // buffered source
-                                                                // mod == stream
- if(is_streamed()) {
-  std::cin.tie(nullptr);                                        // speedup cin
+ // initialize buffer (if required)
+ const char * func = __func__;
+ auto dbg_init = [&] {
+       if(DBG()(0)) {
+        ULOCK(DBG().mutex())
+        DBG().dout() << DBG().prompt(func, 1, DBG().stamped())
+                     << "initializing mode: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
+       }
+       return true;
+      };
+ auto dbg_exit = [&](bool unused) {
+       if(DBG()(0)) {
+        ULOCK(DBG().mutex())
+        DBG().dout() << DBG().prompt(func, 1, DBG().stamped()) << "buffer "
+                     << (is_streamed()? "(stream) ":
+                          is_buffered_src()? "(user setup buffer) ":
+                           is_buffered_cin()? "(from <stdin>) ":
+                            "(from file: " + filename()  + ") ")
+                     << "size after initialization: "
+                     << (drf_? "deferred": std::to_string(buf_.size())) << std::endl;
+       }
+      };
+ GUARD(dbg_init, dbg_exit)
+
+ if(is_buffered_src()) return;                                  // mod: buffered source
+
+ if(is_streamed()) {                                            // mod: stream
   std::cin >> std::noskipws;
   buf_.resize(1);
   ++it;
   return;
  }
- // this is C++ idiomatic way to read cin/file, unfortunately it's 2-3 times slower
- //buf_ = std::string{                                            // read file/stdin into buffer
- //        std::istream_iterator<char>(is_buffered_cin()?
- //         std::cin >> std::noskipws:
- //         std::ifstream{fn_.front().c_str(), std::ifstream::in} >> std::noskipws),
- //        std::istream_iterator<char>{}};
 
- if(is_buffered_cin()) {                                        // buffered_cin
+ if(is_buffered_cin()) {                                        // mod: buffered_cin
   std::vector<std::vector<char>> aob;                           // array of buffers
   std::ifstream fin("/dev/stdin", std::ios::in);
   do {
@@ -250,24 +311,33 @@ void Streamstr::ss_init_(const_iterator &it) {
   } while(not fin.eof());
   buf_.reserve(aob.size() * (RB_SIZE - 1));
   for(auto &b: aob) buf_ += b.data();
+  return;
  }
- else                                                           // buffered_file
-  do {
-   std::ifstream fin(fn_.front().c_str(), std::ios::in);        // read next file in fn_
-   if(fin) {
-    fin.seekg(0, std::ios::end);
-    buf_.resize(fin.tellg());
-    fin.seekg(0, std::ios::beg);
-    fin.read(&buf_[0], buf_.size());
-    cf_ = fn_.front();
-   }
-   else
-    std::cerr << "error: could not open file '" <<  fn_.front() << "'" << std::endl;
-   fn_.pop_front();
-  } while(buf_.empty() and not fn_.empty());
 
- DBG(0) DOUT() << "read file: " << (is_buffered_cin()? "<stdin>":filename())
-               << " (" << buf_.size() << " bytes)" << std::endl;
+ buf_.clear();
+ if(drf_) return;                                               // file read deferred
+ do {                                                           // mod: buffered_file
+  std::ifstream fin(fn_[nf_idx_].c_str(), std::ios::in);        // read next file in fn_
+  if(fin)
+   read_file_(fin);
+  else {
+   fs_.push_back(Filestatus::Failure);
+   if(verbosity() == Verbosity::Vocal)
+    std::cerr << "error: could not open file '" <<  fn_[nf_idx_] << "'" << std::endl;
+  }
+  ++nf_idx_;
+ } while(buf_.empty() and nf_idx_ < fn_.size());
+}
+
+
+
+void Streamstr::read_file_(std::ifstream & fin) {
+ // read file into buffer; return true/false if file is read/deferred
+ fin.seekg(0, std::ios::end);
+ buf_.resize(fin.tellg());
+ fin.seekg(0, std::ios::beg);
+ fin.read(&buf_[0], buf_.size());
+ fs_.push_back(Filestatus::Success);
 }
 
 
@@ -277,17 +347,20 @@ void Streamstr::ss_init_(const_iterator &it) {
 //
 const char & Streamstr::const_iterator::operator*(void) {
  // demultiplex streamed and buffered dereferencing
- if(is_streamed())
+ if(is_streamed()) {
   if(cnt_ < ssp_->cnt_)                                         // stream ran away from iterator
    { rwd_ += ssp_->cnt_ - cnt_; cnt_ = ssp_->cnt_; }
+
+  if(rwd_ == 0)                                                  // there was no back out
+   return ssp_->buffer()[pos_];
+                                                                // back-outing occurred
+  return ssp_->hb_.chr(rwd_ - pos_);                            // get data from historical buffer
+ }
 
  if(rwd_ == 0)                                                  // there was no back out
   return ssp_->buffer()[pos_];
                                                                 // back-outing occurred
- if(is_streamed())
-  return ssp_->hb_.chr(rwd_ - pos_);                            // get data from historical buffer
-                                                                // mod_ = buffer
- return ssp_->buf_[pos_ - rwd_];
+ return ssp_->buffer()[pos_ - rwd_];                            // mod_ = buffer
 }
 
 
@@ -303,9 +376,10 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
 
  if(++pos_ < ssp_->buffer().size())
   { ++ssp_->cnt_; ++cnt_; return *this; }
-                                                                // out of buffer
+
+ // out of buffer - handle various modes
  if(is_streamed()) {                                            // stream mode
-  if(not std::cin.good()) { pos_ = static_cast<size_t>(-2); return *this; }
+  if(not std::cin.good()) { pos_ = SIZE_T(-1); return *this; }
   char c;
   std::cin.read(&c, 1);
   ssp_->hb_.push_back(c);
@@ -317,10 +391,10 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
                                                                 // buffer mode
  if(is_buffered_src()) return *this;                            // buffer is up (cin/buffer src)
  if(is_buffered_cin()) return *this;                            // buffer is up (cin/buffer src)
- if(ssp_->fn_.empty()) return *this;                            // no more files to read from
+ if(ssp_->nf_idx_ >= ssp_->fn_.size()) return *this;            // no more files to read from
                                                                 // read in next file then
  pos_ = 0;
- ssp_->buf_.clear();
+ //ssp_->buf_.clear();
  ssp_->ss_init_(*this);
  return *this;
 }
@@ -331,7 +405,7 @@ std::string Streamstr::const_iterator::str(size_t len) const {
  // return string: for streaming mode - return historical string (up till current pointer),
  // for buffer mode - from current pointer onwards
  if(is_streamed()) return ssp_->hb_.str(len);
- return {ssp_->buf_, pos_ - rwd_, len};
+ return std::string{ssp_->buffer(), pos_ - rwd_, len};
 }
 
 
@@ -341,6 +415,7 @@ std::string Streamstr::const_iterator::str(size_t len) const {
 #undef HB_SIZE
 #undef RB_SIZE
 
+#undef SIZE_T
 
 
 

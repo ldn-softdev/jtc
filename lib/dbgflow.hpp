@@ -8,11 +8,8 @@
 
 #ifdef BG_FLOW                                                  // -DBG_FLOW to compile this debug
  #ifdef DBGBL_REF                                               // reference to a DEBUGGABLE class
-  __Dbg_flow__ dbg_flow(DBGBL_REF.DBG(),
-                        DBGBL_REF.DBG().prompt(__func__, __Dbg_flow__::ind + 1,
-                                               DBGBL_REF.DBG().stamped(), true));
+  __Dbg_flow__ __dbg_flow__(DBGBL_REF.DBG(), __func__);
  #else
-  __Dbg_flow__ dbg_flow(DBG(),
-                        DBG().prompt(__func__, __Dbg_flow__::ind + 1, DBG().stamped(), true));
+  __Dbg_flow__ __dbg_flow__(DBG(), __func__);
  #endif
 #endif

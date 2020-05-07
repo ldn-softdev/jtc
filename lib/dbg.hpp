@@ -276,6 +276,7 @@
  *  DOUT()              // refers to ostream used by debug class
  *  DOUT(c)             // refers to ostream used by debug class c
  *  DBG_PROMPT(n)       // print debug prompt with indent n (+object severity)
+ *  DBG_PMT(n)          // alias for DBG_PROMPT
  */
 
 #pragma once
@@ -291,7 +292,10 @@
 #include <exception>
 #include <sys/time.h>
 #include <climits>
-#include "macrolib.h"
+#include <functional>
+#include <unistd.h>             // STDOUT_FILENO - for term width
+#include <sys/ioctl.h>          // ioctl() and TIOCGWINSZ - for term width
+#include "macrolib.hpp"
 #include "extensions.hpp"
 
 
@@ -304,16 +308,16 @@
 // 2nd form is used only for in-class declarations and let enumerate all DEBUGGABLE
 // members. Enumerated debuggable members then conform declared class object debug
 // policy
-#define DEBUGGABLE(args...) __DEBUGGABLE_ARG__(IF_ARGS(args), args)
-#define __DEBUGGABLE_ARG__(X, args...) __DEBUGGABLE_IF__(X, args)
-#define __DEBUGGABLE_IF__(X, args...) __DEBUGGABLE_##X##__(args)
-#define __DEBUGGABLE_PROPAGATE__(X) X.__dbg__.severity(sev + 1, X);
+#define DEBUGGABLE(ARGS...) __DEBUGGABLE_ARG__(IF_ARGS(ARGS), ARGS)
+#define __DEBUGGABLE_ARG__(X, ARGS...) __DEBUGGABLE_IF__(X, ARGS)
+#define __DEBUGGABLE_IF__(X, ARGS...) __DEBUGGABLE_##X##__(ARGS)
+#define __DEBUGGABLE_PROPAGATE__(X) X.__dbg__.severity(__sev__ + 1, X);
 #define __DEBUGGABLE_false__() \
     Debug   __dbg__;
-#define __DEBUGGABLE_true__(args...) \
+#define __DEBUGGABLE_true__(ARGS...) \
     Debug   __dbg__{*this}; \
-    void    __dbg_propagate__(int sev) \
-             { MACRO_TO_ARGS(__DEBUGGABLE_PROPAGATE__, ##args) }
+    void    __dbg_propagate__(int __sev__) \
+             { MACRO_TO_ARGS(__DEBUGGABLE_PROPAGATE__, ##ARGS) }
 
 
 // below macros define debug usage cases:
@@ -330,16 +334,16 @@
 #define __DBG_0_ARG__() __dbg__     /* DBG(): access to debug object */
 #define __DBG_1_ARG__(X)            /* DBG(N) {..}: debug operator, prints debug indention */\
     if( __dbg__(X) ) \
-     for(std::unique_lock<std::mutex> mgard(__dbg__.mutex()); mgard.owns_lock(); mgard.unlock()) \
+     TLOCK(__dbg__.mutex()) \
       if( __dbg__(X, __func__) )                                // now print the prompt
 #define __DBG_2_ARG__(O, X)         /* DBG(F, N) {..}: using debug operator from F */\
     if( O.__dbg__(X) ) \
-     for(std::unique_lock<std::mutex> mgard(O.__dbg__.mutex()); mgard.owns_lock(); mgard.unlock())\
+     TLOCK(O.__dbg__.mutex()) \
       if( O.__dbg__(X, __func__) )                              // now print the prompt
 #define __DBG_4TH_ARG__(arg1, arg2, arg3, arg4, ...) arg4
-#define __DBG_CHOOSER__(args...) \
-    __DBG_4TH_ARG__(dummy, ##args, __DBG_2_ARG__, __DBG_1_ARG__, __DBG_0_ARG__)
-#define DBG(args...) __DBG_CHOOSER__(args)(args)
+#define __DBG_CHOOSER__(ARGS...) \
+    __DBG_4TH_ARG__(dummy, ##ARGS, __DBG_2_ARG__, __DBG_1_ARG__, __DBG_0_ARG__)
+#define DBG(ARGS...) __DBG_CHOOSER__(ARGS)(ARGS)
 
 
 #ifdef NDEBUG                                                   // compiled with -DNDEBUG option
@@ -351,21 +355,33 @@
 
 
 
-// DOUT() macros and init Debug's global macros
+// DOUT() macros and init Debug's global macros:
+// 1. DOUT() - an alias for the current output class, optionally defined via use_ostream()
+// 2. DOUT(X) - uses class X to utilize its DOUT() output alias
+//
+// DOUT() has 3 output manipulators:
+//  o Debug::btw - when a printing line requires truncating at the back by the term width
+//  o Debug::ftw - when a printing line requires truncating at the front by the term width
+//  o Debug::ctw(x) - when a printing line requires center-adjusting of the output at the
+//                    position X and truncating might occur at the front and/or back
+//
 #define __DOUT_0_ARG__() (DBG().dout())
 #define __DOUT_1_ARG__(X) (X.DBG().dout())
 #define __DOUT_3RD_ARG__(arg1, arg2, arg3, ...) arg3
-#define __DOUT_CHOOSER__(args...) \
-    __DOUT_3RD_ARG__(dummy, ##args, __DOUT_1_ARG__, __DOUT_0_ARG__)
-#define DOUT(args...) __DOUT_CHOOSER__(args)(args)
+#define __DOUT_CHOOSER__(ARGS...) \
+    __DOUT_3RD_ARG__(dummy, ##ARGS, __DOUT_1_ARG__, __DOUT_0_ARG__)
+#define DOUT(ARGS...) __DOUT_CHOOSER__(ARGS)(ARGS)
+
+// init Debug's global macros
 #define DBG_INDENT "."                                          // default debug's indent prefix
 #define DBG_ALT_INDENT " "                                      // alternative prefix
 #define DBG_SUFFIX ", "                                         // default debug's suffix
 #define DBG_PROMPT(X) DBG().prompt(__func__, X + 1)
 #define DBG_PMT(X) DBG().prompt(__func__, X + 1)
+#define DBG_WDTH 100                                            // default term width for debug
 #define NDBG SHRT_MAX/2
-// NDBG definition is just insanely low debug severity - to be used when certain
-// debugs needed to be suppressed
+// NDBG definition is just a ridiculously low debug severity - to be used when certain debugs have
+// to be suppressed; /2 instead of using SHRT_MAX is to avoid value overflow when delegating debugs
 
 // below definition let checking whether '__dbg_propagate__()' method is present or not:
 template<typename T>
@@ -383,7 +399,55 @@ class __Dbg_flow__;
 
 class Debug {
  friend __Dbg_flow__;
+
+    #define TOS_TYPE        /* indent type: native (default '.'), or alternative*/\
+                No_trunc, \
+                Trunc_back, \
+                Trunc_front, \
+                Trunc_both
+    ENUM(TosType, TOS_TYPE)
+
+    struct Ctw {};                                              // used only as enablement for ctw
+
+    class DbgStream: public std::ostream {
+     // custom class used for debug outputs (via dout()), it's required to plug-in
+     // own std::stringbuf based custom class (DbgStringBuf) to handle processing of
+     // term-width truncated debug outputs (via Debug::cut modifier). The modifier
+     // has a transient effect until `std::endl`
+        class DbgStringBuf: public std::stringbuf {
+         public:
+                                DbgStringBuf() = default;
+                               ~DbgStringBuf()
+                                 { if (pbase() != pptr()) sync_(); }
+
+            // sync is called when `std::endl` is processed by ostream/stringbuf
+            virtual int         sync() { sync_(); return 0; }
+            void                use_ostream(std::ostream & os) { osp_ = &os; }
+
+         private:
+            std::ostream *      osp_{&std::cout};
+            void                sync_(void);
+            void                utf8_trim_back_(std::string &, size_t width);
+            size_t              utf8_trim_front_(std::string &, size_t width);
+        };
+
+     public:
+                            DbgStream(void): std::ostream(&sbuf_) {}
+        void                use_ostream(std::ostream & os) { sbuf_.use_ostream(os); }
+
+     private:
+        DbgStringBuf        sbuf_;
+    };
+
  public:
+
+    #define IND_TYPE        /* indent type: native (default '.'), or alternative*/\
+                Native, \
+                Alternative
+    ENUM(Indention, IND_TYPE)
+    #undef IND_TYPE
+
+
                         Debug(void) = default;
     template<class X>   Debug(X &x) { x.DBG().severity(x); };
 
@@ -400,20 +464,26 @@ class Debug {
     Debug &             suffix(const char *s) { suffix_ = s; return *this; }
     bool                stamped(void) const { return ts_; }
     Debug &             stamped(bool x) { ts_ = x; return *this; }
-    Debug &             stamp_ms(bool x) { ms_ = x; return *this; }
-    Debug &             stamp_us(bool x) { us_ = x; return *this; }
+    Debug &             stamp_ms(bool x = true)
+                         { ms_ = x; if(x == true) stamped(x); return *this; }
+    Debug &             stamp_us(bool x = true)
+                         { us_ = x; if(x == true) stamp_ms(); return *this; }
+    Debug &             stamp_delta(bool x = true) { delta_ = x; return *this; }
     Debug &             filter_out(bool x) { ft_ = x; return *this; }
     Debug &             filter(const char *s) { filter_.push_back(s); return *this; }
     Debug &             reset_filter(void) { filter_.clear(); filter_out(false); return *this; }
     std::mutex &        mutex(void) const { return Debug::mtx_; }
     Debug &             mutex(std::mutex & mtx) { mp_ = &mtx; return *this; }
     Debug &             reset_mutex(void) { mp_ = &mtx_; return *this; }
-    std::ostream &      dout(void) const { return *op_; }
-    Debug &             use_ostream(std::ostream & os) { op_ = &os; return *this; }
-    Debug &             reset_ostream(void) { op_ = &std::cout; return *this; }
+    std::ostream &      dout(void) const { return dos_; }
+    Debug &             use_ostream(std::ostream & os) { dos_.use_ostream(os); return *this; }
+    Debug &             reset_ostream(void) { dos_.use_ostream(std::cout); return *this; }
     bool                operator()(short d, const char *fn=nullptr) const;// check and print prompt
     std::string         prompt(const char *fn, int ms=0,
-                               bool useTs=Debug::ts_, bool useAltPfx=false) const;
+                               bool useTs=Debug::ts_, Indention it_type = Indention::Native) const;
+    size_t              ctw_adjust(void) { return Debug::adj_; }
+                        // after invoking Debug::ctw(pos), ctw_adjust() will return an offset
+                        // where position pos was displayed
 
                         // severity() and increment() definitions implement mechanism which
                         // allows propagating calling class' debug policy to its debuggable
@@ -466,6 +536,20 @@ class Debug {
     short &             value(void) { return ds_; }
     const short &       value(void) const { return ds_; }
 
+    // term_width() is used by Debug class when dbg-output modifiers btw, ftw, ctw are invoked
+    static size_t       term_width(bool forced = false);        // read terminal width
+
+  static std::ostream & btw(std::ostream &os)       // cut output's end by term width
+                         { Debug::tos_ = Debug::Trunc_back; return os; }
+
+  static std::ostream & ftw(std::ostream &os)       // cut output's front by term width
+                         { Debug::tos_ = Debug::Trunc_front; return os; }
+
+  friend std::ostream & operator<<(std::ostream & os, Debug::Ctw ctw) { return os; }
+  static  Ctw           ctw(size_t pos)             // center-adjust  and cut by term width
+                         { Debug::tos_ = Debug::Trunc_both; Debug::adj_ = pos; return Ctw{}; }
+
+
  protected:
     short               ds_{0};                                 // my debug severity offset
 
@@ -481,12 +565,18 @@ class Debug {
     static bool         ts_;                                    // build time-stamp into prompt?
     static bool         ms_;                                    // use ms in time-stamp
     static bool         us_;                                    // use us in time-stamp
+    static bool         delta_;                                 // use delta time-stamp
+    static timeval      lts_;                                   // last time stamp, for delta_
     static std::mutex   mtx_;                                   // default mutex used by debug
     static std::mutex * mp_;                                    // pointer to currently used mutex
-  static std::ostream * op_;                                    // pointer to currently ostream
+  static DbgStream      dos_;                                   // debug's output stream
     static bool         ft_;                                    // filter-in(true) or -out(false)
   static std::vector<std::string>
                         filter_;                                // facility filter
+    static size_t       tw_;                                    // term width
+    static size_t       lups_;                                  // last used prompt size
+    static TosType      tos_;                                   // flag: truncate output stream
+    static size_t       adj_;                                   // value for Trunc_both
 
     static const std::string
                         timestamp_(void);
@@ -497,6 +587,7 @@ class Debug {
 
 STRINGIFY( Debug::Month, MONTH)
 #undef MONTH
+#undef TOS_TYPE
 
 
 short                   Debug::udl_{0};                         // 0: debugs disabled
@@ -507,11 +598,18 @@ std::string             Debug::suffix_{DBG_SUFFIX};
 bool                    Debug::ts_{false};
 bool                    Debug::ms_{false};
 bool                    Debug::us_{false};
+bool                    Debug::delta_{false};
+timeval                 Debug::lts_;                            // last time stamp
 std::mutex              Debug::mtx_;
 std::mutex *            Debug::mp_{&Debug::mtx_};
-std::ostream *          Debug::op_{&std::cout};
+Debug::DbgStream        Debug::dos_;
 bool                    Debug::ft_{false};                      // filter-in by default
 std::vector<std::string>Debug::filter_;
+size_t                  Debug::tw_{0};                          // term width
+size_t                  Debug::lups_{0};                        // last used prompt size
+Debug::TosType          Debug::tos_{Debug::No_trunc};           // truncate output stream
+size_t                  Debug::adj_;                            // adjustment for Trunc_both
+
 
 
 
@@ -530,24 +628,40 @@ bool Debug::operator()(short d, const char * fn) const {
  if(fn == nullptr) return true;                                 // user wants no printed prompt
  if(not match_(fn)) return false;                               // filter does not match
 
- dout() << Debug::indent_ << prompt(fn, d);
+ dout() << prompt(fn, d + 1);
  return true;
 }
 
 
-std::string Debug::prompt(const char *fn, int msgSev, bool useTs, bool useAltPfx) const {
+std::string Debug::prompt(const char *fn, int msg_sev, bool useTs, Indention ind_type) const {
  // useAltPfx: use alternative prefix (indent)?
  // useTs: use Debug::ts to drive time-stamp update?
  std::stringstream so;
 
  if(indented())
-  for(int i=severity()+msgSev; i>0; --i)
-   so << (useAltPfx? Debug::alt_indent_: Debug::indent_);
- so << fn << "()";
+  for(int i = severity() + msg_sev; i > 0; --i)
+   so << (ind_type == Native? Debug::indent_: Debug::alt_indent_);
  if(stamped())
-  so << " [" << timestamp_() << "]";
+  so << "[" << timestamp_() << "] ";
+ so << fn << "()";
  so << Debug::suffix_;
+ Debug::lups_ = so.str().size();
  return so.str();
+}
+
+
+
+size_t Debug::term_width(bool forced) {
+ // read term width upon the first call, and on all subsequent return the read value
+ struct winsize ws;
+ auto read_ws = [&ws]{ return ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws); };
+
+ if(forced)                                                     // force ioctl
+  { Debug::tw_ = read_ws() == 0? ws.ws_col: DBG_WDTH; return Debug::tw_; }
+
+ if(Debug::tw_ != 0) return tw_;                                // != 0 => ioclt already called
+ Debug::tw_ = read_ws() == 0? ws.ws_col: DBG_WDTH;
+ return Debug::tw_;
 }
 
 
@@ -556,8 +670,17 @@ const std::string Debug::timestamp_(void) {
  // build a time-stamp of the local TZ, possibly including ms and us
  std::stringstream so;
 
- struct timeval t;
+ timeval t, ts;
  gettimeofday(&t, nullptr);
+ ts = t;                                                        // timeval saved, for delta_
+
+ if(delta_) {
+  if(lts_.tv_sec + lts_.tv_usec == 0) lts_ = t;
+  if(lts_.tv_usec > t.tv_usec)
+   { t.tv_usec += 1000000; --t.tv_sec; }
+  t.tv_usec -= lts_.tv_usec;
+  t.tv_sec -= lts_.tv_sec;
+ }
 
  so << stamp_str_(t.tv_sec);
  if(ms_) {
@@ -566,6 +689,7 @@ const std::string Debug::timestamp_(void) {
    so << '.' << std::setfill('0') << std::setw(3) << t.tv_usec%1000;
  }
 
+ if(delta_) lts_ = ts;
  return so.str();
 };
 
@@ -574,6 +698,11 @@ const std::string Debug::timestamp_(void) {
 const std::string Debug::stamp_str_(time_t t_stamp) {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
  std::stringstream so;
+
+ if(delta_) {
+  so << std::setw(3) << std::setfill('0') << t_stamp;
+  return so.str();
+ }
 
  tm * tmp = localtime(&t_stamp);
 
@@ -597,7 +726,7 @@ bool Debug::match_(const char *fn) {
   return true;                                                  // match is always true
 
  std::string fname(fn);
- if(Debug::ft_) {                                                // filter-out
+ if(Debug::ft_) {                                               // filter-out
   for(auto &f: Debug::filter_)
    { if(fname.find(f) == 0) return false; }
   return true;
@@ -610,6 +739,101 @@ bool Debug::match_(const char *fn) {
 }
 
 
+
+void Debug::DbgStream::DbgStringBuf::sync_(void) {
+ // process upon receiving std::endl (output buffered string)
+ auto rst = [&](void) {                                         // do all housekeeping at the end
+  if(str().size() > 1024)                                       // buffer grew too big,
+   { std::stringbuf temp; swap(temp); }                         // reset buffer to a new one
+  Debug::tos_ = Debug::No_trunc; Debug::lups_ = 0; str("");     // reset all that required
+  osp_->flush();
+ };
+
+ if(Debug::tos_ == Debug::No_trunc)                             // no truncating
+  { (*osp_) << str(); rst(); return; }
+
+ std::string s = str();
+ while(not s.empty() and (s.back() == '\r' or s.back() == '\n'))// remove trailing \n and/or \r
+  s.pop_back();
+ if(Debug::tos_ == Debug::Trunc_back) {                         // btw
+  utf8_trim_back_(s, Debug::term_width());
+  (*osp_) << s << std::endl;
+  return rst();
+ }
+
+ std::string sp = s.substr(0, Debug::lups_);                    // sp: string's prompt
+ s.erase(0, Debug::lups_);
+ if(Debug::tos_ == Debug::Trunc_front) {                        // ftw
+  utf8_trim_front_(s, Debug::term_width() - Debug::lups_);
+  (*osp_) << sp << s << std::endl;
+  return rst();
+ }
+
+ // must be Debug::Trunc_both                                   // ctw(..)
+ if(Debug::adj_ >= s.size()) Debug::adj_ = s.size() - 1;
+ std::string fp = s.substr(0, Debug::adj_);                     // front part
+ s.erase(0, Debug::adj_);                                       // now s is a the back part
+ Debug::adj_ =  utf8_trim_front_(fp, (Debug::term_width() - Debug::lups_ + 1) / 2);
+ utf8_trim_back_(s, Debug::term_width() - Debug::lups_ - Debug::adj_ - 1);
+ (*osp_) << sp << fp << s << std::endl;
+ return rst();
+}
+
+
+void Debug::DbgStream::DbgStringBuf::utf8_trim_back_(std::string &s, size_t tw) {
+ // trim input string's back by term width and add ellipsis if trimming occurs
+ // this logic assumes that utf8 encoding is not broken!
+ static const char sfx[] = "...";
+ char * ptr = &s.front();
+ size_t ts{0};                                                  // trim size
+ for(size_t uoffset = 0; uoffset < tw; ++ptr) {
+  char chr = *ptr;
+  if(chr == '\0') return;                                       // does not require trimming
+  if(uoffset == tw - sizeof(sfx)) ts = ptr - &s.front();        // possibly a trimming point
+  if(chr > 0) {                                                // non-unicode char
+   if(chr == '\t' ) *ptr = chr = ' ';                           // tabs shouldn't be in debugs
+   if(chr == '\r' or chr == '\n') *ptr = chr = '|';             // intermediate new line chars
+   if(chr >= ' ') ++uoffset;                                    // count only printable chars
+   continue;
+  }                                                             // else - unicode bytes
+  if((static_cast<unsigned char>(chr) & 0xFC) == 0xD8)          // high surrogate, must be followed
+   { ptr += 3; ++uoffset; continue; }                           // by a low surrogate pair
+  while((static_cast<unsigned char>(chr) & 0xC0) != 0x80)       // otherwise process unicode per
+   { ++ptr; chr <<= 1; }                                        // number of bytes
+  ++uoffset;
+ }
+ s.resize(ts);
+ s += sfx;
+}
+
+
+
+size_t Debug::DbgStream::DbgStringBuf::utf8_trim_front_(std::string &s, size_t tw) {
+ // trim input string's front by term width and add ellipsis if trimming occurs
+ // this logic assumes that utf8 encoding is not broken!
+ if(s.empty()) return 0;
+ static const char pfx[] = "...";
+ char * ptr = &s.back();
+ size_t ts{0}, uoffset{0};                                      // trim size, offset in utf8 chars
+ for(; uoffset < tw; --ptr) {
+  char chr = *ptr;
+  if(ptr == &s.front()) return uoffset + 1;                     // does not require trimming
+  if(uoffset == tw - sizeof(pfx)) ts = &s.back() - ptr;         // possibly a trimming point
+  if(chr >= 0) {                                                // non-unicode char
+   if(chr == '\t' ) *ptr = chr = ' ';                           // tabs shouldn't be in debugs
+   if(chr == '\r' or chr == '\n') *ptr = chr = '|';             // intermediate new line chars
+   if(chr >= ' ') ++uoffset;                                    // count only printable chars
+   continue;
+  }                                                             // else - unicode bytes
+  if((static_cast<unsigned char>(chr) & 0xC0) == 0x80) continue;// unicode trailing byte
+  if((static_cast<unsigned char>(chr) & 0xFC) == 0xDC) ptr -= 2;// preceded by high surrogate
+  ++uoffset;
+ }
+ while((static_cast<unsigned char>(s[s.size() - ts]) & 0xC0) == 0x80) --ts;
+ s.erase(0, s.size() - ts);
+ s = pfx + s;
+ return tw - 1;
+}
 
 
 
@@ -630,26 +854,39 @@ bool Debug::match_(const char *fn) {
  *  o for effectuating this debug, a flag -DBG_FLOW to be passed upon compiling
  *  o this debug utilizes alt_prefix, so it's best to redefine a default value (which is " ")
  */
+
+
 class __Dbg_flow__ {
  public:
-                        __Dbg_flow__(const Debug & dbg, std::string pmt): dbg_(dbg), dpmt_(pmt) {
-                         if(dbg_(ind, nullptr))
-                          dbg_.dout() << dpmt_ << "entered -->Fn" << std::endl;
-                         ++ind;
+                        __Dbg_flow__(const Debug & dbg, const char * fnc): dbg_(dbg), dfnc_(fnc) {
+                         if(dbg_(__Dbg_flow__::ind_, nullptr)) {
+                          ULOCK(dbg_.mutex());
+                          dbg_.dout() << dbg_.prompt(dfnc_, __Dbg_flow__::ind_ + 1,
+                                                     dbg_.stamped(), Debug::Indention::Alternative)
+                                      << "-->Fn entered"
+                                      << std::endl;
+                         }
+                         ++__Dbg_flow__::ind_;
                         }
                        ~__Dbg_flow__(void) {
-                         --ind;
-                         if(dbg_(ind, nullptr))
-                          dbg_.dout() << dpmt_ << "left Fn-->" << std::endl;
+                         --__Dbg_flow__::ind_;
+                         if(dbg_(__Dbg_flow__::ind_, nullptr)) {
+                          ULOCK(dbg_.mutex());
+                          dbg_.dout() << dbg_.prompt(dfnc_, __Dbg_flow__::ind_ + 1,
+                                                     dbg_.stamped(), Debug::Indention::Alternative)
+                                      << "left Fn-->"
+                                      << std::endl;
+                         }
                         }
-    static size_t       ind;
 
  protected:
     const Debug &       dbg_;                                   // debug reference
-    std::string         dpmt_;                                  // debug prompt
+    const char *        dfnc_;                                  // debug function
+
+    static size_t       ind_;
 };
 
-size_t __Dbg_flow__::ind{0};                                    // debug's indent
+size_t __Dbg_flow__::ind_{0};                                   // debug's indent
 
 
 
