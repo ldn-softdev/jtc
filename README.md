@@ -35,56 +35,56 @@ remove, copy, move, compare, transform, swap around and many other operations).
      * [compare `jtc` based solutions with *jq*'s](https://github.com/ldn-softdev/jtc#compare-jtc-based-solutions-with-jqs)
 
 ## Short description
-\- `jtc` is simple but efficient cli utility tool to manipulate JSON data
+\- `jtc` is a simple yet very powerful and efficient cli utility tool to process and manipulate JSON data
 
 `jtc` offers following features (a short list of main features):
-  - simple user interface allowing applying a bulk of changes in a single or chained sets of commands 
-  - featured _walk-path_ interface lets extracting any combination of data from source JSON
+  - simple user interface allowing applying a _bulk of changes_ in a single or chained sets of commands 
+  - featured _walk-path_ interface lets extracting any combination of data from sourced JSONs
   - extracted data is representable either as found, or could be encapsulated in JSON array/object or transfored using _templates_
   - support _Regular Expressions_ when searching source JSON (various _RE grammars_ supported)
-  - fast and efficient processing of very large JSON files (built-in search cache)
+  - fast and efficient processing of very large JSON files (various built-in search caches)
   - insert/update operations optionally may undergo _shell cli_ evaluation
   - support in-place modifications of the input/source JSON file
-  - features namespaces, interpolation from namespaces in templates 
-  - supports _buffered_ and _streamed_ modes of input reads
+  - features _namespaces_, interpolation from namespaces in templates
+  - supports _buffered_ and _streamed_ modes of input read
+  - sports _concurent_ input JSON reading/parsing (on multi-core CPU)
   - written entirely in _C++14_, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-The _walk-path_ feature is easy to understand - it's only made of 2 types of lexemes:
+The _walk-path_ feature is easy to understand - it's only made of 2 kinds of lexemes:
   - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards and **upwards (!)**
   - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively); search lexemes facilitate various match criteria defined by an optional suffix and/or quantifier.
 
-Both types of lexemes cab be _iterable_ - **subscripts** let iterating over children of currently addressed JSON iterables
+Both kinds of lexemes cab be _iterable_ - **subscripts** let iterating over children of currently addressed JSON iterables
 nodes (arrays/objects), while iterable **search lexemes** let iterating over all matches for a given search criteria.
 A _walk-path_ may have an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 ## Compilation and installation options
-### Linux and MacOS precompiled binaries are available for download
-
 For compiling, **`c++14`** (or later) is required. To compile under different platforms:
   - MacOS/BSD: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
-  - Linux: `c++ -o jtc -Wall -std=gnu++14 -static -Ofast jtc.cpp`
-  - Debian: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
+  - Linux:
+    - non-relocatable (_dynamically_ linked) image:
+    `c++ -o jtc -Wall -std=gnu++14 -Ofast -pthread -lpthread jtc.cpp`
+    - relocatable (_statically_ linked) image: 
+    `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
+  - Debian: `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
-*pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable -
-there's no performance gain from doing so*
+> pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
 
+### Linux and MacOS precompiled binaries are available for download
 or download the latest **precompiled binary**:
-- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.75d/jtc-macos-64.v1.75d)
-- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75d/jtc-linux-64.v1.75d)
-- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.75d/jtc-linux-32.v1.75d)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-macos-64.v1.76)
+- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-64.v1.76)
+- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-32.v1.76)
 
 ### Installing via MacPorts
-
 On MacOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
-
 ``` ShellSession
 $ sudo port selfupdate
 $ sudo port install jtc
 ```
-
 ### Installation on Linux distributions
 `jtc` is packaged in the following Linux distributions and can be installed via the package manager.
 - **Fedora**: `jtc` is present in Fedora 31 and later:
@@ -99,7 +99,6 @@ or on Leap 15.0 and later by adding the
 [utilities](https://build.opensuse.org/project/show/utilities) repository and installing `jtc` via zypper.
 
 ### Compile and install instructions:
-
 download [`jtc-master.zip`](https://github.com/ldn-softdev/jtc/archive/master.zip),
 unzip it, descend into unzipped folder, compile using an appropriate command, move compiled file into an install location.
 
