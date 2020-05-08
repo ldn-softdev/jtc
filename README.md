@@ -13,7 +13,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [Installing via MacPorts](https://github.com/ldn-softdev/jtc#installing-via-macports)
     * [Installation on Linux distributions](https://github.com/ldn-softdev/jtc#installation-on-linux-distributions)
     * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
-    * [Release Notes](https://github.com/ldn-softdev/jtc/blob/master/Release%20Notes.md)
+    * [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
 2. [Quick-start guide](https://github.com/ldn-softdev/jtc#quick-start-guide)
     * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing---list-all-urls)
