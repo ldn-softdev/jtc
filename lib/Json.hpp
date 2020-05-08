@@ -566,8 +566,6 @@
 #define ITRP_PJSN "$PATH"                                       // token for JSON path interp.
 #define ITRP_PSTR "$path"                                       // token for stringified path
 
-#define DBG_WDTH 100                                            // default term width for debug
-
 
 
 
@@ -2564,7 +2562,7 @@ class Json {
         size_t              walk_uid(void) const { return wuid_; }
         size_t              walk_size(void) const { return ws_.size(); }
         bool                reinterpret_label(void) const
-                             { return lwsi_ != SIZE_T(-1) and
+                             { return lwsi_ < ws_.size() and
                                       ws_[lwsi_].jsearch == Jsearch::key_of_json and
                                       ws_[lwsi_].stripped.front().empty(); }
         signed_size_t       counter(size_t position) const {
@@ -4028,6 +4026,7 @@ Json::signed_size_t Json::iterator::walk_(void) {
   // else - continue, the domain is locked by now, pv is restored
   jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;
  }
+ if(lwsi_ >= ws_.size()) lwsi_ = ws_.size() - 1;
                                                                 // successfully walked ws
  DBG(json(), 2) { DOUT(json()) << "finished walking with "; show_built_pv_(DOUT(json())); }
  sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
@@ -5362,7 +5361,6 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 #undef ITRP_PSTR
 #undef GET_DLM_
 
-#undef DBG_WDTH
 
 #undef THROW_EXP
 #undef __THROW_EXP_1_ARG__

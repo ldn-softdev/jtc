@@ -394,7 +394,6 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
  if(ssp_->nf_idx_ >= ssp_->fn_.size()) return *this;            // no more files to read from
                                                                 // read in next file then
  pos_ = 0;
- //ssp_->buf_.clear();
  ssp_->ss_init_(*this);
  return *this;
 }

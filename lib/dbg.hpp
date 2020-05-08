@@ -787,10 +787,10 @@ void Debug::DbgStream::DbgStringBuf::utf8_trim_back_(std::string &s, size_t tw) 
  char * ptr = &s.front();
  size_t ts{0};                                                  // trim size
  for(size_t uoffset = 0; uoffset < tw; ++ptr) {
-  char chr = *ptr;
+  unsigned char chr = *ptr;
   if(chr == '\0') return;                                       // does not require trimming
   if(uoffset == tw - sizeof(sfx)) ts = ptr - &s.front();        // possibly a trimming point
-  if(chr > 0) {                                                // non-unicode char
+  if(chr > 0 and chr < 128) {                                   // non-unicode char
    if(chr == '\t' ) *ptr = chr = ' ';                           // tabs shouldn't be in debugs
    if(chr == '\r' or chr == '\n') *ptr = chr = '|';             // intermediate new line chars
    if(chr >= ' ') ++uoffset;                                    // count only printable chars
