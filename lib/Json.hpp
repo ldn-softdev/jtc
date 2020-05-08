@@ -3519,9 +3519,9 @@ std::string Json::extract_lexeme_(std::string::const_iterator &si, char closing)
  // search lexemes w/o suffix: <>, <text<\>>
  auto begin = si;
  while(*si != closing) {                                        // advance till closing bracket
+  if(*si == CHR_QUOT) ++si;                                     // si -> "\...
   if(*si == CHR_NULL)
    throw EXP(Jnode::ThrowReason::walk_lexeme_missing_closure);
-  if(*si == CHR_QUOT) ++si;                                     // si -> "\...
   ++si;
  }
 
