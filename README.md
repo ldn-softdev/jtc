@@ -38,27 +38,31 @@ remove, copy, move, compare, transform, swap around and many other operations).
 \- `jtc` is a simple yet very powerful and efficient cli utility tool to process and manipulate JSON data
 
 `jtc` offers following features (a short list of main features):
-  - simple user interface allowing applying a _bulk of changes_ in a single or chained sets of commands 
-  - featured _walk-path_ interface lets extracting any combination of data from sourced JSONs
-  - extracted data is representable either as found, or could be encapsulated in JSON array/object or transfored using _templates_
-  - support _Regular Expressions_ when searching source JSON (various _RE grammars_ supported)
-  - fast and efficient processing of very large JSON files (various built-in search caches)
-  - insert/update operations optionally may undergo _shell cli_ evaluation
-  - support in-place modifications of the input/source JSON file
-  - features _namespaces_, interpolation from namespaces in templates
-  - supports _buffered_ and _streamed_ modes of input read
-  - sports _concurent_ input JSON reading/parsing (on multi-core CPU)
-  - written entirely in _C++14_, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
+  - simple user interface allowing applying a **_bulk of changes_** in a single or chained sets of commands 
+  - featured **_walk-path_** interface lets extracting any combination of data from sourced JSON trees
+  - extracted data is representable either as found, or could be encapsulated in JSON array/object or transfored using **_templates_**
+  - support **_Regular Expressions_** when searching source JSON
+  - fast and efficient processing of very large JSON files (**_various built-in search caches_**)
+  - insert/update operations optionally may undergo **_shell cli evaluation_**
+  - support **_in-place modifications_** of the input/source JSON file
+  - features **_namespaces_**, facilitating interpolation of preserved JSON values in templates
+  - supports **_buffered_** and **_streamed_** modes of input read
+  - sports **_concurent_** input JSON reading/parsing (on multi-core CPU)
+  - written entirely in **_C++14_**, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
 The _walk-path_ feature is easy to understand - it's only made of 2 kinds of lexemes:
-  - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards and **upwards (!)**
-  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive search respectively); search lexemes facilitate various match criteria defined by an optional suffix and/or quantifier.
+  - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards (towards the leaves) and 
+  **upwards** (towards the root)
+  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive searches respectively); search lexemes
+  facilitate various match criteria defined by an optional suffix and/or quantifier
 
-Both kinds of lexemes cab be _iterable_ - **subscripts** let iterating over children of currently addressed JSON iterables
-nodes (arrays/objects), while iterable **search lexemes** let iterating over all matches for a given search criteria.
-A _walk-path_ may have an arbitrary number of lexemes, while the tool accepts a virtually unlimited number of walk
+Both kinds of lexemes cab be _iterable_:
+  - iterable **subscripts** let iterating over children of currently addressed JSON iterables nodes (arrays/objects), 
+  - while iterable **search lexemes** let iterating over all (recursive) matches for a given search criteria
+
+A _walk-path_ may have an arbitrary number of lexemes -the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 ## Compilation and installation options
@@ -66,9 +70,9 @@ For compiling, **`c++14`** (or later) is required. To compile under different pl
   - MacOS/BSD: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
   - Linux:
     - non-relocatable (_dynamically_ linked) image:
-    `c++ -o jtc -Wall -std=gnu++14 -Ofast -pthread -lpthread jtc.cpp`
+      - `c++ -o jtc -Wall -std=gnu++14 -Ofast -pthread -lpthread jtc.cpp`
     - relocatable (_statically_ linked) image: 
-    `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
+      - `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
   - Debian: `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
 > pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
@@ -79,19 +83,20 @@ or download the latest **precompiled binary**:
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-64.v1.76)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-32.v1.76)
 
-### Installing via MacPorts
+### Packaged installations:
+#### Installing via MacPorts
 On MacOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
 ``` ShellSession
 $ sudo port selfupdate
 $ sudo port install jtc
 ```
-### Installation on Linux distributions
+#### Installation on Linux distributions
 `jtc` is packaged in the following Linux distributions and can be installed via the package manager.
-- **Fedora**: `jtc` is present in Fedora 31 and later:
+  - **Fedora**: `jtc` is present in Fedora 31 and later:
 ``` ShellSession
 $ dnf install jtc
 ```
-- **openSUSE**: `jtc` can be installed on openSUSE Tumbleweed via `zypper`:
+  - **openSUSE**: `jtc` can be installed on openSUSE Tumbleweed via `zypper`:
 ``` ShellSession
 $ zypper in jtc
 ```
@@ -156,7 +161,6 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 ```
 
-
 ### 1. let's start with a simple thing - list all URLs:
 ```bash
 bash $ jtc -w'<url>l:' Bookmarks
@@ -166,15 +170,10 @@ bash $ jtc -w'<url>l:' Bookmarks
 "https://stackoverflow.com/"
 "https://en.cppreference.com/"
 ```
-The **_walk-path_** (an argument of `-w`) is a combination of lexemes. There are only 2 types of lexemes:
-1. subscript lexemes -  enclosed in `[..]`
-2. search lexemes - enclosed in `<..>` for a _recursive_, or in `>..<` for a _non-recursive_ type of search
-\- the walk-paths may contain any number of lexemes, optionally separated with space(s)
-
-let's take a look at the walk-path `<url>l:`:
+Let's take a look at the walk-path **`<url>l:`**:
 - search lexemes are enclosed in angular brackets `<`, `>` - that style provides a **recursive search** throughout JSON 
-- suffix `l` instructs to search among **labels** only
-- quantifier `:` instructs to find **all occurrences**, such quantifiers makes a path *iterable*
+- suffix **`l`** instructs to search among **labels** only
+- quantifier **`:`** instructs to find **all occurrences**, such quantifiers makes a path *iterable*
 
 
 ### 2. dump all bookmark names from the `Work` folder:
@@ -183,22 +182,23 @@ bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-here the walk-path `<Work>[-1][children][:][name]` is made of following lexemes:
+Here the walk-path **`<Work>[-1][children][:][name]`** is made of following lexemes:
 
-a. `<Work>`: find within a JSON tree the **first** occurrence where the **JSON string** value is matching `"Work"` exactly  
-b. `[-1]`: **step up** one tier in the JSON tree structure (i.e., address an immediate parent of the found JSON element)  
-c. `[children]`: **select/address** a node whose label is `"children"` (it'll be a JSON array, at the same tier with `Work`)  
-d. `[:]`: select **each node** in the array  
-e. `[name]`: select/address a node whose label is `"name"` 
+a. **`<Work>`**: find within a JSON tree the **first** occurrence where the **JSON string** value is matching **`"Work"`** exactly  
+b. **`[-1]`**: **step up** one tier in the JSON tree structure (i.e., address an immediate parent of the found JSON element)  
+c. **`[children]`**: **select/address** a node whose label is **`"children"`** (it'll be a JSON array, at the same tier with `Work`)  
+d. **`[:]`**: select **each node** in the array 
+e. **`[name]`**: select/address a node with the label **`"name"`** 
 
 
-in order to understand better how the walk-path works, let's run a series of cli in a slow-motion, gradually adding lexemes
+in order to understand better how the walk-path works, let's run that series of cli in a slow-motion, gradually adding lexemes
 to the path one by one, perhaps with the option `-l` to see also the labels (if any) of the selected elements:
 
 ```bash
 bash $ jtc -w'<Work>' -l Bookmarks
 "name": "Work"
 ```
+
 ```bash
 bash $ jtc -w'<Work>[-1]' -l Bookmarks
 {
@@ -218,6 +218,7 @@ bash $ jtc -w'<Work>[-1]' -l Bookmarks
    "stamp": "2018-03-06, 12:07:29"
 }
 ```
+
 ```bash
 bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
 "children": [
@@ -233,6 +234,7 @@ bash $ jtc -w'<Work>[-1][children]' -l Bookmarks
    }
 ]
 ```
+
 ```bash
 bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
 {
@@ -246,6 +248,7 @@ bash $ jtc -w'<Work>[-1][children][:]' -l Bookmarks
    "url": "https://en.cppreference.com/"
 }
 ```
+
 ```bash
 bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 "name": "Stack Overflow"
@@ -262,11 +265,11 @@ bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "Stack Overflow"
 "C++ reference"
 ```
-this walk-path `<url>l:[-1][name]`:
+this walk-path **`<url>l:[-1][name]`**:
 
- - finds recursively (encasement `<`, `>`) each (`:`) JSON element with a label (`l`) matching `url`
- - then for an each found JSON element, select its parent (`[-1]`)
- - then, select a JSON element with the label `"name"` (encasement `[`, `]`)
+ - finds recursively (encasement *`<`*, *`>`*) each (*`:`*) JSON element with a label (*`l`*) matching **`url`**
+ - then for an each found JSON element, select its parent (**`[-1]`**)
+ - then, select a JSON (sub)element with the label **`"name"`**
 
 
 ### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
@@ -297,9 +300,9 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 ```
 
 - yes, multiple walks (`-w`) are allowed
-- option `-j` will wrap the walked outputs into a JSON array, but not just,
-- option `-l` used together with `-j` will ensure relevant walks are grouped together (try without `-l`)
-- if multiple walks (`-w`) are present, by default, walked results will be printed interleaved
+- option **`-j`** will wrap the walked outputs into a JSON array, but not just,
+- option **`-l`** used together with `-j` will ensure relevant walks are grouped together (try without `-l`)
+- if multiple walks (**`-w`**) are present, by default, walked results will be printed interleaved (if it can be interleaved)
 
 
 ### 5. Subscripts (offsets) and Searches explained
@@ -318,12 +321,13 @@ In short:
     - there're also optional quantifiers to search lexemes (must take the last position in the search lexeme, after the suffix
     if one present) - let selecting match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`;
     if no quantifier present `0` is assumed - first match)
-- a subscript lexeme could be grouped with a search lexeme over ':' to facilitate a **_scoped search_**, e.g.: `[id]:<value>` is a single
-   lexeme which will match recursively the first occurrence of the string `"value"` with the label `"id"` - i.e., `"id": "value"`
+- a subscript lexeme could be grouped with a search lexeme over **':'** to facilitate a **_scoped search_**, e.g.:
+`[id]:<value>` is a single lexeme which will match recursively the first occurrence of the string **`"value"`**
+with the label **`"id"`** - i.e., `"id": "value"`
 - Directives: there are a few suffixes which turn a search lexeme into a directive:
     - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
-    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation
-    - couple directives (`<>f` and `<>F`) facilitate also walk branching
+    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation, etc
+    - couple directives (`<>f` and `<>F`) facilitate also walk branching, jumping walks and walk reiterations
 
 Refer to 
 [`jtc` User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
