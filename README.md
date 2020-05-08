@@ -75,7 +75,13 @@ For compiling, **`c++14`** (or later) is required. To compile under different pl
       - `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
   - Debian: `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
-> pass `-DNDEBUG` flag if you like to compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
+Following debugs could be passed to jtc when compiling:
+- `-DNDEBUG`: compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
+- `-DNDBG_PARSER`: disable debugs coming from parsing JSON (handy when deep debugging huge JSONs and want to skip parsing debugs) 
+- `-DBG_FLOW`: all debuggable function/method calls will disply an entry and exit points
+- `-DBG_mTS`, `-DBG_uTS`: display absolute time-stamps in the debug: with millisecond accurasy and with microsecond accurasy respectively
+- `-DBG_dTS`: used with either of 2 previous flags: makes time-stamp to display delta (since last debug message) instead of absolute stamp
+- `-DBG_CC`: every call to a copy-constructor in `Jnode` class will reveal itself (handy for optimization debugging)
 
 ### Linux and MacOS precompiled binaries are available for download
 or download the latest **precompiled binary**:
