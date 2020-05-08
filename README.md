@@ -187,7 +187,7 @@ Here the walk-path **`<Work>[-1][children][:][name]`** is made of following lexe
 a. **`<Work>`**: find within a JSON tree the **first** occurrence where the **JSON string** value is matching **`"Work"`** exactly  
 b. **`[-1]`**: **step up** one tier in the JSON tree structure (i.e., address an immediate parent of the found JSON element)  
 c. **`[children]`**: **select/address** a node whose label is **`"children"`** (it'll be a JSON array, at the same tier with `Work`)  
-d. **`[:]`**: select **each node** in the array 
+d. **`[:]`**: select **each node** in the array  
 e. **`[name]`**: select/address a node with the label **`"name"`** 
 
 
