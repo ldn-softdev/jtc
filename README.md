@@ -75,7 +75,7 @@ For compiling, **`c++14`** (or later) is required. To compile under different pl
       - `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
   - Debian: `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
-Following debug related flags could be passed to jtc when compiling:
+Following debug related flags could be passed to `jtc` when compiling:
 - `-DNDEBUG`: compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
 - `-DNDBG_PARSER`: disable debugs coming from parsing JSON (handy when deep debugging huge JSONs and want to skip parsing debugs) 
 - `-DBG_FLOW`: all debuggable function/method calls will disply an entry and exit points
