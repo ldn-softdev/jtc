@@ -660,7 +660,7 @@ class Jtc {
     bool                size_only_{opt()[CHR(OPT_SZE)].hits() > 1}; // facilitate -zz
     bool                use_hpfx_{opt().imposed(USE_HPFX)};         // facilitate '$?' or -x0/-1
     ofstream            fout_                                       // open file handler if needed
-                         {write_to_file_? cr_.iss().filename().c_str(): nullptr, Jtc::mod_};
+                         {write_to_file_? cr_.iss().filename().c_str(): "", Jtc::mod_};
     ostream &           xout_{write_to_file_? fout_: cout};         // demux cout/file outputs
 
     static ios_base::openmode
