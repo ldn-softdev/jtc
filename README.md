@@ -652,8 +652,8 @@ _Parsing result_ | `[ {}, [], "bar", "foo", 0, 0, 123, true, false, null ]` | `p
 
 ### performance:
  - **jq** is a single-threaded process
- - `jtc` employs _concurent_ (multi-threaded) reading/parsing when multiple files given (advantage could be observed on multi-core CPU,
- though it become noticeable only with relatively big JSONs or with relatively big number of files processed)
+ - `jtc` engages a _concurent_ (multi-threaded) reading/parsing when multiple files given (the advantage could be observed on multi-core
+ CPU, though it become noticeable only with relatively big JSONs or with relatively big number of files processed)
 
 Comparison of single-threaded performance:
 here's a 4+ million node JSON file [standard.json](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
