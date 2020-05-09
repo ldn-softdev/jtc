@@ -12,7 +12,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc#linux-and-macos-precompiled-binaries-are-available-for-download)
     * [Installing via MacPorts](https://github.com/ldn-softdev/jtc#installing-via-macports)
     * [Installation on Linux distributions](https://github.com/ldn-softdev/jtc#installation-on-linux-distributions)
-    * [Manual installation](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
+    * [Manual installation](https://github.com/ldn-softdev/jtc#manual-installation)
     * [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
 2. [Quick-start guide](https://github.com/ldn-softdev/jtc#quick-start-guide)
@@ -20,7 +20,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [dump all bookmark names](https://github.com/ldn-softdev/jtc#2-dump-all-bookmark-names-from-the-work-folder)
     * [dump all URL's names](https://github.com/ldn-softdev/jtc#3-dump-all-urls-names)
     * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json-array)
-    * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#6-debugging-and-validating-json)
+    * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#5-debugging-and-validating-json)
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
 5. [`jtc` vs **jq**](https://github.com/ldn-softdev/jtc#jtc-vs-jq)
