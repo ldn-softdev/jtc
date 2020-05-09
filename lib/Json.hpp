@@ -1561,8 +1561,12 @@ std::ostream & Jnode::print_json_(std::ostream & os, const Jnode & me, signed_si
         return os << my.val();
   case Jtype::String:
         return os << JSN_STRQ << my.str() << JSN_STRQ;
-  default:
-        throw me.EXP(ThrowReason::walk_a_bug);                  // case Neither
+  default:                                                      // case Neither
+        #ifdef BG_CC
+         return os;
+        #else
+         throw me.EXP(ThrowReason::walk_a_bug);
+        #endif
  }
  return print_iterables_(os, my, rl);
 }
