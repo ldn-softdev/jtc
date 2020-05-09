@@ -19,7 +19,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [list all URLs](https://github.com/ldn-softdev/jtc#1-lets-start-with-a-simple-thing---list-all-urls)
     * [dump all bookmark names](https://github.com/ldn-softdev/jtc#2-dump-all-bookmark-names-from-the-work-folder)
     * [dump all URL's names](https://github.com/ldn-softdev/jtc#3-dump-all-urls-names)
-    * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
+    * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json-array)
     * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#6-debugging-and-validating-json)
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
