@@ -12,7 +12,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [Linux and MacOS precompiled binaries](https://github.com/ldn-softdev/jtc#linux-and-macos-precompiled-binaries-are-available-for-download)
     * [Installing via MacPorts](https://github.com/ldn-softdev/jtc#installing-via-macports)
     * [Installation on Linux distributions](https://github.com/ldn-softdev/jtc#installation-on-linux-distributions)
-    * [Compile and install instructions](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
+    * [Manual installation](https://github.com/ldn-softdev/jtc#compile-and-install-instructions)
     * [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
 2. [Quick-start guide](https://github.com/ldn-softdev/jtc#quick-start-guide)
@@ -20,7 +20,6 @@ remove, copy, move, compare, transform, swap around and many other operations).
     * [dump all bookmark names](https://github.com/ldn-softdev/jtc#2-dump-all-bookmark-names-from-the-work-folder)
     * [dump all URL's names](https://github.com/ldn-softdev/jtc#3-dump-all-urls-names)
     * [dump all the URLs and corresponding names](https://github.com/ldn-softdev/jtc#4-dump-all-the-urls-and-their-corresponding-names-preferably-wrap-found-pairs-in-json)
-    * [Subscripts (offsets) and Searches explained](https://github.com/ldn-softdev/jtc#5-subscripts-offsets-and-searches-explained)
     * [Debugging and validating JSON](https://github.com/ldn-softdev/jtc#6-debugability--json-validation)
 3. [Complete User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md)
 4. [Class usage and c++14 interface](https://github.com/ldn-softdev/jtc#a-tiny-example-of-class-usage-and-its-interface-c14)
@@ -37,7 +36,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
 ## Short description
 \- `jtc` is a simple yet very powerful and efficient cli utility tool to process and manipulate JSON data
 
-`jtc` offers following features (a short list of main features):
+**`jtc` offers following features (a short list of main features)**:
   - simple user interface allowing applying a **_bulk of changes_** in a single or chained sets of commands 
   - featured **_walk-path_** interface lets extracting any combination of data from sourced JSON trees
   - extracted data is representable either as found, or could be encapsulated in JSON array/object or transfored using **_templates_**
@@ -52,28 +51,33 @@ remove, copy, move, compare, transform, swap around and many other operations).
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
 
-The _walk-path_ feature is easy to understand - it's only made of 2 kinds of lexemes:
-  - subscripts - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards (towards the leaves) and 
+The _walk-path_ feature is easy to understand - it's only made of 2 kinds of lexemes traversing JSON tree,
+which could be mixed up in any order:
+  - **_subscripts_** - enclosed into `[`, `]`, subscripts let traversing JSON tree downwards (towards the leaves) and 
   **upwards** (towards the root)
-  - search lexemes - encased as `<..>` or `>..<` (for a recursive and non-recursive searches respectively); search lexemes
+  - **_search lexemes_** - encased as `<..>` or `>..<` (for a recursive and non-recursive searches respectively); search lexemes
   facilitate various match criteria defined by an optional suffix and/or quantifier
+>There's also a 3rd kind of lexemes - **_directives_**: they typically facilitate other functions like working with _namespaces_,
+controlling walk-path execution, etc; _directives_ are syntactically similar to the _search lexemes_    
 
-Both kinds of lexemes cab be _iterable_:
-  - iterable **subscripts** let iterating over children of currently addressed JSON iterables nodes (arrays/objects), 
-  - while iterable **search lexemes** let iterating over all (recursive) matches for a given search criteria
+All lexemes cab be _iterable_:
+  - iterable **_subscripts_** let iterating over children of currently addressed JSON iterables nodes (arrays/objects), 
+  - while iterable **_search lexemes_** let iterating over all (recursive) matches for a given search criteria
 
 A _walk-path_ may have an arbitrary number of lexemes -the tool accepts a virtually unlimited number of walk
 paths. See below more detailed explanation with examples
 
 ## Compilation and installation options
 For compiling, **`c++14`** (or later) is required. To compile under different platforms:
-  - MacOS/BSD: `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
-  - Linux:
+  - **MacOS/BSD**:
+    - `c++ -o jtc -Wall -std=c++14 -Ofast jtc.cpp`
+  - **Linux**:
     - non-relocatable (_dynamically_ linked) image:
       - `c++ -o jtc -Wall -std=gnu++14 -Ofast -pthread -lpthread jtc.cpp`
     - relocatable (_statically_ linked) image: 
       - `c++ -o jtc -Wall -std=gnu++14 -Ofast -static -Wl,--whole-archive -lrt -pthread -lpthread -Wl,--no-whole-archive jtc.cpp`
-  - Debian: `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
+  - **Debian**:
+    - `c++ -o jtc -Wall -std=c++14 -pthread -lpthread -Ofast jtc.cpp` (ensure `c++` poits to `clang++-6.0` or above)
 
 Following debug related flags could be passed to `jtc` when compiling:
 - `-DNDEBUG`: compile w/o debugs, however it's unadvisable - there's no performance gain from doing so
@@ -83,20 +87,20 @@ Following debug related flags could be passed to `jtc` when compiling:
 - `-DBG_dTS`: used with either of 2 previous flags: makes time-stamp to display delta (since last debug message) instead of absolute stamp
 - `-DBG_CC`: every call to a copy-constructor in `Jnode` class will reveal itself (handy for optimization debugging)
 
-### Linux and MacOS precompiled binaries are available for download
+#### Linux and MacOS precompiled binaries are available for download
 or download the latest **precompiled binary**:
 - _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-macos-64.v1.76)
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-64.v1.76)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-32.v1.76)
 
-### Packaged installations:
-#### Installing via MacPorts
+#### Packaged installations:
+##### Installing via MacPorts
 On MacOS, you can install `jtc` via the [MacPorts](https://macports.org) package manager:
 ``` ShellSession
 $ sudo port selfupdate
 $ sudo port install jtc
 ```
-#### Installation on Linux distributions
+##### Installation on Linux distributions
 `jtc` is packaged in the following Linux distributions and can be installed via the package manager.
   - **Fedora**: `jtc` is present in Fedora 31 and later:
 ``` ShellSession
@@ -109,7 +113,7 @@ $ zypper in jtc
 or on Leap 15.0 and later by adding the
 [utilities](https://build.opensuse.org/project/show/utilities) repository and installing `jtc` via zypper.
 
-### Compile and install instructions:
+#### Manual installation:
 download [`jtc-master.zip`](https://github.com/ldn-softdev/jtc/archive/master.zip),
 unzip it, descend into unzipped folder, compile using an appropriate command, move compiled file into an install location.
 
@@ -167,7 +171,7 @@ Consider a following JSON (a mockup of a bookmark container), stored in a file `
 
 ```
 
-### 1. let's start with a simple thing - list all URLs:
+#### 1. let's start with a simple thing - list all URLs:
 ```bash
 bash $ jtc -w'<url>l:' Bookmarks
 "https://www.nytimes.com/"
@@ -182,7 +186,7 @@ Let's take a look at the walk-path **`<url>l:`**:
 - quantifier **`:`** instructs to find **all occurrences**, such quantifiers makes a path *iterable*
 
 
-### 2. dump all bookmark names from the `Work` folder:
+#### 2. dump all bookmark names from the `Work` folder:
 ```bash
 bash $ jtc -w'<Work>[-1][children][:][name]' Bookmarks
 "Stack Overflow"
@@ -260,9 +264,10 @@ bash $ jtc -w'<Work>[-1][children][:][name]' -l Bookmarks
 "name": "Stack Overflow"
 "name": "C++ reference"
 ```
+> B.t.w., a better (a bit faster and more efficient) walk-path achieving the same query would be this:  
+>  - `jtc -w'<Work>[-1][children]<name>l:' Bookmarks`
 
-
-### 3. dump all URL's names:
+#### 3. dump all URL's names:
 ```bash
 bash $ jtc -w'<url>l:[-1][name]' Bookmarks
 "The New York Times"
@@ -278,7 +283,7 @@ this walk-path **`<url>l:[-1][name]`**:
  - then, select a JSON (sub)element with the label **`"name"`**
 
 
-### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON:
+#### 4. dump all the URLs and their corresponding names, preferably wrap found pairs in JSON array:
 ```bash
 bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 [
@@ -310,36 +315,11 @@ bash $ jtc -w'<url>l:' -w'<url>l:[-1][name]' -jl Bookmarks
 - option **`-l`** used together with `-j` will ensure relevant walks are grouped together (try without `-l`)
 - if multiple walks (**`-w`**) are present, by default, walked results will be printed interleaved (if it can be interleaved)
 
-
-### 5. Subscripts (offsets) and Searches explained
-In short:
-- Subscript lexemes (`[..]`) facilitate:
-    - addressing children (by index/label) in _JSON iterables_ (_arrays_ and _objects_) - i.e., traverse JSON structure downward
-    from the root (toward leaves), e.g.: `[2]`, `[id]` 
-    - addressing parents (immediate and distant) - i.e., traverse JSON structure **upwards**, toward the the root (from leaves),
-    e.g.:  `[-1]` (tier offset from the currently walked/found element), `[^2]` (tier offset from the root towards walked/found element)
-    - select ranges and slices of JSON elements in _JSON iterables_, e.g.: `[+2]`, `[:]`, `[:3]`, `[-2:]`, `[1:-1:2]` 
-- Search lexemes (`<..>`, `>..<`) facilitate:
-    - recursive (`<..>`) and non-recursive (`>..<`) matches
-    - there're optional one-letter suffixes that may follow the lexemes (e.g.: `<..>Q`) which define type of search: (REGEX) string 
-    search, (REGEX) label search, (REGEX) numerical, boolean, null, atomic, objects, arrays (or either), arbitrary JSONs, 
-    unique, duplicates, sorted match, etc.
-    - there're also optional quantifiers to search lexemes (must take the last position in the search lexeme, after the suffix
-    if one present) - let selecting match instance, or range of matches (e.g.: `<id>l3`- will match 4th (zero based) label `"id"`;
-    if no quantifier present `0` is assumed - first match)
-- a subscript lexeme could be grouped with a search lexeme over **':'** to facilitate a **_scoped search_**, e.g.:
-`[id]:<value>` is a single lexeme which will match recursively the first occurrence of the string **`"value"`**
-with the label **`"id"`** - i.e., `"id": "value"`
-- Directives: there are a few suffixes which turn a search lexeme into a directive:
-    - directives do not do any matching, instead they facilitate a certain action/operation with the currently walked JSON element,
-    like: memorize it in the _namespace_, or erase from it, or memorize its label, or perform a _shell cli_ evaluation, etc
-    - couple directives (`<>f` and `<>F`) facilitate also walk branching, jumping walks and walk reiterations
-
-Refer to 
+Refer to
 [`jtc` User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-json)
-for the detailed explanation of the subscripts, search lexemes and directives.
+for the detailed and complete explanation of the subscripts, search lexemes, directives and other `jtc` features.
 
-### 6. Debugability / JSON validation
+#### 5. Debugging and validating JSON
 `jtc` is extensively debuggable: the more times option `-d` is passed the more debugs will be produced.
 Enabling too many debugs might be overwhelming, though one specific case many would find extremely useful - when validating
 a failing JSON:
