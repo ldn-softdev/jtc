@@ -480,7 +480,7 @@ _Parsing result_ | `[ {}, [], "bar", "foo", 0, 0, 123, true, false, null ]` | `p
  - `jtc` engages a _concurrent_ (multi-threaded) reading/parsing when multiple files given (the advantage could be observed on multi-core
  CPU, though it become noticeable only with relatively big JSONs or with relatively big number of files processed)
 
-**Comparison of single-threaded performance:**  
+**_Comparison of single-threaded performance:_**  
 Here's a 4+ million node JSON file [standard.json](https://github.com/ldn-softdev/jtc/releases/download/standard.json/standard.json):
 ```
 bash $ time jtc -zz standard.json 
@@ -505,7 +505,7 @@ _**`updating JSON recursively by label:`**_ | _**`updating JSON recursively by l
 `user 12.715 sec` | `user 29.450 sec`
 
 
-**Comparison of `jtc` to `jtc` (single-threaded to multi-threaded parsing performance):**
+**_Comparison of `jtc` to `jtc` (single-threaded to multi-threaded parsing performance):_**
 ```bash
 bash $ unset TIMEFORMAT
 bash $ 
