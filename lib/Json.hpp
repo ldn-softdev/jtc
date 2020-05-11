@@ -5016,7 +5016,7 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
    { uct.insert( (*it)[2] ); sst.insert( to_lower((*it)[2]) ); }
  }
 
- DBG(jit.json(), 3) {                                           // debug print all found tokens
+ DBG(jit.json(), 4) {                                           // debug print all found tokens
   DOUT(jit.json()) << "found tokens: ";
   std::string dlm;
   for(const auto &t: sst) {

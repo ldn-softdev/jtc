@@ -1726,9 +1726,9 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
 
  DBG(4)
   DOUT() << (i < 0? "non-": "")  << "recusive call, type: " << ENUMS(Jtc::Jitsrc, jsrt_)
-         << ", walk src: " << idx() << ", walk/json: '"
+         << ", src walk/json[ " << idx() << " ]: " << Debug::btw
          << (jsrc_[idx()].is_neither()? jsrc_[idx()].val(): jsrc_[idx()].to_string(Jnode::Raw, 1))
-         << "'" << endl;
+         << endl;
 
  if(jits_.is_valid()) {                                         // if true, walk_size must be > 0
   if((++jits_).is_valid())                                      // end() not reached yet
@@ -1741,27 +1741,26 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
  // 1. init call,
  // 2. change source (reached end, i >= 0, walk_size here is always > 0)
  if(not is_multi_walk_ and i == SGNS_T(walk_options_start_idx_())) {    // single_walk, change src
-   DBG(4) DOUT() << "single-walk all sources have been walked, ending src advancing" << endl;
+  DBG(4) DOUT() << "single-walk all sources have been walked, ending src advancing" << endl;
   jits_ = Json::iterator{}; return false;                       // and loop => end of operations
  }
- // select type of source (json)
+ // select source (json)
  auto & srcj = jsrt_ == Src_input? json():
                jsrt_ == Src_mixed? (jsrc_[0].is_neither()? jtmp_[jtmp_.size()]: jsrc_[0]):
                 (jsrc_[idx()].is_neither()? jtmp_[jtmp_.size()]: jsrc_[idx()]);
-
  if(jits_.walk_size() == 0)                                     // merge upon jits_ initialization
   wns_[&jit].sync_out(srcj.ns(), map_jnse::NsOpType::NsReferAll);   // merge global ns to -u/i's ns
 
- jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str());
  // if src arg is a template then resolve:
  if(not jtmp_.empty() and &srcj == &jtmp_.rbegin()->VALUE) {
+  DBG(4) DOUT() << "interpolating template: " << jsrc_[jsrt_ == Src_mixed? 0: idx()].val() << endl;
   auto & jtmp = jtmp_.rbegin()->VALUE;
   jtmp = Json::interpolate(jsrc_[jsrt_ == Src_mixed? 0: idx()].val(),
-                                 jit, jits_.json().ns(), Json::ParseTrailing::Relaxed_no_trail);
+                                 jit, srcj.ns(), Json::ParseTrailing::Relaxed_no_trail);
   if(jtmp.is_neither())
    { cerr << "fail: template argument failed interpolation" << endl;  exit(RC_ARG_FAIL); }
  }
-
+ jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str());
 
  if(jits_.is_valid()) {                                         // jits_ resolved
   DBG(4) DOUT() << "next selected source idx: " << idx() << endl;
