@@ -194,7 +194,8 @@ class map_jnse: public Json::map_jne {
     #define NSOPT \
                 NsReferAll, /* reference all ns values - local and remote */\
                 NsMove,     /* move local ns values, reference remote entriess */\
-                NsMoveAll   /* move all ns values - local & remote  */
+                NsUpdate,   /* same as NsMove, but for non-existent (new) entries only*/\
+                NsMoveAll   /* move all ns values - local & remote */
     ENUM(NsOpType, NSOPT)
 
     void                sync_out(Json::map_jne &to, NsOpType nsopt);
@@ -216,7 +217,7 @@ void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
   return;
  }
 
- // else: either NsMove or NsMoveAll
+ // else: either NsMove
  for(auto &ns: *this) {                                         // for all entries in this map
   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
   if(ns.VALUE.is_remote() and nsopt == NsOpType::NsMove) {      // refer remote
@@ -244,15 +245,16 @@ void map_jnse::sync_in(Json::map_jne &from, NsOpType nsopt) {
   return;
  }
 
- // else: either NsMove or NsMoveAll
+ // else: either NsMove or NsMoveAll or NsUpdate
  for(auto &ns: from) {                                          // for all entries in from
   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
-  if(ns.VALUE.is_remote() and nsopt == NsOpType::NsMove) {      // refer remote
+  auto found = find(ns.KEY);
+  if(nsopt == NsOpType::NsUpdate and found != end()) continue;  // update only new records
+  if(ns.VALUE.is_remote() and nsopt != NsOpType::NsMoveAll) {   // refer remote (NsMove/NsUpdate)
    auto mp = emplace(ns.KEY, Json::JnEntry{});                  // mp: my pair
    mp.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
    continue;
   }
-  auto found = find(ns.KEY);
   if(found != end())                                            // local entry found
    found->VALUE = move(ns.VALUE.ref());                         // overwrite local entry
   else                                                          // no local entry exists
@@ -2627,6 +2629,7 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
   }
   auto & dwi = wpi.back();                                      // dwi: deque<Json::iterator>
   while(dwi.back() != dwi.back().end()) {                       // extend all iterators until end
+   //cerr << " extending interators" << endl;
    if(wns_.empty()) wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMoveAll);
    else wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMove);
    if(use_hpfx_) {
@@ -2637,11 +2640,14 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
    wns_[&dwi.back()].sync_out(json().clear_ns().ns(), map_jnse::NsReferAll);
    last_dwi_ptr_ = &dwi.back();
    dwi.push_back(dwi.back());                                   // make new copy (next instance)
-   ++dwi.back();                                                // json.ns now is partialNsMoveAll
+   ++dwi.back();                                                // json.ns now is partial
   }
   dwi.pop_back();                                               // remove last (->end()) iterator
  }
  hwlk_ = move(ARY{STR{}});                                      // reset hwlk_ to init value
+ // json.ns() may hold now the latest updated namespace while wns_ might not even have been
+ // updated (e.g. when walk has ended as <>F, or out of iterations), thus require syncing 
+ wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsOpType::NsUpdate);
 
  is_multi_walk_ = opt()[CHR(OPT_WLK)].hits() > 1 or             // i.e. -w.. -w.., else (one -w..)
                   wpi.size() > 1 or                             // wpi.size > 1, otherwise:

@@ -2701,14 +2701,14 @@ class Json {
         signed_size_t       next_iterable_ws_(signed_size_t wsi);
 
         // facilitate <>f and <>F lexemes
-        void                lock_fs_domain(size_t wsi) {        // lock FS domain till end of FI
+        void                lock_fs_domain_(size_t wsi) {       // lock FS domain till end of FI
                              for(; wsi < walk_path_().size(); ++wsi) { // traversing forward
                               auto & ws = walk_path_()[wsi];
                               ws.locked = true;
                               if(ws.jsearch == Jsearch::Forward_itr) break;
                              }
                             }
-        void                unlock_fs_domain(signed_size_t wsi) {   // unlock all FS domains
+        void                unlock_fs_domain_(signed_size_t wsi) {  // unlock all FS domains
                              for(++wsi; wsi < SGNS_T(walk_path_().size()); ++wsi)
                               walk_path_()[wsi].locked = false;
                             }
@@ -3925,7 +3925,7 @@ bool Json::iterator::incremented(void) {
   if(ws.type == Json::WalkStep::WsType::Directive_inactive)     // activate inactivated directives
      ws.type = Json::WalkStep::WsType::Directive;
  }
- unlock_fs_domain(-1);                                          // unlock possibly locked domains
+ unlock_fs_domain_(-1);                                         // unlock possibly locked domains
  // json().clear_ns();                                          // let NS survive over reps.
 
  DBG(json(), 2) DOUT(json()) << "replicating entire walk" << std::endl;
@@ -3997,10 +3997,11 @@ Json::signed_size_t Json::iterator::walk_(void) {
  #include "dbgflow.hpp"
  // walk 'ws' structure from the root building a path vector
  // empty pv_ addresses json.root()
- lwsi_ = SIZE_T(-1);                                            // init last walked ws index
- Jnode * jnp = & json().root();
- pv_.clear();                                                   // path-vector being built
+ auto init_sqnc = [&] { pv_.clear(); lwsi_ = SIZE_T(-1); return true; };
+ auto exit_sqnc = [&] (bool unused) { if(lwsi_ >= ws_.size()) lwsi_ = ws_.size() - 1; };
+ GUARD(init_sqnc, exit_sqnc)
 
+ Jnode * jnp = & json().root();
  for(size_t i = 0; i < ws_.size(); lwsi_ = i++) {
   if(ws_[i].is_locked()) continue;                              // locked domain - do not process
   walk_step_(i, jnp);                                           // walkStep builds up a path-vector
@@ -4028,7 +4029,6 @@ Json::signed_size_t Json::iterator::walk_(void) {
   // else - continue, the domain is locked by now, pv is restored
   jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;
  }
- if(lwsi_ >= ws_.size()) lwsi_ = ws_.size() - 1;
                                                                 // successfully walked ws
  DBG(json(), 2) { DOUT(json()) << "finished walking with "; show_built_pv_(DOUT(json())); }
  sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
@@ -4601,7 +4601,7 @@ bool Json::iterator::regex_match_(const std::string &val,
  for(size_t i = 0; i < m.size() ; ++i) {                        // save matches in the namespace
   nsp->emplace( "$" + std::to_string(i), STR{std::move(m[i])});
   DBG(json(), 6)
-   DOUT(json()) << Debug::btw << "saved into namespace [" << "$" + std::to_string(i) << "]: "
+   DOUT(json()) << Debug::btw << "preserved in namespace [" << "$" + std::to_string(i) << "]: "
                 << nsp->at("$" + std::to_string(i)).ref().to_string(Jnode::Raw, 1) << std::endl;
  }
  return true;
@@ -4763,7 +4763,7 @@ void Json::iterator::maybe_nsave_(WalkStep & ws, const Jnode *jn) {
  else                                                           // namespaced
   json().ns()[ws.stripped.front()] = ws.user_json.is_neither()? *jn: ws.user_json;
  DBG(json(), 3)
-  DOUT(json()) << Debug::btw << "saved into namespace [" << ws.stripped[0] << "]: "
+  DOUT(json()) << Debug::btw << "preserved in namespace [" << ws.stripped[0] << "]: "
                << json().ns(ws.stripped[0]).to_string(Jnode::PrettyType::Raw, 1) << std::endl;
  return;
 }
@@ -4823,7 +4823,7 @@ Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
 
  auto step = ws.load_step(json());
  ws.offset += step <= 0? 1: step;                               // next iteration
- unlock_fs_domain(wsi);
+ unlock_fs_domain_(wsi);
  DBG(json(), 2) DOUT(json()) << "next incremented: [" << wsi << "] " << ws << std::endl;
 
  signed_size_t failed_wsi = walk_();
@@ -4904,7 +4904,7 @@ Json::signed_size_t Json::iterator::failed_stop_(signed_size_t wsi) {
   pv_ = ws.fs_path;                                             // restore the path vector
   DBG(json(), 3)
    { DOUT(json()) << "found fs[" << wsi << "], restored "; show_built_pv_(DOUT(json())); }
-  lock_fs_domain(wsi);                                          // lock out FS domain immediately
+  lock_fs_domain_(wsi);                                         // lock out FS domain immediately
   return wsi;
  }
 
