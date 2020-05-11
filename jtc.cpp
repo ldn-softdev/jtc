@@ -2646,7 +2646,7 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
  }
  hwlk_ = move(ARY{STR{}});                                      // reset hwlk_ to init value
  // json.ns() may hold now the latest updated namespace while wns_ might not even have been
- // updated (e.g. when walk has ended as <>F, or out of iterations), thus require syncing 
+ // updated (e.g.: when walk has ended as <>F, or out of iterations), thus require syncing
  wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsOpType::NsUpdate);
 
  is_multi_walk_ = opt()[CHR(OPT_WLK)].hits() > 1 or             // i.e. -w.. -w.., else (one -w..)

@@ -3529,7 +3529,8 @@ std::string Json::extract_lexeme_(std::string::const_iterator &si, char closing)
  std::string quoted{"\\"};                                      // replace quoted closing bracket
  quoted += closing;
  for(size_t p = lexeme.find(quoted); p != std::string::npos; p = lexeme.find(quoted, p))
-  lexeme.replace(p, 2, 1, closing);
+  if(p + quoted.size() >= lexeme.size()) break;                 // replace only if it's not last
+  else lexeme.replace(p, 2, 1, closing);
  DBG(1) DOUT() << "parsed lexeme: " << lexeme << std::endl;
  return lexeme;
 }
