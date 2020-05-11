@@ -299,13 +299,13 @@ the problem. To visualize the spot where the problem is, as well as its locus pa
 ```bash
 bash $ <ab.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
-.read_inputs(), reading json from <stdin>
-.location_(), exception locus: ...206,|            "state": "CO,|            "street address": ...
-.location_(), exception spot: --------------------------------->| (offset: 1214)
+.init_inputs(), reading json from <stdin>
+.exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "6213...
+.exception_spot_(), --------------------------------------->| (offset: 1214)
 jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
 bash $ 
 ```
-the vertical pipe symbol `|` in the debug showing JSON replaces new lines, thus it becomes easy to spot the problem. 
+the vertical pipe symbol `|` in the debug showing JSON locus replaces new lines, thus it becomes easy to spot the problem. 
 The offset (`1214` in the example) is given in _unicode UTF-8_ characters from the beginning of the input/file/stream.
 In that particular failure instance, `jtc` found the end of a line, while _JSON string_ `"Co,` is still open (JSON standard does not
 permit multi-line strings). To fix that, the missing quotation mark to be added
@@ -326,9 +326,9 @@ a non-escaped notation:
 ```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc -q -d
 .display_opts(), option set[0]: -q -d (internally imposed: )
-.read_inputs(), reading json from <stdin>
-.location_(), exception locus: { "escaped": "\/", "unescaped": "/" }|
-.location_(), exception spot: --------------------------------->| (offset: 33)
+.init_inputs(), reading json from <stdin>
+.exception_locus_(), { "escaped": "\/", "unescaped": "/" }
+.exception_spot_(), --------------------------------->| (offset: 33)
 jtc json parsing exception (<stdin>:33): unquoted_character
 bash $ 
 ```
@@ -363,7 +363,7 @@ bash $
 
 > NOTE: _the option notation `-qq` will not engulf a single option notation `-q`, if both behaviors are required then both variants have
 to be spelled (e.g. `jtc -q -qq`, or `jtc -qqq`)_  
-> Also, `-qq` is incompatible with `-j`, `-J` options, because of a risk of ill-formed JSON, thus, when sighted together
+> Also, `-qq` is incompatible with `-j`, `-J` options, because of a risk of forming an ill-formed JSON, thus, when sighted together
 option `-qq` is silently ignored
 
 
@@ -383,7 +383,14 @@ bash $ <<<$jsn jtc -rr
 bash $
 ```
 
-B.t.w., both _string unquoting_ and _JSON stringification_ also could be achieved via 
+The spacer for stringification is also controlled via `-t`, e.g.: to stringify the above JSON w/o space use:
+```bash
+bash $ <<<$jsn jtc -rr -t0
+"[\"JSON\",\"example\"]"
+bash $ 
+```
+
+> B.t.w., both _string unquoting_ and _JSON stringification_ also could be achieved via 
 [template operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified).
 
 
@@ -406,7 +413,8 @@ force parsing of a solidus `/` as strictly quoted (i.e., `\/`)
 unquote printed (walked) JSON string (drop the outer quotation marks and unqote all embedded quoted characters)
 - [`-rr`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json):
 inquote (embed) JSON (walked elements) into a JSON string values
-- `-rrtN`: inquote (embed) JSON (walked elements) into a JSON string values with a spacer `N`
+- [`-rrtN`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json):
+inquote (embed) JSON (walked elements) into a JSON string values with a spacer `N`
 
 
 ## Walking JSON
