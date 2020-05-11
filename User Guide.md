@@ -560,20 +560,23 @@ Also, following REGEX grammars are supported:
 - `G`: grammar used by the `grep` utility in POSIX
 - `P`: regular expression grammar used by the `egrep` utility
 
-All of the above flags may be given as _quoted trailing characters_ in the lexeme:
+All of the above flags may be passed as _quoted trailing characters_ in the lexeme:
 ```bash
 bash $ <ab.json jtc -w'<^new york\I>R'
 "New York"
 bash $ 
 ```
-> that way multiple options could be given, however, if multiple grammars specified, only the first one will take the effect, e.g.:
-`<...\G\A>R` - between `awk` and `grep` grammars the latter wins, because it's given first
+> Multiple options could be passed within the lexeme, however, if multiple grammars specified, only the first one will take the effect, 
+e.g.: `<...\G\A>R` - between `awk` and `grep` grammars the latter wins, because it's given first
 
+All REGEX lexemes also support template/namespace
+[interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). The ineterpolation is applied before
+regex search performed.
 
 #### Search suffixes
 This is the complete list of suffixes that control _search_ behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ values (e.g.: `<CO>`, `<CO>r`)
-  * `R`: the lexeme is a search RE, only _JSON string_ values searched (e.g.: `<^N+*>R`)
+  * `R`: the lexeme is a search RE, only _JSON string_ values searched (e.g.: `<^N.*>R`)
   * `P`: matches _any_ string values, same like `<.*>R`, just faster (e.g.: `<>P`)
   * `d`: matches _JSON numericals_ (e.g.: `<3.14>d`)
   * `D`: the lexeme is an RE, only _JSON numerical_ values searched (e.g.: `<^3\.+*>D`)
