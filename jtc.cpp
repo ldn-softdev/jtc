@@ -446,9 +446,9 @@ class Jtc {
                             BoundJit(const BoundJit &) = default;
                             BoundJit(BoundJit && bj) = default;
                             BoundJit(Json::iterator &d, Json::iterator &s):   // for emplacement
-                             dst{d}, src{s}, ns{src.json().ns()}, lbl{STR_JILL} {}
+                             dst{d}, src{s} { ns.sync_in(s.json().ns(), map_jnse::NsMove); }
                             BoundJit(Json::iterator &d, Json::iterator &s, Json::map_jne &n):
-                             dst{d}, src{s}, ns{n}, lbl{STR_JILL} {}
+                             dst{d}, src{s} { ns.sync_in(n, map_jnse::NsMove); }
         BoundJit &          operator=(BoundJit bj) noexcept
                              { swap(*this, bj); return *this; }
 
@@ -458,7 +458,7 @@ class Jtc {
 
         Json::iterator      dst;                                // -w walks (iterators) go here
         Json::iterator      src;                                // -i/u/c walks (iterators) go here
-        Json::map_jne       ns;                                 // NS from respective -i/u/c iters.
+        map_jnse            ns;                                 // NS from respective -i/u/c iters.
         string              lbl{STR_JILL};                      // facilitates -u for label update
                                                                 // invalid lbl initially
     };
@@ -1657,8 +1657,8 @@ bool Jtc::upsert_json(char op) {
  walk_interleaved_(upsert_mtd[op == CHR(OPT_UPD)]);
  DBG(1) DOUT() << "collected " << psrc_.size() << (op == CHR(OPT_UPD)? " update":" insert")
                << "-walk pairs" << endl;
- apply_src_walks(op);
 
+ apply_src_walks(op);
  maybe_update_lbl_();                                           // will update lbl if any pending
 
  if(opt()[CHR(OPT_PRG)].hits() > 0)                             // only work when walk-path is src
@@ -1690,12 +1690,13 @@ void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
   wns_[&it].sync_out(jits_.json().ns(), map_jnse::NsOpType::NsReferAll);
 
  if(ecli_ > Ecli::No_exec and walk_options_size_() == 0)        // -e ... \; alone
-  { psrc_.emplace_back(it, it, wns_[&it]); return; }            // collect iterator and ns
+  { psrc_.emplace_back(it, it, wns_[&it]); return; }            // collect iterators
 
  while(advance_to_next_src(it)) {
   DBG(2) DOUT() << "optarg idx [" << jscur_ << "] out of " << walk_options_size_()
                 << " (" << (jsrt_ == Src_optarg? "json": "walk") << ")" << endl;
-  psrc_.emplace_back(it, jits_);                                // collect iterator
+
+  psrc_.emplace_back(it, jits_);                                // collect iterators
   if(is_multi_walk_) break;
  }
 }
@@ -1748,17 +1749,18 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
  auto & srcj = jsrt_ == Src_input? json():
                jsrt_ == Src_mixed? (jsrc_[0].is_neither()? jtmp_[jtmp_.size()]: jsrc_[0]):
                 (jsrc_[idx()].is_neither()? jtmp_[jtmp_.size()]: jsrc_[idx()]);
- if(jits_.walk_size() == 0)                                     // merge upon jits_ initialization
+ if(jits_.walk_size() == 0 or &srcj == &jtmp_.rbegin()->VALUE)  // merge upon init or new template
   wns_[&jit].sync_out(srcj.ns(), map_jnse::NsOpType::NsReferAll);   // merge global ns to -u/i's ns
 
  // if src arg is a template then resolve:
  if(not jtmp_.empty() and &srcj == &jtmp_.rbegin()->VALUE) {
-  DBG(4) DOUT() << "interpolating template: " << jsrc_[jsrt_ == Src_mixed? 0: idx()].val() << endl;
+  DBG(4) DOUT() << "resolving template: " << jsrc_[jsrt_ == Src_mixed? 0: idx()].val() << endl;
   auto & jtmp = jtmp_.rbegin()->VALUE;
   jtmp = Json::interpolate(jsrc_[jsrt_ == Src_mixed? 0: idx()].val(),
                                  jit, srcj.ns(), Json::ParseTrailing::Relaxed_no_trail);
   if(jtmp.is_neither())
    { cerr << "fail: template argument failed interpolation" << endl;  exit(RC_ARG_FAIL); }
+  wns_[&jit].sync_out(jtmp.ns(), map_jnse::NsOpType::NsReferAll);
  }
  jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str());
 
