@@ -834,7 +834,7 @@ there are couple other uses for `Fn` lexeme with a non-zero (non-default) quanti
   _repeat_ the path additionally `n` times
 
 For example, to duplicate all the found address records, use `<>Fn`:
-```
+```bash
 # find all "address" records
 bash $ <ab.json jtc -w'<address>l:' -rl
 "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }
@@ -872,7 +872,7 @@ bash $
 
 
 #### Search quantifiers
-Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix). 
+Optionally, a quantifier may follow the search lexeme (if a lexeme has a suffix, then the quantifier must come after the suffix). 
 Quantifiers in search lexemes allow selecting match instance (i.e., select first match, second one, etc, or a range of matches)
 Quantifiers exist in the following formats:
 - `n`, - a positive number - tells which instance of a match to pick. By default, a quantifier `0` is applied
@@ -923,19 +923,23 @@ there could be only one label `"b"`, thus normally trying to match a second, thi
 make much of a sense: `<<<'{ "a": 1, "b":2, "c":3, "d":4, "e":6 }' jtc -w'>b<l2'`
 
 Thus, the semantic of quantifiers only in those searches was enhanced (to extend use cases) - there, the quantifiers provide a
-_relative offset_ from a found label/index. So, for the notation like above: `'>b<l2'`, the label `"b"` will be matched and
+_relative offset_ from a found label/index. So, for the notations like above: `'>b<l2'`, the label `"b"` will be matched and
 then its second (successive) neighbor value will be selected:
 ```bash
 bash $ <<<$jsn jtc -w'>b<l2' -l
 "d": 4
 bash $ 
 ```
-Because of change in semantic, those are the only search quantifiers (in the _non-recursive_ lexemes `>..<l`, `>..<t`) 
+Because of a change in semantic, those are the only search quantifiers (in the _non-recursive_ lexemes `>..<l`, `>..<t`) 
 which allow negative values. Positive quantifiers let selecting next (successive) neighbors, while negative quantifiers let
 selecting preceding neighbors:
 ```bash
-bash $ <<<$jsn jtc -w'>d<l-2' -l
+bash $ <<<$jsn jtc -w'>d<l' -l
+"d": 4
+bash $ <<<$jsn jtc -w'>d<l-2:1' -l
 "b": 2
+"c": 3
+"d": 4
 bash $ 
 ```
 
@@ -955,7 +959,6 @@ bash $ <ab.json jtc -w'<\d>R:' -l
 "street address": "6213 E Colfax Ave"
 "number": "358-303-0373"
 "number": "333-638-0238"
-bash $ 
 bash $ 
 ```
 Some of the values are `street address`es, some are the phone `number`s. Say, we want to dump only the phone records using
@@ -2858,7 +2861,6 @@ bash $ <ab.json jtc -w'[Directory][0][address]' -u'[Directory][-1:][address]' -p
    ]
 }
 bash $ 
-
 ```
 \- That leaves `Jane` "homeless", while `John` "moves" into `Jane`'s place!
 
