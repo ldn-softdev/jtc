@@ -306,8 +306,10 @@ class __Guard_X__ {
  // Guard class itself
  public:
                         __Guard_X__(void) = delete;
-                        __Guard_X__(T &__Guard_X_arg__):
+                        __Guard_X__(typename std::remove_reference<T>::type & __Guard_X_arg__):
                          x_{__Guard_X_arg__}, xptr_{&__Guard_X_arg__} {}
+                        __Guard_X__(typename std::remove_reference<T>::type && __Guard_X_arg__):
+                         x_{std::move(__Guard_X_arg__)}, xptr_{&__Guard_X_arg__} {}
                        ~__Guard_X__(void) { if(xptr_) *xptr_ = std::move(x_); }
  protected:
     typename std::remove_reference<T>::type     x_;

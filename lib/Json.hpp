@@ -4969,7 +4969,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  }
 
  DBG(jit.json(), 4)
-  DOUT(jit.json()) << "result: '"
+  DOUT(jit.json()) << Debug::btw << "result: '"
                    << (rj.parsing_failed()? "failed interpolation":
                         rj.to_string(Jnode::PrettyType::Raw, 1)) << "'" << std::endl;
  if(rj.parsing_failed()) rj.type(Jnode::Neither);
@@ -4982,7 +4982,12 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &ns) {
  #include "dbgflow.hpp"
  // generate auto tokens {$a}, {$b}, {$A}, ... for iterables
+ static auto sre = std::regex(R"(\{\$a\})", std::regex::optimize | std::regex::icase);
+ static auto mre = std::regex(R"(\{(?:(\$[a-z]{1,3})|(\$[A-Z]{1,3}))\})", std::regex::optimize);
+ std::smatch m;
+
  if(jit->is_atomic()) {
+  if(not std::regex_search(static_cast<std::string&>(tmp), m, sre)) return;
   ns["$a"] = *jit;
   if(jit->has_label()) ns["$A"] = jit->label();
   else if(jit->has_index()) ns["$A"] = jit->index();
@@ -5006,9 +5011,8 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
  };
 
  std::set<std::string> uct, lct, sst;                           // upper/lower/super case tokens
- static auto re = std::regex("\\{(?:(\\$[a-z]{1,3})|(\\$[A-Z]{1,3}))\\}", std::regex::optimize);
  for(std::sregex_iterator it = std::sregex_iterator(static_cast<std::string&>(tmp).begin(),
-                                                    static_cast<std::string&>(tmp).end(), re);
+                                                    static_cast<std::string&>(tmp).end(), mre);
      it != std::sregex_iterator(); ++it) {
   if((*it)[2].length() == 0)
    { lct.insert( (*it)[1] ); sst.insert( std::move((*it)[1]) ); }
