@@ -21,7 +21,7 @@
      * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
-       * [Examples sporting _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-examples-sporting-fail-safe-using-namespaces-and-interpolation)
+       * [Examples illustrating _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-examples-illustrating-fail-safe-using-namespaces-and-interpolation)
        * [Uses of `Fn` directive with non-default quantifiers (`<>Fn`, `><Fn`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-uses-of-fn-directive-with-non-default-quantifiers)
      * [RE generated namespaces (`$0`, `$1`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#re-generated-namespaces)
      * [Search quantifiers (`n`,`+n`,`n:m:s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers)
@@ -573,6 +573,11 @@ All REGEX lexemes also support template/namespace
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). The ineterpolation is applied before
 regex search performed.
 
+_NOTE: the namespace tokens usage in REGEX lexemes is restricted to alphabetical names only (e.g.: `{abc}`):  
+\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEXP quantifiers and hence not supported,  
+\- the auto-tokens (e.g.: '$abc') are also unsupported, because at the time of walking the iterator is yet unresolved_
+
+
 #### Search suffixes
 This is the complete list of suffixes that control _search_ behavior: 
   * `r`: default (could be omitted), fully matches _JSON string_ values (e.g.: `<CO>`, `<CO>r`)
@@ -609,7 +614,7 @@ This is the complete list of suffixes that control _search_ behavior:
 
 Some search lexemes (and
 [directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives))
-require their content is set and be **non-empty** (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`v`,`z`,`u`,`I`,`Z`,`W`), otherwise an exception 
+require their content is set and be **non-empty** (`R`,`d`,`D`,`L`,`j`,`s`,`t`,`v`,`z`,`u`,`I`,`Z`,`W`,`S`), otherwise an exception 
 _`walk_empty_lexeme`_ will be thrown
 
 A few of search lexemes might be left empty, but then they cary a semantic of an **empty match** (`r`,`l`):
@@ -625,17 +630,8 @@ e.g.: `<array>i` - upon a match will preserve found _JSON array_ in the namespac
 
 ##### \* Cached Search
 `jtc` is super efficient searching recursively even huge JSONs structures - normally no exponential search decay will be observed
-(which is very typical for such kind of operations). The decay is avoided because `jtc` builds a cache for all searches (whenever
+(which is very typical for such kind of operations). The decay is avoided because `jtc` builds a cache for **_all_** searches (whenever
 cacheing is required, both recursive and non-recursive) and thus all subsequent matches are taken from the cache.  
-Though, there're couple cases when search could not be _cached_ in principle - when the search lexeme is a _dynamic_ type, i.e., when
-resolution of the search is dependent on the _namespace_ value.  
-Here's the list of such search types:
-  * recursive `<..>s`,`<..>t`: the lexemes are using _namespaces_ when performing search and hence could not be cached
-  * JSON match when the lexeme is a template, e.g.: `<{ "label": {{val}} }>j`: templates typically require _namespace_ for interpolation
-  and hence are also non-cacheable, though `<..>j` searches with static JSONs will be cached - e.g.: `<{"label": "val" }>j` is cacheable)
-
-\- all the above cases are exempt from cacheing and hence the exponential decay might become noticeable, so be aware when building a 
-query for very large JSON structures (order of hundred thousands of nodes)
 
 
 #### Directives
@@ -653,7 +649,12 @@ for the currently walked JSON elements, these are _directives_:
   * `F`: Forward-Stop: behavior of the directive is dependent on spelling:
     * `<>F` - when the directive is reached, the currently walked path is skipped and silently proceeds to the next walk iteration
     without ending the walk (like _`continue`_ loop operator in some programming languages)
+    * `<>FN`, where `N` is a non-zero quantifier - implements a _"jump"_ logic: it will skip over N lexemes
+    starting with the `F` lexeme itself; thus `<>F1` just continues walk with the next lexeme, `<>F2` will skip over the next lexeme,
+    etc.
     * `><F` - when the directive is reached, the walk successfully ends for the output processing (similar to _`break`_ loop operator)
+    * `><FN`, where `N` is a non-zero quantifier - implements "_repeat"_ logic: repeats walked path N times, e.g.:
+    `><F1` will produce 2 identical walk results (original one, and one repeated) 
   * `u`: user evaluation of the walk-path: the lexeme is the _`shell cli`_ sequence which affects walking: if a returned result of the
   shell evaluation is `0` (success) then walk continues, otherwise the walk fails; the lexeme is subjected for template
   interpolation
@@ -663,10 +664,11 @@ for the currently walked JSON elements, these are _directives_:
   effects - the former calculates the entire JSON size, while the latter does only the number of children); with the quantifier of `1`
   (i.e., `<StrSize>Z1`) saves into the namespace a size of the currently walked _JSON string_, otherwise (if not a string) `-1`
   * `W` saves into the provided namespace a currently walked JSON's walk-path as a _JSON array_ (e.g.: `<wp>W`)
+  * `S` restores the point of walk (if it can be restored) previously saved by `W` lexeme (e.g.: `<wp>S`)
 
 
 #### Setting a custom JSON value into a namespace
-There's a set of lexemes which may reference a name in the
+There's a set of lexemes (search lexemes and directives) which may reference a name in the
 [_namespace_](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace) for capturing a currently walked JSON elements:
 `P`,`N`,`b`,`n`,`a`,`o`,`i`,`c`,`e`,`w`,`q`,`Q`,`g`,`G`,`v`,`k`,`f`,`F`.
 All of those lexemes also allow capturing a custom JSON value in lieu of currently walked JSON - if the lexeme's value is given in
@@ -683,10 +685,10 @@ into the _walk-path_. Let's break it down:
 
 When directive `F` is paired with `<>f`, together they cover all cases of walk-paths branching:
   * ... `<>f` {if this path fails, then a walk ends reinstating the walk at `<>f` point}
-  * ... `<>f` {if this path does not fail, then skip it} `<>F` {otherwise keep walking this path starting from `<>f` point} ...
-  * ... `<>f` {if this path does not fail, then end walking} `><F` {otherwise walk this path} ...
-  * ... `<>f` {if this path does not fail, then end walking} `><F <>F` # otherwise skip it (i.e., skip the failed path)
-  * etc (there's unlimited number of times `<>f` and `<>F`/`><F` pairs could be present in the walk)
+  * ... `<>f` {if this path succeeds, then skip the result} `<>F` {otherwise keep walking this path starting from `<>f` point} ...
+  * ... `<>f` {if this path path succeeds, then end walking} `><F` {otherwise walk this path} ...
+  * ... `<>f` {if this path succeeds, then end walking} `><F <>F` # otherwise skip it (i.e., skip the failed path/result)
+  * etc. (there's unlimited number of times `<>f` and `<>F`/`><F` pairs could be present in the walk)
 
 Say, we want to list all `mobile` phone records, let's do it along with names of phone holders:
 ```bash
@@ -721,7 +723,7 @@ further walking fails, there:
 one to the failing point)
 
 
-##### \* Examples sporting _fail-safe_ using namespaces and interpolation:
+##### \* Examples illustrating _fail-safe_ using namespaces and interpolation:
 Say we want to list from the address book all the record holders and indicate whether they have any children or not in 
 this format:  
   `<Name> has children: true/false`
@@ -738,7 +740,7 @@ bash $ <ab.json jtc -w'[0][:][name]<N>v'
 "Jane"
 bash $ 
 ```
-2. Now let's inspect a sibling record `children`:
+2. Now let's inspect a sibling record `children` (while memorizing `Name`):
 ```bash
 bash $ <ab.json jtc -w'[0][:][name]<N>v [-1][children]' -r
 [ "Olivia" ]
@@ -789,7 +791,7 @@ bash $ <<<$jsn jtc -pw'<name>l:[-1]' -tc
 ]
 bash $ 
 ```
-But what if we want to walk entries rather than purging (e.g., for reason of template-interpolating the entries at the output)?  
+But what if we want to walk entries rather than purge (e.g., for reason of template-interpolating the entries at the output)?  
 The prior solution would require
 [chaining the output](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
 to the next option set (which is quite a reasonable solution too, e.g.: `<<<$jsn jtc -pw'<name>l:[-1]' / -w[:] -tc`),
@@ -824,11 +826,12 @@ bash $
 
 ##### \* Uses of `Fn` directive with non-default quantifiers
 there are couple other uses for `Fn` lexeme with a non-zero (non-default) quantifiers:
-  - `<>Fn` - that variant of the lexeme acts as a 'jump' instruction for the walk path - i.e., once walked, it will jump to the `n`th 
-  lexeme (from the lexeme `<>F`) and continues walking from there. E.g.: `<>F1` does not do anything - it continues walking from the 1st 
-  lexeme after `<>F1`, `<>F2` will jump over one lexeme and continues walking from the 2nd one, and so on and so forth.  
+  - `<>Fn` - that variant of the lexeme implements a **_jump_** logic for the walk path - i.e., once walked, it will jump to the `n`th 
+  lexeme (counting from the lexeme `<>F` itself) and continues walking from there.
+  E.g.: `<>F1` does not do anything - it continues walking from the 1st lexeme after `<>F1`,
+  `<>F2` will jump over the very next lexeme and continues walking from the 2nd one, and so on and so forth.  
   - `><Fn` - this variant will repeat the same walk up to the lexeme additionally `n` times - that is useful when there's a need to
-  replicate a path additionally `n` times
+  _repeat_ the path additionally `n` times
 
 For example, to duplicate all the found address records, use `<>Fn`:
 ```
@@ -873,7 +876,7 @@ Optionally a quantifier may follow the search lexeme (if a lexeme has a suffix, 
 Quantifiers in search lexemes allow selecting match instance (i.e., select first match, second one, etc, or a range of matches)
 Quantifiers exist in the following formats:
 - `n`, - a positive number - tells which instance of a match to pick. By default, a quantifier `0` is applied
-(i.e., first match is selected)
+(i.e., first match selected)
 - `+n` - selects all match instances starting from `n`th (zero based)
 - `n:m:s` - slice select: the notation rules for this quantifier the same as for 
 [subscript slices](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#subscript-slice-notation)
