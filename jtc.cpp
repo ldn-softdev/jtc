@@ -705,8 +705,8 @@ int main(int argc, char *argv[]) {
  CommonResource cr;
  REVEAL(cr, opt)
 
- opt.prolog("\n" PRGNAME "\nVersion " VERSION \
-            ", developed by " CREATOR " (" EMAIL ")\n");
+ opt.prolog("\n" PRGNAME "\nVersion " VERSION " (built on " __DATE__ \
+            "), developed by " CREATOR " (" EMAIL ")\n");
  opt[CHR(OPT_ALL)].desc("process all JSONs from source, or disable multithreading if multiple"
                         " sources given");
  opt[CHR(OPT_CMN)].desc("a common part of a walk-path, prepended to every followed -" STR(OPT_PRT)
