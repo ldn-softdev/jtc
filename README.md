@@ -89,9 +89,9 @@ Following debug related flags could be passed to `jtc` when compiling:
 
 #### Linux and MacOS precompiled binaries are available for download
 or download the latest **precompiled binary**:
-- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-macos-64.v1.76)
-- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-64.v1.76)
-- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/1.76/jtc-linux-32.v1.76)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-macos-64.v1.76a)
+- _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-64.v1.76a)
+- _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-32.v1.76a)
 
 #### Packaged installations:
 ##### Installing via MacPorts
