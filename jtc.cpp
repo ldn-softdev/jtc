@@ -192,10 +192,11 @@ class map_jnse: public Json::map_jne {
  public:
 
     #define NSOPT \
-                NsReferAll, /* reference all ns values - local and remote */\
-                NsMove,     /* move local ns values, reference remote entriess */\
-                NsUpdate,   /* same as NsMove, but for non-existent (new) entries only*/\
-                NsMoveAll   /* move all ns values - local & remote */
+                NsUpdateRef,    /* reference all ns values - only non-existent ones  */\
+                NsReferAll,     /* reference all ns values - local and remote */\
+                NsMove,         /* move local ns values, reference remote entriess */\
+                NsUpdate,       /* same as NsMove, but for non-existent (new) entries only*/\
+                NsMoveAll       /* move all ns values - local & remote */
     ENUM(NsOpType, NSOPT)
 
     void                sync_out(Json::map_jne &to, NsOpType nsopt);
@@ -208,11 +209,16 @@ class map_jnse: public Json::map_jne {
 
 void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
  // sync all entries from this map to Json namespace `to``
- if(nsopt == NsOpType::NsReferAll) {                            // reference all entries
+ if(nsopt <= NsOpType::NsReferAll) {                            // reference all entries
   for(auto &ns: *this) {                                        // for all entries in this map
    if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
-   auto ip = to.emplace(ns.KEY, Json::JnEntry{});               // ip: insertion pair
-   ip.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
+   auto found = to.find(ns.KEY);
+   if(found == to.end())
+    to.emplace(ns.KEY, Json::JnEntry{}).first->VALUE.ptr(&ns.VALUE.ref());
+   else {
+    if(nsopt == NsOpType::NsUpdateRef) continue;
+    found->VALUE.ptr(&ns.VALUE.ref());
+   }
   }
   return;
  }
@@ -236,7 +242,7 @@ void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
 
 void map_jnse::sync_in(Json::map_jne &from, NsOpType nsopt) {
  // sync all entries `from` map according to given handling type `nsopt`
- if(nsopt == NsOpType::NsReferAll) {                            // reference all entries
+ if(nsopt <= NsOpType::NsReferAll) {                            // reference all entries
   for(auto &ns: from) {                                         // for all entries in from
    if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
    auto mp = emplace(ns.KEY, Json::JnEntry{});                  // mp: my pair
@@ -479,6 +485,8 @@ class Jtc {
 
         size_t              group{0};
         size_t              counter{0};
+
+        COUTABLE(Grouping, group, counter)                      // for debugs only
     };
 
 
@@ -634,6 +642,7 @@ class Jtc {
     size_t              jscur_{0};                              // current walk in jsrc_
     map<Json::iterator*, map_jnse>
                         wns_;                                   // namespaces for walked (-w) paths
+    map_jnse            ins_;                                   // holds interleaved namespaces
     Json::iterator *    last_dwi_ptr_{nullptr};
     Jnode               hwlk_{ARY{STR{}}};                      // last walked value (interpolated)
     set<string>         c2a_;                                   // used in jsonized_output_obj_()
@@ -1947,6 +1956,7 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
   wns_[&wi][WLK_HPFX] = move(hwlk_[0]);
   hwlk_[0].type(Jnode::Neither);
  }
+
  if(opt()[CHR(OPT_TMP)].hits() > 0) {                           // interpolate each tmp per walk
   // in all other cases - templates are round-robin applied onto each walk iteration
   if(is_tpw_)                                                   // template per walk:
@@ -1958,9 +1968,12 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
                  opt()[CHR(OPT_TMP)].str(tpw_.size() + 1));
   size_t tmp_idx = is_tpw_?
          wi.walk_uid(): key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
-  tmp = Json::interpolate(tpw_[tmp_idx], wi, wns_[&wi]);
+  ins_.sync_out(wns_[&wi], map_jnse::NsUpdateRef);              // this is done so that walks could
+  tmp = Json::interpolate(tpw_[tmp_idx], wi, wns_[&wi]);        // propagate namespaces interleaved
+  ins_.sync_in(wns_[&wi], map_jnse::NsReferAll);                // way rather than sequentially
   if(use_hpfx_) hwlk_ = move(ARY{tmp.root()});
  }
+
 
  if(use_hpfx_ and hwlk_[0].is_neither()) {                      // templating failed or was none
   if(wi->has_label()) hwlk_ = move(OBJ{LBL{wi->label(), *wi}}); // preserve also the label if exist
@@ -2618,9 +2631,10 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
  subscriber_ = subscriber;
  deque<deq_jit> wpi;                                            // wpi holds queues of iterators
 
- cr_.global_ns().sync_out(json().ns(), map_jnse::NsOpType::NsReferAll);
 
  for(const auto &walk_str: opt()[CHR(OPT_WLK)]) {               // process each -w arguments
+  cr_.global_ns().sync_out(json().clear_ns().ns(), map_jnse::NsOpType::NsReferAll);
+
   // wpi: push back deq_jit init'ed with -w inited walk
   wpi.push_back( deq_jit{json().walk(walk_str.find_first_not_of(" ") == string::npos?
                                      "": walk_str, Json::Keep_cache)} );
@@ -2630,9 +2644,7 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
   }
   auto & dwi = wpi.back();                                      // dwi: deque<Json::iterator>
   while(dwi.back() != dwi.back().end()) {                       // extend all iterators until end
-   //cerr << " extending interators" << endl;
-   if(wns_.empty()) wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMoveAll);
-   else wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsOpType::NsMove);
+   wns_[&dwi.back()].sync_in(json().ns(), map_jnse::NsMove);
    if(use_hpfx_) {
     wns_[&dwi.back()][WLK_RSTH] = BUL{wns_[&dwi.back()].erase(WLK_HPFX)? true: false};
     if(dwi.back()->has_label()) hwlk_ = move(OBJ{ LBL{dwi.back()->label(), *dwi.back()} });
@@ -2644,11 +2656,11 @@ void Jtc::walk_interleaved_(wlk_subscr Jtc::* subscriber) {
    ++dwi.back();                                                // json.ns now is partial
   }
   dwi.pop_back();                                               // remove last (->end()) iterator
+  // json.ns() may hold now the latest updated namespace while wns_ might not even have been
+  // updated (e.g.: when walk has ended as <>F, or out of iterations), thus require syncing
+  wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsOpType::NsUpdate);
  }
  hwlk_ = move(ARY{STR{}});                                      // reset hwlk_ to init value
- // json.ns() may hold now the latest updated namespace while wns_ might not even have been
- // updated (e.g.: when walk has ended as <>F, or out of iterations), thus require syncing
- wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsOpType::NsUpdate);
 
  is_multi_walk_ = opt()[CHR(OPT_WLK)].hits() > 1 or             // i.e. -w.. -w.., else (one -w..)
                   wpi.size() > 1 or                             // wpi.size > 1, otherwise:

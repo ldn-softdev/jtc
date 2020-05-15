@@ -280,6 +280,7 @@ bool operator==(const std::string &__a__, std::vector<const char *> __b__) {
 #define __STITCH_2TKNS__(X,Y) X ## Y
 #define STITCH_2TKNS(X,Y) __STITCH_2TKNS__(X, Y)
 
+
 #define __GUARD_1_ARG__(X) \
     __Guard_X__<decltype(X)> STITCH_2TKNS(__my_Guard_X__, __LINE__)(X);
 #define __GUARD_2_ARG__(X, Y) \
@@ -376,7 +377,6 @@ class __Guard_X__ {
 
 
 
-
 /*
  * A couple of definitions for mutexes:
  * ULOCK - declared a unique_lock
@@ -398,6 +398,8 @@ class __Guard_X__ {
 
 #define TLOCK(MTX) \
     for(std::unique_lock<std::mutex> __tlck__(MTX); __tlck__.owns_lock(); __tlck__.unlock())
+
+
 
 
 
@@ -426,7 +428,6 @@ class __Guard_X__ {
 #define IF_NOT_FOUND(CTN, VAL) \
  auto STITCH_2TKNS(__AIFV__,__LINE__) = CTN.find(VAL); \
  if(STITCH_2TKNS(__AIFV__,__LINE__) == CTN.end())
-
 
 
 
