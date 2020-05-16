@@ -1987,7 +1987,7 @@ Let's consider both scenarios where interpolation of the namespace `Val` uses a 
   - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ {{Val}}: {{Key}} }'` results in `{ "irrational": "type" }` - the interpolation of `{{VAL}}`
 for the first record fails here, it becomes `{ 3.14: "pi" }`, which is invalid JSON and hence not getting inserted (but purged)
   - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ "{{Val}}": {{Key}} }'` results in `{ "3.14": "pi" }` - the interpolation of `"{{VAL}}"`
-for the second record fails here - it becomes `{ ""type"": "irrational" }` - which is also an invalid JSON
+for the second record fails here - it becomes `{ ""irrational"": "type" }` - which is also an invalid JSON
 
 The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work as well. 
 
