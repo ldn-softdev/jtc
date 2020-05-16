@@ -1918,8 +1918,9 @@ bash $ <<<$jsn jtc -w'<label>L:<>k' -u'<label>L:<>k' -T'"new {}"'
 bash $ 
 ```
 There, in the example above, the template token `{}` refers to the result of walking `-u` rather than `-w` (the same holds
-true for insert `-i` and compare `-c` operators). The walk `-w` points to the destination location(s) for the update (which
-is the label,  as per description of the lexeme `<>k`), while source is pointed by `-u` walk.  
+true for insert `-i` and compare `-c` operators: themplate operation (`-T`) refers to the option argument rather than to the walk).
+The walk `-w` points to the destination location(s) for the update (which is the label,  as per description of the lexeme `<>k`),
+while source is pointed by `-u` walk.  
 Alternatively, the same could be achieved like this, in a bit more succinct way:
 ```bash
 bash $ <<<$jsn jtc -w'<label>L:<T>k<>k' -u0 -T'"new {T}"'
@@ -1934,8 +1935,30 @@ unused in the template and hence is irrelevant to the operation. The template no
 which will be  populated when destination `-w` is walked (which, btw, always occurs before any other walks, as per design logic).  
 Why `<..>k` lexeme is used twice? As per the lexeme design, when it's empty (and only then) it lets reinterpreting currently walked 
 element's label as a value (which is being updated in this case), Thus, the first lexeme `<L>k` only preserves the label in the
-namespace, while  the second lexeme allows pointing to the label as the destination point for the update - which will be the
-template-interpolated JSON value `'"new label"'`.
+namespace, while the second lexeme allows pointing to the label as the destination point for the update - which will be the
+template-interpolated JSON value `'"new label"'`.  
+  
+Starting from `jtc` _`v1.176`_, it's possible to achive the same interpolation even in a more efficient and laconic way:
+```bash
+bash $ <<<$jsn jtc -w'<label>L:<>k' -u'"new {}";'
+{
+   "new label1": "value1",
+   "new label2": "value2"
+}
+bash $ 
+```
+options `-u`/`-i`/`-c` may accept now an argument in various forms: _JSON_, _walk_, _template_. In the latter case the template
+token `{}` will refer to the walk (`-w`) result.  
+\- Why trailing `;` is there?  
+\- It boils down to how argument disambiguation for the options occurs:
+among various forms of an argument (_JSON_, _walk_, _template_) it's possible that the argument semantic can be ambigous.
+In our case, if the template string was like `"new {}"` it would be impossible to tell if it's a _JSON_ argument, or a _template_
+(indeed, in your great design `{}` might represent either a token, or an empty object, or just a literal value - there's no way for `jtc`
+to know that).  
+So, `jtc` needs a little hint from you how to treat that argument (in case if there's an ambiguity).
+_JSON_ argument does not tolerate any trailing symbols, while _template_ argument disregards any trailing symbols after
+interpolation and parsing. Thus symbol `;` only ensures that the argument is treated as a _template_ rater than a _JSON_ (in fact,
+it could be any combinations of any trailing symbols)
 
 
 Here's an illustration when a _naked notation_ is required:
@@ -1957,9 +1980,16 @@ bash $
 ```
 there, values getting into the namespace `Val` will be different types in each pass: the first time it's a numeric value `3.14`,
 in the second pass it'll be a string `"irrational"`. Therefore, in the template, where `Val` is used with the label semantic,
-we have to ensure that the interpolation occurs of the naked value (otherwise, if dressed notation was used - `{{Val}}: ...` then
-numerical value would be substituted w/o quotation marks resulting in the invalid label and thus failing the template).  
-The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work both ways. 
+we have to ensure that the interpolation occurs of the naked value.  
+
+Let's consider both scenarios where interpolation of the namespace `Val` uses a _dressed_ notation:
+
+  - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ {{Val}}: {{Key}} }'` results in `{ "irrational": "type" }` - the interpolation of `{{VAL}}`
+for the first record fails here, it becomes `{ 3.14: "pi" }`, which is invalid JSON and hence not getting inserted (but purged)
+  - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ "{{Val}}": {{Key}} }'` results in `{ "3.14": "pi" }` - the interpolation of `"{{VAL}}"`
+for the second record fails here - it becomes `{ ""type"": "irrational" }` - which is also an invalid JSON
+
+The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work as well. 
 
 
 #### Interpolation of iterables
@@ -1985,22 +2015,15 @@ bash $
 ```
 And the ask here would be to extend all arrays in each `args` with the arguments from the respective `Func`:
 ```bash
-bash $ <<<$jsn jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]'
+bash $ <<<$jsn jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]' -tc
 [
    {
       "Func": "x + y",
-      "args": [
-         123,
-         "x",
-         "y"
-      ]
+      "args": [ 123, "x", "y" ]
    },
    {
       "Func": "a * b",
-      "args": [
-         "a",
-         "b"
-      ]
+      "args": [ "a", "b" ]
    }
 ]
 bash $ 
@@ -2014,30 +2037,33 @@ All the same applies when interpolating _JSON objects_ and _JSON strings_.
 
 
 ##### \* Interpolation of iterables into a string template
-If a currently interpolated JSON is an _iterable_ and is getting interpolated into a string template (using the _naked_
-token notation), then its values get fully enumerated within the string _**one by one**_ and as long they are _string-interpolatable_:
+An array could be converted into a string _literally_ using a _dressed_ token notation as long it does not hold any string literals,
+e.g.:
+```bash
+bash $ <<<'[null, true, 123, {}, []]' jtc -T'"array stringified: {{}}"'
+"array stringified: [ null, true, 123, {}, [] ]"
+bash $ 
+```
+\- presence of any string value (or a label) would fail the interpolation (b/c of quotation marks)
+
+Any _iterable_ can be interpolated into a string template using the _naked_ token notation: then _all its atomic_ values 
+get _recursively_ enumerated within the string:
 ```bash
 # array:
-bash $ <<<'{"array":[null,1,true,{},[],"five"]}' jtc -w[array] -T'"stringified array: {}"'
-"stringified array: null, 1, true, {}, [], five"
+bash $ jsn='{"array":[null,1,true,{"root":["five"]}]}'
+bash $ 
+bash $ <<<$jsn jtc -w[array] -T'"stringified array: {}"'
+"stringified array: null, 1, true, five"
 bash $ 
 
 # object:
-bash $ <<<'{"str":"a string", "bool":false, "null": null, "empty":[]}' jtc -T'"stringified object: {}"'
-"stringified object: false, [], null, a string"
+bash $ <<<$jsn jtc -T'"stringified object: {}"'
+"stringified object: null, 1, true, five"
 bash $ 
 ```
-Note that string values (`"five"`, `"a string"`) also get naked (because during such kind of interpolation a naked notation
-token `{}` gets applied onto each value of the iterable one by one).
+Note, string values (`"five"`) also get naked (because during such kind of interpolation a naked notation token `{}` gets
+applied onto each value of the iterable one by one).
 
-However, if any of children hold nested string types, then such interpolation would fail:
-```bash
-bash $ <<<'{"array":[null,1,true,{},["string"],"five"]}' jtc -w[array] -T'"stringified array: {}"' -r
-[ null, 1, true, {}, [ "string" ], "five" ]
-bash $ 
-```
-\- it fails because the interpolated value `[ "string" ]` would render the template an invalid JSON string,
-namely: `"stringified array: null, 1, true, {}, [ "string" ], five"` (inner quotation marks are not quoted)
 
 By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
 (default value `", "`), which means, it could be altered by a user:
