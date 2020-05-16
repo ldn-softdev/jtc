@@ -687,6 +687,12 @@ bash $ <ab.json jtc -w'<array>i1' -T'[{array}, "Sophia"]'
    "Sophia"
 ]
 bash $ 
+bash $ <ab.json jtc -w'<array:["Mia"]>i1' -T'[{array}, "Sophia"]'
+[
+   "Mia",
+   "Sophia"
+]
+bash $ 
 ```
 
 
@@ -1623,8 +1629,8 @@ bash $ <ab.json jtc -w'<C>z<name>l:' -w'<children>l: <C:no>f[0]<C:yes>v' -T'{"ha
 bash $ 
 ```
 
-> all the above examples just illustrate capabilities of the options, while the same ask probably would be easier to achive
-using just a single walk:  
+> all the above examples just illustrate capabilities of the options for instructional purpose. Practically,
+the same ask would be easier to achive using just a single walk:  
 >```bash
 >bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]<C:no>f[0]<C:yes>v' -T'{"name":{{N}}, "has children": {{C}}}' -jtc
 >[
@@ -1774,11 +1780,11 @@ the start, while _`S`_ can only be positive); either of positional parameters co
 finds recursively the first _empty string_ (e.g.: like in `{ "empty string": "" }`)
 - [`<text>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json):
 finds _recursively_ the first string _`"text"`_ (e.g.: like in `[ "text" ]`)
-- [`<..>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes):
-_`S`_ is an optional one-letter suffix altering the behavior of the lexeme:  
-  * if _`S`_ is any of _`rRPdDNbnlLaoicewjstqQgG`_ - then it's a _search_ matching a first occurrence of the lexeme, as per the 
+- [`<..>X`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes):
+_`X`_ is an optional one-letter suffix altering the behavior of the lexeme:  
+  * if _`X`_ is any of _`rRPdDNbnlLaoicewjstqQgG`_ - then it's a _search_ matching a first occurrence of the lexeme, as per the 
   suffix description      
-  * if _`S`_ is any of _`vkzfFuIZW`_ then it's a _directive_ and applies the respective behavior as per the suffix description
+  * if _`X`_ is any of _`vkzfFuIZWS`_ then it's a _directive_ and applies the respective behavior as per the suffix description
 - [`<text>n`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers):
 finds recursively _`n`th_ occurrence of _`"text"`_ in a currently walked JSON element
 - [`<text>+n`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers):
@@ -1787,9 +1793,9 @@ finds recursively _each occurrence_ of _`"text"`_ in a currently walked JSON ele
 finds recursively _each occurrence_ of `"text"` in a currently walked JSON element for the selected slice,
 where _`n`_,_`m`_,_`s`_ parameters comply with all `[N:M:S]` rules with an additional limitation: _`n`_ and _`m`_ cannot go negative
 and one additional liberation: either of parameters _`n`_,_`m`_,_`s`_ could be _interpolated_ from the namespace
-- [`<..>Sn`, `<..>S+n`, `<..>Sn:m:s`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers): 
-  * if _`S`_ is a search lexeme suffix, then quantifier notations apply exactly the same way as per in above `text` search quantifiers
-  * if _`S`_ is a directive lexeme suffix, then the quantifier behavior is either ignored (like in directives `vkzW`), 
+- [`<..>Xn`, `<..>X+n`, `<..>Xn:m:s`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers): 
+  * if _`X`_ is a search lexeme suffix, then quantifier notations apply exactly the same way as per in above `text` search quantifiers
+  * if _`X`_ is a directive lexeme suffix, then the quantifier behavior is either ignored (like in directives `vkzW`), 
   or is specific for the given directive (refer to the relevant description of directives: `fFuIZ`)
 - [`[label]:<..>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#scoped-search):
 _scoped_ recursive search - the search and match is performed in the currently selected JSON element only _among 
@@ -1809,13 +1815,13 @@ suffixes exemptions:
   the _non-recursive_ exact label match _cannot_ be scoped as well, however _`n`_ also may go negative here
   * [`>..<L`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re):
   the _non-recursive_ REGEX label match _cannot_ be scoped as well
-- [`<NS>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
+- [`<NS>X`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
 some search lexemes and some directives allow _capturing_ a currently walked/matched JSON into a namespace _`NS`_:
-  * if _`S`_ is a suffix any of _`PNbnaoicewqQgGvfF`_, then the namespace _`NS`_ will be populated upon a successful match (for searches)
+  * if _`X`_ is a suffix any of _`PNbnaoicewqQgGvfF`_, then the namespace _`NS`_ will be populated upon a successful match (for searches)
   or upon walking (for directives)
   * for the rest of the searches (_`rRdDlLjst`_), the lexeme defines a _search context_ (rather than the namespace reference), 
-  * for  for the rest of directives (_`kzuIZW`_) the behavior varies - refer to a respective directive description
-- [`<NS:JSON_value>S`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
+  * for  for the rest of directives (_`kzuIZWS`_) the behavior varies - refer to a respective directive description
+- [`<NS:JSON_value>X`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-json-value-into-a-namespace):
 the same searches and directives allowing _capturing_ JSON values, allow setting custom _`JSON_value`s_ 
 _instead_ of capturing (the same rules apply)
 
@@ -1834,7 +1840,7 @@ turns on a _sequential_ behavior for walk-paths (process first all the results f
 when used together with `-j` and `-l` allows _aggregated_ behavior for values with clashing labels, see below
 - [`-nn`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks):
 also triggers a _round-robin templates_ application when a number of templates (`-T`) and walks (`-w`) is the same but 
-a _round_robin_ template application must be favored over a default _per-walk_'s in this situation
+the _round_robin_ template application must be favored over the _per-walk_'s in this situation
 - [`-j`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array):
 arranges all walked elements (from all walk-paths) into a _JSON array_
 - [`-jl`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-resulted-walks-to-json-array):
@@ -1849,7 +1855,8 @@ labels are aggregated
 - [`-jj`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-a-json-object):
 arranges all walked elements into a _JSON object_ (i.e. all walked elements which do not have labels will be ignored), the
 values with clashing labels will _override the prior_ values (_note:_ `-l`,`-n` and `-nn` with `-jj` have no effect)
-- `-jjm`: alters behavior of `-jj` by enabling the aggregation of the values with the clashing labels into _JSON arrays_ 
+- [`-jjm`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrapping-walked-entries-into-a-json-object):
+alters behavior of `-jj` by enabling the aggregation of the values with the clashing labels into _JSON arrays_ 
 - `-jjll`: combined behavior of `-jj` and `-ll`
 - `-jjllm`: combined behavior of `-jj` and `-ll` and `-m`
 - [`-x`,`-y`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax):
