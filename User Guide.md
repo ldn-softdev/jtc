@@ -2083,13 +2083,13 @@ Stored in the namespace values could be reused later in the same or different wa
 [templates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates) and arguments
 for a shell evaluation.
 
-Beside user provided names, `jtc` features a number of internally generated/supported tokens and names that have various applications:
+Beside user provided names, `jtc` caters a number of internally generated/supported tokens and names that have various applications:
   - `$N` namespace, where `N` is a number - typically that would be a reference to the result of a REGEX matched group
   (however, could be (re)used by a user as well)
   - `$a`, `$b`, `$c`, etc - auto generated tokens when the interpolated value is an iterable (an array or an object),
-  where `$a` refers to the first element in the iterable, `$b` to the second, etc
-  - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an an object,
-  where `$A` refers to the first element's label, `$B` to the second's label, etc
+  where `$a` refers to the first top element in the iterable, `$b` to the second top, etc
+  - `$A`, `$B`, `$C`, etc - auto generated tokens when the interpolated value is an iterable,
+  where `$A` refers to the first top element's label/index, `$B` to the second top's label/index, etc
   - `$PATH` - an auto generated token, used in templates when requires to interpolate a path (set of indices/labels)
   to the walked point as a JSON array
   - `$path` - same as `$PATH` but interpolation occurs as a _JSON string_
@@ -2116,7 +2116,7 @@ bash $ <<<$jsn jtc -tc
 }
 bash $ 
 ```
-the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross-reference lookup.
+the ask here would be to retrieve a value from `list` given the label is in `item` - that would require a cross lookup.
 Using namespaces it becomes a trivial task:
 ```bash
 bash $ <<<$jsn jtc -w'[item]<Itm>v[^0]<Itm>t' -l
@@ -2128,10 +2128,10 @@ bash $
 - `[^0]` - resets the walk path back to the root
 - `<Itm>t` - searches (recursively) for a (first) label matching the value stored in the namespace `Itm` (which is `bread`)
 
-The similar way (like in `<Itm>v`) labels/indices could be accessed and stored in the namespace using directive `<>k`.
+The similar way (like in `<Itm>v`) labels/indices could be stored and accessed in the namespace using directive `<>k`.
 The empty directive lets reinterpreting label/index of the currently walked JSON element and treat it as a _JSON string_ / _JSON number_ 
 value respectively.  
-Say, we want to list all labels in the `address` record:
+E.g., say, we want to list all labels in the `address` record:
 ```bash
 bash $ <ab.json jtc -w'<address>l[:]<>k'
 "city"
@@ -2140,7 +2140,22 @@ bash $ <ab.json jtc -w'<address>l[:]<>k'
 "street address"
 bash $ 
 ```
-
+and we want to remap some of the labels, e.g.: `postal code` -> `zip`, `street address` -> `street`.
+Here's a way to do it:
+```bash
+bash $ map='{"postal code":"zip","street address":"street"}'
+bash $ 
+bash $ <ab.json jtc -w'<address>l[:]<Lbl>k<>k' -u"$map" -u'>Lbl<t' / -w'<address>l'
+{
+   "city": "New York",
+   "state": "NY",
+   "street": "599 Lafayette St",
+   "zip": 10012
+}
+bash $ 
+```
+\- it was already explained why there are 2 x `k`-lexemes in the walk-path, but here's once again: when `k`-lexeme stores the label
+into a namespace it does not re-interpret the label (it ony does storing), while the emplty `k`-lexeme does. 
 
 #### Path namespace example
 Here are both of the path tokens demonstrated:
@@ -2181,9 +2196,8 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
 [ "a", "b", "c" ]
 bash $ 
 ```
-When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk), or when interpolation of `$?` fails,
-then the value of this token is reset to an empty string (`""`). 
-
+When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk, or when interpolation of `$?` fails, or the 
+token was reset by user by setting the namespace '$?' to any value) then the value of this token is reset to an empty string (`""`). 
 
 When expanding values into a string (rather than into an array), the separator used by a user is arbitrary, e.g.:
 ```bash
@@ -2194,7 +2208,7 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"'
 bash $ 
 ```
 The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artifact 
-the namespace `$$?` holds the value which `jtc` considers as a separator (if it matches user's):
+the namespace `$$?` holds the value which `jtc` considers as a separator (default is `,`):
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
 "a"
@@ -2204,15 +2218,38 @@ bash $
 ```
 
 #### Iterables auto tokens
-Once a JSON iterable is the last walked element, then it generates auto-tokens which could be used in a template-interpolation. 
+When a JSON iterable is being interpolated, then it generates auto-tokens which could be used in a template-interpolation. 
 Each value in the iterable could be referred by a respective token: first value referred by `$a`, second by `$b`, and so on. In the 
-unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the last walked iterable
+unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the interpolated iterable
 is a JSON object, then its labels also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
 ```bash
 bash $ <<<'["This", "is", "example"]' jtc -T'"{$a} {$b} an {$c}!"'
 "This is an example!"
 bash $ 
 ```
+
+The auto-generated tokens for interpolated iterables can go as far as 3 characters in size. Say, there's a big flat JSON array
+(for the simplicity of explanation) like this: `[1, 2, 3, 4, 5 ... ]`. The first token (`$a`, `$A`) will refer to the number `1` 
+(and its index `0` respectively), `b$` will refer `2`, `$aa` will do `27`, `$aaa` will do `703`, etc.
+The highest element (index) in such array could be referred by auto-token `$zzž` (`$ZZZ`), which is `18278` (index `18277`)  
+
+Here's a proof:
+```bash
+bash $ 
+bash $ <<<0 jtc -jw'<c>I1><F19999' -T{c} / -T'{$a}'
+1
+bash $ <<<0 jtc -jw'<c>I1><F19999' -T{c} / -T'{$b}'
+2
+bash $ <<<0 jtc -jw'<c>I1><F20999' -T{c} / -T'{$aa}'
+27
+bash $ <<<0 jtc -jw'<c>I1><F19999' -T{c} / -T'{$aaa}'
+703
+bash $ <<<0 jtc -jw'<c>I1><F19999' -T{c} / -T'{$zzz}'
+18278
+bash $ 
+```
+\- the first _option chain-set_ (`-jw'<c>I1><F19999' -T{c}`) generates such a big flat array: `[1, 2, 3, ... 19999, 20000]`,
+the second part (`-T'{$..}'`) picks the respective element from the array
 
 
 ### Namespaces with interleaved walks
@@ -2230,10 +2267,10 @@ bash $
 ```
 That is a correct result (though might not reflect what possibly was intended), let's review it:
 1. first line contains only result `"John"` - because template interpolation fails here (namespace `chld` does not yet exist yet,
-thus the resulting template is _invalid JSON_) hence source walk is used / printed last walked JSON value
+thus the resulting template is _invalid JSON_) hence source walk is used / printed w/o interpolation
 2. upon next (_interleaved_) walk, we see a correct result of a template interpolation: `Parent`'s and `child`'s records are filled
 right (template is a _valid JSON_ here)
-3. in the third line, the result is also correct, albeit might not be the expected one - upon next _interleaved_ walk, the 
+3. in the third is also corline, the result rect, albeit might not be the expected one - upon next _interleaved_ walk, the 
 namespace `pnt` is populated with `"Ivan"`, but the namespace `chld` still carries the old result.
 4. _etc._
 
@@ -2265,7 +2302,7 @@ bash $
 ```
 \- that's a neat, though a [documented](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#unquoting-JSON-strings) trick
 
-Yet, the same could have been achieved even a simpler way (using just one walk):
+Yet again, the same could have been achieved even a simpler way (using just one walk):
 ```bash
 bash $ <ab.json jtc -w'<name>l:<pnt>v[-1][children][:]' -T'{ "Parent": {{pnt}}, "child": {{}} }' -r
 { "Parent": "John", "child": "Olivia" }
@@ -2344,14 +2381,15 @@ bash $ <<<$jsn jtc -w'[item]<idx>v[-1][list]>idx<t' -l
 "milk": 0.90
 bash $ 
 ```
-- `>idx<t` lexeme here will utilize namespace `idx` to find the offset (index).
+\- `>idx<t` lexeme here will use namespace `idx` to produce the offset (index).
 
 There's a subtle difference how the lexeme `t` treats and uses referred namespace:
-- in `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching (recursively) a 
-respective label. I.e., even if the value in the namespace is numerical value `0`, it will search for a label `"0"` instead
-- in `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try matching the label
-(as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value is used as a direct offset
-in the searched JSON node
+
+- in a recursive `<..>t` notation, the lexeme always treats the value in the namespace as _JSON string_ and will try searching
+(recursively) a  respective label. I.e., even if the value in the namespace is numerical value `0`, it will search for a label `"0"`
+- in a non-recursive `>..<t` notation, if the namespace holds a literal (i.e., a _JSON string_) value, then the lexeme will try
+matching the label (as expected);  however, if the namespace holds a numerical value (_JSON number_), then the value (its integral part) 
+is used as a direct offset in the searched JSON node
 
 
 ### Templates
