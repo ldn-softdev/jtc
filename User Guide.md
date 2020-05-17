@@ -52,8 +52,10 @@
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
        * [Prior walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
+          * [auto tokens ranges](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-ranges)
+          * [auto tokens for atomics](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-for-atomics)
    * [Namespaces with interleaved walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespaces-with-interleaved-walks)
-   * [Search quantifiers interpolation (`<...>S{..}`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
+   * [Search quantifiers interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-quantifiers-interpolation)
    * [Templates (`-T`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#templates)
      * [Multiple templates and walks](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#multiple-templates-and-walks)
      * [Stringifying JSON, Jsonizing stringified(`>{{}}<`, `>>{{}}<<`, `<{{}}>`, `<<{{}}>>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified)
@@ -2019,7 +2021,7 @@ bash $
 ```
 And the ask here would be to extend all arrays in each `args` with the arguments from the respective `Func`:
 ```bash
-bash $ <<<$jsn jtc -w'[:][args]' -u'[:][Func]<(\w+)[ +*]+(\w+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]' -tc
+bash $ <<<$jsn jtc -w'<args>l:' -u'<Func>l:<(.+)[ +*]+(.+)>R[-1][args]' -T'[{}, {{$1}}, {{$2}}]' -tc
 [
    {
       "Func": "x + y",
@@ -2222,9 +2224,10 @@ bash $
 ```
 
 #### Iterables auto tokens
-When a JSON iterable is being interpolated, then it generates auto-tokens which could be used in a template-interpolation. 
-Each value in the iterable could be referred by a respective token: first value referred by `$a`, second by `$b`, and so on. In the 
-unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the interpolated iterable
+When a JSON iterable is being interpolated, it generates auto-tokens which could be used in a template-interpolation. 
+Each value in the iterable could be referred by a respective token: the first value is referred by `$a`, the second is by `$b`, and so on. 
+In the  unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the interpolated  
+iterable
 is a JSON object, then its labels also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
 ```bash
 bash $ <<<'["This", "is", "example"]' jtc -T'"{$a} {$b} an {$c}!"'
@@ -2254,6 +2257,58 @@ bash $
 ```
 \- the first _option chain-set_ (`-jw'<c>I1><F19999' -T{c}`) generates such a big flat array: `[1, 2, 3, ... 19999, 20000]`,
 the second part (`-T'{$..}'`) picks the respective element from the array
+
+##### auto tokens ranges
+There are 2 ranges for auto-generated tokens for iterables:  
+- the first range refers each top element of the iterable,  
+\- second range of auto-token refers to each _atomic value_ in the iterable as if it was walked recursively.  
+
+It's easier to understand on the example, consider this simple JSON:
+```bash
+bash $ jsn='{"item": "spoon", "props": ["steel", "dessert"]}'
+bash $ <<<$jsn jtc 
+{
+   "item": "spoon",
+   "props": [
+      "steel",
+      "dessert"
+   ]
+}
+bash $ 
+```
+First-range tokens `$a` and `$b` will refer top values:
+```bash
+bash $ <<<$jsn jtc -T'{{$a}}'
+"spoon"
+bash $
+bash $ <<<$jsn jtc -T'{{$b}}'
+[
+   "steel",
+   "dessert"
+]
+bash $ 
+```
+While second-range tokens (for this JSON the second range will start with token `$c`) will refer each _atomic value_ as
+if JSON was walked recursively:
+```bash
+bash $ <<<$jsn jtc -T'{{$c}}'
+"spoon"
+bash $ 
+bash $ <<<$jsn jtc -T'{{$d}}'
+"steel"
+bash $ 
+bash $ <<<$jsn jtc -T'{{$e}}'
+"dessert"
+bash $ 
+```
+
+##### auto tokens for atomics
+In fact, atomic values also generate auto-tokens (`$a` and `$A` for the value and the label/index respectively):
+```bash
+bash $ <<<'[null]' jtc -w[0] -T'"atomic: {$a} with index: {$A}"'
+"atomic: null with index: 0"
+bash $ 
+```
 
 
 ### Namespaces with interleaved walks
@@ -2473,24 +2528,26 @@ destination walk (`-w`). Thus using templates it becomes easy to transmute exist
 
 `jtc` operations `-i`/`-u`/`-c` also support template (as of _`v1.76`_) as an argument, that extends capabilities and use-cases of such 
 operations:
-1) template-interpolate operation directly from source walks: 
+1. template-interpolate operation directly from source walks: 
   ```bash
   bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' / -lrw'<name>l'
   "name": [ "Smith", "John" ]
   bash $ 
   ```
-2) template-interpolation of the operation's template argument (double templating):
+2. template-interpolation of the operation's template argument (double templating):
   ```bash
   bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' -T'"Jones-{}"' / -lrw'<name>l'
   "name": "Jones-Smith, John"
   bash $ 
   ```
-3) template-interpolation of the operation's template argument walks:
+3. template-interpolation of the operation's template argument walks:
   ```bash
-  bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' -u'[0]<L>v' -T'"{L} & Wesson"' / -lrw'<name>l'
+  bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' -u'[0] ' -T'"{} & Wesson"' / -lrw'<name>l'
   "name": "Smith & Wesson"
   bash $ 
   ```
+  See [argument disambiguation](TBU) for explanations why there are trailing symbols (`;`, ` `) after template and walk arguments 
+  
 
 #### Multiple templates and walks
 When _multiple_ templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>` to which templates applied)
@@ -2532,7 +2589,7 @@ bash $
 
 ```
 The mess in the above last example is explained by `-nn` usage: templates are forced to get applied in the round-robin fashion while
-walks are sequential.
+walks are sequential (`-n`).
 
 
 One use-case of multiple round-robin templates would be this example:
@@ -2544,14 +2601,15 @@ bash $ <<<'[1,2,3,4,5,6,7,8,9,10]' jtc -w[:] -T'""' -T{} -T'""' -qq
 bash $ 
 ```
 \- in the above example printed every 3rd element from source JSON starting from the 2nd one (recall: when unquoting an empty
-JSON string ("") the resulted blank lines are not getting printed). Though a much handier way to achieve the same is to use `-xn/N`
+JSON string ("") the resulted blank lines are not getting printed). Though a much handier way to achieve the same is to use
+[`-xn/N`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
 option.
 
 
 #### Stringifying JSON, Jsonizing stringified
 There's one more token combination in templates allowing _stringification_ and _jsonization_ of values:
 - `<..>`, `<<..>>` will attempt "expanding" a string value into a JSON
-- `>..<`, `>>..<<` will take a current JSON value and stringify it
+- `>..<`, `>>..<<` will take a current JSON value and stringify it (compress JSON into a string)
 
 The token notation follows the same rule as for regular tokens (`{}`, `{{}}`):
 - single angular bracket notation (`<..>`, `>..<`) will result in a "naked" JSON value (without quotation marks, curly braces
@@ -2577,21 +2635,21 @@ bash $
 
 ### Summary of interpolation token types
 - [`{}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
-a token used in _templates_ resulting in a "naked" type of interpolation from the currently walked JSON
+a token used in _templates_ resulting in a _"naked"_ type of interpolation from the currently walked JSON
 - [`{NS}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
 same as `{}`, but interpolation occurs from the _namespace_ `NS`
 - [`{{}}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
-a token used in _templates_ resulting in a "dressed" type of interpolation from the currently walked JSON
+a token used in _templates_ resulting in a _"dressed"_ type of interpolation from the currently walked JSON
 - [`{{NS}}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
 same as `{{}}`, but interpolation occurs from the _namespace_ `NS`
 - [`<json_str>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
-a token notation for a jsonization request of the stringified JSON `json_str`, the result is a "naked" JSON value
+a token notation for a jsonization request of the stringified JSON `json_str`, the result is a _"naked"_ JSON value
 - [`<<json_str>>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
-same as `<json_str>`, however  the result is a complete ("dressed") JSON value
+same as `<json_str>`, however  the result is a complete (_"dressed"_) JSON value
 - [`>json<`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
-a token notation for a stringification request of a JSON `json`, the result is a "naked" _JSON string_ value
+a token notation for a stringification request of a JSON `json`, the result is a _"naked" JSON string_ value
 - [`>>json<<`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified):
-same as `>json<`, however the result is a complete ("dressed") _JSON string_ value
+same as `>json<`, however the result is a complete (_"dressed"_) _JSON string_ value
 
 
 ### Summary of namespace tokens
@@ -2603,10 +2661,10 @@ all internally generated names and tokens always begin with symbol `$`
 - [`?N`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace):
 where N is a number - these names are generated by matching subgroups in REGEX lexemes (`<..>R`, `<..>D`, `<..>L`)
 - [`$a`, `$b` .. `$z`, `$aa`, `$ab`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens), .. :
-auto generated tokens when the interpolated JSON is an iterable, each token corresponds
+auto-generated tokens when the interpolated JSON is an iterable, each token corresponds
 to a respective ordinal value in the iterable
 - [`$A`, `$B` .. `$Z`, `$AA`, `$AB`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens), .. :
-auto generated tokens when the interpolated JSON is an object, each token corresponds
+auto-generated tokens when the interpolated JSON is an object, each token corresponds
 to a label of each respective ordinal value in the object
 - [`$PATH`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example):
 a token expanding into a _JSON array_ holding a path (set of labels and indices) towards currently walked JSON element
