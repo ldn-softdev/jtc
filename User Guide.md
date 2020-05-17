@@ -1984,11 +1984,15 @@ we have to ensure that the interpolation occurs of the naked value.
 
 Let's consider both scenarios where interpolation of the namespace `Val` uses a _dressed_ notation:
 
-  - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ {{Val}}: {{Key}} }'` results in `{ "irrational": "type" }` - the interpolation of `{{VAL}}`
-for the first record fails here, it becomes `{ 3.14: "pi" }`, which is invalid JSON and hence not getting inserted (but purged)
-  - `<<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ "{{Val}}": {{Key}} }'` results in `{ "3.14": "pi" }` - the interpolation of `"{{VAL}}"`
-for the second record fails here - it becomes `{ ""irrational"": "type" }` - which is also an invalid JSON
-
+  - `bash $ <<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ {{Val}}: {{Key}} }'`  
+  `{ "irrational": "type" }`  
+  \- the interpolation of `{{VAL}}` for the first record fails here (template becomes `{ 3.14: "pi" }`, which is invalid JSON) and hence
+  insertion happens of the same existing value (which is moot) and then getting purged
+  - `bash $ <<<$jsn jtc -rpi'[:]<Key>k<Val>v' -T'{ "{{Val}}": {{Key}} }'`  
+  `{ "3.14": "pi" }`  
+  \- here, the interpolation of `"{{VAL}}"` for the second record fails: template becomes `{ ""irrational"": "type" }`, which is also
+  an invalid JSON.
+  
 The `Key` token notation could have been spelled either way, e.g.: `"{Key}"` - would work as well. 
 
 
@@ -2393,12 +2397,18 @@ is used as a direct offset in the searched JSON node
 
 
 ### Templates
-Template (an argument to `-T`, or in lexeme `<..>j`) is a literal JSON optionally containing tokens for interpolation. 
+Template (an argument to `-T`/`-u`/`-i`/`-c`, or in lexeme `<..>j`) is a literal JSON optionally containing tokens for interpolation. 
 Templates can be used upon walking, insertion, updates and when comparing. The result of template interpolation still must
 be a valid JSON. If a template (`-T`) is given then it's a template value (after interpolation) will be used for the operations,
 not the source walk (unless the resulting template is invalid JSON, in such case the source walk will be used).
 
-When walking is a standalone operation, then template interpolation occurs from the walk-path (`-w`):
+> Remember, template always refers to a source (walk/JSON), e.g.:  
+> - if `jtc` executes walking only (`-w`) then such walks refer to source (walk source JSON)
+> - if `jtc` executes any of `-u`/`-i`/`-c`, then arguments of such operations is a source (while any of `-w` walks point to 
+destinations location points of update/insertion/comparison operation)  
+
+
+When walking is a standalone operation, then template interpolation occurs from the walk (`-w`) results:
 ```bash
 bash $ <ab.json jtc -w'[0][0]<number>l:' 
 "112-555-1234"
@@ -2409,19 +2419,19 @@ bash $ <ab.json jtc -w'[0][0]<number>l:' -T'"+1 {}"'
 bash $ 
 ```
 
-For the rest of operations (`-i`, `-u`, `-c`) templates are getting interpolated from walk-path of the operation argument itself and
-never from `-w`. The namespaces resulting from walking destinations (`-w`) are shared with source walks in operations (`-i`, `-u`, `-c`)
+For the operations `-i`, `-u`, `-c` the namespaces resulting from walking destination (`-w`) are shared with source walks in operations
 \- that way 
 [cross-referenced insertions and updates](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-insert-update)
 are possible. Logically, for each destination walk (`-w`) there will be a respective subsequent source walk 
-(e.g.: `-c <src-walk>`), thus source walk may utilize the namespaces populated during destination walk (`-w`). 
-Template-interpolation will be attempted only once source walk is successful
+(e.g.: `-u <src-walk>`), thus source walk may utilize the namespaces populated during destination walk (`-w`). 
+Template-interpolation will be attempted only once source walk is successful. If an attempt of template interpolation fails (resulting
+in an invalid JSON) then the source result wil be used for the operation. 
 
 Below is an example of updating the phone records for the first entry in the `Directory` (appending a country-code and 
 altering the `phone` label at the same time via template):
 ```bash
 # dump phones of the 1st record in the Directory 
-bash $ <ab.json jtc -w'[0][0]<phone>l'
+bash $ <ab.json jtc -w'<phone>l'
 [
    {
       "number": "112-555-1234",
@@ -2433,8 +2443,8 @@ bash $ <ab.json jtc -w'[0][0]<phone>l'
    }
 ]
 bash $
-# transform phone records: append country-code and update labels at the same time
-bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<V>v' -T'{ "phone number": "+1 {V}" }' / -w'[0][0]<phone>l'
+# let's transform phone records: append country-code and update labels at the same time
+bash $ <ab.json jtc -w'<phone>l[:]' -pi'<phone>l[:][number]<V>v' -T'{ "phone number": "+1 {V}" }' / -w'<phone>l'
 [
    {
       "phone number": "+1 112-555-1234",
@@ -2448,19 +2458,39 @@ bash $ <ab.json jtc -w'[0][0]<phone>l[:]' -pi'[0][0]<number>l:<V>v' -T'{ "phone 
 bash $ 
 ```
 Explanations:
-- `-w'[0][0]<phone>l[:]'` - that's our destinations which we will be updating (i.e., all phone records in the first `Directory` entry)
-- `-pi'[0][0]<number>l:<val>v'` - we'll walk (logically, synchronously with `-w`) all the `number` records and memorize `number`
-values in the namespace `V`; option `-p` turns _insert_ operation into _move_
-- `-T'{ "phone number": "+1 {val}" }'` after each source walk argument in `-i` a template interpolations occurs - a new 
+- `-w'<phone>l[:]'` - that's our destinations which we will be updating (i.e., all phone records in the first `Directory` entry)
+- `-pi'<phone>l[:][number]<V>v'` - we'll walk (logically, synchronously with `-w`) all the `number` records in the first phone record
+and memorize `number` values in the namespace `V`; option `-p` turns _insert_ operation into _move_
+- `-T'{ "phone number": "+1 {V}" }'` after each source walk (the argument of `-i`) a template interpolations occurs - a new 
 JSON entry is generated from the template and namespace `V`, and the new entry is then used for insertion into the respective
 destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON entry into a new one.
 
 > there might be a confusion how purge (`-p`) is applied when used together with `-i`, `-u`, `-c`: 
->- when the argument of the options is a source walk and not a static JSON and/or a file (i.e. when options `-i`,`-u`,`-c` are walking
-the  source/input JSON), then the purge is applied to the source walked elements
->- when the argument of the options is either a static JSON and/or a file, then the purge is applied to the destination walked 
-(`-w`) elements
+>- when the argument of the options is a walk and not a JSON (i.e. when options `-i`,`-u`,`-c` are walking the input JSON), 
+> then the purge is applied to the source walked elements
+>- when the argument of the options is JSON, then the purge is applied to the destination walked (`-w`) elements
 
+
+`jtc` operations `-i`/`-u`/`-c` also support template (as of _`v1.76`_) as an argument, that extends capabilities and use-cases of such 
+operations:
+1) template-interpolate operation directly from source walks: 
+  ```bash
+  bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' / -lrw'<name>l'
+  "name": [ "Smith", "John" ]
+  bash $ 
+  ```
+2) template-interpolation of the operation's template argument (double templating):
+  ```bash
+  bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' -T'"Jones-{}"' / -lrw'<name>l'
+  "name": "Jones-Smith, John"
+  bash $ 
+  ```
+3) template-interpolation of the operation's template argument walks:
+  ```bash
+  bash $ <ab.json jtc -w'<name>l' -u'["Smith", {{}}];' -u'[0]<L>v' -T'"{L} & Wesson"' / -lrw'<name>l'
+  "name": "Smith & Wesson"
+  bash $ 
+  ```
 
 #### Multiple templates and walks
 When _multiple_ templates given and a number of walks (`-w<walk>`, or `-u<walk>`, `-i<walk>` to which templates applied)
