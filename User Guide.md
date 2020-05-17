@@ -2224,11 +2224,10 @@ bash $
 ```
 
 #### Iterables auto tokens
-When a JSON iterable is being interpolated, it generates auto-tokens which could be used in a template-interpolation. 
+When a JSON iterable is being interpolated, it generates auto-tokens which could be reused in a template-interpolation. 
 Each value in the iterable could be referred by a respective token: the first value is referred by `$a`, the second is by `$b`, and so on. 
-In the  unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. If the interpolated  
-iterable
-is a JSON object, then its labels also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
+In the  unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. Labels and/or indices of 
+the interpolatable iterable also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
 ```bash
 bash $ <<<'["This", "is", "example"]' jtc -T'"{$a} {$b} an {$c}!"'
 "This is an example!"
@@ -2260,10 +2259,10 @@ the second part (`-T'{$..}'`) picks the respective element from the array
 
 ##### auto tokens ranges
 There are 2 ranges for auto-generated tokens for iterables:  
-- the first range refers each top element of the iterable,  
+\- the first range refers each top element of the iterable,  
 \- second range of auto-token refers to each _atomic value_ in the iterable as if it was walked recursively.  
 
-It's easier to understand on the example, consider this simple JSON:
+It's easier to understand auto-token ranges on the example. Consider this simple JSON:
 ```bash
 bash $ jsn='{"item": "spoon", "props": ["steel", "dessert"]}'
 bash $ <<<$jsn jtc 
@@ -2276,7 +2275,7 @@ bash $ <<<$jsn jtc
 }
 bash $ 
 ```
-First-range tokens `$a` and `$b` will refer top values:
+The first-range tokens (`$a` and `$b`) will refer top values:
 ```bash
 bash $ <<<$jsn jtc -T'{{$a}}'
 "spoon"
@@ -2288,7 +2287,7 @@ bash $ <<<$jsn jtc -T'{{$b}}'
 ]
 bash $ 
 ```
-While second-range tokens (for this JSON the second range will start with token `$c`) will refer each _atomic value_ as
+While the second-range tokens (for this JSON the second range starts with token `$c`) will refer each _atomic value_ as
 if JSON was walked recursively:
 ```bash
 bash $ <<<$jsn jtc -T'{{$c}}'
@@ -2520,7 +2519,11 @@ and memorize `number` values in the namespace `V`; option `-p` turns _insert_ op
 JSON entry is generated from the template and namespace `V`, and the new entry is then used for insertion into the respective
 destination walk (`-w`). Thus using templates it becomes easy to transmute existing JSON entry into a new one.
 
-> there might be a confusion how purge (`-p`) is applied when used together with `-i`, `-u`, `-c`: 
+> B.t.w., in the above example usage of namespace `<V>v` was reduntand and served only instructional purpose - the same JSON query
+> could be achieved w/o using the namespace, compare:  
+> `<ab.json jtc -w'<phone>l[:]' -pi'<phone>l[:][number]' -T'{ "phone number": "+1 {}" }' / -w'<phone>l'`
+
+> There might be a confusion how purge (`-p`) is applied when used together with `-i`, `-u`, `-c`: 
 >- when the argument of the options is a walk and not a JSON (i.e. when options `-i`,`-u`,`-c` are walking the input JSON), 
 > then the purge is applied to the source walked elements
 >- when the argument of the options is JSON, then the purge is applied to the destination walked (`-w`) elements
