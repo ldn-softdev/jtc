@@ -67,7 +67,8 @@
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
-     * [Argument disambiguation path](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)
+     * [Argument disambiguation path](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)  
+       * [Inserting/Updating from a file](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#inserting-updating-from-a-file)     
      * [Destination driven insertion](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#destination-driven-insertion)
      * [Inserting objects into objects](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#inserting-objects-into-objects)
      * [Insertion matrix without merging](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-without-merging)
@@ -77,8 +78,8 @@
      * [Updating labels](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#updating-labels)
    * [Insert, Update with move semantic (`-i`/`-u`,`-p`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic)
    * [Insert, Update: argument shell evaluation (`-e`,`-i`/`-u`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation)
-   * [Use of mixed argument types for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-for--i--u--c)
-   * [Use of mixed argument types with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-with--e)
+   * [Mixing argument types for `-i`, `-u`, `-c` (e.g.: `jtc -u<JSON> -u<walk-path>`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixing-argument-types-for--i--u--c)
+   * [Mixing argument types with `-e`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixing-argument-types-with--e)
    * [Cross-referenced insert, update](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Cross-referenced-insert-update)
      * [Cross-referenced purge](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-purge)
    * [Summary of modification options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-modification-options)
@@ -2934,6 +2935,27 @@ To ensure that such argument is treated as a template, pass any (non-space) trai
 argument w.r.t. any trailing characters is _relaxed_ - it attempts parsing what it can and discards any trailing symbols.
 
 
+#### Inserting/Updating from a file
+if insert/update occurs from a _file_ and such file caters multiple JSONS (a.k.a. _stream of JSONs_), then the stream of JSON is 
+automatically converted into array of JSONs:
+```bash
+bash $ cat file.json 
+[ "first", "JSON" ]
+{ "second": "JSON" }
+"third JSON"
+bash $ 
+bash $ <<<'{"update here": null}' jtc -w'[update here]' -u file.json -tc
+{
+   "update here": [
+      [ "first", "JSON" ],
+      { "second": "JSON" },
+      "third JSON"
+   ]
+}
+bash $ 
+```
+
+
 #### Destination driven insertion
 The destination insertion point(s) (`-w`) controls how insertion is done:
 - if a given destination insertion point (`-w`) is a single walk and non-iterable - i.e., if it's a single point location - then 
@@ -2945,7 +2967,7 @@ bash $ <ab.json jtc -w'<children>l:' -lr
 "children": []
 "children": [ "Robert", "Lila" ]
 bash $
-# make couple insertions in a single destination record
+# make couple insertions in a single destination point
 bash $ <ab.json jtc -w'[name]:<Ivan>[-1][children]' -i'"Maggie"' -i'"Bruce"' / -w'<children>l:' -lr
 "children": [ "Olivia" ]
 "children": [ "Maggie", "Bruce" ]
@@ -2993,7 +3015,7 @@ bash $ <ab.json jtc -w'[0][-1:][address]' -i'{ "PO box": null, "street address":
 }
 bash $
 ```
-\- the `"PO box"` label got inserted, but the destination object's value in the `"street address"` has been preserved
+\- the `"PO box"` got inserted, but the destination object's value in the `"street address"` has been preserved
 
 
 #### Insertion matrix without merging
@@ -3020,7 +3042,7 @@ as follows from the table:
 if insertion of an array into another array happens without merging arrays, how then to achieve the merged result upon
 insertion?
 
-option `-m` (merge) alters the behavior of insert operation into following:
+Option `-m` (merge) alters the behavior of insert operation into following:
 ```
   to \ from  |        [3,4]        |     {"a":3,"c":4}     |      "a":3,"c":4      |      3
 -------------+---------------------+-----------------------+-----------------------+-------------
@@ -3069,11 +3091,11 @@ Here's the matrix table for update operations with and without merging:
 
 
 #### Updating labels
-The directive lexeme `<>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
+The directive lexeme `<..>k` allows accessing the label/index of the currently walked JSON element and even store it in the namespace.
 
 Another function featured by the lexeme is that the label could be is reinterpreted as a _JSON string_ value, that allows rewriting
 labels using update operation (insert into labels is not possible even semantically). However, that only applies if `<>k` lexeme 
-is the last lexeme in the walk-path and if the lexeme is empty.
+is the last executed lexeme and if the lexeme is empty.
 
 As the an exercise, let's capitalize all the labels within all `address`'es in `ab.json`:
 ```bash
@@ -3120,11 +3142,20 @@ bash $ <ab.json jtc -w'<John>[-1]<.*>L:<>k' -eu '<<<{{}}' tr '[:lower:]' '[:uppe
 bash $ 
 ```
 
+The labels can be updated with any atomic value (and not with the iterable values, obviously):
+```bash
+bash $ <ab.json jtc -w'<John><>k' -u true / -w'<John>' -l
+"true": "John"
+bash $ <ab.json jtc -w'<name>l<>k' -u '[true]' / -w'[0][0]' -tc
+error: label could be updated only with JSON atomic value
+...
+```
+
 
 ### Insert, Update with move semantic 
-if a source argument for either `-i` or `-u` is given in the form of `<file>` or `<JSON>`, then those obviously cannot be moved.
+if a source argument for either `-i` or `-u` is given in the form of a _file_ or _literal JSON_, then those obviously cannot be moved.
 The move semantic is only applicable when the argument is given only in the form of a `<walk-path>` (i.e. it refers to the 
-input/source JSON), then upon completing the operation, the source elements (referred by the source walk-path) becomes possible
+_input JSON_), then upon completing the operation, the source elements (referred by the source walk-path) becomes possible
 to remove (purge). This is achievable by adding the option `-p`.
 
 Let's move `address` from the last `Directory` record into the first one:
@@ -3177,18 +3208,19 @@ option `-e`).
 E.g., let's capitalize all the `name` entries in the address book:
 ```bash
 # dump all the names:
-bash $ <ab.json jtc -w'<name>l:' 
-"John"
-"Ivan"
-"Jane"
+bash $ <ab.json jtc -w'<name>l:' -l
+"name": "John"
+"name": "Ivan"
+"name": "Jane"
 bash $
 # capitalize the names through update using shell evaluation:
-bash $ <ab.json jtc -w'<name>l:' -eu '<<<{{}}' tr "[:lower:]" "[:upper:]" \; / -w'<name>l:'
-"JOHN"
-"IVAN"
-"JANE"
-bash $
+bash $ <ab.json jtc -w'<name>l:' -eu '<<<{{}}' tr "[:lower:]" "[:upper:]" \; / -w'<name>l:' -l
+"name": "JOHN"
+"name": "IVAN"
+"name": "JANE"
+bash $ 
 ```
+
 Once options `-e` and `-u`(`-i`) are used together, following rules must be observed:
 - option `-e` must precede first occurrence of `-i`/`-u`
 - cli arguments sequence following option `-i`/`-u` must be terminated with the _standalone_ escaped semicolon: `\;`
@@ -3204,37 +3236,35 @@ be promoted to a _JSON string_ value)
 >if shell cli does not deliver expected result for some reason, it's debuggable with `-dd` options.
 
 
-### Use of mixed argument types for `-i`, `-u`, `-c` 
-options `-i`, `-u`, `-c` allow two *kinds* of their arguments:
-1. static JSONs (i.e., `<file>`, `<JSON>`)
-2. walk-path (i.e., `<walk-path>`)
+### Mixing argument types for `-i`, `-u`, `-c` 
+options `-i`, `-u`, `-c` allow mixing two *kinds* of their arguments:
+1. _JSON argument_ (given in the form of either _file_, or a _literally spelled JSON_, or a _template_)
+2. _walk-path_
 
-\- when those used together, namely a `<walk-path>` argument(s) follows either of statics, e.g.:  
+\- when those used together, namely a `<walk-path>` argument(s) follows _JSON argument_, e.g.:  
 `jtc -u file.json -u'[Root][:]'`
+then all `<walk-path>` arguments (here `[Root][:]`) apply onto the _JSON argument_ (here a JSON from `file.json`).
+\- when both kinds of arguments are used together, then only one _JSON argument_ is allowed while multiple _walk-path_ may be given
 
-then all `<walk-path>` arguments (here `[Root][:]`) apply onto the static argument (here `file.json`).
-\- When both kinds of arguments are used together, then only one (the first) static JSON argument is accepted, while 
-multiple walk-path may be given
-\- if `<walk-path>` arguments are given without preceding static JSON, then walk-path are applied onto the input (source) JSON
-
-That rule is in play to facilitate a walking capability over the specified static JSONs. Though be aware: in any case _all specified 
-`<walk-path>` arguments will be processed in a consecutive order, one by one (i.e., interleaving never occurs)_.
+That way is possible to facilitate walking over the specified _JSON argument_. Though be aware of a design limitation: 
+_multiple `<walk-path>` arguments will be processed in a sequential order, one by one (i.e., interleaving never occurs)_.
 
 (Also, see 
 [operations with cross referenced lookups](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-referenced-insert-update))
 
 
-### Use of mixed argument types with `-e`
+### Mixing argument types with `-e`
 options `-u`, `-i` when used together with `-e` also allow specifying multiple instances of the option usage:
 1. first option occurrence must prove a shell cli line, terminated with the standalone spelling of a semicolon `\;`
 2. all the subsequent option usages must provide `<walk-path>` type of argument, which let specifying source(s) of interpolation
-(occurring before shell evaluation happens). However, in the case if mixed option arguments usage is detected (in presence of `-e`),
-then the semantic of the `jtc` arguments would be like this (e.g., for option `-u`):  
+(occurring before shell evaluation happens). 
+However, in the case if the mixed argument types use is detected (in presence of `-e`), then the semantic of the `jtc` arguments 
+would be like this:  
 `jtc -w'<dst>' -eu <shell cli ...> \; -u'<src>'`  
 Here, both `<dst>` and `<src>` walk the same input JSON. _Shell cli_ evaluation / interpolation occurs from walking `<src>`
 That way it's possible to decouple source(s) (of interpolation) from the destination(s): all trailing (subsequent) arguments of `-u`
 will be used in every shell evaluation (interpolating respective JSON elements), while arguments pointed by (all) `-w` option(s)
-will point where returned/evaluated resulting JSONs should be placed.
+will point where evaluated/returned resulting JSONs should be placed.
 
 The described argument behavior facilitates transformation of a JSON when a source location of transformation is not the same as
 a destination
@@ -3252,8 +3282,8 @@ bash $ <ab.json jtc -w'<children>l:' -ei '<<<{{}}' tr '[:lower:]' '[:upper:]' \;
 "children": [ "Robert", "Lila", "JANE" ]
 bash $ 
 ```
-- there, the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'`), while the destinations were
-`children` (given with `-w'<children>l:'`)
+- there, the source(s) of shell interpolation were `name` records (provided with `-i'<name>l:'` walks), while the destinations
+were `children` (given with `-w'<children>l:'`)
 
 In case if a single option instance (`-eu`/`-ei`) is used (w/o trailing options with walk arguments), then both the source
 (of interpolation) and the destination (of operation) would be provided with `-w` option argument
@@ -3261,8 +3291,8 @@ In case if a single option instance (`-eu`/`-ei`) is used (w/o trailing options 
 
 ### Cross-referenced insert, update
 One use-case that namespaces facilitate quite nicely, is when insert/update/purge/compare operation refer to different JSONs 
-(i.e., in
-[Use of mixed argument types](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#use-of-mixed-argument-types-for--i--u--c)) 
+(e.g, in
+[Mixing argument types](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixing-argument-types-for--i--u--c)) 
 but one requires a reference from another.
 
 Say, we have 2 JSONs:
@@ -3290,12 +3320,12 @@ bash $
 The ask here is to insert songs titles from `id.json` into `main.json` cross-referencing respective `rec` to `id` values.  
 The way to do it:
 - first walk `main.json` finding and memorizing (each) `rec` value 
-- then, walk up to the `song` entry  (so that will be a destination pointer, where song needs to be inserted).
+- then, walk up to the `song` entry (so that will be a destination pointer, where song needs to be inserted).
 
 The insert operation (`-i`) here would need to find `id` record in `id.json` using memorized (in the destination walk) namespace and 
 insert respective `title`:
 ```bash
-bash $ <main.json jtc -w'<rec>l:<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][title]' -tc
+bash $ <main.json jtc -w'<rec>l:<Rid>v[-1][songs]' -mi id.json -i'[id]:<Rid>s[-1][title]' -tc
 [
    {
       "name": "Abba",
@@ -3315,9 +3345,9 @@ bash $ <main.json jtc -w'<rec>l:<R>v[-1][songs]' -mi id.json -i'[id]:<R>s[-1][ti
 ]
 bash $ 
 ```
-For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When dst. 
-walk  finishes walking, the namespace will be populated with a respective value from the `rec` entry. That value will be reused
-by insert-walk when walking its source JSON (`id.json`) with the lexeme `[id]:<R>s` that will find a respective `id`. 
+For each destination walk (`-w`) here, there will be a respective insert-walk (`-i`) (`-w` is always walked first). When destination 
+walk finishes walking, the namespace `Rid` will be populated with a respective value from the `rec` entry. That value will be reused
+by insert-walk when walking its source JSON (`id.json`) with the lexeme `[id]:<Rid>s` that will find a respective `id`. 
 The rest should be obvious by now.
 
 
@@ -3330,7 +3360,7 @@ The trick is to use update/insert `-u`/`-i` operation together with `-p`. When t
 `<<<dst.json jtc -w... -u <src.json> -u... -p`,  
 purging will be applied to walked destinations, but only predicated by a successful source walk:
 ```bash
-bash $ <main.json jtc -w'<rec>l:<R>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<R>s' -p
+bash $ <main.json jtc -w'<rec>l:<Rid>v[-1]' -u'[{"id":1}, {"id":3}]' -u'[id]:<Rid>s' -p
 [
    {
       "name": "Queen",
@@ -3343,7 +3373,7 @@ bash $
 
 The "complemented" purge operation (i.e. when we want to delete everything except referenced) is facilitated using `-pp`:
 ```bash
-bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
+bash $ <main.json jtc -w'[rec]:<Rid>N:[-1]<Entry>v' -u'[1, 3]' -u'<Rid>s' -T'{{Entry}}' -pp
 [
    {
       "name": "Abba",
@@ -3358,9 +3388,9 @@ bash $ <main.json jtc -w'[rec]:<R>N:[-1]<E>v' -u'[1, 3]' -u'<R>s' -T'{{E}}' -pp
 ]
 bash $ 
 ```
-\- memorizing the whole entry (in `E`) is required because update operation w/o the template only replaces records (and 
-purge everything else), but that's not the goal - the goal is to retain all the entries, hence replacing the updated entries
-with the template for the entire entry.
+\- memorizing the whole entry (in `Entry` namespace) is required because the update operation w/o the template only replaces
+records (and purges everything else), but that's not the goal - the goal is to retain all the entries, hence replacing the 
+updated entries with the template for the entire entry.
 
 
 ### Summary of modification options
@@ -3374,20 +3404,20 @@ purges all walked (`-w`) JSON elements from a JSON tree
 purges all JSON elements _except_ walked ones (`-w`) from a JSON tree
 - [`-s`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements):
 swaps around JSON elements in a JSON tree pointed by the _pairs_ of walks (i.e. at least 2 -w must be given)
-- [`-i<static_json>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
-inserts `static_json` (which is either a file, or a literally spelled JSON) into the destinations pointed by `-w`; 
-multiple options with such arguments allowed
-- [`-i<static_json> -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
-inserts JSON elements walked `static_json` with `walk-path` into the destinations pointed by `-w`; 
-only a single option with `static_json` and multiple options with `walk-path` arguments are supported
+- [`-i<arg_JSON>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
+inserts `arg_JSON` (which is either a _file_, or a _literally spelled JSON_, or a _template_) into the destinations
+pointed by `-w`; multiple options with such arguments allowed
+- [`-i<arg_JSON> -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#mixing-argument-types-for--i--u--c):
+inserts JSON elements walked `arg_JSON` with `walk-path` into the destinations pointed by `-w`; 
+only a single option with `arg_JSON` and multiple options with `walk-path` arguments are supported
 - [`-i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations):
-insert-copies JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+insert-copies JSON elements from the _input JSON_ pointed by `walk-path` into the destinations pointed by `-w`;
 multiple options with such arguments allowed
 - [`-pi<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic):
-insert-moves JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`;
+insert-moves JSON elements from the _input JSON_ pointed by `walk-path` into the destinations pointed by `-w`;
 multiple options with such arguments allowed
 - [`-ppi<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-with-move-semantic):
-inserts JSON elements from the input (source) JSON pointed by `walk-path` into the destinations pointed by `-w`, 
+inserts JSON elements from the _input JSON_ pointed by `walk-path` into the destinations pointed by `-w`, 
 while purging all other (non-walked) elements from a JSON tree
 - [`-ei <shell_cli> \;`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
 inserts a JSON element resulted from a shell evaluation running `shell_cli` into the destinations pointed
@@ -3395,12 +3425,12 @@ by `-w`; `shell_cli` is run for every successful destination walk (`-w`) iterati
 supported
 - [`-ei <shell_cli> \; -i<walk-path>`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-update-argument-shell-evaluation):
 inserts a JSON element resulted from a running `shell_cli` into the destinations pointed
-by `-w`; `shell_cli` is run for every successful source `walk-path` iteration walking input (source) JSON; multiple options with
+by `-w`; `shell_cli` is run for every successful source `walk-path` iteration walking _input JSON_; multiple options with
 `walk-path` argument are supported
 - [`u...`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#update-operations):
 update (rewrite) operations, all the same option modes and combinations as for `-i` are applied
 - [`-m`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-with-merging):
-modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "merging" behavior
+modifier option, when used together with `-i`, `-u` toggles insert/update behavior allowing "_merging_" behavior
 
 
 ## Comparing JSONs
