@@ -3437,7 +3437,7 @@ modifier option, when used together with `-i`, `-u` toggles insert/update behavi
 `-c` allows comparing JSONs (or JSONs element pointed by walk-paths) - `jtc` will display JSON delta (diffs) between compared JSONs. 
 Let's compare `phone` records from the first and the second entries of the address book:
 ```bash
-bash $ <ab.json jtc -w'[Directory][0][phone]' -c'[Directory][1][phone]' -l
+bash $ <ab.json jtc -w'<phone>l' -c'<phone>l1' -l
 "json_1": [
    {
       "number": "112-555-1234",
@@ -3534,9 +3534,9 @@ attempting to print a label of the root always results in the exception:_
 While JSON [RFC 7158](https://tools.ietf.org/html/rfc7158) is strict on the label uniqueness:
 > _... The names within an object SHOULD be unique._
 
-`jtc` follows the RFC (and so considers JSONs with clashing labels to be ill-formed), because logically, labels must provide
-an addressing mechanism within objects and non-unique (clashing) labels break the addressing. In case if the source JSON holds
-duplicate labels, by default `jtc` parses and retains the first label only:
+`jtc` follows the RFC (and so considers JSONs with clashing labels to be ill-formed), because logically labels must provide
+an addressing mechanism within objects and non-unique (clashing) labels break the addressing. In case the source JSON holds
+duplicate labels, then by default `jtc` parses and retains the first label only:
 ```bash
 bash $ cat ill.json 
 {
@@ -3568,7 +3568,7 @@ bash $
 
 ### A word on ordering within JSON objects
 both _`ECMA-404`_ and _`RFC 7158`_ agree that JSON spec does not assign any significance to the ordering of name/value pairs within
-objects (unlike with the arrays, which are ordered sequences) - thus, it's free up to a JSON parser to handle it in any preferable way.
+objects (unlike with the arrays, which are _ordered sequences_) - thus, it's free up to a JSON parser to handle it in any preferable way.
 
 `jtc`, while being relaxed upon parsing in object values coming in any order, will always re-arrange objects by labels sorted
 in the descending order - that provides some benefits when handling JSON manipulations queries, e.g.: auto-generated tokens when
@@ -3577,8 +3577,8 @@ subscripting object elements with numerical indices also becomes more determinis
 
 
 ### Process all input JSONs
-Normally `jtc` would process only a _single_ input JSON. If multiple input JSONs given - the fist JSON will be processed and the 
-rest of the inputs will be silently ignored:
+Normally `jtc` would process only a _single_ input JSON (withing a single source). If multiple input JSONs given (within a single source) 
+\- the fist JSON will be processed and the rest of the inputs will be silently ignored:
 ```bash
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -r
 [ "1st json" ]
@@ -3602,20 +3602,40 @@ bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "3rd json"
 bash $ 
 ```
+
 All the input JSONs will be processed as long they are valid - processing will stops upon parsing failure:
 ```bash
 bash $ <<<'[ "1st json" ] { "2nd": json" } "3rd json"' jtc -ad
 .display_opts(), option set[0]: -a -d (internally imposed: )
-.read_inputs(), reading json from <stdin>
+.init_inputs(), reading json from <stdin>
 .write_json(), outputting json to <stdout>
 [
    "1st json"
 ]
-.location_(), exception locus: [ "1st json" ] { "2nd": j
-.location_(), exception spot: ------------------------>| (offset: 24)
+.exception_locus_(), [ "1st json" ] { "2nd": j
+.exception_spot_(), ------------------------>| (offset: 24)
 jtc json parsing exception (<stdin>:24): expected_json_value
 bash $ 
 ```
+
+> The exception locus is only shown up to a violating point and not past it because of `streamed_cin` type of read. If the same
+> steam of JSONs was in the file, then the read type woudl be `buffered_file` and then the entire locus would be shown:
+>```bash
+>bash $ jtc -ad file.json 
+>.display_opts(), option set[0]: -a -d 'file.json' (internally imposed: )
+>.init_inputs(), reading json from file-arguments:
+>.init_inputs(), file argument: file.json
+>.write_json(), outputting json to <stdout>
+>[
+>   "1st json"
+>]
+>.exception_locus_(), { "2nd": json" } "3rd json"
+>.exception_spot_(), --------->| (offset: 9)
+>jtc json parsing exception (file.json:9): expected_json_value
+>bash $ 
+>```
+  
+
 
 ### Wrap all processed JSONs
 option `-J` allows wrapping all processed input JSONs into a super JSON array (option `-J` assumes option `-a`, no need giving both):
