@@ -50,7 +50,7 @@
    * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Prior walk token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token)
+       * [Prior walk's token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-s-token)
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
           * [auto tokens ranges](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-ranges)
           * [auto tokens for atomics](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-for-atomics)
@@ -63,7 +63,7 @@
    * [Summary of namespace tokens](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-namespace-tokens) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
-     * [Ensuring input read from `stdin` (`-`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin)
+     * [Forcing input read from `stdin` (`-`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
@@ -548,8 +548,8 @@ bash $
 
 #### Searching JSON with RE
 Optionally, search lexemes may accept _one-letter suffixes_: a single character following the lexeme's closing bracket.
-These suffixes alter the search behaviors.  
-There 3 suffixes that facilitate _REGEX_ types of search:
+The suffixes define lexeme's search behavior.  
+For example, these 3 suffixes facilitate _REGEX_ types of search:
 - `R`: performs a _REGEX search_ only among JSON _string_ values
 - `D`: performs a _REGEX search_ only among JSON _numerical_ values
 - `L`: performs a _REGEX search_ only among JSON _labels_
@@ -586,13 +586,21 @@ bash $
 > Multiple options could be passed within the lexeme, however, if multiple grammars specified, only the first one will take the effect, 
 e.g.: `<...\G\A>R` - between `awk` and `grep` grammars the latter wins, because it's given first
 
-All REGEX lexemes also support template/namespace
+All REGEX lexemes also support templates/namespace 
 [interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation). The ineterpolation is applied before
-regex search performed.
+regex search performed:
+```bash
+bash $ <ab.json jtc -tc -w'<postal code>l:<PC>v[-1][street address]<[{PC}]>R'
+"5423 Madison St"
+"6213 E Colfax Ave"
+bash $ 
+```
+\- in the last lexeme (`<[{PC}]>R`) the namespace `PC` is getting interpolated first (it was set in the second lexeme - `<PC>v`)
+and then the REGEX search applied.
 
-_NOTE: the namespace tokens usage in REGEX lexemes is restricted to alphabetical names only (e.g.: `{abc}`):  
-\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEXP quantifiers and hence not supported,  
-\- the auto-tokens (e.g.: '$abc') are also unsupported, because at the time of walking the iterator is yet unresolved_
+>_NOTE: the namespace tokens usage in REGEX lexemes is restricted to alphabetical names only (e.g.: `{abc}`):  
+>\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEXP quantifiers and hence not supported,  
+>\- the auto-tokens (e.g.: '$abc') are also unsupported, because at the time of walking the iterator is yet unresolved_
 
 
 #### Search suffixes
@@ -2188,8 +2196,8 @@ bash $
 ```
 
 
-#### Prior walk token
-A prior last walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
+#### Prior walk's token
+A prior walk could be referred (during interpolation) using an auto-generated token `$?`. It comes handy when it's required
 to build/join up JSON records:
 ```bash
 bash $ <<<'["a","b","c"]' jtc -w[:]
@@ -2202,8 +2210,6 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'[{$?}, {{}}]' -r
 [ "a", "b", "c" ]
 bash $ 
 ```
-When interpolation of the token `$?` occurs the first time (i.e. there was no prior walk, or when interpolation of `$?` fails, or the 
-token was reset by user by setting the namespace '$?' to any value) then the value of this token is reset to an empty string (`""`). 
 
 When expanding values into a string (rather than into an array), the separator used by a user is arbitrary, e.g.:
 ```bash
@@ -2213,6 +2219,7 @@ bash $ <<<'["a","b","c"]' jtc -w[:] -T'"{$?} | {}"'
 " | a | b | c"
 bash $ 
 ```
+
 The first separator appearing as an artifact of the first interpolation is undesirable and it seems superfluous. To rid of this artifact 
 the namespace `$$?` holds the value which `jtc` considers as a separator (default is `,`):
 ```bash
@@ -2223,11 +2230,51 @@ bash $ <<<'["a","b","c"]' jtc -w'<$$?:|>v[:]' -T'"{$?} | {}"'
 bash $ 
 ```
 
+When interpolation of the token `$?` occurs for the first time (i.e. when there was no prior walk) then the value of this token
+is a default empty string (`""`). The reset of the token back to the default value may occur in 2 ways:  
+a) if template interpolation fails  
+b) if user sets the _namespace_ `$?` to any (even empty) value - this is a user's way to control token behavior
+
+Say, we want to build an object mapping parent's name to all its children (like: `"Parent": "..list of children.."`) using `$?` token?
+The query could be achieved this way:
+```bash
+bash $ <ab.json jtc -w'<name>l:<N>v[-1][children][:]' -T'{"{N}": "{$?}, {}"}' -lljj
+{
+   "Jane": "Olivia, Robert, Lila",
+   "John": "Olivia"
+}
+bash $ 
+```
+See what happens there? The `Jane`'s record holds the child's name from `John`'s record because token `$?` did not get reset in between 
+walking parent's `name`s steps. To rectify it, we need to add resetting `$?` token to a default value in the respective posion
+in the walk-path (anywhere in between lexeme iterating over `name`s and `children`):
+```bash
+bash $ <ab.json jtc -w'<name>l:<$?:>v<N>v[-1][children][:]' -T'{"{N}": "{$?}, {}"}' -lljj
+{
+   "Jane": "Robert, Lila",
+   "John": "Olivia"
+}
+bash $ 
+```
+
+> The example above is shown for instructive purpose. Probably the easier (and more efficient) way achieving the same result
+> would be this one:
+>```bash
+>bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' -T'{"{N}": "{}"}' -jjll / -pw'<>'
+>{
+>   "Jane": "Robert, Lila",
+>   "John": "Olivia"
+>}
+>bash $ 
+>```
+
+
 #### Iterables auto tokens
 When a JSON iterable is being interpolated, it generates auto-tokens which could be reused in a template-interpolation. 
 Each value in the iterable could be referred by a respective token: the first value is referred by `$a`, the second is by `$b`, and so on. 
-In the  unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on. Labels and/or indices of 
-the interpolatable iterable also could be referred using capital letters notations: `$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
+In the  unlikely event of running out of all letters (a - z), the next tokens would be `$aa`, `$ab`, and so on.  
+Labels and/or indices of  the interpolatable iterable also could be referred using capital letters notations:
+`$A`, `$B`, ... `$Z`, `$AA`, `$AB`, etc.:
 ```bash
 bash $ <<<'["This", "is", "example"]' jtc -T'"{$a} {$b} an {$c}!"'
 "This is an example!"
@@ -2615,26 +2662,34 @@ There's one more token combination in templates allowing _stringification_ and _
 - `>..<`, `>>..<<` will take a current JSON value and stringify it (compress JSON into a string)
 
 The token notation follows the same rule as for regular tokens (`{}`, `{{}}`):
-- single angular bracket notation (`<..>`, `>..<`) will result in a "naked" JSON value (without quotation marks, curly braces
+- single angular bracket notation (`<..>`, `>..<`) will result in a "_naked_" JSON value (without quotation marks, curly braces
 or square brackets for strings, objects and arrays respectively)
-- double token notation (`<<..>>`, `>>..<<`) is always a safe type and the result of operation while be a complete JSON type.
+- double token notation (`<<..>>`, `>>..<<`) is always a safe ("_dressed_") type and the result of operation will be
+a complete JSON type.
 
 This little demo illustrates the tokens usage:
 ```bash
-bash $ <<<'["a", "b"]' jtc -T'">{{}}<"'
-"[ \"a\", \"b\" ]"
+bash $ <<<'{"atomics": ["abc", 123, null, true]}' jtc -T'">{{}}<"'
+"{ \"atomics\": [ \"abc\", 123, null, true ] }"
+bash $ 
 ```
 \- because the single form of angular token notation was used, the outer quotation marks were necessary for a successful interpolation.
 The same could have been achieved with the template: `-T'>>{{}}<<'`
 
 That was the example of _stringification_ of a JSON value, now let's do a reverse thing - _jsonize_ previously stringified value:
 ```bash
-bash $ <<<'["a", "b"]' jtc -T'>>{{}}<<' / -T'[ <{{}}>, "c"]' -r
-[ "a", "b", "c" ]
+bash $ <<<'{"atomics": ["abc", 123, null, true]}' jtc -T'">{{}}<"' / -T'{<{{}}>, "empty":[{ }, []]}' -tc
+{
+   "atomics": [ "abc", 123, null, true ],
+   "empty": [ {}, [] ]
+}
 bash $ 
 ```
-\- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON array at the same time
+\- the above example sports _jsonization_ of the previously _stringified JSON_ while extending resulting JSON object at the same time
 
+> Note how the empty object was spelled there: `{ }` - over space. It's done intentionally, because if it was spelled w/o one (`{}`)
+>then it would be attempted for an interpolation and fail.
+>- That is the suggested way of spelling empty objects in the templates.
 
 ### Summary of interpolation token types
 - [`{}`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation-token-types):
@@ -2691,11 +2746,13 @@ there are a few options that let modifying input JSON:
 - `-p` - purge (remove) elements from JSON
 
 Typically, those options are mutually exclusive and if sighted together only one operation will be executed (the above list
-is given in the priority order of operation selection). However, there is a combination of options `-i`,`-u` and `-p`, which
+is given in the priority order of operation selection). However, there is a combination of options `-i`/`-u` and `-p`, which
 facilitates _move_ semantic, those cases reviewed in the respective chapters.
 
-Each of options requires one or multiple `-w` to be given to operate on (a.k.a. destination walk). Options `-i` and `-u` require
-an argument, which comes in different flavors, one of them is the `walk-path` per-se (a.k.a. source walk)
+Each of options (except `-s`, which requires at least a _pair_ of walks) requires one or multiple destination walks (`-w`) to be given
+to operate on - a.k.a. destination walk (howerver, actually none of destination walks can be given, in such case a default walk 
+pointing to a JSON root `-w[^0]` is assumed).  
+Options `-i` and `-u` require an argument, which comes in different flavors: _JSON_/_walk_/_template_
 
 `jtc` will execute any of those operations only once, if multiple operations required, then those could be combined in multiple
 option chain sets, daisy-chained through the separator `/`.
@@ -2733,13 +2790,13 @@ bash $
 In the above example, JSON is read from `file.json` and output back into the file (`stdin` input is ignored) - note the altered
 format of the file.
 
-#### Ensuring input read from `stdin`
+#### Forcing input read from `stdin`
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
 ```bash
-bash $ <<<'[ "input", "JSON" ]' jtc -f - file.json
+  bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f - file.json
 bash $ cat file.json
 [
-   "input",
+   "<stdin>",
    "JSON"
 ]
 bash $ 
@@ -2747,7 +2804,7 @@ bash $
 
 
 ### Purging JSON
-`-p` removes from JSON all walked elements (given by one or multiple `-w`). E.g.: let's remove from the address book (for the sake
+`-p` removes from JSON all walked elements (pointed by `-w` walks). E.g.: let's remove from the address book (for the sake
 of an example) all the `home` and `office` phones records (effectively leaving only `mobile` phone records):
 ```bash
 bash $ <ab.json jtc -w'[type]:<home>:[-1]' -w'[type]:<office>:[-1]' -p / -w'<phone>l:' -l -tc
@@ -2802,7 +2859,7 @@ bash $ <ab.json jtc -w'<name>l:' -w'<spouse>l:' -s / -w'<name|spouse>L:' -l
 "spouse": "Jane"
 bash $
 ```
-> _\- for the sake of output brevity, swapped elements only displayed_
+> _\- for the sake of output brevity, the swapped elements only displayed_
 
 
 Probably, a more frequent use-case for `-s` is when it's required to remove some extra/redundant nestedness in a JSON structure. 
@@ -2825,8 +2882,8 @@ bash $
 ```
 > _\- again, for the brevity, only phone records are displayed_
 
-Finally, more than just one pair of walks (-w) could be swapped out. In fact, as many *pairs* of walks given will be swapped
-(predicated walks did not become invalid during prior walk pair swap operations)
+Finally, more than just one pair of walks (-w) could be swapped out. In fact, al of given *pairs* of walks will be swapped
+(predicated walks are valid did not become invalid during prior walk pair swap operations)
 
 
 ### Insert operations
