@@ -50,7 +50,7 @@
    * [Namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#namespace)
        * [Cross-lookups using namespace (`<>s`, `<>t`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#cross-lookups-using-namespace)
        * [Path namespace example (`$PATH`, `$path`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example)
-       * [Prior walk's token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-s-token)
+       * [Prior walk's token (`$?`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walks-token)
        * [Iterables auto tokens (`$a`, `$A`, `$b`, etc)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens)
           * [auto tokens ranges](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-ranges)
           * [auto tokens for atomics](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#auto-tokens-for-atomics)
@@ -67,6 +67,7 @@
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
+     * [Argument disambiguation path](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)
      * [Destination driven insertion](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#destination-driven-insertion)
      * [Inserting objects into objects](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#inserting-objects-into-objects)
      * [Insertion matrix without merging](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-without-merging)
@@ -1960,8 +1961,10 @@ bash $
 options `-u`/`-i`/`-c` may accept now an argument in various forms: _JSON_, _walk_, _template_. In the latter case the template
 token `{}` will refer to the walk (`-w`) result.  
 \- Why trailing `;` is there?  
-\- It boils down to how argument disambiguation for the options occurs:
-among various forms of an argument (_JSON_, _walk_, _template_) it's possible that the argument semantic can be ambigous.
+\- It boils down to how argument
+[disambiguation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)
+for the options occurs: among various forms of an argument (_JSON_, _walk_, _template_) it's possible that the argument semantic 
+can be ambigous.
 In our case, if the template string was like `"new {}"` it would be impossible to tell if it's a _JSON_ argument, or a _template_
 (indeed, in your great design `{}` might represent either a token, or an empty object, or just a literal value - there's no way for `jtc`
 to know that).  
@@ -2596,7 +2599,8 @@ operations:
   "name": "Smith & Wesson"
   bash $ 
   ```
-  See [argument disambiguation](TBU) for explanations why there are trailing symbols (`;`, ` `) after template and walk arguments 
+  See [argument disambiguation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)
+  for explanations why there are trailing symbols (`;`, ` `) after template and walk arguments 
   
 
 #### Multiple templates and walks
@@ -2887,37 +2891,47 @@ Finally, more than just one pair of walks (-w) could be swapped out. In fact, al
 
 
 ### Insert operations
-when either of insert (`-i`) of update (`-u`) operation is carried, there 2 types of walks exist:
- - one facilitating insert/update points, a.k.a. _destination walks_ (always facilitated with `-w` options)
- - one facilitating points (elements) being inserted/updated, a.k.a. _source walks_ (facilitated with respective `-i`, `-u` options)
+when either of insert (`-i`) of update (`-u`) operation is carried, there 2 types of options/arguments required:
+ 1. desnination points: facilitated with `-w` - a.k.a. _destination walks_
+ 2. source points: facilitated with `-i` (`-u`)
 
-The _destination points_ of insertion are always given using `-w` option(s), while the argument under `-i` designates the source 
-of the insertions (multiple `-i` options could be given). The source of insertion must _always_ be a valid JSON.
+The _destination points_ of insertion are given using `-w` option(s) walking _input JSON_, while the argument under `-i`
+designates the source  of the insertions (multiple `-i` options could be given).
+The source of the insertion must _always_ be a valid JSON.
 
-Insert operations never result in overwriting destination JSON elements (though the destination could be extended).
-There are 5 different flavors of insertion arguments (i.e., sources of insertion):
-- `-i <static_json> ...`: a JSON being inserted is either read from a file or spelled literally, multiple of such insert options allowed 
-- `-i <static_json> -i<walk-path> ...`: here the `walk-path` actually walks `static_json` rather than the input (source) JSON; only one
-option with `static_json` argument is allowed (will be processed) while multiple options with `walk-path` may be given
-- `-i <walk-path> ...`: the argument `walk-path` walks the input (source) JSON, multiple allowed
-- `-ei <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` destination walks (`-w`) to be shell evaluated, 
+Insert operations never result in overwriting destination JSON elements (though the destination could be extended via a _merge_).
+There are a few different flavors of insertion arguments (i.e., sources of insertion):
+1. `-i <arg_JSON>`: an `arg_JSON` could be either _read from a file_ or _spelled literally_, or given as a _template_ 
+(which gets interpolated and must result in a valid JSON before insertion occurs)
+2. `-i <arg_JSON> -i <walk-path>`: here the `walk-path` actually walks `arg_JSON` rather than the _input JSON_; only one
+option with `arg_JSON` argument is allowed while multiple options with `walk-path` may be given
+3. `-i <walk-path>`: the argument `walk-path` walks the _input JSON_
+4. `-e -i <shell_cli> \;`: `shell_cli` is the shell command sequence terminated with `\;` destination walks (`-w`) to be shell evaluated, 
 optionally containing interpolation tokens; tokens `{}`,`{{}}` will be referring to JSONs pointed by `-w` (destination) walk; the 
 returned value (predicated the evaluation was a success) has to be a valid JSON, otherwise it'll be promoted to a _JSON string_.
-- `-ei <shell_cli> \; -i<walk-path>` ...: `walk-path` here walks the input (source) JSON and tokens `{}`,`{{}}` will be referring
-to `-i<walk-path>`, the shell evaluation occurs for the each of `-i<walk-path>` rather than for destination walks (`-w`).
+5. `-ei <shell_cli> \; -i<walk-path>`: `walk-path` here walks the _input JSON_ (wcich is different from case 2, where such argument walks
+the source of insertion) and tokens `{}`,`{{}}` will be referring `-i<walk-path>`, the shell evaluation occurs for the each of 
+`-i<walk-path>` rather than for destination walks (`-w`).
 
+#### Argument disambiguation path
 How does `jtc` know which argument is supplied? The disambiguation path is like this:
-1. initially a `file` argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
-2. a literally spelled JSON is assumed and attempted to be parsed. If JSON parsing fails, then
-3. a `walk-path` is assumed and parsed - if that fails too, a short exception message is thrown (`walk_expect_lexeme`)
+1. initially a _file_ argument is assumed and attempted to be open/read, if that fails (i.e., file not found), then
+2. a _literally spelled JSON_ is assumed and attempted to be parsed. If JSON parsing fails, then
+3. a `walk-path` is assumed and compiled - if that fails too, then
+4. argument is considered to be a _template_ - a template interpolation is deferred until the actual operation (insertion/update) occurs.
 
-> _Attention is required when passing a `<walk-path>` type argument: some walk-paths look exactly like JSON, e.g:
-`[0]` - this is both a valid JSON array (made of a single numeric value `0`) and a valid walk-path (addressing the first element
-in an iterable), hence such argument will be treated as JSON.  
-> To pass it as a walk-path, modify it to a range-type of walk, e.g.: `[0:1]` - that is still a valid walk-path (selecting only the
-first element) but is invalid JSON.  
-> **Alternatively**, add a trailing space at the end of the walk-lexeme: `'[0] '` - then the argument will be treated as a walk-path (in 
-options `-i`, `-u`, `-c` the JSON argument is expected to have no trailing white spaces or other characters)_
+There's a problem (usually associated with short argument notations) that different semantics of argument may clash. For example, let's
+consider this argument `-i'[{}]'` - actually it could be anything - even a file.  
+- Alright, the 1st type of argument can be sorted by `jtc` automaticaly - if such file exists then JSON will be read from it. 
+If doesn't, then `jtc` will parse it as a JSON: indeed `[{}]` is a valid JSON - it's an array made of a an empty object.  
+- But what if a user meant to pass it as a _walk-path_? `[{}]` is also a perfect _walk-path_ - it tries addressing a 
+value by the label `"{}"` at root. There are couple ways to dodge such clashing:
+  - make the walk-path look more explicit like a walk and not like a JSON (e.g., the same walk semantic could be expressed as `>{}<l`) 
+  - or allow a trailing space past the walk: `'[{}] '` - The _literally spelled JSON_ argument does not tolerate any trailing characters 
+(even spaces) while _walk-path_ accept spaces before/between/past lexemes
+- Fine, but what if it's meant to be passed as a _template_? `[{}]` is also an array template with a "_naked_" interpolation token `{}`.
+To ensure that such argument is treated as a template, pass any (non-space) trailing characters, e.g.: `[{}];`. The template policy in the 
+argument w.r.t. any trailing characters is _relaxed_ - it attempts parsing what it can and discards any trailing symbols.
 
 
 #### Destination driven insertion
