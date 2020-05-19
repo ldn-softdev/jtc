@@ -3871,9 +3871,10 @@ Ivan, Seattle, 98104, WA, 5423 Madison St
 Jane, Denver, 80206, CO, 6213 E Colfax Ave
 bash $ 
 ```
-The template above is demo'ing iterable auto tokens - those are good when it's required to extract iterables members individually, 
-or in a different order. In our case the query's order of items matches those in the array, hence it's possible to simplify our
-template:
+The template above is demo'ing 
+[iterable auto tokens](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#iterables-auto-tokens) - those are 
+good when it's required to extract iterables members individually,  or in a different order. In our case the query's order
+of items matches those in the array, hence it's possible to simplify our template:
 ```bash
 bash $ <ab.json jtc -rw'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"'
 John, New York, 10012, NY, 599 Lafayette St
@@ -3894,9 +3895,8 @@ Jane, Denver, 80206, CO, 6213 E Colfax Ave
 bash $ 
 ```
 
-Another way to add a header is to use additional template with `jtc`: 
-```bash
-bash $ <ab.json jtc -nqqw' ' -T"\"$hdr\"" -w'<name>l:<N>v[-1][address]' -qqT'"{N}, {}"'
+Another way to add a header is to use additional walk and template with `jtc`: 
+bash $ <ab.json jtc -nqq -w' ' -T"\"$hdr\"" -w'<name>l:<N>v[-1][address]' -T'"{N}, {}"'
 name, city, postal code, state, street address
 John, New York, 10012, NY, 599 Lafayette St
 Ivan, Seattle, 98104, WA, 5423 Madison St
@@ -4106,7 +4106,7 @@ DONE.
 
 
 ### Sorting JSONs
-Search Lexemes `<>g`, `<>G` allow walk and thus sort entries in an ascending or descending order respectively. Let's sort
+Search Lexemes `<>g`, `<>G` allow sorted walk of entries in an ascending or descending order respectively. Let's sort
 entries in the Directory of `ab.json` by `city` in the ascending order.
 
 First, let's walk `city`es in the ascending order:
