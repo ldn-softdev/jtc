@@ -6,6 +6,9 @@
 elements at once (wrap selected elements into a new JSON, filter in/out, sort elements, update elements, insert new elements,
 remove, copy, move, compare, transform, swap around and many other operations).
 
+##### Enhancement requests and/or questions are more than welcome: *ldn.softdev@gmail.com*
+
+
 ### Content:
 1. [Short description](https://github.com/ldn-softdev/jtc#short-description)
 2. [Compilation and installation options](https://github.com/ldn-softdev/jtc#compilation-and-installation-options)
@@ -336,8 +339,16 @@ bash $
 ```
 
 ## Complete User Guide
-Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+there's a lot more under the hood of `jtc`:
+- various viewing options, 
+- directives allowing controlling walks, preserving parts of whole JSONs in namespaces, walking with various criteria, etc
+- interpolating namespaces and walk results in templates and lexemes
+- amending input JSONs via purge/swap/update/insert/move/merge operations
+- comparing JSONs (or their parts) or their schemas
+- various processing modes (streamed, buffered, concurrent parsing, chaining operations, etc)
+- and more ...
 
+Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
 
 ## C++ class and interface usage primer
 Refer to a [Class usage primer](https://github.com/ldn-softdev/jtc/blob/master/Class%20usage%20primer.md) document.
@@ -549,8 +560,6 @@ feasibility of the solutions, test relevant performance, etc
 
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
-
-##### Enhancement requests are more than welcome: *ldn.softdev@gmail.com*
 
 
 
