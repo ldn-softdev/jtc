@@ -91,6 +91,7 @@
    * [Process all input JSONs (`-a`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#process-all-input-jsons)
    * [Wrap all processed JSONs (`-J`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#wrap-all-processed-jsons)
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
+   * [Concurent (multithreaded) file parsing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#concurent-multithreaded-file-parsing)
    * [Chaining option sets (`/`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
 8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#some-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
@@ -3691,8 +3692,8 @@ bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 ]
 bash $ 
 ```
-> _Note: `jtc` supports an unlimited number of files that can be supplied via standalone arguments (after all options given). 
-When multiple input files are given, options `-a` is assumed_ automatically.
+> _Note: `jtc` supports an unlimited number of files that can be supplied via standalone arguments.  When multiple input files are given,
+options `-a` is assumed_ implicitely.
 
 
 ### Buffered vs Streamed read
@@ -3701,7 +3702,7 @@ When multiple input files are given, options `-a` is assumed_ automatically.
 - _**streamed read**_
 
 In the _buffered read_ mode (which is default), the entire file (or `<stdin>`) input is read into memory and only then JSON parsing is
-attempted (with all subsequent due processing).  
+attempted (with all due subsequent processing).  
 In the _streamed read_ mode JSON parsing begins immediately as the the first character is read (so, no memory wasted to hold input
 literal JSON).
 
@@ -3718,12 +3719,12 @@ a network-based streaming)
 We can see the difference in the parsing when debugging `jtc`:
 \- in a _buffered read_ mode, the debug will show the _parsing point_ with the data following behind it:
 ```bash
-bash $ <ab.json jtc -dddddd 
+bash $ <ab.json jtc -dddddd
 .display_opts(), option set[0]: -d -d -d -d -d -d (internally imposed: )
-.read_inputs(), reading json from <stdin>
-..ss_init_(), initializing: buffered_cin
-..ss_init_(), read file: <stdin> (1674 bytes)
-..run_decomposed(), pass for set[0]
+.init_inputs(), reading json from <stdin>
+..ss_init_(), initializing mode: buffered_cin
+..ss_init_(), buffer (from <stdin>) size after initialization: 1674
+..run_decomposed_optsets(), pass for set[0]
 ......parse_(), parsing point ->{|   "Directory": [|      {|         "address": {|        ...
 ......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "...
 ......parse_(), parsing point ->[|      {|         "address": {|            "city": "New Y...
@@ -3734,14 +3735,17 @@ bash $ <ab.json jtc -dddddd
 ```bash
 bash $ <ab.json jtc -dddddd -a
 .display_opts(), option set[0]: -d -d -d -d -d -d -a (internally imposed: )
-.read_inputs(), reading json from <stdin>
-..ss_init_(), initializing: streamed_cin
-..run_decomposed(), pass for set[0]
+.init_inputs(), reading json from <stdin>
+..ss_init_(), initializing mode: streamed_cin
+..ss_init_(), buffer (stream) size after initialization: 1
+..run_decomposed_optsets(), pass for set[0]
 ......parse_(), {<- parsing point
 ......parse_(), {|   "<- parsing point
 ......parse_(), {|   "Directory": [<- parsing point
 ......parse_(), {|   "Directory": [|      {<- parsing point
 ......parse_(), {|   "Directory": [|      {|         "<- parsing point
+......parse_(), {|   "Directory": [|      {|         "address": {<- parsing point
+......parse_(), ..."Directory": [|      {|         "address": {|            "<- parsing point
 ...
 ```
 
@@ -3778,6 +3782,30 @@ the input JSONs. It will stop once `<stdin>` is closed, but `netcat` is run usin
 In the `Screen 2`, `jtc` sends to `netcat` a few walks (JSONs), which `netcat` relays to its counterpart in the `Screen1`.
 
 
+### Concurent (multithreaded) file parsing
+When multiple file argumens are given, `jtc` by default will read and parse each file in a separate thread (predicated a multi-core CPU
+is available). `jtc` will spawn only as many CPU threads as many CPU cores available or as many as files arguments given 
+(whichever number is smaller). E.g., on a 8-core CPU and 10 files given, only up to 8 additional threads will be created.
+
+The advantage of a concurent parsing only becomes noticeable when JSON files are relatively big, or there are many of them. If there are 
+too many of very tiny JSONs, then such processing might be even slower (due to thread creation overheads) than a single-threaded run.  
+To disable multithreaded parsing and revert to a single-threaded mode use option `-a` (in the initial option set).
+
+Compare:
+```bash
+bash $ # multithreaded input file parsing
+bash $ /usr/bin/time jtc -J / -zz big.json big.json 
+30000033
+       18.33 real        28.69 user         2.49 sys
+bash $ 
+bash $ # single threaded input file parsing
+bash $ /usr/bin/time jtc -aJ / -zz big.json big.json 
+30000033
+       29.34 real        27.50 user         1.77 sys
+bash $ 
+```
+
+
 ### Chaining option sets
 Like it was mentioned before, `jtc` performs one major operation at a time: _standalone walking_, _insertion_, _update_, _purging_, 
 _swapping_, _comparison_. There's a number of supplementary operations that might complement the major operations like: wrapping results 
@@ -3795,18 +3823,20 @@ of JSON occurs and those are quite expensive (CPU cycles-wise) operations.
 
 without any affect to the result. The sets of all options in between separators are known as _options sets_.
 
-The advantage of such approach is huge: processed JSONs now are passed from one option set to the next one in a compiled binary
-form (no CPU cycles wasted on printing / parsing). Another additional benefit is that the _namespace_ now is shared across all 
-_options sets_.
+The advantage of such approach is huge: processed JSONs now are passed from one option set to the next one in a compiled (binary)
+form (no CPU cycles wasted on printing / re-parsing). Another additional benefit is that the _namespace_ now is shared across all 
+_option sets_.
 
 There's a few options (mostly viewing and parsing) which are non-transient and may occur only in the first or in the last _option set_:
 - `-r`: compact printing - may occur only in the last option set
 - `-rr`: stringifying output JSON - may occur only in the last option set; if such operation is required in the interim operation -
-use template stringification instead
+use [template stringification](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified) 
+instead
 - `-t`: output indentation - may occur only in the last option set
 - `-q`: parse input with a strict solidus quoting - may occur only in the initial option set
 - `-qq`: unquoting _JSON strings_, jsonizing stringified JSONs - may occur only in the last option set; if such operation is required
-in the interim operation - use template jsonizing instead
+in the interim operation - use 
+[template jsonizing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#stringifying-json-jsonizing-stringified) instead
 - `-z`: additionally printing size for the each walked JSON - may occur only in the last option set
 - `-zz`: printing size instead of JSON - may occur only in the last option set
 - `-f`: forcing (redirecting) outputs into a file  - may occur only in the last option set
