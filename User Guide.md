@@ -3823,7 +3823,7 @@ of JSON occurs and those are quite expensive (CPU cycles-wise) operations.
 `jtc` permits chaining multiple operations using solidus separator `/`. The above example could be collapsed into this:  
 - `jtc <insert...> / <swap...> / etc`  
 
-without any affect to the result. The sets of all options in between separators are known as _options sets_.
+without any affect to the result. The sets of all options in between separators are known as _option sets_.
 
 The advantage of such approach is huge: processed JSONs now are passed from one option set to the next one in a compiled (binary)
 form (no CPU cycles wasted on printing / re-parsing). Another additional benefit is that the _namespace_ now is shared across all 
