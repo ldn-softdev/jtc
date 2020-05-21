@@ -94,6 +94,7 @@
    * [Concurent (multithreaded) file parsing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#concurent-multithreaded-file-parsing)
    * [Chaining option sets (`/`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
      * [Non-transient options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-transient-options)
+     * [JSON processing sequence with chained operations](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#json-processing-sequence-with-chained-operations)
 8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#some-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
