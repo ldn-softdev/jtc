@@ -2588,6 +2588,8 @@ Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
   return walk_itr;
  }
 
+ // standalone -p/-pp or -s
+ cr_.global_ns().sync_out(json().clear_ns().ns(), map_jnse::NsOpType::NsReferAll);
  for(auto it = json().walk(walk_path, Json::Keep_cache); it != json().end(); ++it)
   walk_itr.push_back(it);
  wns_[last_dwi_ptr_].sync_in(json().ns(), map_jnse::NsMoveAll);
