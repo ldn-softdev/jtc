@@ -93,6 +93,7 @@
    * [Buffered vs Streamed read](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read)
    * [Concurent (multithreaded) file parsing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#concurent-multithreaded-file-parsing)
    * [Chaining option sets (`/`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#Chaining-option-sets)
+     * [Non-transient options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#non-transient-options)
 8. [Some Examples](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#some-examples)
    * [Generating CSV from JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#generating-csv-from-json)
    * [Taming duplicates (`<..>q`, `<..>Q`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#taming-duplicates)
@@ -3827,6 +3828,7 @@ The advantage of such approach is huge: processed JSONs now are passed from one 
 form (no CPU cycles wasted on printing / re-parsing). Another additional benefit is that the _namespace_ now is shared across all 
 _option sets_.
 
+#### Non-transient options
 There's a few options (mostly viewing and parsing) which are non-transient and may occur only in the first or in the last _option set_:
 - `-r`: compact printing - may occur only in the last option set
 - `-rr`: stringifying output JSON - may occur only in the last option set; if such operation is required in the interim operation -
@@ -3841,6 +3843,65 @@ in the interim operation - use
 - `-zz`: printing size instead of JSON - may occur only in the last option set
 - `-f`: forcing (redirecting) outputs into a file  - may occur only in the last option set
 - `-`: ensuring input is read from `stdin` - may occur in any of the option sets, but affects only first one (where parsing occurs)
+
+#### JSON processing sequence with chained operations
+In the [bufferred reading](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read) mode
+the processing of JSON streams occurs per option-set. I.e., consider following syntax:
+```bash
+jtc <option-set1> / <option-set2>  file.json
+```
+If `file.json` contains multiple JSONs (a.k.a. _stream of JSONs_) and predicated `option-set1` caters `-a` option, then all JSONs
+from the file will be processed first in `option-set1` then all (walk) ouputputs are passed to the input of `option-set2` and again all
+JSONs will be processed in `option-set2` (predicated `option-set2` caters `-a`) and so on and so forth:
+```bash
+bash $ jtc -ar file.json 
+{ "1": "first JSON" }
+{ "2": "second JSON" }
+{ "3": "third JSON" }
+bash $ 
+bash $ jtc -raw[:] -u'[{{}}];' file.json 
+{ "1": [ "first JSON" ] }
+{ "2": [ "second JSON" ] }
+{ "3": [ "third JSON" ] }
+bash $ 
+bash $ jtc -aw[:] -u'[{{}}];' / -raw'[:][0]<(\w+) (\w+)>R[-1]' -u'[{{$1}}, {{$2}}];' file.json 
+{ "1": [ "first", "JSON" ] }
+{ "2": [ "second", "JSON" ] }
+{ "3": [ "third", "JSON" ] }
+bash $ 
+```
+
+However, in the [`streamed`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#buffered-vs-streamed-read) mode 
+_each_ JSON will be processed through all option sets individually (in the streamed mode it's assumed that the stream of JSONs
+could be virtually endless), for the same reason the behavior of option `-J` is reduced to `-j` (it's impossible to aggregate
+an endless stream of JSONs).  
+Thus, if neither of option-sets caters `-J` option, then the result of the operations should be identical:
+```bash
+bash $ <file.json jtc -aw[:] -u'[{{}}];' / -raw'[:][0]<(\w+) (\w+)>R[-1]' -u'[{{$1}}, {{$2}}];' 
+{ "1": [ "first", "JSON" ] }
+{ "2": [ "second", "JSON" ] }
+{ "3": [ "third", "JSON" ] }
+bash $ 
+```
+However, if `-J` is present, then no aggregation will happen in the streamed reading mode:
+```bash
+bash $ # buffered reading mode
+bash $ jtc -aw[0] / -J file.json 
+[
+   "first JSON",
+   "second JSON",
+   "third JSON"
+]
+bash $ 
+bash $ # streamed reading mode
+bash $ <file.json jtc -aw[0] / -J -tc
+notice: in streamed_cin mode, behavior of option -J is reduced to -j
+[ "first JSON" ]
+[ "second JSON" ]
+[ "third JSON" ]
+bash $ 
+```
+
 
 
 ## Some Examples
