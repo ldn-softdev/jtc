@@ -18,7 +18,7 @@
      * [Searching JSON with RE (`<..>R`,`<..>L`, `<..>D`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#searching-json-with-re)
      * [Search suffixes (`rRPdDNbnlLaoicewjstqQgG`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#search-suffixes)
        * [Cached Search](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-cached-search)
-     * [Directives (`vkzfFuIZW`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
+     * [Directives (`vkzfFuIZWS`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#directives)
      * [Setting a custom JSON value into a namespace](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#setting-a-custom-JSON-value-into-a-namespace)
      * [Fail-safe and Forward-Stop directives (`<..>f`, `<..>F`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#fail-safe-and-forward-stop-directives)
        * [Examples illustrating _fail-safe_ using namespaces and interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#-examples-illustrating-fail-safe-using-namespaces-and-interpolation)
@@ -63,12 +63,12 @@
    * [Summary of namespace tokens](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-namespace-tokens) 
 4. [Modifying JSON](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#modifying-json)
    * [In-place JSON modification (`-f`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification)
-     * [Forcing input read from `stdin` (`-`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin)
+     * [Forcing input read from `stdin` (`-`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-input-read-from-stdin)
    * [Purging JSON (`-p`, `-pp`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#purging-json)
    * [Swapping JSON elements (`-s`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#swapping-json-elements)
    * [Insert operations (`-i`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insert-operations)
-     * [Argument disambiguation path](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)  
-       * [Inserting/Updating from a file](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#inserting-updating-from-a-file)     
+     * [Argument disambiguation path](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#argument-disambiguation-path)
+       * [Inserting/Updating from a file](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertingupdating-from-a-file)
      * [Destination driven insertion](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#destination-driven-insertion)
      * [Inserting objects into objects](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#inserting-objects-into-objects)
      * [Insertion matrix without merging](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#insertion-matrix-without-merging)
@@ -2738,9 +2738,9 @@ a token expanding into a _JSON string_ representing a path towards currently wal
 a name holding a separator used when expanding token `$path`, default value is `"_"`
 - [`$#`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#path-namespace-example):
 a name holding a separator used when a _JSON iterable_ is expanded into a _JSON string_, default value is `", "`
-- [`$?`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token):
+- [`$?`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walks-token):
 a token referring to the result of a prior last successful walk
-- [`$$?`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walk-token):
+- [`$$?`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#prior-walks-token):
 a namespace holding a string separator considered when expanding walks using `$?` token, default value is `","`
 
 
@@ -3395,7 +3395,7 @@ updated entries with the template for the entire entry.
 
 
 ### Summary of modification options
-- [`-`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#ensuring-input-read-from-stdin):
+- [`-`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#forcing-input-read-from-stdin):
 bare qualifier (hyphen), ensures that input read occurs from `stdin` regardless of present filename arguments
 - [`-f`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#in-place-json-modification):
 ensures that the final output is redirected to the filename (if one given) instead of `stdout`
@@ -3896,6 +3896,7 @@ bash $
 ```
 
 Another way to add a header is to use additional walk and template with `jtc`: 
+```bash
 bash $ <ab.json jtc -nqq -w' ' -T"\"$hdr\"" -w'<name>l:<N>v[-1][address]' -T'"{N}, {}"'
 name, city, postal code, state, street address
 John, New York, 10012, NY, 599 Lafayette St
