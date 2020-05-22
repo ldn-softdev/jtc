@@ -4184,6 +4184,8 @@ void Json::iterator::process_directive_I_(size_t wsi, Jnode *jn) {
  // first increment is added then factored, i.e. <a>In:m -> (a + n) * m
  auto & ws = ws_[wsi];
  auto found_ns = json().ns().find(ws.stripped.front());
+ auto already_nsaved{false};
+
  // create / init namespace (if not yet)
  if(found_ns == json().ns().end() or found_ns->VALUE.ref().is_neither()) {  // non-exist. or erased
   if(found_ns != json().ns().end())                             // if was erased
@@ -4191,14 +4193,22 @@ void Json::iterator::process_directive_I_(size_t wsi, Jnode *jn) {
   if(ws.user_json.is_neither())                                 // NO user json (<a:user_json>)
    json().ns().emplace(ws.stripped.front(), 0);                 // init with 0
   else                                                          // i.e. <a:user_json>
-   maybe_nsave_(ws, jn);                                        // i.e. preserve only on init
+   { maybe_nsave_(ws, jn); already_nsaved = true; }             // i.e. preserve only on init
   found_ns = json().ns().find(ws.stripped.front());
  }
  else                                                           // ns already exists
   if(not found_ns->VALUE.ref().is_number())
    return;                                                      // <..>I processes only numerics
+
+ // namespace already exists
  signed_size_t incr = ws.load_head(json());
  signed_size_t mult = ws.load_tail(json());
+
+ if(not ws.user_json.is_neither() and incr == 0 and mult == LONG_MAX) { // it's init-only <v:..>I
+  if(not already_nsaved) maybe_nsave_(ws, jn);                  // must nsave, (if not already)
+  return;
+ }
+ // it's non-initial increment/multiplier
  found_ns->VALUE = (found_ns->VALUE.ref().num() + (incr == LONG_MIN + 1? 0: incr))
                    * (mult == LONG_MAX? 1: mult);
 }
@@ -5175,7 +5185,6 @@ void Json::interpolate_tmp__(std::string &tmp, Json::iterator &jit, map_jne &ns,
             ipos != std::string::npos;                          // ipos: interpolating position
             ipos = tmp.find(nsk, ipos + found.size()), found.clear()) {
   std::string ns_dlm{ GET_DLM_(A, ns) };                        // ns_dlm is AR/OBJ stringification
-
 
   if(nse.is_string() and nse.str() == TKN_EMP)                  // phony json to fill {}/{{}}
    nse = jit->value();                                          // load on demand
