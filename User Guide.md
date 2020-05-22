@@ -3893,7 +3893,8 @@ However, in the [`streamed`](https://github.com/ldn-softdev/jtc/blob/master/User
 _each_ JSON will be processed through all option sets individually (in the streamed mode it's assumed that the stream of JSONs
 could be virtually endless), for the same reason the behavior of option `-J` is reduced to `-j` (it's impossible to aggregate
 an endless stream of JSONs).  
-Thus, if neither of option-sets caters `-J` option, then the result of the operations should be identical:
+Thus, if neither of option-sets caters `-J` option, then the result of the operations should be identical (it might not be identical
+if there was namespace dependency in the walks - due to difference in processing it might result in a discrepancy of the results):
 ```bash
 bash $ <file.json jtc -aw[:] -u'[{{}}];' / -raw'[:][0]<(\w+) (\w+)>R[-1]' -u'[{{$1}}, {{$2}}];' 
 { "1": [ "first", "JSON" ] }
