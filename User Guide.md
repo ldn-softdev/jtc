@@ -3637,7 +3637,24 @@ bash $
 >jtc json parsing exception (file.json:9): expected_json_value
 >bash $ 
 >```
-  
+
+Another option trigerring all JSONs processing (from any number of sources) is `-J` - that option tells that aggregation of all JSONs
+is required and thus assumes option `-a` implicitely (no need giving both):
+```bash
+bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -J -w[0] 
+[
+   "1st json",
+   "json"
+]
+bash $  
+```
+
+>If multiple sources (_input file arguments_) given, then there's no need specifying option `-a` - it's assumed implicitly. Actually,
+>if multiple sources given then option `-a` gates
+>[single-threaded JSON parsing](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#concurent-multithreaded-file-parsing)
+>behavior, so use `-a`:
+>- with a single input source (`stdin`, or a _single file argument_) only when a stream of JSONs has to be processed, or
+>- with multiple input sources when you like to enforce a _single-threaded JSON parsing_
 
 
 ### Wrap all processed JSONs
