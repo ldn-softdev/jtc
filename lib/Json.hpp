@@ -2380,19 +2380,15 @@ class Json {
     typedef std::map<unsigned short, SortCacheEntry>
                         SortCache;
 
-    struct Stringover {
-        // a trivial std::string wrapper: overrides string holder only if argument is non-empty
+    struct Stringover: public std::string {
+        // a trivial std::string adapter: overrides string holder only if argument is non-empty
         // utilized by interpolation routines
-                            Stringover(void) = default;
-                            Stringover(std::string str): str_{str} {}   // CC with copy elision
+                            Stringover(std::string str):
+                             std::string{std::move(str)} {}
 
-                            operator std::string & (void) { return str_; }
         Stringover &        operator=(const std::string &str)
-                             { if(not str.empty()) str_ = str; return *this; }
-     private:
-        std::string         str_;
+                             { if(not str.empty()) std::string::operator=(str); return *this; }
     };
-
 
     // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
     void                parse_subscript_type_(WalkStep & state) const;
@@ -4945,6 +4941,13 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 
  interpolate_path_(tmp, jit, ns, prty);                         // interpol. {$path, $PATH} in tmp
 
+ #define DBG_AND_RET(JSN) \
+  { DBG(jit.json(), 4) \
+     DOUT(jit.json()) << Debug::btw << "result: '" \
+                      << ((JSN).is_neither()? "failed interpolation": \
+                           (JSN).to_string(Jnode::PrettyType::Raw, 1)) << "'" << std::endl; \
+    return JSN; }
+
  map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns;
  Stringover tmpc(tmp);                                          // preserved copy of tmp
  map_jne auto_ns;
@@ -4966,7 +4969,9 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
   if(p == IntpBit::Attempt_as_array and not prty[IntpBit::Obj_attempted]) continue;
   prty[p] = true;
   tmp = interpolate_tmp_(tmp, jit, auto_ns, prty);              // interpolate {}, {{}}
+  if(tmp.front() == *TKN_EMP) DBG_AND_RET(*jit)                 // performance optimization
   tmp = interpolate_tmp_(tmp, jit, *nsp, prty);                 // interpolate all NS values
+  if(tmp.front() == *TKN_EMP) DBG_AND_RET(nsp->at(tmp.substr(1, tmp.size() - 1)).ref())
   tmp = interpolate_jsn_(tmp, jit.json());                      // jsonize/stringify (<<>> / >><<)
 
   if(parse_type == ParseTrailing::Dont_parse)
@@ -4978,13 +4983,10 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
   tmp = tmpc;                                                   // repeat interpolation attempt
  }
 
- DBG(jit.json(), 4)
-  DOUT(jit.json()) << Debug::btw << "result: '"
-                   << (rj.parsing_failed()? "failed interpolation":
-                        rj.to_string(Jnode::PrettyType::Raw, 1)) << "'" << std::endl;
  if(rj.parsing_failed()) rj.type(Jnode::Neither);
  // interpolate passes the notion of failure also through type Neither
- return rj;
+ DBG_AND_RET(rj)
+ #undef DBG_AND_RET
 }
 
 
@@ -5111,10 +5113,27 @@ std::string Json::interpolate_tmp_(std::string tmp, Json::iterator &jit, map_jne
  //  o if Attempt_as_array is false - process (interpolate) obj as usually, no deviations, but
  //    setup bit Obj_attempted (case 1)
  //  o if Attempt_as_array is true - process OBJECTS as if they were ARRAYS (case 2)
+
  static std::vector<std::pair<std::string, std::string>> ibv {  // interpolation braces vector
          {std::string(2, ITRP_BRC[0]), std::string(2, ITRP_BRC[1])},    // pair: "{{", "}}"
          {{ITRP_BRC[0]}, {ITRP_BRC[1]}}                                 // pair: "{", "}"
         };
+ // this is an interpolation optimization: when tmp is "{{}}" or "{{..}}" then no need
+ // going through the entire interpolation (which is quite expensive), instead indicate
+ // (via returning the special symbol TKN_EMP + key) that json can be taken directly
+ // from the iterator or a namespace and hence skip interpolations and following parsing
+ auto opn = tmp.find(ibv.front().ITRP_OPN);                     // find opening "{{"
+ if(opn != std::string::npos and tmp.find_first_not_of(" ", 0) == opn) {    // tmb begins with "{{"
+  auto cls = tmp.find(ibv.front().ITRP_CLS);                    // find closing "}}"
+  if(cls != std::string::npos) {
+   std::string key = tmp.substr(opn + 2, cls - opn - 2);        // extract key between {{..}}
+   if(key.empty()) { tmp = TKN_EMP; return tmp; }               // key is empty (i.e. {{}})
+   auto found = ns.find(key);
+   if(found != ns.end() and found->KEY.front() != '$')          // key does not begin with $
+    { tmp = TKN_EMP + key; return tmp; }
+  }
+ }
+
  vec_range irng;                                                // track interpolated ranges
  std::string u8id;                                              // UTF8_ILL detected?
 
