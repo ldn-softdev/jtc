@@ -40,6 +40,8 @@
      * [Extracting labeled values (`-ll`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#extracting-labeled-values)
      * [Succinct walk-path syntax (`-x`,`-y`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#succinct-walk-path-syntax)
      * [Controlling displayed walks (`-xn/N`)](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#controlling-displayed-walks)
+   * [Summary table of search lexemes](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-table-of-search-lexemes)
+   * [Summary table of directives](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-table-of-directives)
    * [Summary of walk lexemes](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-lexemes)
    * [Summary of walk options](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#summary-of-walk-options)
 3. [Interpolation](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#interpolation)
@@ -604,7 +606,7 @@ bash $
 and then the REGEX search applied.
 
 >_NOTE: the namespace tokens usage in REGEX lexemes is restricted to alphabetical names only (e.g.: `{abc}`):  
->\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEXP quantifiers and hence not supported,  
+>\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEX quantifiers and hence not supported,  
 >\- the auto-tokens (e.g.: '$abc') are also unsupported, because at the time of walking the iterator is yet unresolved_
 
 
@@ -1771,6 +1773,33 @@ bash $ <<<$jsn  jtc -w[:] -x4/2 -x/0 -x/-1
 9
 bash $ 
 ```
+
+
+### Summary table of search lexemes
+sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment 
+--- | :--- | :--- | :---
+_r_ | `<>` matches _empty string_ (`""`) | `<str>` matches given _string_ `"str"` | -
+_R_ | - | `<RE>R` matches _string value_ using _REGEX_ `RE` | -
+_P_ | `<>P` matches _any string_ | `<val>P` stores (_any_) found _string value_ in the namespace `val` |  `<v:...>P` upon any _string match_ stores in the namespace `v` a user's value
+_d_ | - | `<3.14>d` matches given _numerical_ values | -
+_D_ | - | `<RE>D` matches _numerical value_ using _REGEX_ `RE` | -
+_N_ | `<>N` matches _any numerical_ value | `<val>N` stores (_any_) found _numerical value_ in the namespace `val` |  `<v:...>N` upon any _numerical match_ stores in the namespace `v` a user's value
+_b_ | `<>b` matches any _boolean value_ | `<true>b`, `<false>b` matches given _boolean value_; `<v>b` stores _any_ found _boolean value_ in `v` | `<v:...>b` upon any _boolean match_ stores in the namespace `v` a user's value
+_n_ | `<>n` matches _null value_ | `<val>n` stores found _null value_ in the namespace `val` | `<v:...>n` upon any _null match_ stores in the namespace `v` a user's value
+_l_ | `<>l` matches a value with an _empty label_ (`"": ...`) | `<lbl>` matches a _value_ by the given _label_ `"lbl": ...` | -
+_L_ | - | `<RE>L` matches a value by the label using _REGEX_ `RE` | -
+_a_ | `<>a` matches any _atomic_ value | `<val>a` stores (_any_) found _atomic value_ in the namespace `val` | `<v:...>a` upon any _atomic match_ stores in the namespace `v` a user's value
+_o_ | `<>a` matches any _object_ value | `<val>o` stores (_any_) found _object value_ in the namespace `val` | `<v:...>o` upon any _object match_ stores in the namespace `v` a user's value
+_i_ | `<>i` matches any _array_ value | `<val>i` stores (_any_) found _array value_ in the namespace `val` | `<v:...>i` upon any _array match_ stores in the namespace `v` a user's value
+_c_ | `<>c` matches any _container_ (_object_ or _array_) value | `<val>c` stores (_any_) found _container value_ in the namespace `val` | `<v:...>c` upon any _container match_ stores in the namespace `v` a user's value
+_e_ | `<>e` matches any _end node_ (_atomic_ or _[]_ or _{}_) value | `<val>e` stores (_any_) found _end node value_ in the namespace `val` | `<v:...>e` upon any _end node match_ stores in the namespace `v` a user's value
+_w_ | `<>w` matches _any_ JSON value | `<val>w` stores _any_ found value in the namespace `val` | `<v:...>i` upon any value match stores in the namespace `v` a user's value
+_j_ | - | `<JSN>j` matches literal _JSON_ (`JSN` could be also a template) | -  
+_s_ | - | `<val>s` matches a _JSON value_ previously stored in the namespace `val` | -
+_s_ | - | `<val>t` matches a _label_ or _index_ previously stored in the namespace `val` | -
+_q_ | `<>q` - matches an _original_ (_non-duplicating_) value | `<val>q` stores (_any_) found _original value_ in the namespace `val` | `<v:...>q` upon an _original value match_ stores in the namespace `v` a user's value
+_Q_ | `<>Q` - matches a _duplicating_ value | `<val>Q` stores (_any_) found _duplicating value_ in the namespace `val` | `<v:...>Q` upon an _original value match_ stores in the namespace `v` a user's value
+_g_ | `<>g` - matches values in the _ascending_ order | `<val>g` stores (_any_) found _ascending value_ in the namespace `val` | `<v:...>g` upon an _ascending value match_ stores in the namespace `v` a user's value_G_ | `<>G` - matches values in the _descending_ order | `<val>G` stores (_any_) found _descending value_ in the namespace `val` | `<v:...>Q` upon an _descending value match_ stores in the namespace `v` a user's value
 
 
 ### Summary of walk lexemes
