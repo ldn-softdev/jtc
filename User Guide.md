@@ -1802,6 +1802,19 @@ _Q_ | `<>Q` - matches a _duplicating_ value | `<val>Q` stores (_any_) found _dup
 _g_ | `<>g` - matches values in the _ascending_ order | `<val>g` stores (_any_) found _ascending value_ in the namespace `val` | `<v:...>g` upon an _ascending value match_ stores in the namespace `v` a user's value
 _G_ | `<>G` - matches values in the _descending_ order | `<val>G` stores (_any_) found _descending value_ in the namespace `val` | `<v:...>G` upon an _descending value match_ stores in the namespace `v` a user's value
 
+### Summary table of directives
+sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment 
+--- | :--- | :--- | :---
+_v_ | - | `<val>v` stores a _currently_walked_ JSON value in the namespace `val` | `<val:...>v` stores in the namespace `val` a user's JSON value
+_k_ | `<>k` reinterprets a _currently walked_ JSON's label/index as a value | `<val>k` stores a _currently walked_ JSON value's _label_/_index_ in the namespace `val` | `<val:...>k` stores in the namespace `val` a user's _string_ value
+_z_ | - | `<val>z` removes from the namespace the value stored in `val` | -
+_f_ | `<>f` sets a branching point | `<val>f` sets a branching point and stores a _currently walked_ JSON value in the namespace `val` | `<v:...>f` sets a branching point and stores in the namespace `v` a user's JSON value
+_F_ | `<>F`,`><F`,`<>Fn`,`><Fn` facilitates various actions as per notation | `<val>f` stores a _currently walked_ JSON value in the namespace `val` and facilitates walk's action | `<v:...>F` stores in the namespace `v` a user's JSON value and facilitates walk's action
+_u_ | - | `<cli>u` evaluates a shell _cli_ and gates further walking by the result | -
+_I_ | - | `<val>I` increments/multiplies (as per quantifier(s)) a value stored in the namespace `val` | `<val:..>I` initializes the namespace `val` by a given value and then applies increment/multiplication (as per given quantifier(s))
+_W_ | - | `<val>W` preserves in the namespace `val` a _currently walked_ JSON path | -
+_S_ | - | `<val>S` walks from the root a path previously preserved in the namespace `val` by the lexeme `W`, or hand-crafted | -
+
 
 ### Summary of walk lexemes
 - [`[]`](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md#walking-with-subscripts-offset-lexemes):
