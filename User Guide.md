@@ -609,6 +609,8 @@ and then the REGEX search applied.
 >\- numerical namespaces (e.g., `{123}` ) might be clashing with REGEX quantifiers and hence not supported,  
 >\- the auto-tokens (e.g.: '$abc') are also unsupported, because at the time of walking the iterator is yet unresolved_
 
+**_Be extreamly careful with all search lexemes supporting interpolation (namely: `<..>R`, `<..>L`, `<..>D`, `<..>j`) -
+reckless interpolation may render walking quite slow_**
 
 #### Search suffixes
 This is the complete list of suffixes that control _search_ behavior: 
