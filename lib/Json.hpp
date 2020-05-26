@@ -2085,19 +2085,40 @@ class Json {
                                     break;
                                    }
                               case Jsearch::json_match: {
-                                    user_json = Json::interpolate(stripped.front(), jit);
-                                    if(user_json.is_neither())
-                                     throw jsn.EXP(Jnode::ThrowReason::json_lexeme_invalid);
-                                    return true;
+                                    if(user_json.is_neither()) {    // i.e. it's a template
+                                     user_json = Json::interpolate(stripped.front(), jit);
+                                     if(user_json.is_neither())
+                                      throw jsn.EXP(Jnode::ThrowReason::json_lexeme_invalid);
+                                     return true;                   // ensure reset to Neither
+                                    }
+                                    // user_json is a valid JSON, but it still could be a template
+                                    // if template was within a string. Try interpolating once
+                                    // and see if there's a difference
+                                    if(not stripped.front().empty()) {
+                                     Jnode j = std::move(user_json);
+                                     user_json = Json::interpolate(stripped.front(), jit);
+                                      if(user_json.is_neither())
+                                       throw jsn.EXP(Jnode::ThrowReason::json_lexeme_invalid);
+                                     if(user_json != j) return true;// tmp: reset it to Neither
+                                     stripped.front().clear();      // indicate no intp. needed
+                                    }
+                                    return false;                   // don't reset to Neither
                                    }
                               case Jsearch::Regex_search:
                               case Jsearch::Digital_regex:
                               case Jsearch::Label_RE_search: {
-                                    user_json = Json::interpolate(stripped.front(), jit, jsn.ns(),
+                                    // interpolation renders RE search slower, so use it
+                                    // only if there is interpolation token in RE lexeme
+                                    if(user_json.is_neither())      // request to interpolate
+                                     user_json = Json::interpolate(stripped.front(), jit, jsn.ns(),
                                                                    Json::ParseTrailing::Dont_parse);
-                                    auto restr = user_json.str();
+                                    auto restr = user_json.val();   // copy is required here
                                     rexp = std::regex(restr, jsn.parse_RE_flags_(restr));
-                                    break;
+                                    if(user_json.val() == stripped.front()) 
+                                     { user_json.type(Jnode::Jtype::Neither); break; }
+                                    // user_json will not be set to Neither => dont intp. next time
+                                    else return true;
+                                    // user_json will be set to Neither => interpolate next time
                                    }
                               default: throw jsn.EXP(Jnode::ThrowReason::walk_a_bug);
                              }
@@ -2760,7 +2781,7 @@ class Json {
     //      key: made of { WalkStep, *Jnode };
     //      value: vector<SearchCacheEntry: { namespace (map_jn); vector<path_vector> }>;
     // - namespace is required to be a part of the cache to support REGEX values only!
-    SearchCache         srchc_{CacheKey::cmp};                  // search cache itself
+    SearchCache         srchc_{CacheKey::cmp};                  // search lexemes cache itself
                         // search cache is the array of all path_vector's for given
                         // search key (combination of jnode and walk step)
 
@@ -4943,9 +4964,9 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 
  #define DBG_AND_RET(JSN) \
   { DBG(jit.json(), 4) \
-     DOUT(jit.json()) << Debug::btw << "result: '" \
-                      << ((JSN).is_neither()? "failed interpolation": \
-                           (JSN).to_string(Jnode::PrettyType::Raw, 1)) << "'" << std::endl; \
+     DOUT(jit.json()) << Debug::btw << "result" << (tmp.front() == *TKN_EMP? " (shortcut)":"") \
+                      << ": " << ((JSN).is_neither()? "failed interpolation": \
+                                  (JSN).to_string(Jnode::PrettyType::Raw, 1)) << std::endl; \
     return JSN; }
 
  map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns;
@@ -5032,30 +5053,25 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
    { uct.insert( (*it)[2] ); sst.insert( to_lower((*it)[2]) ); }
  }
 
- DBG(jit.json(), 4) {                                           // debug print all found tokens
-  DOUT(jit.json()) << "found tokens: ";
+ Json &w = jit.json();                                          // needed for walk()
+ DBG(w, 4) {                                                    // debug print all found tokens
+  DOUT(w) << "found tokens: ";
   std::string dlm;
   for(const auto &t: sst) {
    if(uct.count(to_upper(t))) DOUT(jit.json()) << dlm << to_upper(t); dlm = ", ";
    if(lct.count(t)) DOUT(jit.json()) << dlm << t; dlm = ", ";
   }
-  DOUT(jit.json()) << std::endl;
+  DOUT(w) << std::endl;
  }
 
- Json w;                                                        // needed for walk()
- w.DBG().severity(NDBG);
- auto move2json = [&w, &jit](void) { w.root() = std::move(*jit); return true; };
- auto reinstate = [&w, &jit](bool unused) { *jit = std::move(w.root()); };
- GUARD(move2json, reinstate);
-
- auto wi = w.walk("><w:");                                      // first walk all the top elements
+ auto wi = w.walk(sst.empty()?"":"><w:", Json::CacheState::Keep_cache);// walk only if there tokens
  signed_size_t last_idx{0};
  for(const auto &t: sst) {                                      // interpolate found tokens into ns
   auto idx = str2idx(t);
   std::advance(wi, idx - last_idx);
   if(wi == wi.end()) {
    if(wi.type(0) != Jsearch::wide_match) break;
-   wi = w.walk("<>a:");                                         // second: walk all the atomics
+   wi = w.walk("<>a:", Json::CacheState::Keep_cache);           // second: walk all the atomics
    std::advance(wi, idx - SGNS_T(wi.json().root().children()));
    if(wi == wi.end()) break;
   }
