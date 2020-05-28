@@ -2114,7 +2114,7 @@ class Json {
                                                                    Json::ParseTrailing::Dont_parse);
                                     auto restr = user_json.val();   // copy is required here
                                     rexp = std::regex(restr, jsn.parse_RE_flags_(restr));
-                                    if(user_json.val() == stripped.front()) 
+                                    if(user_json.val() == stripped.front())
                                      { user_json.type(Jnode::Jtype::Neither); break; }
                                     // user_json will not be set to Neither => dont intp. next time
                                     else return true;
@@ -5053,8 +5053,9 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
    { uct.insert( (*it)[2] ); sst.insert( to_lower((*it)[2]) ); }
  }
 
- Json &w = jit.json();                                          // needed for walk()
+ Json w;                                                        // needed for walk()
  DBG(w, 4) {                                                    // debug print all found tokens
+  w.DBG().severity(NDBG);
   DOUT(w) << "found tokens: ";
   std::string dlm;
   for(const auto &t: sst) {
@@ -5063,6 +5064,10 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
   }
   DOUT(w) << std::endl;
  }
+
+ auto move2json = [&w, &jit](void) { w.root() = std::move(*jit); return true; };
+ auto reinstate = [&w, &jit](bool unused) { *jit = std::move(w.root()); };
+ GUARD(move2json, reinstate);
 
  auto wi = w.walk(sst.empty()?"":"><w:", Json::CacheState::Keep_cache);// walk only if there tokens
  signed_size_t last_idx{0};

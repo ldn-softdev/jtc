@@ -1771,7 +1771,7 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
    { cerr << "fail: template argument failed interpolation" << endl;  exit(RC_ARG_FAIL); }
   wns_[&jit].sync_out(jtmp.ns(), map_jnse::NsOpType::NsReferAll);
  }
- jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str());
+ jits_ = srcj.walk(jsrt_ == Src_optarg? "": jsrc_[idx()].str(), Json::CacheState::Keep_cache);
 
  if(jits_.is_valid()) {                                         // jits_ resolved
   DBG(4) DOUT() << "next selected source idx: " << idx() << endl;
