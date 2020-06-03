@@ -132,9 +132,14 @@ folder:
 ### Release Notes
 See the latest [Release Notes](https://github.com/ldn-softdev/jtc/releases)
 
-
 ## Quick-start guide:
-*run `jtc -g` for walk-path explanations, usage notes and additional usage examples*
+
+* run the command `jtc -g` to read the mini USER-GUIDE, with walk path syntax, usage notes, short examples
+* read the examples just below
+* see [stackoverflow-json](https://github.com/ldn-softdev/stackoverflow-json) for lots of worked examples
+  based on Stack Overflow questions
+* refer to the complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
+
 ##
 Consider a following JSON (a mockup of a bookmark container), stored in a file `Bookmarks`:
 ```json
