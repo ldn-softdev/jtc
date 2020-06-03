@@ -48,7 +48,8 @@ void GuideJtc::print(void) {
                {"%c", STR(OPT_CMP) }, {"%s", STR(OPT_SWP) }, {"%l", STR(OPT_LBL) },
                {"%i", STR(OPT_INS) }, {"%u", STR(OPT_UPD) }, {"%p", STR(OPT_PRG) },
                {"%e", STR(OPT_EXE) }, {"%m", STR(OPT_MDF) }, {"%x", STR(OPT_CMN) },
-               {"%y", STR(OPT_PRT) }, {"%T", STR(OPT_TMP) }, {"%f", STR(OPT_FRC) }
+               {"%y", STR(OPT_PRT) }, {"%T", STR(OPT_TMP) }, {"%f", STR(OPT_FRC) },
+               {"%a", STR(OPT_ALL)}
  };
  auto replace = [] (const replace_token &rt) {
                  GuideJtc::jtc_usage_ = std::regex_replace(GuideJtc::jtc_usage_,
@@ -154,7 +155,7 @@ interpolation:
    JSON is a string, then outer quotation marks are dropped, if it's a JSON array or object, then
    the respective encasements ('[', ']', or '{', '}') are dropped, so the user must specify those
  - if an empty token is given (e.g.: {}, {{}}), then the interpolation of the currently selected
-   (walked) JSON element occurs (thw same interpolation rules apply)
+   (walked) JSON element occurs (the same interpolation rules apply)
 
 operations chaining:
  - jtc normally performs one (primary) operation at a time; if multiple required those could be
@@ -166,6 +167,15 @@ operations chaining:
    here, all operations are performed by a single jtc invocation, resulting in a much faster
    performance, plus that way the namespace is common across all the steps, which allows achieving
    operations with JSON otherwise unattainable in the former notation
+
+single/multiple JSONs and sources:
+ - if a single JSON source is given (file, or <std-in>), then jtc will process only the first JSON
+   and then quit. If the single source holds multiple JSONs and all to be processed, then option
+   -%a is required.
+ - if multiple sources given (i.e., multiple files) then option -%a is assumed and is not required,
+   jtc then performs reading and parsing from multiple files concurrently (in multiple threads).
+   However, if option -%a is given, then it disables concurrent JSON reading/parsing and forces
+   processing of all the input files sequentially (in a single thread)
 )"};
 
 
@@ -255,7 +265,7 @@ std::string GuideJtc::jtc_examples_{R"(
        "Relation": [
           {
              "age": 31,
-             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Sophia", "Olivia", "James" ],
              "city": "New York",
              "parent": "John Smith"
           },
@@ -276,7 +286,7 @@ std::string GuideJtc::jtc_examples_{R"(
        "Relation": [
           {
              "age": 31,
-             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Sophia", "Olivia", "James" ],
              "city": "New York",
              "parent": "Jane Smith"
           },
@@ -291,12 +301,12 @@ std::string GuideJtc::jtc_examples_{R"(
 
 
 - to add a new record into a JSON node where parent is '"Jane Smith"':
-    jtc -tc -%w'[parent]:<Jane Smith>[-1]' -%i'{"gene": "Y"}' example.json
+    jtc -tc -w'[parent]:<Jane Smith>[-1]' -i'{"gene": "Y"}' example.json
     {
        "Relation": [
           {
              "age": 31,
-             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Sophia", "Olivia", "James" ],
              "city": "New York",
              "gene": "Y",
              "parent": "Jane Smith"
@@ -319,7 +329,7 @@ std::string GuideJtc::jtc_examples_{R"(
        "Relation": [
           {
              "age": 31,
-             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Sophia", "Olivia", "James" ],
              "city": "New York",
              "gene": "Y",
              "parent": "Jane Smith"
@@ -364,18 +374,18 @@ std::string GuideJtc::jtc_examples_{R"(
           ]
        }
     ]
-  ors:
-    jtc -w'<parent>l:' -j example.json
+  or:
+    jtc -w'<parent>l:' -jl example.json
 
 
 - an insert and update options could be subjected for a shell cli evaluation, e.g., say we want to
   capitalize all parent names in our JSON:
-    jtc -tc -%w'<parent>l:' -%e%u echo {{}} \| tr "[:lower:]" "[:upper:]" \; example.json
+    jtc -tc -w'<parent>l:' -eu echo {{}} \| tr "[:lower:]" "[:upper:]" \; example.json
     {
        "Relation": [
           {
              "age": 31,
-             "children": [ "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Sophia", "Olivia", "James" ],
              "city": "New York",
              "gene": "Y",
              "parent": "JANE SMITH"
@@ -393,12 +403,12 @@ std::string GuideJtc::jtc_examples_{R"(
 
 - to add a child "Victoria" into each record, but as the first child use update operation with
   templating:
-    jtc -tc -%w'<children>l:' -%u'<children>l:' -%T'["Victoria", {}]' example.json
+    jtc -tc -w'<children>l:' -u'<children>l:' -T'["Victoria", {}]' example.json
     {
        "Relation": [
           {
              "age": 31,
-             "children": [ "Victoria", "Sophia", "Olivia", "James", "James" ],
+             "children": [ "Victoria", "Sophia", "Olivia", "James" ],
              "city": "New York",
              "gene": "Y",
              "parent": "Jane Smith"
@@ -412,11 +422,14 @@ std::string GuideJtc::jtc_examples_{R"(
           }
        ]
     }
+  or:
+    jtc -tc -w'<children>l:' -u'["Victoria", {}];' example.json
 
-  in that example, the destination point of an update (-%w), as well as the source point of the
+  in the 1st example, the destination point of an update (-%w), as well as the source point of the
   update (-%u) are in the same input - `example.json`. In the template (-%T), the interpolation
-  of `{}` token will result in the bare array of "children", making resulting array carrying
-  "Victoria" as the first element
+  of `{}` token will result in the naked array of "children", making resulting array carrying
+  "Victoria" as the first element. -%T (and its interpolation token) here refers to the -%u walk
+  in the 2nd example, -%u holds a template itself, which then refers to the -%w walk
 
 
 * for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md
