@@ -63,7 +63,7 @@ which could be mixed up in any order:
 >There's also a 3rd kind of lexemes - **_directives_**: they typically facilitate other functions like working with _namespaces_,
 controlling walk-path execution, etc; _directives_ are syntactically similar to the _search lexemes_    
 
-All lexemes cab be _iterable_:
+All lexemes can be _iterable_:
   - iterable **_subscripts_** let iterating over children of currently addressed JSON iterables nodes (arrays/objects), 
   - while iterable **_search lexemes_** let iterating over all (recursive) matches for a given search criteria
 
