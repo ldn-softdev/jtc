@@ -1530,7 +1530,7 @@ Sometimes, when displaying outputs wrapped into an object, it's desirable to ext
 Let's consider a following query:  
 Say, the ask here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
-```bash
+```json
 [
    { "name": "John", "has children": "yes" },
    ...
@@ -2131,7 +2131,7 @@ applied onto each value of the iterable one by one).
 
 By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
 (default value `", "`), which means, it could be altered by a user:
-```json
+```bash
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
 good for TSV conversion:
 1       2       3       4       5
