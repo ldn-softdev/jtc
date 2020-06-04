@@ -1754,7 +1754,7 @@ bash $ <<<$jsn jtc -w[:] -x4
 4
 8
 bash $ 
- ```
+```
 To display _every 4th walk starting from 3rd one_, use this notation:
 ```bash
 bash $ <<<$jsn jtc -w[:] -x4/2
@@ -2844,7 +2844,7 @@ format of the file.
 #### Forcing input read from `stdin`
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
 ```bash
-  bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f - file.json
+bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f - file.json
 bash $ cat file.json
 [
    "<stdin>",
