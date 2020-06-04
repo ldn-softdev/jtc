@@ -442,7 +442,7 @@ bash $ <<<$case3 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Patrick", "Lynch" ]
 [ "Alice", "Price" ]
 [ "Rebecca", "Hernandez" ]
-
+#
 #jq:
 bash $ <<<$case3 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
 [null,null]
@@ -455,7 +455,7 @@ bash $ case2='[{"Surname":"Lynch", "gender":"male", "age":29},{"Name":"Alice", "
 bash $ 
 bash $ <<<$case2 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Alice", "Price" ]
-
+#
 #jq:
 bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
 [null,"Lynch"]

@@ -223,11 +223,11 @@ bash $ <<<$jsn jtc -w[4] -tc
    { "number three": 3 }
 ]
 bash $ 
-
+#
 # dig the second level:
 bash $ <<<$jsn jtc -w[4][2] -tc
 { "number three": 3 }
-
+#
 # dig the 3rd level:
 bash $ <<<$jsn jtc -w[4][2][number three]
 error: could not open file 'three]'
