@@ -528,7 +528,7 @@ _**`updating JSON recursively by label:`**_ | _**`updating JSON recursively by l
 
 
 **_Comparison of `jtc` to `jtc` (single-threaded to multi-threaded parsing performance):_**
-```bash
+```bash SKIP
 bash $ unset TIMEFORMAT
 bash $ 
 bash $ # concurrent (multi-threaded) parsing:
