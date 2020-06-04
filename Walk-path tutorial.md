@@ -722,24 +722,18 @@ Examples:
 - Find an exact string value:
 ```bash
 bash $ <<<$JSN jtc -w'<two>'
-```
-```json
 "two"
 ```
 
 - Find a string value matching _RE_:
 ```bash
 bash $ <<<$JSN jtc -w'<^t>R'
-```
-```json
 "two"
 ```
 
 - Find the first _JSON string_ value:
 ```bash
 bash $ <<<$JSN jtc -w'<>P'
-```
-```json
 "abc"
 ```
 
@@ -767,8 +761,6 @@ let's work with this JSON:
 ```bash
 bash $ JSS='["one", "two", ["three", "four", {"5 to 7": [ "five", "six", "seven"], "second 1": "one"  } ] ]'
 bash $ <<<$JSS jtc
-```
-```json
 [
    "one",
    "two",
@@ -790,8 +782,6 @@ bash $ <<<$JSS jtc
 - among all _JSON strings_ find those from 2nd till 5th inclusive:
 ```bash
 bash $ <<<$JSS jtc -w'<>P1:5'
-```
-```json
 "two"
 "three"
 "four"
@@ -806,8 +796,6 @@ So, let's repeat the last example, but now using quantifier indices references i
 - among all _JSON strings_ find those from 2nd till 5th inclusive:
 ```bash
 bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
-```
-```json
 "two"
 "three"
 "four"
@@ -818,8 +806,6 @@ bash $ <<<$JSS jtc -w'<Start:1>v<End:5>v <>P{Start}:{End}'
 - find all the string occurrences where letter `e` is present:
 ```bash
 bash $ <<<$JSS jtc -w'<e>R:'
-```
-```json
 "one"
 "three"
 "five"
@@ -830,8 +816,6 @@ bash $ <<<$JSS jtc -w'<e>R:'
 - find all the occurrences of string `"one"`:
 ```bash
 bash $ <<<$JSS jtc -w'<one>:'
-```
-```json
 "one"
 "one"
 ```
@@ -845,8 +829,6 @@ only among immediate children of a current _iterable_.
 the JSON's root in the example is an _array_, so if we apply a non-recursive search on the root's array, only one match will be found:
 ```bash
 bash $ <<<$JSS jtc -w'>one<:'
-```
-```json
 "one"
 ```
 
@@ -858,8 +840,6 @@ The recursive search always begins from checking the currently selected (walked)
 even onto atomic types and match those:
 ```bash
 bash $ <<<$JSS jtc -w'[0]<one>'
-```
-```json
 "one"
 ```
 
@@ -876,15 +856,11 @@ The lexeme might be empty or hold the `namespace` where matched value will be pr
 
 ```bash
 bash $ <<<$JSN jtc -w'<[13]>D1:'
-```
-```json
 1
 3
 ```
 ```bash
 bash $ <<<$JSN jtc -w'<3.14>d:'
-```
-```json
 3.14
 ```
 
@@ -900,8 +876,6 @@ but rather a spelled boolean value will be matched
 
 ```bash
 bash $ <<<$JSN jtc -w'<>b:'
-```
-```json
 false
 ```
 
@@ -924,8 +898,6 @@ All of those lexemes can stay empty, or hold the _namespace_ that will be filled
 
 ```bash
 bash $ <<<$JSN jtc -rw'<>c:'
-```
-```json
 [ "abc", false, null, { "pi": 3.14 }, [ 1, "two", { "number three": 3 } ] ]
 { "pi": 3.14 }
 [ 1, "two", { "number three": 3 } ]
@@ -938,8 +910,6 @@ bash $ <<<$JSN jtc -rw'<>c:'
 lexeme with the suffix `j` can match any arbitrary JSON value:
 ```bash
 bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
-```
-```json
 {
    "pi": 3.14
 }
@@ -948,8 +918,6 @@ bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
 Even more, the parameter in the `j` lexeme can be a _templated JSON_:
 ```bash
 bash $ <<<$JSN jtc -w'[4][2][0] <Nr3>v [^0] <{"pi": {Nr3}.14}>j [pi]'
-```
-```json
 3.14
 ```
 
@@ -968,8 +936,6 @@ Obviously the `j` lexeme cannot be empty or result in an empty lexeme after temp
 There's another search lexeme suffix - `s` - that one will find a JSON pointed by a _namespace_:
 ```bash
 bash $  <<<$JSN jtc -w'<PI:{"pi": 3.14}>v <PI>s'
-```
-```json
 {
    "pi": 3.14
 }
@@ -988,8 +954,6 @@ lexemes search for original or duplicate entries of any JSONs, not necessarily a
 ```bash
 bash $ JSD='{"Orig 1": 1, "Orig 2": "two", "list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ]}' 
 bash $ <<<$JSD jtc 
-```
-```json
 {
    "Orig 1": 1,
    "Orig 2": "two",
@@ -1007,8 +971,6 @@ bash $ <<<$JSD jtc
 Let's see _all_ the original elements in the above JSON:
 ```bash
 bash $ <<<$JSD jtc -lrw'<org>q:'
-```
-```json
 { "Orig 1": 1, "Orig 2": "two", "list": [ "three", { "dup 1": 1, "dup 2": "two", "second dup 1": 1 } ] }
 "Orig 1": 1
 "Orig 2": "two"
@@ -1021,8 +983,6 @@ As you can see there were listed _all_ first seen JSON values (including the roo
 Now, let's list _all_ the duplicates:
 ```bash
 bash $ <<<$JSD jtc -lrw'<dup>Q:'
-```
-```json
 "dup 1": 1
 "dup 2": "two"
 "second dup 1": 1
@@ -1047,8 +1007,6 @@ First two variants should not require much of a clarification, let's work with t
 ```bash
 bash $ JSL='{"One": 1, "obj": { "One": true, "Two": 2, "": 3 }, "45": "forty-five"}'
 bash $ <<<$JSL jtc
-```
-```json
 {
    "45": "forty-five",
    "One": 1,
@@ -1061,8 +1019,6 @@ bash $ <<<$JSL jtc
 ```
 ```bash
 bash $ <<<$JSL jtc -rlw'<[oO]>L:'
-```
-```json
 "One": 1
 "obj": { "": 3, "One": true, "Two": 2 }
 "One": true
@@ -1070,8 +1026,6 @@ bash $ <<<$JSL jtc -rlw'<[oO]>L:'
 ```
 ```bash
 bash $ <<<$JSL jtc -rlw'<One>l:'
-```
-```json
 "One": 1
 "One": true
 ````
@@ -1082,14 +1036,10 @@ or _JSON numeric_, in the latter case, it's automatically converted to a _string
 a numerical value:
 ```bash
 bash $ <<<$JSL jtc -lrw'<idx:45>v <idx>t'
-```
-```json
 "45": "forty-five"
 ```
 ```bash
 bash $ <<<$JSL jtc -lrw'<idx:"45">v <idx>t'
-```
-```json
 "45": "forty-five"
 ```
 All other _JSON types_ in the `NS` will be ignored, such search will always return _false_.
@@ -1111,8 +1061,6 @@ value `"forty-five"` via literal subscript, but using `>..<l` lexeme it is:
 bash $ <<<$JSL jtc -rlw'[45]'
 bash $ 
 bash $ <<<$JSL jtc -rlw'>45<l'
-```
-```json
 "45": "forty-five"
 ```
 
@@ -1121,15 +1069,11 @@ The lexeme `>..<t` can do both _JSON objects_ and _arrays_:
 in the JSON object:
 ```bash
 bash $ <<<$JSL jtc -lw'<lbl:"45">v >lbl<t'
-```
-```json
 "45": "forty-five"
 ```
 \- if the lexeme's _namespace_ is set to _JSON numeric_ type, then it can address _JSON iterables_ by the index:
 ```bash
 bash $ <<<$JSL jtc -lw'<idx:2">v [obj]>idx<t'
-```
-```json
 "Two": 2
 ```
 
@@ -1145,8 +1089,6 @@ Even though it's possible to pass to a parser an object that will hold non-uniqu
 _**does not define**_ software behavior in that regard. `jtc` in such case retains the first parsed value:
 ```bash
 bash $ <<<'{"abc":1, "abc":2}' jtc
-```
-```json
 {
    "abc": 1
 }
@@ -1169,8 +1111,6 @@ and therefore can take a _negative value_ - that is the only case when a quantif
 Observe a relative quantifier in action:
 ```bash
 bash $ <<<$JSL jtc -w'[obj]'
-```
-```json
 {
    "": 3,
    "One": true,
@@ -1179,14 +1119,10 @@ bash $ <<<$JSL jtc -w'[obj]'
 ```
 ```bash
 bash $ <<<$JSL jtc -lw'[obj] >One<l'
-```
-```json
 "One": true
 ```
 ```bash 
 bash $ <<<$JSL jtc -lw'[obj] >One<l-1'
-```
-```json
 "": 3
 ```
 ```bash
@@ -1197,8 +1133,6 @@ bash $ <<<$JSL jtc -lw'[obj] >One<l1'
 The relative quantifiers though are fully compatible with the quantifiers range-notation: 
 ```bash
 bash $ <<<$JSL jtc -lw'[obj] >One<l:'
-```
-```json
 "": 3
 "One": true
 "Two": 2
@@ -1218,8 +1152,6 @@ a label cannot be scoped by a label.
 For example:
 ```bash
 bash $ <<<$JSL jtc -w'[One]:<org>q:'
-```
-```json
 1
 true
 ```
@@ -1240,8 +1172,6 @@ the second will do `$2` and so on. Plus, the entire match will populate the name
 That way it's possible to extract any part(s) from the found JSON values for a later re-use.
 ```bash
 bash $ <<<$JSL jtc -w'<(.*)[oO](.*)>L:' -T'{ "sub-group 1":{{$1}}, "sub-group 2":{{$2}}, "entire match":{{$0}} }'
-```
-```json
 {
    "entire match": "One",
    "sub-group 1": "",
@@ -1305,8 +1235,6 @@ are capable of doing the same on their own, but for others, as well as for the s
 
 ```bash
 bash $ <<<$JSN jtc
-```
-```json
 [
    "abc",
    false,
@@ -1325,16 +1253,12 @@ bash $ <<<$JSN jtc
 ```
 ```bash
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
-```
-```json
 "two"
 ```
 
 It's fun to see how `jtc` works in a slow-mo, building a walk-path step by step, one lexeme at a time:
 ```bash
 bash $ <<<$JSN jtc -w'[4]'
-```
-```json
 [
    1,
    "two",
@@ -1347,24 +1271,18 @@ bash $ <<<$JSN jtc -w'[4]'
 ##
 ```bash
 bash $ <<<$JSN jtc -w'[4][0]'
-```
-```json
 1
 ```
 \-  addressed the 1st JSON value in the JSON iterable (found in the prior step)  
 ##
 ```bash
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v'
-```
-```json
 1
 ```
 \- memorized a currently walked JSON in the namespace `Idx` (which is the _JSON numeric_ `1`)  
 ##
 ```bash
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
-```
-```json
 [
    1,
    "two",
@@ -1377,8 +1295,6 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
 ##
 ```bash
 bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
-```
-```json
 "two"
 ```
 \- using a value from the namespace `Idx` found an offset in the JSON iterable (the numeric value `1` stored in `Idx` points to a
@@ -1393,8 +1309,6 @@ of a _JSON array_):
 
 ```bash
 bash $ <<<$JSN jtc 
-```
-```json
 [
    "abc",
    false,
@@ -1413,8 +1327,6 @@ bash $ <<<$JSN jtc
 ```
 ```bash
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
-```
-```json
 3
 ```
 
@@ -1423,14 +1335,10 @@ in the namespace, but instead re-interprets the label as the JSON value. That wa
 operations, or re-use it in template interpolation.
 ```bash
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' 
-```
-```json
 3
 ```
 ```bash
 bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' -T'{"idx": {{}}}' -r
-```
-```json
 { "idx": 3 }
 ``` 
 The described effect occurs only if the empty `<>k` lexeme appears the last in the walk-path, if the lexeme appears somewhere in the
@@ -1445,16 +1353,12 @@ _[walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tut
 For example, let's replace all even numbers in the array with their negative values:
 ```bash
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
-```
-```json
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
 
 If the walk began w/o initial lexeme erasing namespace `Num`, then the whole attempt would fail:
 ```bash
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
-```
-```json
 [ 1, -2, -2, -4, -4, -6, -6, -8, -8 ]
 
 ```
@@ -1464,8 +1368,6 @@ Of course, knowing _how
 work_, it's possible to rewrite the walk-path in a bit more succinct way:
 ```bash
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
-```
-```json
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
 
