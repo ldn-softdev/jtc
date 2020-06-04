@@ -721,19 +721,19 @@ The lexeme might be empty or hold the `namespace` where matched value will be st
 Examples:
 - Find an exact string value:
 ```bash
-bash $ <<<$JSN jtc -w'<two>'
+bash $ <<<$jsn jtc -w'<two>'
 "two"
 ```
 
 - Find a string value matching _RE_:
 ```bash
-bash $ <<<$JSN jtc -w'<^t>R'
+bash $ <<<$jsn jtc -w'<^t>R'
 "two"
 ```
 
 - Find the first _JSON string_ value:
 ```bash
-bash $ <<<$JSN jtc -w'<>P'
+bash $ <<<$jsn jtc -w'<>P'
 "abc"
 ```
 
@@ -855,12 +855,12 @@ bash $ <<<$JSS jtc -w'[0]<one>'
 The lexeme might be empty or hold the `namespace` where matched value will be preserved (upon a match)
 
 ```bash
-bash $ <<<$JSN jtc -w'<[13]>D1:'
+bash $ <<<$jsn jtc -w'<[13]>D1:'
 1
 3
 ```
 ```bash
-bash $ <<<$JSN jtc -w'<3.14>d:'
+bash $ <<<$jsn jtc -w'<3.14>d:'
 3.14
 ```
 
@@ -875,7 +875,7 @@ in the `namespace` shall it be present in the lexeme
 but rather a spelled boolean value will be matched
 
 ```bash
-bash $ <<<$JSN jtc -w'<>b:'
+bash $ <<<$jsn jtc -w'<>b:'
 false
 ```
 
@@ -897,7 +897,7 @@ The others are:
 All of those lexemes can stay empty, or hold the _namespace_ that will be filled upon a successful match.
 
 ```bash
-bash $ <<<$JSN jtc -rw'<>c:'
+bash $ <<<$jsn jtc -rw'<>c:'
 [ "abc", false, null, { "pi": 3.14 }, [ 1, "two", { "number three": 3 } ] ]
 { "pi": 3.14 }
 [ 1, "two", { "number three": 3 } ]
@@ -909,7 +909,7 @@ bash $ <<<$JSN jtc -rw'<>c:'
 ### Arbitrary Json searches
 lexeme with the suffix `j` can match any arbitrary JSON value:
 ```bash
-bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
+bash $ <<<$jsn jtc -w'<{ "pi":3.14 }>j'
 {
    "pi": 3.14
 }
@@ -917,7 +917,7 @@ bash $ <<<$JSN jtc -w'<{ "pi":3.14 }>j'
 
 Even more, the parameter in the `j` lexeme can be a _templated JSON_:
 ```bash
-bash $ <<<$JSN jtc -w'[4][2][0] <Nr3>v [^0] <{"pi": {Nr3}.14}>j [pi]'
+bash $ <<<$jsn jtc -w'[4][2][0] <Nr3>v [^0] <{"pi": {Nr3}.14}>j [pi]'
 3.14
 ```
 
@@ -935,7 +935,7 @@ Obviously the `j` lexeme cannot be empty or result in an empty lexeme after temp
 ##
 There's another search lexeme suffix - `s` - that one will find a JSON pointed by a _namespace_:
 ```bash
-bash $  <<<$JSN jtc -w'<PI:{"pi": 3.14}>v <PI>s'
+bash $  <<<$jsn jtc -w'<PI:{"pi": 3.14}>v <PI>s'
 {
    "pi": 3.14
 }
@@ -1234,7 +1234,7 @@ The directive `<NS>v` preserves currently walked value in the _namespace_ `NS`.
 are capable of doing the same on their own, but for others, as well as for the subscripts, it's still a useful feature.
 
 ```bash
-bash $ <<<$JSN jtc
+bash $ <<<$jsn jtc
 [
    "abc",
    false,
@@ -1252,13 +1252,13 @@ bash $ <<<$JSN jtc
 ]
 ```
 ```bash
-bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
+bash $ <<<$jsn jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 "two"
 ```
 
 It's fun to see how `jtc` works in a slow-mo, building a walk-path step by step, one lexeme at a time:
 ```bash
-bash $ <<<$JSN jtc -w'[4]'
+bash $ <<<$jsn jtc -w'[4]'
 [
    1,
    "two",
@@ -1270,19 +1270,19 @@ bash $ <<<$JSN jtc -w'[4]'
 \- addressed there the 5th JSON element in the JSON root (always begin walking from the root)  
 ##
 ```bash
-bash $ <<<$JSN jtc -w'[4][0]'
+bash $ <<<$jsn jtc -w'[4][0]'
 1
 ```
 \-  addressed the 1st JSON value in the JSON iterable (found in the prior step)  
 ##
 ```bash
-bash $ <<<$JSN jtc -w'[4][0]<Idx>v'
+bash $ <<<$jsn jtc -w'[4][0]<Idx>v'
 1
 ```
 \- memorized a currently walked JSON in the namespace `Idx` (which is the _JSON numeric_ `1`)  
 ##
 ```bash
-bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
+bash $ <<<$jsn jtc -w'[4][0]<Idx>v[-1]'
 [
    1,
    "two",
@@ -1294,7 +1294,7 @@ bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]'
 \- stepped one level up (towards the root) from the last walked JSON  
 ##
 ```bash
-bash $ <<<$JSN jtc -w'[4][0]<Idx>v[-1]>Idx<t'
+bash $ <<<$jsn jtc -w'[4][0]<Idx>v[-1]>Idx<t'
 "two"
 ```
 \- using a value from the namespace `Idx` found an offset in the JSON iterable (the numeric value `1` stored in `Idx` points to a
@@ -1308,7 +1308,7 @@ its label (if currently walked element is a child of _JSON object_), or its inde
 of a _JSON array_):
 
 ```bash
-bash $ <<<$JSN jtc 
+bash $ <<<$jsn jtc
 [
    "abc",
    false,
@@ -1326,7 +1326,7 @@ bash $ <<<$JSN jtc
 ]
 ```
 ```bash
-bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
+bash $ <<<$jsn jtc -w'<{"pi":3.14}>j<idx>k' -T'{idx}'
 3
 ```
 
@@ -1334,11 +1334,11 @@ If the lexeme is _**empty**_ (`<>k`) _AND_ is the last one in the walk-path, the
 in the namespace, but instead re-interprets the label as the JSON value. That way it become possible to rewrite labels in update (`-u`)
 operations, or re-use it in template interpolation.
 ```bash
-bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' 
+bash $ <<<$jsn jtc -w'<{"pi":3.14}>j<>k'
 3
 ```
 ```bash
-bash $ <<<$JSN jtc -w'<{"pi":3.14}>j<>k' -T'{"idx": {{}}}' -r
+bash $ <<<$jsn jtc -w'<{"pi":3.14}>j<>k' -T'{"idx": {{}}}' -r
 { "idx": 3 }
 ``` 
 The described effect occurs only if the empty `<>k` lexeme appears the last in the walk-path, if the lexeme appears somewhere in the
