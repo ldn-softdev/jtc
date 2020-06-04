@@ -196,7 +196,7 @@ bash $
 ```
 option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
 ```bash
-bash $ <ab.json jtc -t10
+bash $ <ab.json jtc -t10 | head -13
 {
           "Directory": [
                     {
@@ -210,7 +210,6 @@ bash $ <ab.json jtc -t10
                               "children": [
                                         "Olivia"
                               ],
-...
 ```
 Majority of the examples and explanations in this document are based on the above simplified version of the above address book JSON model.
 
@@ -1691,8 +1690,7 @@ bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -jlnn
 a syntactical sugar and do not apply any walk-path parsing or validation, instead they just reconcile into respective `-w` options 
 created internally, then the latter get processed. Thus, it's even possible to write it with what it seems a broken syntax at first:
 ```bash
-bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:' -jlnn
-...
+bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:' -jlnn > /dev/null
 ```
 However, if a reinstatement of the options results in a valid walk-path - that's all what matters.
 
@@ -3194,9 +3192,8 @@ The labels can be updated with any atomic value (and not with the iterable value
 ```bash
 bash $ <ab.json jtc -w'<John><>k' -u true / -w'<John>' -l
 "true": "John"
-bash $ <ab.json jtc -w'<name>l<>k' -u '[true]' / -w'[0][0]' -tc
+bash $ <ab.json jtc -w'<name>l<>k' -u '[true]' / -w'[0][0]' -tc > /dev/null
 error: label could be updated only with JSON atomic value
-...
 ```
 
 
@@ -3784,7 +3781,7 @@ a network-based streaming)
 We can see the difference in the parsing when debugging `jtc`:
 \- in a _buffered read_ mode, the debug will show the _parsing point_ with the data following behind it:
 ```bash
-bash $ <ab.json jtc -dddddd
+bash $ <ab.json jtc -dddddd 2>&1 | head -9
 .display_opts(), option set[0]: -d -d -d -d -d -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: buffered_cin
@@ -3794,11 +3791,10 @@ bash $ <ab.json jtc -dddddd
 ......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "...
 ......parse_(), parsing point ->[|      {|         "address": {|            "city": "New Y...
 ......parse_(), parsing point ->{|         "address": {|            "city": "New York",|  ...
-...
 ```
 \- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
 ```bash
-bash $ <ab.json jtc -dddddd -a
+bash $ <ab.json jtc -dddddd -a 2>&1 | head -12
 .display_opts(), option set[0]: -d -d -d -d -d -d -a (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: streamed_cin
@@ -3811,7 +3807,6 @@ bash $ <ab.json jtc -dddddd -a
 ......parse_(), {|   "Directory": [|      {|         "<- parsing point
 ......parse_(), {|   "Directory": [|      {|         "address": {<- parsing point
 ......parse_(), ..."Directory": [|      {|         "address": {|            "<- parsing point
-...
 ```
 
 Here's an example of how _streamed read_ works in `jtc`:
