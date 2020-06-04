@@ -428,23 +428,23 @@ bash $
 ```
 >Note how `jtc` _interleaves_ the walks: it puts relevant walks in a good (relevant) order, rather than dumping results of
 the first walk and then of the second. If one prefers seeing the latter behavior, option `-n` will do the trick, compare:
->```bash
->bash $ <<<$jsn jtc -w[:] -w[:][:] -tc -n
->"abc"
->false
->null
->{ "pi": 3.14 }
->[
->   1,
->   "two",
->   { "number three": 3 }
->]
->3.14
->1
->"two"
->{ "number three": 3 }
->bash $ 
->```
+```bash
+bash $ <<<$jsn jtc -w[:] -w[:][:] -tc -n
+"abc"
+false
+null
+{ "pi": 3.14 }
+[
+   1,
+   "two",
+   { "number three": 3 }
+]
+3.14
+1
+"two"
+{ "number three": 3 }
+bash $ 
+```
 
 ##
 ##### Alternative range notation
@@ -594,36 +594,36 @@ Thus in order to select either of parents, we just need to pick a respective ind
 - `[-3]` wil address the _JSON root_ itself.
 >_Note_: `[-0]` will address the value `3` itself, so there's no much of a point to use such addressing, while indices greater _root's 
 (in that example are `[-4]`, `[-5]`, etc will keep addressing the JSON root)_. Take a look:
->```bash
-># addressing an immediate parent:
->bash $ <<<$jsn jtc -w'[4][2][number three][-1]' -tc
->{ "number three": 3 }
->bash $ 
->
-># addressing a parent of a parent:
->bash $ <<<$jsn jtc -w'[4][2][number three][-2]' -tc
->[
->   1,
->   "two",
->   { "number three": 3 }
->]
->bash $ 
->
-># addressing the next parent (which happens to be the root):
->bash $ <<<$jsn jtc -w'[4][2][number three][-3]' -tc
->[
->   "abc",
->   false,
->   null,
->   { "pi": 3.14 },
->   [
->      1,
->      "two",
->      { "number three": 3 }
->   ]
->]
->bash $ 
->```
+```bash
+# addressing an immediate parent:
+bash $ <<<$jsn jtc -w'[4][2][number three][-1]' -tc
+{ "number three": 3 }
+bash $ 
+
+# addressing a parent of a parent:
+bash $ <<<$jsn jtc -w'[4][2][number three][-2]' -tc
+[
+   1,
+   "two",
+   { "number three": 3 }
+]
+bash $ 
+
+# addressing the next parent (which happens to be the root):
+bash $ <<<$jsn jtc -w'[4][2][number three][-3]' -tc
+[
+   "abc",
+   false,
+   null,
+   { "pi": 3.14 },
+   [
+      1,
+      "two",
+      { "number three": 3 }
+   ]
+]
+bash $ 
+```
 
 ##
 #### Offsetting path from the root

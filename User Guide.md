@@ -1400,55 +1400,55 @@ bash $
 ```
 >Note: such grouping is only possible with labeled values (obviously), it won't be possible to group array elements that easily,
 > e.g., let's break array into pairs:
->```bash
->bash $ array='[0,1,2,3,4,5,6,7,8,9]'
->bash $ <<<$array jtc -w[::2] -w[1::2] -j -tc
->[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
->bash $ 
->```
+```bash
+bash $ array='[0,1,2,3,4,5,6,7,8,9]'
+bash $ <<<$array jtc -w[::2] -w[1::2] -j -tc
+[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+bash $
+```
 > it won't work even if we try relating walks:
->```bash
->bash $ <<<$array jtc -w[::2] -w'[::2]<I>k[-1]>I<t1' -j -tc
->[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
->bash $ 
->```
+```bash
+bash $ <<<$array jtc -w[::2] -w'[::2]<I>k[-1]>I<t1' -j -tc
+[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+bash $
+```
 >Thus grouping here should be achieved differently. One way is to use only a single walk collecting required elements of the group into
 >the namespaces and then using template interpolating the latter:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}},{{}}]' -j -tc
->[
->   [ 0, 1 ],
->   [ 2, 3 ],
->   [ 4, 5 ],
->   [ 6, 7 ],
->   [ 8, 9 ]
->]
->bash $
->```
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}},{{}}]' -j -tc
+[
+   [ 0, 1 ],
+   [ 2, 3 ],
+   [ 4, 5 ],
+   [ 6, 7 ],
+   [ 8, 9 ]
+]
+bash $
+```
 >Another way is to transofrm the walks into objects assigning labels from the first walk's index:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -tc
->{
->   "0": [ 0, 1 ],
->   "2": [ 2, 3 ],
->   "4": [ 4, 5 ],
->   "6": [ 6, 7 ],
->   "8": [ 8, 9 ]
->}
->bash $ 
->```
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -tc
+{
+   "0": [ 0, 1 ],
+   "2": [ 2, 3 ],
+   "4": [ 4, 5 ],
+   "6": [ 6, 7 ],
+   "8": [ 8, 9 ]
+}
+bash $ 
+```
 >and then re-walk dropping labels and encapsulating into the outer array:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -jw[:] -tc
->[
->   [ 0, 1 ],
->   [ 2, 3 ],
->   [ 4, 5 ],
->   [ 6, 7 ],
->   [ 8, 9 ]
->]
->bash $ 
-
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -jw[:] -tc
+[
+   [ 0, 1 ],
+   [ 2, 3 ],
+   [ 4, 5 ],
+   [ 6, 7 ],
+   [ 8, 9 ]
+]
+bash $ 
+```
 
 #### Aggregating walks
 the walks results that have labels also could be aggregated (per label), option `-nn` facilitates the ask:
@@ -1650,15 +1650,15 @@ bash $
 
 > all the above examples just illustrate capabilities of the options for instructional purpose. Practically,
 the same ask would be easier to achive using just a single walk:  
->```bash
->bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]<C:no>f[0]<C:yes>v' -T'{"name":{{N}}, "has children": {{C}}}' -jtc
->[
->   { "has children": "yes", "name": "John" },
->   { "has children": "no", "name": "Ivan" },
->   { "has children": "yes", "name": "Jane" }
->]
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]<C:no>f[0]<C:yes>v' -T'{"name":{{N}}, "has children": {{C}}}' -jtc
+[
+   { "has children": "yes", "name": "John" },
+   { "has children": "no", "name": "Ivan" },
+   { "has children": "yes", "name": "Jane" }
+]
+bash $
+```
 
 
 #### Succinct walk-path syntax
@@ -2311,14 +2311,14 @@ bash $
 
 > The example above is shown for instructive purpose. Probably the easier (and more efficient) way achieving the same result
 > would be this one:
->```bash
->bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' -T'{"{N}": "{}"}' -jjll / -pw'<>'
->{
->   "Jane": "Robert, Lila",
->   "John": "Olivia"
->}
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' -T'{"{N}": "{}"}' -jjll / -pw'<>'
+{
+   "Jane": "Robert, Lila",
+   "John": "Olivia"
+}
+bash $ 
+```
 
 
 #### Iterables auto tokens
@@ -3566,11 +3566,11 @@ bash $
 ```
 > NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print a label of the root always results in the exception:_
->```bash
->bash $ <ab.json jtc -w'<>k'
->jtc json exception: walk_root_has_no_label
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<>k'
+jtc json exception: walk_root_has_no_label
+bash $ 
+```
 
 
 ## Processing input JSONs
@@ -3668,20 +3668,21 @@ bash $
 
 > The exception locus is only shown up to a violating point and not past it because of `streamed_cin` type of read. If the same
 > steam of JSONs was in the file, then the read type woudl be `buffered_file` and then the entire locus would be shown:
->```bash
->bash $ jtc -ad file.json 
->.display_opts(), option set[0]: -a -d 'file.json' (internally imposed: )
->.init_inputs(), reading json from file-arguments:
->.init_inputs(), file argument: file.json
->.write_json(), outputting json to <stdout>
->[
->   "1st json"
->]
->.exception_locus_(), { "2nd": json" } "3rd json"
->.exception_spot_(), --------->| (offset: 9)
->jtc json parsing exception (file.json:9): expected_json_value
->bash $ 
->```
+```bash
+bash $ echo '["1st json"] { "2nd": json" } "3rd json"' > file.json
+bash $ jtc -ad file.json 
+.display_opts(), option set[0]: -a -d 'file.json' (internally imposed: )
+.init_inputs(), reading json from file-arguments:
+.init_inputs(), file argument: file.json
+.write_json(), outputting json to <stdout>
+[
+   "1st json"
+]
+.exception_locus_(), { "2nd": json" } "3rd json"
+.exception_spot_(), --------->| (offset: 9)
+jtc json parsing exception (file.json:9): expected_json_value
+bash $ 
+```
 
 Another option trigerring all JSONs processing (from any number of sources) is `-J` - that option tells that aggregation of all JSONs
 is required and thus assumes option `-a` implicitely (no need giving both):
