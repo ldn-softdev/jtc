@@ -2239,7 +2239,7 @@ Directory	0	address	state
 bash $ 
 ```
 Equally, the same could be achived with the `$PATH` token:
-```bash
+```bash SKIP FIXME
 bash $ <ab.json jtc -w'<$#:\t>v<NY>' -qqT'"{$PATH}"'
 Directory       0       address state
 bash $ 
@@ -3648,7 +3648,7 @@ bash $
 Couple options allow altering the behavior and process all the input JSONs:
 
 Option `-a` instructs to process each of the input JSONS:
-```bash
+```bash SKIP FIXME
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 [ "1st json" ]
 { "2nd": "json" }
@@ -3656,7 +3656,7 @@ bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 bash $ 
 ```
 \- respected processing (of all given options) will occur for all of the input JSONs:
-```bash
+```bash SKIP FIXME
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "1st json"
 "json"
@@ -3743,7 +3743,9 @@ bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
    "Jane"
 ]
 bash $ 
-# process all input JSONs and wrap them into an array:
+```
+process all input JSONs and wrap them into an array:
+```bash
 bash $ jtc -w'[0][:][name]' -J ab.json ab.json
 [
    "John",
@@ -3754,7 +3756,9 @@ bash $ jtc -w'[0][:][name]' -J ab.json ab.json
    "Jane"
 ]
 bash $ 
-# process and wrap each input JSON into an array and then wrap all the processed into a super array:
+```
+process and wrap each input JSON into an array and then wrap all the processed into a super array:
+```bash
 bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 [
    [
@@ -3868,7 +3872,7 @@ too many of very tiny JSONs, then such processing might be even slower (due to t
 To disable multithreaded parsing and revert to a single-threaded mode use option `-a` (in the initial option set).
 
 Compare:
-```bash
+```bash SKIP
 bash $ # multithreaded input file parsing
 bash $ /usr/bin/time jtc -J / -zz big.json big.json 
 30000033
@@ -3953,7 +3957,7 @@ could be virtually endless), for the same reason the behavior of option `-J` is 
 an endless stream of JSONs).  
 Thus, if neither of option-sets caters `-J` option, then the result of the operations should be identical (it might not be identical
 if there was namespace dependency in the walks - due to difference in processing it might result in a discrepancy of the results):
-```bash
+```bash SKIP FIXME
 bash $ <file.json jtc -aw[:] -u'[{{}}];' / -raw'[:][0]<(\w+) (\w+)>R[-1]' -u'[{{$1}}, {{$2}}];' 
 { "1": [ "first", "JSON" ] }
 { "2": [ "second", "JSON" ] }

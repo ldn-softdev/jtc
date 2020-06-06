@@ -1071,7 +1071,7 @@ bash $ <<<$JSL jtc -lw'<lbl:"45">v >lbl<t'
 "45": "forty-five"
 ```
 \- if the lexeme's _namespace_ is set to _JSON numeric_ type, then it can address _JSON iterables_ by the index:
-```bash
+```bash SKIP FIXME
 bash $ <<<$JSL jtc -lw'<idx:2">v [obj]>idx<t'
 "Two": 2
 ```
@@ -1350,7 +1350,7 @@ The directive `<NS>z` allows erasing the namespace `NS`. Mostly, this would be r
 _[walk branching](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#walk-branching)_.
 
 For example, let's replace all even numbers in the array with their negative values:
-```bash
+```bash SKIP FIXME
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<Num>z[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
@@ -1364,7 +1364,7 @@ bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 Of course, knowing _how
 [Regex lexemes](https://github.com/ldn-softdev/jtc/blob/master/Walk-path%20tutorial.md#regex-searches)
 work_, it's possible to rewrite the walk-path in a bit more succinct way:
-```bash
+```bash SKIP FIXME
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'<$0>z[:]<>f<[02468]$>D:' -T'-{$0}' -jr
 [ 1, -2, 3, -4, 5, -6, 7, -8, 9 ]
 ```
