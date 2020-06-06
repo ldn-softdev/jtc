@@ -231,7 +231,6 @@ bash $ <<<$jsn jtc -w[4][2] -tc
 # dig the 3rd level:
 bash $ <<<$jsn jtc -w[4][2][number three]
 error: could not open file 'three]'
-jtc json parsing exception (three]:0): unexpected_end_of_string
 bash $ 
 ```
 \- why? 
@@ -576,7 +575,7 @@ but internally, the path towards this JSON element would be built as:
 ```bash
 bash $ <<<$jsn jtc -w'<3>d' -dddd 2>&1 | grep "built path vector"
 ....walk_(), built path vector: [00000004]->[00000002]->[number three]
-....walk_(), finished walking: with built path vector: [00000004]->[00000002]->[number three]
+....walk_(), finished walking with built path vector: [00000004]->[00000002]->[number three]
 bash $ 
 ```
 i.e. it still would be `[4][2][number three]`. That's why `jtc` is known to be a _**`walk-path`**_ based utility.
@@ -1360,7 +1359,6 @@ If the walk began w/o initial lexeme erasing namespace `Num`, then the whole att
 ```bash
 bash $ <<<$'[1,2,3,4,5,6,7,8,9]' jtc -w'[:]<>f<[02468]$>D:<Num>v' -T'-{Num}' -jr
 [ 1, -2, -2, -4, -4, -6, -6, -8, -8 ]
-
 ```
 
 Of course, knowing _how

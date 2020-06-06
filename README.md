@@ -335,7 +335,7 @@ Enabling too many debugs might be overwhelming, though one specific case many wo
 a failing JSON:
 ```bash
 bash $ <addressbook-sample.json jtc 
-jtc json exception: expected_json_value
+jtc json parsing exception (<stdin>:263): expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Passing just one `-d` let easily spotting the
 parsing failure point and its locus:
@@ -343,9 +343,9 @@ parsing failure point and its locus:
 bash $ <addressbook-sample.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
-.exception_locus_(), ...         }|       ],|       "children": [,],|       "spouse": null|    },|    {|  ...
-.exception_spot_(), -------------------------------------------->| (offset: 967)
-jtc json parsing exception (<stdin>:967): expected_json_value
+.exception_locus_(), ...    "age": 31,|        "children": [,],|        "phoneNumbers": [|     ...
+.exception_spot_(), --------------------------------------->| (offset: 263)
+jtc json parsing exception (<stdin>:263): expected_json_value
 bash $ 
 ```
 

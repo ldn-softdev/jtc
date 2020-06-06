@@ -308,9 +308,9 @@ the problem. To visualize the spot where the problem is, as well as its locus pa
 bash $ <ab_eol.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
-.exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "6213...
-.exception_spot_(), --------------------------------------->| (offset: 1214)
-jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
+.exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "621...
+.exception_spot_(), --------------------------------------->| (offset: 1215)
+jtc json parsing exception (<stdin>:1215): unexpected_end_of_line
 bash $ 
 ```
 the vertical pipe symbol `|` in the debug showing JSON locus replaces new lines, thus it becomes easy to spot the problem. 
@@ -664,7 +664,7 @@ bash $ <ab.json jtc -w'<>L' -ddd
 .display_opts(), option set[0]: -w'<>L' -d -d -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: buffered_cin
-..ss_init_(), buffer (from <stdin>) size after initialization: 1674
+..ss_init_(), buffer (from <stdin>) size after initialization: 1675
 ..run_decomposed_optsets(), pass for set[0]
 ...parse(), finished parsing json
 ..demux_opt(), option: '-w', hits: 1
@@ -676,7 +676,7 @@ bash $ <ab.json jtc -w'<>L' -ddd
 ...parse_lexemes_(), walked string: <>L
 ...parse_lexemes_(), parsing here: -->|
 ...parse_suffix_(), search type sfx: Label_RE_search
-..main(), exception raised by: file: './lib/Json.hpp', func: 'parse_suffix_()', line: 3573
+..main(), exception raised by: file: 'lib/Json.hpp', func: 'parse_suffix_()', line: 3590
 jtc json exception: walk_empty_lexeme
 bash $ 
 ```
@@ -2083,11 +2083,11 @@ bash $ <<<$jsn jtc -w'<args>l:' -u'<Func>l:<(.+)[ +*]+(.+)>R[-1][args]' -T'[{}, 
 [
    {
       "Func": "x + y",
-      "args": [ 123, "x", "y" ]
+      "args": [ 123, "x +", "y" ]
    },
    {
       "Func": "a * b",
-      "args": [ "a", "b" ]
+      "args": [ "a *", "b" ]
    }
 ]
 bash $ 
@@ -2134,7 +2134,7 @@ By default, for such kind of interpolations (stringifying iterables) the enumera
 ```bash
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
 good for TSV conversion:
-1       2       3       4       5
+1	2	3	4	5
 bash $ 
 ```
 
@@ -2235,7 +2235,7 @@ _to play safe with the templates, always surround them with single quotes (to do
 here's an example how to join path tokens using a custom separator:
 ```bash
 bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
-Directory       0       address state
+Directory	0	address	state
 bash $ 
 ```
 Equally, the same could be achived with the `$PATH` token:
@@ -2872,10 +2872,26 @@ bash $
 Of course there's a bit more succinct syntax:
 ```bash
 bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p  / -w'<phone>l:' -ltc
+"phone": [
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
+]
+"phone": [
+   { "number": "223-283-0372", "type": "mobile" }
+]
+"phone": []
 ```
 or, using even a single walk-path:
 ```bash
 bash $ <ab.json jtc -w'[type]:<home|office>R:[-1]' -p / -w'<phone>l:' -ltc
+"phone": [
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
+]
+"phone": [
+   { "number": "223-283-0372", "type": "mobile" }
+]
+"phone": []
 ```
 
 Another use-case example: remove all the JSON elements _except_ walked ones, while preserving original JSON structure - that's
@@ -3785,12 +3801,12 @@ bash $ <ab.json jtc -dddddd 2>&1 | head -9
 .display_opts(), option set[0]: -d -d -d -d -d -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: buffered_cin
-..ss_init_(), buffer (from <stdin>) size after initialization: 1674
+..ss_init_(), buffer (from <stdin>) size after initialization: 1675
 ..run_decomposed_optsets(), pass for set[0]
-......parse_(), parsing point ->{|   "Directory": [|      {|         "address": {|        ...
-......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "...
-......parse_(), parsing point ->[|      {|         "address": {|            "city": "New Y...
-......parse_(), parsing point ->{|         "address": {|            "city": "New York",|  ...
+......parse_(), parsing point ->{|    "Directory": [|      {|         "address": {|            "...
+......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "city":...
+......parse_(), parsing point ->[|      {|         "address": {|            "city": "New York",|...
+......parse_(), parsing point ->{|         "address": {|            "city": "New York",|        ...
 ```
 \- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
 ```bash
@@ -3801,12 +3817,12 @@ bash $ <ab.json jtc -dddddd -a 2>&1 | head -12
 ..ss_init_(), buffer (stream) size after initialization: 1
 ..run_decomposed_optsets(), pass for set[0]
 ......parse_(), {<- parsing point
-......parse_(), {|   "<- parsing point
-......parse_(), {|   "Directory": [<- parsing point
-......parse_(), {|   "Directory": [|      {<- parsing point
-......parse_(), {|   "Directory": [|      {|         "<- parsing point
-......parse_(), {|   "Directory": [|      {|         "address": {<- parsing point
-......parse_(), ..."Directory": [|      {|         "address": {|            "<- parsing point
+......parse_(), {|    "<- parsing point
+......parse_(), {|    "Directory": [<- parsing point
+......parse_(), {|    "Directory": [|      {<- parsing point
+......parse_(), {|    "Directory": [|      {|         "<- parsing point
+......parse_(), {|    "Directory": [|      {|         "address": {<- parsing point
+......parse_(), {|    "Directory": [|      {|         "address": {|            "<- parsing point
 ```
 
 Here's an example of how _streamed read_ works in `jtc`:
@@ -4128,7 +4144,7 @@ it's just a reverse action.
 Counting any number of properties is JSON could be done using external `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
 ```bash
 bash $ <ab.json jtc -w'<number>l:' | wc -l
-       6
+6
 bash $ 
 ```
 
