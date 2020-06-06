@@ -298,14 +298,14 @@ bash $
 When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, a short exception
 message will be displayed, e.g,:
 ```bash
-bash $ <ab.json jtc
-jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
+bash $ <ab_eol.json jtc
+jtc json parsing exception (<stdin>:1215): unexpected_end_of_line
 bash $ 
 ```
 and though the message lets us knowing that there's a problem with the input JSON, it not very informative with regards whereabouts the
 the problem. To visualize the spot where the problem is, as well as its locus pass a single debug option (`-d`):
 ```bash
-bash $ <ab.json jtc -d
+bash $ <ab_eol.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 .exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "6213...

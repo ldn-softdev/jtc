@@ -1,0 +1,75 @@
+{
+    "Directory": [
+      {
+         "address": {
+            "city": "New York",
+            "postal code": 10012,
+            "state": "NY",
+            "street address": "599 Lafayette St"
+         },
+         "age": 25,
+         "children": [
+            "Olivia"
+         ],
+         "name": "John",
+         "phone": [
+            {
+               "number": "112-555-1234",
+               "type": "mobile"
+            },
+            {
+               "number": "113-123-2368",
+               "type": "mobile"
+            }
+         ],
+         "spouse": "Martha"
+      },
+      {
+         "address": {
+            "city": "Seattle",
+            "postal code": 98104,
+            "state": "WA",
+            "street address": "5423 Madison St"
+         },
+         "age": 31,
+         "children": [],
+         "name": "Ivan",
+         "phone": [
+            {
+               "number": "273-923-6483",
+               "type": "home"
+            },
+            {
+               "number": "223-283-0372",
+               "type": "mobile"
+            }
+         ],
+         "spouse": null
+      },
+      {
+         "address": {
+            "city": "Denver",
+            "postal code": 80206,
+            "state": "CO,
+            "street address": "6213 E Colfax Ave"
+         },
+         "age": 25,
+         "children": [
+            "Robert",
+            "Lila"
+         ],
+         "name": "Jane",
+         "phone": [
+            {
+               "number": "358-303-0373",
+               "type": "office"
+            },
+            {
+               "number": "333-638-0238",
+               "type": "home"
+            }
+         ],
+         "spouse": "Chuck"
+      }
+   ]
+}
