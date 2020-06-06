@@ -96,7 +96,7 @@ Choose the latest **precompiled binary**:
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-64.latest)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-32.latest)
 
-Don't forget to rename the downloaded file and give proper permissions. E.g., for the latest macOS:
+Rename the downloaded file and give proper permissions. E.g., for the latest macOS:
 ```
 mv jtc-macos-64.latest jtc
 chmod 754 jtc
