@@ -2815,11 +2815,11 @@ By default `jtc` expects the input from `stdin`. If the standalone argument(s) `
 file (ignoring `stdin`), see below:
 ```bash
 # show content of the file:
-bash $ cat file.json 
+bash $ echo '[ "JSON", "in", "file" ]' | tee file.json
 [ "JSON", "in", "file" ]
 bash $ 
 # both input sources present: stdin and file 
-bash $ <<<'[ "<stdin>", "JSON" ]' jtc file.json
+bash $ echo '[ "<stdin>", "JSON" ]' | jtc file.json
 [
    "JSON",
    "in",
@@ -3001,6 +3001,7 @@ argument w.r.t. any trailing characters is _relaxed_ - it attempts parsing what 
 if insert/update occurs from a _file_ and such file caters multiple JSONS (a.k.a. _stream of JSONs_), then the stream of JSON is 
 automatically converted into array of JSONs:
 ```bash
+bash $ cp inserting_updating.json file.json
 bash $ cat file.json 
 [ "first", "JSON" ]
 { "second": "JSON" }
@@ -3530,10 +3531,9 @@ bash $
 ```
 Otherwise (JSONs are different) a non-zero code is returned:
 ```bash
-bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr
+bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr; echo $?
 "json_1": [ 1, 2, 3 ]
 "json_2": [ 2, 3 ]
-bash $ echo $?
 4
 bash $
 ```
@@ -3929,6 +3929,7 @@ If `file.json` contains multiple JSONs (a.k.a. _stream of JSONs_) and predicated
 from the file will be processed first in `option-set1` then all (walk) ouputputs are passed to the input of `option-set2` and again all
 JSONs will be processed in `option-set2` (predicated `option-set2` caters `-a`) and so on and so forth:
 ```bash
+bash $ cp stream.json file.json
 bash $ jtc -ar file.json 
 { "1": "first JSON" }
 { "2": "second JSON" }
