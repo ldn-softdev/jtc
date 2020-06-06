@@ -1528,7 +1528,7 @@ Sometimes, when displaying outputs wrapped into an object, it's desirable to ext
 (i.e., reach inside the object and use inner label rather than outer). This become especially handy when dealing with templates.
 
 Let's consider a following query:  
-Say, the ask here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
+Say, the task here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
 ```json
 [
