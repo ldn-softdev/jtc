@@ -428,7 +428,7 @@ std::string GuideJtc::jtc_examples_{R"(
   in the 1st example, the destination point of an update (-%w), as well as the source point of the
   update (-%u) are in the same input - `example.json`. In the template (-%T), the interpolation
   of `{}` token will result in the naked array of "children", making resulting array carrying
-  "Victoria" as the first element. -%T (and its interpolation token) here refers to the -%u walk
+  "Victoria" as the first element. -%T (and its interpolation token) here refers to the -%u walk;
   in the 2nd example, -%u holds a template itself, which then refers to the -%w walk
 
 

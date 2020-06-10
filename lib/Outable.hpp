@@ -280,12 +280,13 @@ __cout_arg__(std:: ostream & os, const char *var_name, const T & var) {
 
 
 
-// 2c. linear containers type output: out-able format
-template<template<typename, typename> class Container, typename T, typename Alloc>
-typename std::enable_if<std::is_member_function_pointer<decltype(& Alloc::allocate)>::value,
+// 3a. linear containers (vector, deque, etc)type output: out-able format
+template<template<typename, typename> class Container, typename T, typename A>
+//typename std::enable_if<std::is_member_function_pointer<decltype(& Alloc::allocate)>::value,
+typename std::enable_if<std::is_same<A, std::allocator<T>>::value,
                         void>::type
 __out_arg__(std:: ostream & os, int ind, const char *class_name,
-            const char *var_name, const Container<T, Alloc> & var) {
+            const char *var_name, const Container<T, A> & var) {
  std::string vn{var_name};
  size_t idx = 0;
  for(auto &v: var)
@@ -295,10 +296,10 @@ __out_arg__(std:: ostream & os, int ind, const char *class_name,
 }
 
 // cout-able format
-template<template<typename, typename> class Container, typename T, typename Alloc>
-typename std::enable_if<std::is_member_function_pointer<decltype(& Alloc::allocate)>::value,
+template<template<typename, typename> class Container, typename T, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<T>>::value,
                         void>::type
-__cout_arg__(std:: ostream & os, const char *var_name, const Container<T, Alloc> & var) {
+__cout_arg__(std:: ostream & os, const char *var_name, const Container<T, A> & var) {
  std::string vn{var_name};
  size_t idx = 0;
  for(auto &v: var)
@@ -314,11 +315,93 @@ __cout_arg__(std:: ostream & os, const char *var_name, const Container<T, Alloc>
 
 
 
-// 2d. container map out: out-able format
-template<template<typename, typename, typename, typename>
-         class Map, typename K, typename V, typename C, typename A>
-void __out_arg__(std::ostream & os, int ind, const char *class_name,
-                 const char *var_name, const Map<K, V, C, A> & var) {
+// 3b. linear sorted containers (e.g., std::set): out-able format
+template<template<typename, typename, typename> class Container,
+         typename T, typename C, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<T>>::value and
+                        std::is_same<C, std::less<T>>::value,
+                        void>::type
+__out_arg__(std:: ostream & os, int ind, const char *class_name,
+            const char *var_name, const Container<T, C, A> & var) {
+ std::string vn{var_name};
+ size_t idx = 0;
+ for(auto &v: var)
+  __out_arg__(os, ind, class_name, (vn + '[' + std::to_string(idx++) + ']').c_str(), v);
+ if(var.empty())
+  { __out_arg__(os, ind, class_name, var_name, '['); os << ']'; }
+}
+
+// cout-able format
+template<template<typename, typename, typename> class Container,
+         typename T, typename C, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<T>>::value and
+                        std::is_same<C, std::less<T>>::value,
+                        void>::type
+__cout_arg__(std:: ostream & os, const char *var_name, const Container<T, C, A> & var) {
+ std::string vn{var_name};
+ size_t idx = 0;
+ for(auto &v: var)
+  __cout_arg__(os, (vn + '[' + std::to_string(idx++) + ']').c_str(), v);
+ if(var.empty()) {
+  std::ostringstream ss;
+  __cout_arg__(ss, var_name, '[');
+  ss.seekp(-size_of_coutable_sfx(), ss.cur);
+  ss << "], ";
+  os << ss.str();
+ }
+}
+
+
+
+// 3c. linear unordered containers (e.g., std::unordered_set): out-able format
+template<template<typename, typename, typename, typename> class Container,
+         typename K, typename H, typename E, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<K>>::value and
+                        std::is_same<H, std::hash<K>>::value and
+                        std::is_same<E, std::equal_to<K>>::value,
+                        void>::type
+__out_arg__(std:: ostream & os, int ind, const char *class_name,
+            const char *var_name, const Container<K, H, E, A> & var) {
+ std::string vn{var_name};
+ size_t idx = 0;
+ for(auto &v: var)
+  __out_arg__(os, ind, class_name, (vn + '[' + std::to_string(idx++) + ']').c_str(), v);
+ if(var.empty())
+  { __out_arg__(os, ind, class_name, var_name, '['); os << ']'; }
+}
+
+// cout-able format
+template<template<typename, typename, typename, typename> class Container,
+         typename K, typename H, typename E, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<K>>::value and
+                        std::is_same<H, std::hash<K>>::value and
+                        std::is_same<E, std::equal_to<K>>::value,
+                        void>::type
+__cout_arg__(std:: ostream & os, const char *var_name, const Container<K, H, E, A> & var) {
+ std::string vn{var_name};
+ size_t idx = 0;
+ for(auto &v: var)
+  __cout_arg__(os, (vn + '[' + std::to_string(idx++) + ']').c_str(), v);
+ if(var.empty()) {
+  std::ostringstream ss;
+  __cout_arg__(ss, var_name, '[');
+  ss.seekp(-size_of_coutable_sfx(), ss.cur);
+  ss << "], ";
+  os << ss.str();
+ }
+}
+
+
+
+// 4a. key-value sorted container type (e.g., std::map): out-able format
+template<template<typename, typename, typename, typename> class Container,
+         typename K, typename V, typename C, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<std::pair<const K, V>>>::value and
+                        (std::is_same<C, bool (*)(const K&, const K&)>::value or
+                         std::is_same<C, std::less<K>>::value),
+                        void>::type
+__out_arg__(std::ostream & os, int ind, const char *class_name,
+                 const char *var_name, const Container<K, V, C, A> & var) {
  for(auto &i: var) {
   std::ostringstream ss;
   ss << var_name << "[ ";
@@ -332,9 +415,61 @@ void __out_arg__(std::ostream & os, int ind, const char *class_name,
 }
 
 // cout-able format
-template<template<typename, typename, typename, typename>
-         class Map, typename K, typename V, typename C, typename A>
-void __cout_arg__(std::ostream & os, const char *var_name, const Map<K, V, C, A> & var) {
+template<template<typename, typename, typename, typename> class Container,
+         typename K, typename V, typename C, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<std::pair<const K, V>>>::value and
+                        (std::is_same<C, bool (*)(const K&, const K&)>::value or
+                         std::is_same<C, std::less<K>>::value),
+                        void>::type
+__cout_arg__(std::ostream & os, const char *var_name, const Container<K, V, C, A> & var) {
+ for(auto &i: var) {
+  std::ostringstream ss;
+  ss << var_name << "[ ";
+  __cout_arg__(ss, nullptr, i.first);
+  ss.seekp(-size_of_coutable_sfx(), ss.cur);
+  ss << " ]";
+  __cout_arg__(os, ss.str().c_str(), i.second);
+ }
+ if(var.empty()) {
+  std::ostringstream ss;
+  __cout_arg__(ss, var_name, '[');
+  ss.seekp(-size_of_coutable_sfx(), ss.cur);
+  ss << "], ";
+  os << ss.str();
+ }
+}
+
+
+
+// 4b. key-value unordered container type (e.g., std::unordered_map): out-able format
+template<template<typename, typename, typename, typename, typename> class Container,
+         typename K, typename V, typename H,  typename E, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<std::pair<const K, V>>>::value and
+                        std::is_same<H, std::hash<K>>::value and
+                        std::is_same<E, std::equal_to<K>>::value,
+                        void>::type
+__out_arg__(std::ostream & os, int ind, const char *class_name,
+                 const char *var_name, const Container<K, V, H, E, A> & var) {
+ for(auto &i: var) {
+  std::ostringstream ss;
+  ss << var_name << "[ ";
+  __cout_arg__(ss, nullptr, i.first);
+  ss.seekp(-size_of_coutable_sfx(), ss.cur);
+  ss << " ]";
+  __out_arg__(os, ind, class_name, ss.str().c_str(), i.second);
+ }
+ if(var.empty())
+  { __out_arg__(os, ind, class_name, var_name, '['); os << ']'; }
+}
+
+// cout-able format
+template<template<typename, typename, typename, typename, typename> class Container,
+         typename K, typename V, typename H,  typename E, typename A>
+typename std::enable_if<std::is_same<A, std::allocator<std::pair<const K, V>>>::value and
+                        std::is_same<H, std::hash<K>>::value and
+                        std::is_same<E, std::equal_to<K>>::value,
+                        void>::type
+__cout_arg__(std::ostream & os, const char *var_name, const Container<K, V, H, E, A> & var) {
  for(auto &i: var) {
   std::ostringstream ss;
   ss << var_name << "[ ";

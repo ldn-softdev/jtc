@@ -1758,7 +1758,7 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
  auto & srcj = jsrt_ == Src_input? json():
                jsrt_ == Src_mixed? (jsrc_[0].is_neither()? jtmp_[jtmp_.size()]: jsrc_[0]):
                 (jsrc_[idx()].is_neither()? jtmp_[jtmp_.size()]: jsrc_[idx()]);
- if(jits_.walk_size() == 0 or &srcj == &jtmp_.rbegin()->VALUE)  // merge upon init or new template
+ if(jits_.walk_size() == 0 or (jtmp_.size() > 0 and &srcj == &jtmp_.rbegin()->VALUE))
   wns_[&jit].sync_out(srcj.ns(), map_jnse::NsOpType::NsReferAll);   // merge global ns to -u/i's ns
 
  // if src arg is a template then resolve:
@@ -1876,19 +1876,24 @@ void Jtc::swap_json(void) {
  #include "lib/dbgflow.hpp"
  // swap around nodes pointed by 2 walk pairs
  for(size_t si = 1; si < opt()[CHR(OPT_WLK)].hits(); si += 2) {
-  vector<vec_jit> swaps{2};                                     // collect all walks in here
-  swaps[0] = collect_walks_(opt()[CHR(OPT_WLK)].str(si));
-  swaps[1] = collect_walks_(opt()[CHR(OPT_WLK)].str(si+1));
+  vec_jit swaps1, swaps2;                                       // collect all walks in swaps src
+  swaps1 = collect_walks_(opt()[CHR(OPT_WLK)].str(si));
+  swaps2 = collect_walks_(opt()[CHR(OPT_WLK)].str(si+1));
 
-  size_t max_i = min(swaps[0].size(), swaps[1].size());
+  size_t max_i = min(swaps1.size(), swaps2.size());
   for(size_t i = 0; i < max_i; ++i) {                           // swap only paired walks
-   if(not swaps[0][i].is_valid() or not swaps[1][i].is_valid()) {
+   if(not swaps1[i].is_valid() or not swaps2[i].is_valid()) {
     cerr << "error: walk instance " << i
          << " became invalid due to prior operations, skipping" << endl;
     cr_.rc(RC_WP_INV);
     break;
    }
-   swap(*swaps[0][i], *swaps[1][i]);
+   if(not swaps1[i].is_nested(swaps2[i]))
+    { swap(*swaps1[i], *swaps2[i]); continue; }
+   if(swaps1[i].path_size() < swaps2[i].path_size())            // swaps1 nests swaps2
+    *swaps1[i] = move(*swaps2[i]);
+   else                                                         // swaps2 nests swaps1
+    *swaps2[i] = move(*swaps1[i]);
   }
  }
 }
