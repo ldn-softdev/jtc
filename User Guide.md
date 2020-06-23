@@ -113,8 +113,10 @@
 
 ## Displaying JSON
 ### Pretty printing
-If no argument given, `jtc` will expect an input JSON from the `<stdin>`, otherwise JSON is read from the file(s) pointed by the 
-argument(s). `jtc` will parse and validate input JSON and upon a successful validation will output:
+If no argument is given, `jtc` will read JSON from `<stdin>`, otherwise JSON
+will be read from the files specified. `jtc` will parse and validate input JSON
+and upon successful validation the JSON will be output:
+
 ```bash
 bash $ <ab.json jtc
 {
@@ -194,7 +196,9 @@ bash $ <ab.json jtc
 }
 bash $
 ```
-option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
+
+option `-t` specifies pretty-printing spacing (default - 3 spaces):
+
 ```bash
 bash $ <ab.json jtc -t10
 {
@@ -212,29 +216,34 @@ bash $ <ab.json jtc -t10
                               ],
 ...
 ```
-Majority of the examples and explanations in this document are based on the above simplified version of the above address book JSON model.
+The majority of the examples and explanations here use the above address book JSON.
 
 ### Compact printing
-Option `-r` will instruct to display JSON in a compact (single row) format:
+
+Option `-r` will instruct to display JSON in compact (single row) format:
+
 ```bash
 bash $ <ab.json jtc -r
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
 bash $
 ```
 
-By default, the compact printing view will use a single spacer between all tokens, that also could be controlled if `-r` and `-t`
-used together, e.g., to print the above JSON w/o spacer:
+By default, compact printing view will use a single space between all tokens.
+By combining `-r` and `-t` the results can be printed without spaces:
+
 ```bash
 bash $ <ab.json jtc -rt0
 {"Directory":[{"address":{"city":"New York","postal code":10012,"state":"NY","street address":"599 Lafayette St"},"age":25,"children":["Olivia"],"name":"John","phone":[{"number":"112-555-1234","type":"mobile"},{"number":"113-123-2368","type":"mobile"}],"spouse":"Martha"},{"address":{"city":"Seattle","postal code":98104,"state":"WA","street address":"5423 Madison St"},"age":31,"children":[],"name":"Ivan","phone":[{"number":"273-923-6483","type":"home"},{"number":"223-283-0372","type":"mobile"}],"spouse":null},{"address":{"city":"Denver","postal code":80206,"state":"CO","street address":"6213 E Colfax Ave"},"age":25,"children":["Robert","Lila"],"name":"Jane","phone":[{"number":"358-303-0373","type":"office"},{"number":"333-638-0238","type":"home"}],"spouse":"Chuck"}]}
-bash $ 
+bash $
 ```
 
-
 ### Semi-compact printing
-A semi-compact view is a middle ground between pretty and compact views. The semi-compact view is engaged with the suffix -`c` appended
-to the indent value in `-t` option (e.g.: `-t5c`) . In the semi-compact view all _JSON iterables_ made of only _atomic values_ and/or
-empty iterables (`[]`, `{}`) will be printed in a single line, the rest if pretty-printed, compare:
+
+Semi-compact output can be obtained by combining the `-c` and `-t` flags, for
+example `-t5c`.  All _JSON iterables_ made of only _atomic values_ or empty
+iterables (`[]`, `{}`) will be printed in a single line, the rest will be
+pretty-printed:
+
 ```bash
 bash $ <ab.json jtc -tc
 {
@@ -274,37 +283,41 @@ bash $ <ab.json jtc -tc
       }
    ]
 }
-bash $ 
+bash $
 ```
 
-
 ### Printing JSON size
-JSON size is the total number of the JSON elements found within JSON, it could be printed using `-z`, the size appears after input JSON
-is printed (starting from version 1.75b the size is printed in a JSON format):
+
+`-z` prints the total number of JSON elements found, the total will appear
+after the input JSON has been printed. From version 1.75b onwards the size is
+printed in JSON format.
+
 ```bash
 bash $ <ab.json jtc -rz
 { "Directory": [ { "address": { "city": "New York", "postal code": 10012, "state": "NY", "street address": "599 Lafayette St" }, "age": 25, "children": [ "Olivia" ], "name": "John", "phone": [ { "number": "112-555-1234", "type": "mobile" }, { "number": "113-123-2368", "type": "mobile" } ], "spouse": "Martha" }, { "address": { "city": "Seattle", "postal code": 98104, "state": "WA", "street address": "5423 Madison St" }, "age": 31, "children": [], "name": "Ivan", "phone": [ { "number": "273-923-6483", "type": "home" }, { "number": "223-283-0372", "type": "mobile" } ], "spouse": null }, { "address": { "city": "Denver", "postal code": 80206, "state": "CO", "street address": "6213 E Colfax Ave" }, "age": 25, "children": [ "Robert", "Lila" ], "name": "Jane", "phone": [ { "number": "358-303-0373", "type": "office" }, { "number": "333-638-0238", "type": "home" } ], "spouse": "Chuck" } ] }
 { "size": 56 }
-bash $ 
+bash $
 ```
-if size only required (i.e., w/o printing the input JSON), then use `-zz` option:
+To print the total without printing the input JSON, use `-zz`:
+
 ```bash
 bash $ <ab.json jtc -zz
 56
-bash $ 
+bash $
 ```
-
 
 ### Validating JSON
-When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, a short exception
-message will be displayed, e.g,:
-```bash
-bash $ <ab.json jtc
+
+When JSON is read (from a file or `stdin`), it gets parsed and validated. If
+invalid JSON is detected, a short exception message will be displayed:
+```bash bash $ <ab.json jtc
 jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
-bash $ 
+bash $
 ```
-and though the message lets us knowing that there's a problem with the input JSON, it not very informative with regards whereabouts the
-the problem. To visualize the spot where the problem is, as well as its locus pass a single debug option (`-d`):
+
+The error messsage doesn't explain where the problem is, the `-d` flag (single
+debug) will help:
+
 ```bash
 bash $ <ab.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
@@ -312,16 +325,24 @@ bash $ <ab.json jtc -d
 .exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "6213...
 .exception_spot_(), --------------------------------------->| (offset: 1214)
 jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
-bash $ 
+bash $
 ```
-the vertical pipe symbol `|` in the debug showing JSON locus replaces new lines, thus it becomes easy to spot the problem. 
-The offset (`1214` in the example) is given in _unicode UTF-8_ characters from the beginning of the input/file/stream.
-In that particular failure instance, `jtc` found the end of a line, while _JSON string_ `"Co,` is still open (JSON standard does not
-permit multi-line strings). To fix that, the missing quotation mark to be added
+
+The vertical pipe symbol `|` in the debug output shows the location
+(`exception_locus .. offset:1214`) of the problem.
+
+The offset (`1214` in the example) is given in _unicode UTF-8_ characters from
+the beginning of the input/file/stream.  In this example `jtc` found an
+unexpected end of line in `"CO,` (the JSON standard doesn't permit multi-line
+strings). To fix this, the missing quotation mark must be added.
+
+Multiple debug flags (`-dd`, `-ddd`) can be used to gain greater insight.
 
 ### Forcing strict solidus parsing
-JSON specification allows escaping solidus (`/`) optionally. By default, `jtc` is relaxed w.r.t. parsing solidus notation - it admits
-both unescaped and escaped appearances:
+
+The JSON specification allows optional escaping of solidus (`/`). By default,
+`jtc` is looser and allows both unescaped and escaped input:
+
 ```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc
 {
@@ -330,8 +351,9 @@ bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc
 }
 bash $ 
 ```
-If there's a need for a strict solidus parsing, option `-q` facilitates the need. It also will throw an exception upon facing
-a non-escaped notation:
+
+The `-q` flag will enforce strict solidus parsing:
+
 ```bash
 bash $ <<<'{ "escaped": "\/", "unescaped": "/" }' jtc -q -d
 .display_opts(), option set[0]: -q -d (internally imposed: )
@@ -343,8 +365,10 @@ bash $
 ```
 
 ### Unquoting JSON strings
-If a JSON itself (or a result from walking JSON) is a single JSON string, then sometimes there's a need to unquote it
-(especially it comes handy if the string itself is an embedded JSON). `-qq` allows unquoting it, here are a few examples:
+
+Sometimes JSON needs unquoting (for example with embedded JSON), the `-qq` flag
+supports this:
+
 ```bash
 bash $ jsn='"{ \"JSON\": \"example of an embedded JSON\" }"'
 bash $ <<<$jsn jtc 
@@ -362,7 +386,8 @@ bash $ <<<$jsn jtc -qq | jtc
 bash $
 ```
 
-When unquoting empty _JSON strings_ (`""`) the resulted blank lines are not even printed:
+When unquoting empty _JSON strings_ (`""`) the resulting blank lines aren't printed:
+
 ```bash
 bash $ <<<'[null, "", true]' jtc -w[:] -qq
 null
@@ -370,8 +395,9 @@ true
 bash $ 
 ```
 
-If the source string contains Unicode code points, those will be correctly translated into
-respective UTF-8 characters:
+If the source string contains Unicode code points, it will be correctly
+translated to UTF-8 characters:
+
 ```bash
 bash $ <<<'"Unicode char: \u1234"' jtc -qq
 Unicode char: ሴ
@@ -383,7 +409,6 @@ bash $ <<<'"Invalid surrogate: \uDD1E"' jtc -qq
 jtc json exception: invalid_surrogate_code_pair
 bash $ 
 ```
-
 
 > NOTE: _the option notation `-qq` will not engulf a single option notation `-q`, if both behaviors are required then both variants have
 to be spelled (e.g. `jtc -q -qq`, or `jtc -qqq`)_  
