@@ -239,10 +239,11 @@ bash $
 
 ### Semi-compact printing
 
-Semi-compact output can be obtained by combining the `-c` and `-t` flags, for
-example `-t5c`.  All _JSON iterables_ made of only _atomic values_ or empty
-iterables (`[]`, `{}`) will be printed in a single line, the rest will be
-pretty-printed:
+The `-c` flag accepts an optional `t` suffix, that gives semi-compact output
+- all _JSON iterables_ made of only _atomic values_ or empty iterables (`[]`,
+`{}`) are printed on a single line, the remainder are pretty-printed. The `t`
+suffix defaults to 3 spaces, this can be changed with an additional `N` suffix,
+for example `-tc5`.
 
 ```bash
 bash $ <ab.json jtc -tc
@@ -309,7 +310,9 @@ bash $
 ### Validating JSON
 
 When JSON is read (from a file or `stdin`), it gets parsed and validated. If
-invalid JSON is detected, a short exception message will be displayed:
+invalid JSON is detected, a short exception message will be displayed. For example
+in this case, an unexpected end of line:
+
 ```bash bash $ <ab.json jtc
 jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
 bash $
@@ -336,7 +339,7 @@ the beginning of the input/file/stream.  In this example `jtc` found an
 unexpected end of line in `"CO,` (the JSON standard doesn't permit multi-line
 strings). To fix this, the missing quotation mark must be added.
 
-Multiple debug flags (`-dd`, `-ddd`) can be used to gain greater insight.
+Multiple debug flags (`-dd`, `-ddd`, etc) can be used to gain greater insight.
 
 ### Forcing strict solidus parsing
 
