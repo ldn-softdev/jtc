@@ -690,7 +690,7 @@ class Jnode {
                            GUARD(DBG().alt_prefix, DBG().alt_prefix)
                            DBG().alt_prefix(">");
                            DOUT() << DBG().prompt(__func__,
-                                                  __Dbg_flow__::ind() + 1, DBG().stamped(),
+                                                  __Dbg_flow__::ind() + 1,
                                                   Debug::Indention::Alternative)
                                   << "CC copying: "
                                   << jn.to_string(Jnode::PrettyType::Raw, 0) << std::endl;
