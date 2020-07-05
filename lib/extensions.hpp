@@ -379,8 +379,8 @@ class __Guard_X__ {
 
 /*
  * A couple of definitions for mutexes:
- * ULOCK - declared a unique_lock
- * TLOCK - declared an operator-like lock
+ * ULOCK - declare a unique_lock (mutex sguard)
+ * TLOCK - declare an operator-like lock
  *
  * Synopsis:
  * {
@@ -402,32 +402,6 @@ class __Guard_X__ {
 
 
 
-
-/*
- * Provide a shorthand for containers with find method (e.g. std::map)
- * - quite often a temp variable found is created only for the purpose of the next check only
- *   this shorthand will automate auto-variable creation and thus simplifies the syntax
- *
- * Synopsis:
- * std::vector x{1,2,3}
- *
- * IF_FOUND(x, 2)
- *  { ... }
- *
- * or
- *
- * IF_FOUND(x, 2) FITR->second = ...    // FITR (found iterator) must be on the same
- *                                      // line with IF_FOUND
- */
-#define FITR STITCH_2TKNS(__AIFV__,__LINE__)
-
-#define IF_FOUND(CTN, VAL) \
- auto STITCH_2TKNS(__AIFV__,__LINE__) = CTN.find(VAL); \
- if(STITCH_2TKNS(__AIFV__,__LINE__) != CTN.end())
-
-#define IF_NOT_FOUND(CTN, VAL) \
- auto STITCH_2TKNS(__AIFV__,__LINE__) = CTN.find(VAL); \
- if(STITCH_2TKNS(__AIFV__,__LINE__) == CTN.end())
 
 
 

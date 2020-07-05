@@ -45,6 +45,7 @@
 #include <string>
 #include <sstream>
 #include <type_traits>
+#include <memory>       // unique/shared_ptr
 #include "macrolib.hpp"
 #include "extensions.hpp"
 
@@ -77,8 +78,8 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
                                   result.erase(result.size()-2): \
                                   result); \
     } \
-    std::ostream & __outme__(std::ostream & __outable_os__, int __outable_ind__, \
-                             const char * __outable_class_name__=#CLASS) const { \
+    std::ostream & __outme__(std::ostream & __outable_os__, int __unused_ind__, \
+                             const char * __unused_class_name__=#CLASS) const { \
         std::ostringstream __coutable_ss__; \
         __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \
@@ -88,7 +89,7 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
 
 
 // full out-able form (multi-line) output
-#define __OUT_ARG__(VAR) __out_arg__(__outable_os__, abs(__outable_ind__)+1, \
+#define __OUT_ARG__(VAR) __out_arg__(__outable_os__, abs(__outable_ind__) + 1, \
                                      __outable_class_name__, #VAR, VAR);
 #define OUTABLE(CLASS, VARS...) \
     friend std::ostream & operator<<(std::ostream & __outable_os__, const CLASS &x) \
@@ -161,7 +162,6 @@ __cout_arg__(std::ostream & os, const char *var_name, T var) {
 }
 
 
-
 // 1b. enum type output: out-able format
 template<typename T>
 typename std::enable_if<std::is_enum<T>::value, void>::type
@@ -175,7 +175,6 @@ typename std::enable_if<std::is_enum<T>::value, void>::type
 __cout_arg__(std::ostream & os, const char *var_name, T var) {
  os << (var_name? std::string(var_name) + ":": "") << var << __COUTABLE_SFX__;
 }
-
 
 
 // 1c. const char * type output: out-able format
@@ -194,7 +193,6 @@ void __cout_arg__(std::ostream & os, const char *var_name, const char *var) {
  else
  os << (var_name? std::string(var_name) + ":": "") << "nullptr" << __COUTABLE_SFX__;
 }
-
 
 
 // 1d. pointer type output: out-able format
@@ -222,7 +220,6 @@ __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
 //          in most cases.
 
 
-
 // 1e. OUTABLE class output: out-able format
 template<typename T>
 typename std::enable_if<std::is_member_function_pointer<decltype(& T::__outme__)>::value,
@@ -243,7 +240,6 @@ __cout_arg__(std::ostream & os, const char *var_name, const T & var) {
 }
 
 
-
 // 2a. basic string output: out-able format
 void __out_arg__(std::ostream & os, int ind, const char *class_name,
                  const char *var_name, const std::basic_string<char> &var) {
@@ -254,7 +250,6 @@ void __out_arg__(std::ostream & os, int ind, const char *class_name,
 void __cout_arg__(std::ostream & os, const char *var_name, const std::basic_string<char> &var) {
  os << (var_name? std::string(var_name) + ":\"": "\"") << var << "\"" << __COUTABLE_SFX__;
 }
-
 
 
 // 2b. native arrays type output: out-able format
@@ -278,6 +273,32 @@ __cout_arg__(std:: ostream & os, const char *var_name, const T & var) {
   __cout_arg__(os, (vn + '['+std::to_string(idx++)+']').c_str(), v);
 }
 
+
+// 2c. unique_/share ptr
+template<typename T>
+void __out_arg__(std:: ostream & os, int ind, const char *class_name,
+                 const char *var_name, const std::unique_ptr<T> & var) {
+ std::string vn{var_name};
+ __out_arg__(os, ind, class_name, ("*" + vn).c_str(), *var);
+}
+template<typename T>
+void __out_arg__(std:: ostream & os, int ind, const char *class_name,
+                 const char *var_name, const std::shared_ptr<T> & var) {
+ std::string vn{var_name};
+ __out_arg__(os, ind, class_name, ("*" + vn).c_str(), *var);
+}
+
+// cout-able format
+template<typename T>
+void __cout_arg__(std:: ostream & os, const char *var_name, const std::unique_ptr<T> & var) {
+ std::string vn{var_name};
+ __cout_arg__(os, vn.c_str(), &*var);
+}
+template<typename T>
+void __cout_arg__(std:: ostream & os, const char *var_name, const std::shared_ptr<T> & var) {
+ std::string vn{var_name};
+ __cout_arg__(os, vn.c_str(), &*var);
+}
 
 
 // 3a. linear containers (vector, deque, etc)type output: out-able format
@@ -312,7 +333,6 @@ __cout_arg__(std:: ostream & os, const char *var_name, const Container<T, A> & v
   os << ss.str();
  }
 }
-
 
 
 // 3b. linear sorted containers (e.g., std::set): out-able format
@@ -352,7 +372,6 @@ __cout_arg__(std:: ostream & os, const char *var_name, const Container<T, C, A> 
 }
 
 
-
 // 3c. linear unordered containers (e.g., std::unordered_set): out-able format
 template<template<typename, typename, typename, typename> class Container,
          typename K, typename H, typename E, typename A>
@@ -390,7 +409,6 @@ __cout_arg__(std:: ostream & os, const char *var_name, const Container<K, H, E, 
   os << ss.str();
  }
 }
-
 
 
 // 4a. key-value sorted container type (e.g., std::map): out-able format
@@ -438,7 +456,6 @@ __cout_arg__(std::ostream & os, const char *var_name, const Container<K, V, C, A
   os << ss.str();
  }
 }
-
 
 
 // 4b. key-value unordered container type (e.g., std::unordered_map): out-able format

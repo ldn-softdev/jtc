@@ -480,7 +480,7 @@ class Debug {
     Debug &             reset_ostream(void) { dos_.use_ostream(std::cout); return *this; }
     bool                operator()(short d, const char *fn=nullptr) const;// check and print prompt
     std::string         prompt(const char *fn, int ms=0,
-                               bool useTs=Debug::ts_, Indention it_type = Indention::Native) const;
+                               Indention it_type = Indention::Native) const;
     size_t              ctw_adjust(void) { return Debug::adj_; }
                         // after invoking Debug::ctw(pos), ctw_adjust() will return an offset
                         // where position pos was displayed
@@ -545,7 +545,8 @@ class Debug {
   static std::ostream & ftw(std::ostream &os)       // cut output's front by term width
                          { Debug::tos_ = Debug::Trunc_front; return os; }
 
-  friend std::ostream & operator<<(std::ostream & os, Debug::Ctw ctw) { return os; }
+  friend std::ostream & operator<<(std::ostream & os, Debug::Ctw unused)// ctw is unused, but it's
+                         { return os; }             // required for ADL type of use
   static  Ctw           ctw(size_t pos)             // center-adjust  and cut by term width
                          { Debug::tos_ = Debug::Trunc_both; Debug::adj_ = pos; return Ctw{}; }
 
@@ -633,7 +634,7 @@ bool Debug::operator()(short d, const char * fn) const {
 }
 
 
-std::string Debug::prompt(const char *fn, int msg_sev, bool useTs, Indention ind_type) const {
+std::string Debug::prompt(const char *fn, int msg_sev, Indention ind_type) const {
  // useAltPfx: use alternative prefix (indent)?
  // useTs: use Debug::ts to drive time-stamp update?
  std::stringstream so;
@@ -862,7 +863,7 @@ class __Dbg_flow__ {
                          if(dbg_(__Dbg_flow__::ind_, nullptr)) {
                           ULOCK(dbg_.mutex());
                           dbg_.dout() << dbg_.prompt(dfnc_, __Dbg_flow__::ind_ + 1,
-                                                     dbg_.stamped(), Debug::Indention::Alternative)
+                                                     Debug::Indention::Alternative)
                                       << "-->Fn entered"
                                       << std::endl;
                          }
@@ -873,7 +874,7 @@ class __Dbg_flow__ {
                          if(dbg_(__Dbg_flow__::ind_, nullptr)) {
                           ULOCK(dbg_.mutex());
                           dbg_.dout() << dbg_.prompt(dfnc_, __Dbg_flow__::ind_ + 1,
-                                                     dbg_.stamped(), Debug::Indention::Alternative)
+                                                     Debug::Indention::Alternative)
                                       << "left Fn-->"
                                       << std::endl;
                          }

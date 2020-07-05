@@ -740,7 +740,7 @@ class Jnode {
                         // w/o above concept it would clash with double type
 
                         template<typename T>
-                        Jnode(T p, typename std::enable_if<std::is_null_pointer<T>::value>
+                        Jnode(T unused, typename std::enable_if<std::is_null_pointer<T>::value>
                                                ::type * = nullptr):
                          type_{Jtype::Null} {}
 
@@ -1945,8 +1945,8 @@ class Json {
 
                             Itr(const Jnode::iter_jn &it):      // for emplacement of good itr
                              jit(it), lbl(it->KEY), jnp(&it->VALUE) {}
-                            Itr(const Jnode::iter_jn &it, bool x):// for emplacement of end() only!
-                             jit(it) {}
+                            Itr(const Jnode::iter_jn &it, bool unused):
+                             jit(it) {}                         // for emplacement of end() only!
 
         // reminder:    typedef std::map<std::string, Jnode>::iterator iter_jn;
         Jnode::iter_jn      jit;                                // iterator pointing to JSON node
@@ -2659,7 +2659,7 @@ class Json {
         signed_size_t       walk_(void);
         void                walk_step_(size_t wsi, Jnode *);
         void                process_directive_(size_t wsi, Jnode *jn);
-        void                step_walk_(size_t wsi, Jnode *jn);
+        void                step_walk_(size_t wsi);
         void                process_directive_I_(size_t wsi, Jnode *jn);
         void                show_built_pv_(std::ostream &out) const;
         void                walk_numeric_offset_(size_t wsi, Jnode *);
@@ -2754,7 +2754,7 @@ class Json {
 
     static void         generate_auto_tokens_(Stringover &tmp,
                                               Json::iterator &, map_jne &ns);
-    static void         interpolate_path_(Stringover &tmp, Json::iterator &, const map_jne &ns,
+    static void         interpolate_path_(Stringover &tmp, Json::iterator &, map_jne &ns,
                                           std::bitset<IntpBit::Size_of_intpidx> &prty);
     static std::string  interpolate_tmp_(std::string templ, Json::iterator &, map_jne &ns,
                                          std::bitset<IntpBit::Size_of_intpidx> &prty);
@@ -2945,7 +2945,7 @@ Jnode::Jnode(Json j) {                                          // type conversi
 //
 // Json class definitions:
 //
-Json operator ""_json(const char *c_str, std::size_t len) {
+Json operator ""_json(const char *c_str, std::size_t unused) {
  // raw string parsing
  Json x;
  return x.parse(std::string{c_str});
@@ -3116,7 +3116,7 @@ void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
    THROW_EXP(Jnode::ThrowReason::missed_prior_enumeration)
 
-  IF_NOT_FOUND(node.children_(), label.str())
+  if(node.children_().find(label.str()) == node.children_().end())
    node.children_().emplace(std::move(label.str()), std::move(child));
   else
    if(is_merging())
@@ -3738,6 +3738,7 @@ void Json::parse_range_(std::string::const_iterator &si, WalkStep &ws, ParseThro
         if(subscript) return;                                   // [{ - text subscript
         ws.heads = ws.offsets = parse_namespaced_qnt_(si);      // preserve namespace in ws
         ws.offset = LONG_MIN;                                   // indicate NS resolution required
+        break;
  case RNG_SPR:                                                  // ':'
         if(ws.is_qnt_relative() and ws.heads.empty())           // i.e. if >..<l|t:, but not {idx}:
          ws.head = ws.offset = LONG_MIN + 1;                    // indicate entire range select [:
@@ -4117,7 +4118,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
         }
         break;
   case Jsearch::Step_walk:                                      // facilitate <..>S
-        return step_walk_(wsi, jn);
+        return step_walk_(wsi);
   case Jsearch::fail_safe:                                      // facilitate <..>f:
         ws.fs_path = pv_;                                       // preserve path vector if WS fails
         DBG(json(), 3) DOUT(json()) << "recorded fail-safe: [" << wsi << "]" << std::endl;
@@ -4151,7 +4152,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
 
 
 
-void Json::iterator::step_walk_(size_t wsi, Jnode *jn) {
+void Json::iterator::step_walk_(size_t wsi) {
  #include "dbgflow.hpp"
  // re-walk (from the root) a path preserved in the NS (facilitate <..>S lexeme)
  auto & ws = ws_[wsi];
@@ -4960,8 +4961,6 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  //    the indication of that is passed via `parse_type` and result returned as a JSON string
  std::bitset<IntpBit::Size_of_intpidx> prty;                    // various bits used for interp.
 
- interpolate_path_(tmp, jit, ns, prty);                         // interpol. {$path, $PATH} in tmp
-
  #define DBG_AND_RET(JSN) \
   { DBG(jit.json(), 4) \
      DOUT(jit.json()) << Debug::btw << "result" << (tmp.front() == *TKN_EMP? " (shortcut)":"") \
@@ -4979,6 +4978,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  auto_ns.emplace(ITRP_GDLM, GET_DLM_(G, *nsp));                 // set ns for $$?
  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));                 // set ns for $#
  auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));                 // set ns for $_
+ interpolate_path_(tmp, jit, auto_ns, prty);                    // set $path, $PATH if present
  generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$b}, {$A}, ... if any
 
  Json rj;                                                       // returned json value
@@ -5091,34 +5091,30 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
 
 
 
-void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, const map_jne &ns,
+void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto_ns,
                              std::bitset<IntpBit::Size_of_intpidx> &prty) {
  #include "dbgflow.hpp"
  // facilitate interpolation of {$path, $PATH} namespaces
 
- Jnode jpath{ARY{}};
  typedef std::pair<std::string, Jnode> ns_type;
- map_jne auto_ns;
+ Jnode jpath{ARY{}};
  auto_ns.emplace(ns_type{ITRP_PSTR, Jnode{}});                  // map "$path" -> {}, for check
 
  // first interpolate {$path}
- if(not interpolate_tmp_(tmp, jit, auto_ns, prty).empty()) {    // check if {$path} present
+ if(not interpolate_tmp_(tmp, jit, auto_ns, prty).empty()) {    // check if {$path} is present
   build_path_(jpath, jit);                                      // build path array [ ... ]
   std::string string_path;
-  for(auto &item: jpath) string_path += item.val() + GET_DLM_(P, ns); // stringify from path array
-  for(size_t i = 0; i < GET_DLM_(P, ns).size(); ++i)
+  for(auto &item: jpath) string_path += item.val() + GET_DLM_(P, auto_ns); // stringify from array
+  for(size_t i = 0; i < GET_DLM_(P, auto_ns).size(); ++i)
    string_path.pop_back();                                      // remove trailing PATH_SPR
   auto_ns[ITRP_PSTR] = std::move(STR{string_path});             // incorporate $path into namespace
-  tmp = interpolate_tmp_(tmp, jit, auto_ns, prty);              // interpolate properly
  }
 
  // then interpolate {$PATH}
- auto_ns.emplace(ns_type(ITRP_PJSN, Jnode{}));
+ auto_ns.emplace(ns_type(ITRP_PJSN, Jnode{}));                  // check if {$PATH} is present
  if(not interpolate_tmp_(tmp, jit, auto_ns, prty).empty()) {
   if(jpath.is_empty()) build_path_(jpath, jit);
   auto_ns[ITRP_PJSN] = std::move(jpath);
-  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, ns));
-  tmp = interpolate_tmp_(tmp, jit, auto_ns, prty);
  }
 }
 
@@ -5240,6 +5236,7 @@ void Json::interpolate_tmp__(std::string &tmp, Json::iterator &jit, map_jne &ns,
     case Jnode::Jtype::Object:
           if(not prty[IntpBit::Attempt_as_array])               // case 1, process objects
            { intp_obj(); break; }
+          // otherwise - fall thru and process case Jnode::Jtype::Array
     case Jnode::Jtype::Array: {
           GUARD(move2json, reinstate);
           intp_arr(ns_dlm, j);

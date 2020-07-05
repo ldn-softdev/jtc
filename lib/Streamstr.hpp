@@ -274,7 +274,7 @@ void Streamstr::ss_init_(const_iterator &it) {
  auto dbg_init = [&] {
        if(DBG()(0)) {
         ULOCK(DBG().mutex())
-        DBG().dout() << DBG().prompt(func, 1, DBG().stamped())
+        DBG().dout() << DBG().prompt(func, 1)
                      << "initializing mode: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
        }
        return true;
@@ -282,7 +282,7 @@ void Streamstr::ss_init_(const_iterator &it) {
  auto dbg_exit = [&](bool unused) {
        if(DBG()(0)) {
         ULOCK(DBG().mutex())
-        DBG().dout() << DBG().prompt(func, 1, DBG().stamped()) << "buffer "
+        DBG().dout() << DBG().prompt(func, 1) << "buffer "
                      << (is_streamed()? "(stream) ":
                           is_buffered_src()? "(user setup buffer) ":
                            is_buffered_cin()? "(from <stdin>) ":
@@ -379,9 +379,9 @@ Streamstr::const_iterator & Streamstr::const_iterator::read_next_(void) {
 
  // out of buffer - handle various modes
  if(is_streamed()) {                                            // stream mode
-  if(not std::cin.good()) { pos_ = SIZE_T(-1); return *this; }
   char c;
   std::cin.read(&c, 1);
+  if(not std::cin.good()) { pos_ = SIZE_T(-1); return *this; }  // pos indicates end of stream
   ssp_->hb_.push_back(c);
   ssp_->buf_.front() = c;
   pos_ = 0;

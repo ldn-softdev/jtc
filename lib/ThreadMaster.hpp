@@ -221,7 +221,7 @@ void ThreadMaster::run_(Fn &&fn, Args&&... args) {
 
 void ThreadMaster::availale_seats_(void) {
  // print debug outputs of available/vacant seats now (it's under mtx() already)
- size_t last_output{0}, prior_vacant, pfx = 0;
+ size_t last_output{0}, prior_vacant{0}, pfx{0};
 
  DBG(2) {
   DOUT() << "seat[";
