@@ -557,6 +557,7 @@
 #define UTF8_RRM2 ")+ *)?|(?: *(?:"                             // part 2
 #define UTF8_RRM3 ")+ *)?"                                      // part 3
 
+#define ITRP_ALLM "$@"                                          // namespace for all REGEX matches
 #define ITRP_ADLM "$#"                                          // token holding array delimiter
 #define ITRP_GDLM "$$?"                                         // token holding delimiter for $?
 #define ITRP_PDLM "$_"                                          // token holding path delimiter
@@ -4625,15 +4626,31 @@ bool Json::iterator::regex_match_(const std::string &val,
                                   const WalkStep &ws, map_jne * nsp) const {
  #include "dbgflow.hpp"
  // see if regex matches and if instance matches too - only then update the namespace
+
+ Jnode am{ARY{}};                                               // all matches - go into '$@' ns
  std::smatch m;
- if(not std::regex_search(val, m, ws.rexp)) return false;
- for(size_t i = 0; i < m.size() ; ++i) {                        // save matches in the namespace
-  nsp->emplace( "$" + std::to_string(i), STR{std::move(m[i])});
-  DBG(json(), 6)
-   DOUT(json()) << Debug::btw << "preserved in namespace [" << "$" + std::to_string(i) << "]: "
-                << nsp->at("$" + std::to_string(i)).ref().to_string(Jnode::Raw, 1) << std::endl;
+ bool retval{false};
+ for(std::sregex_iterator it = std::sregex_iterator(val.begin(), val.end(), ws.rexp);
+     it != std::sregex_iterator(); ++it) {
+  for(size_t i = 0; i < it->size() ; ++i) {                     // save matches in the namespace:
+   if(it->size() == 1 or i > 0)                                 // groups only or entire match
+    am.push_back( std::move(STR{retval? std::move((*it)[i]): (*it)[i]}) );  // but not both
+   if(retval) continue;                                         // save only 1st match results
+   nsp->emplace( "$" + std::to_string(i), STR{std::move((*it)[i])});
+   DBG(json(), 6)
+    DOUT(json()) << Debug::btw << "preserved in namespace [" << "$" + std::to_string(i) << "]: "
+                 << nsp->at("$" + std::to_string(i)).ref().to_string(Jnode::Raw, 1) << std::endl;
+  }
+  retval = true;
  }
- return true;
+ if(retval) {
+  nsp->emplace( ITRP_ALLM, std::move(am));            // namespace $@ holds all matches
+  DBG(json(), 6)
+   DOUT(json()) << Debug::btw << "preserved in namespace [" << ITRP_ALLM << "]: "
+                 << nsp->at(ITRP_ALLM).ref().to_string(Jnode::Raw, 1) << std::endl;
+ }
+
+ return retval;
 }
 
 
