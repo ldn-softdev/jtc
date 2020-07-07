@@ -1180,7 +1180,7 @@ bool CommonResource::is_recompile_required_(const v_string & args) {
           strcpy(nargv[i], args[i].c_str()); }
        return true;                                             // facilitate return type for GUARD
       };
- auto free_args = [&](bool unused)
+ auto free_args = [&](bool)
        { for(auto &a: nargv) delete [] a; };
 
  GUARD(alloc_args, free_args)
@@ -1258,7 +1258,7 @@ void CommonResource::parse_arguments_(const v_string & new_args) {
                        strcpy(nargv[i], new_args[i].c_str()); }
                     return false;
                    };
- auto free_args = [&](bool unused)
+ auto free_args = [&](bool)
                    { for(size_t i = 0; i < new_args.size(); ++i) delete [] nargv[i]; };
 
  GUARD(alloc_args, free_args)
@@ -1340,7 +1340,7 @@ void CommonResource::fetch_dispatcher_(void) {
 void CommonResource::read_and_parse_json_(const string &filename, JsonStore & js) {
  // isolated thread to read and parse all JSONs from file
  auto dummy = [&] { return true; };                             // b/c it comes in already locked
- auto remove_lock = [&](bool unused) { js.task_complete.unlock(); };
+ auto remove_lock = [&](bool) { js.task_complete.unlock(); };
  GUARD(dummy, remove_lock)
 
  // debugs may interfere with cout outputs (as the latter not mutex'ed), hence commented out
@@ -1689,7 +1689,7 @@ bool Jtc::upsert_json(char op) {
 //   - the destinations always comes as a parameter (Json::iterator &it) from walk_interleaved_()
 //   - the sources will be demuxed in advance_to_next_src() into the jits_
 
-void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
+void Jtc::collect_itr_bindings(Json::iterator &it, Grouping) {
  #include "lib/dbgflow.hpp"
  // facilitate insert each/all -[iu] processed jsons:
  // per each walked destination (-w, facilitated by &it), collect each respective source(s) (jits_)
@@ -1712,7 +1712,7 @@ void Jtc::collect_itr_bindings(Json::iterator &it, Grouping unused) {
 
 
 
-void Jtc::update_by_iterator(Json::iterator &it, Grouping unused) {
+void Jtc::update_by_iterator(Json::iterator &it, Grouping) {
  #include "lib/dbgflow.hpp"
  // update each/all -u processed jsons
  // Grouping arg is unused here, but is required by subscriber_'s definition
@@ -2294,7 +2294,7 @@ void Jtc::compare_jsons_(const Jnode &j1, set<const Jnode*> &s1,
 
 
 
-void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *unused) {
+void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *) {
  #include "lib/dbgflow.hpp"
  // merge 2 jsons. convert to array non-array dst jsons (predicated by -m)
  if(it_dst.reinterpret_label())                                 // '<>k' facing
@@ -2790,7 +2790,7 @@ void Jtc::process_offsets_(deque<deq_jit> &wpi, vector<vector<signed_size_t>> &f
 // thus: console_output_() is used to print only walked (-w) elements, while write_json()
 //       outputs entire (final) JSONs (like after -i/-u/-s/-p, or with -j/-J)
 
-void Jtc::console_output_(Json::iterator &wi, Json &jtmp_, Grouping unused) {
+void Jtc::console_output_(Json::iterator &wi, Json &jtmp_, Grouping) {
  #include "lib/dbgflow.hpp"
  // no -j given, print out element pointed by iter wi
  // there are 3 source to chose from: 1. template (jtmp_); 2. current walk value (*wi);
@@ -2836,7 +2836,7 @@ void Jtc::jsonized_output_(Json::iterator &wi, Json &jtmp_, Grouping grp) {
 
 
 
-void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp, Grouping unused) {
+void Jtc::jsonized_output_obj_(Json::iterator &wi, Json &jtmp, Grouping) {
  #include "lib/dbgflow.hpp"
  // if -jj option given, output into jout_ as Object (items w/o label are ignored)
  Jnode::iterator itl;                                           // to facilitate -ll

@@ -279,7 +279,7 @@ void Streamstr::ss_init_(const_iterator &it) {
        }
        return true;
       };
- auto dbg_exit = [&](bool unused) {
+ auto dbg_exit = [&](bool) {
        if(DBG()(0)) {
         ULOCK(DBG().mutex())
         DBG().dout() << DBG().prompt(func, 1) << "buffer "

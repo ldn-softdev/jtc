@@ -78,8 +78,8 @@ constexpr int size_of_coutable_sfx(void) { return sizeof(__COUTABLE_SFX__) - 1; 
                                   result.erase(result.size()-2): \
                                   result); \
     } \
-    std::ostream & __outme__(std::ostream & __outable_os__, int __unused_ind__, \
-                             const char * __unused_class_name__=#CLASS) const { \
+    std::ostream & __outme__(std::ostream & __outable_os__, int, \
+                             const char *) const { \
         std::ostringstream __coutable_ss__; \
         __coutable_ss__ << #CLASS __COUTABLE_TRL__; \
         MACRO_TO_ARGS(__COUT_ARG__, VARS) \

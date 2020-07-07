@@ -741,8 +741,8 @@ class Jnode {
                         // w/o above concept it would clash with double type
 
                         template<typename T>
-                        Jnode(T unused, typename std::enable_if<std::is_null_pointer<T>::value>
-                                               ::type * = nullptr):
+                        Jnode(T, typename std::enable_if<std::is_null_pointer<T>::value>
+                                                        ::type * = nullptr):
                          type_{Jtype::Null} {}
 
 
@@ -1946,7 +1946,7 @@ class Json {
 
                             Itr(const Jnode::iter_jn &it):      // for emplacement of good itr
                              jit(it), lbl(it->KEY), jnp(&it->VALUE) {}
-                            Itr(const Jnode::iter_jn &it, bool unused):
+                            Itr(const Jnode::iter_jn &it, bool):
                              jit(it) {}                         // for emplacement of end() only!
 
         // reminder:    typedef std::map<std::string, Jnode>::iterator iter_jn;
@@ -2583,6 +2583,7 @@ class Json {
         size_t              walk_size(void) const { return ws_.size(); }
         bool                reinterpret_label(void) const
                              { return lwsi_ < ws_.size() and
+                                      not ws_[lwsi_].is_locked() and
                                       ws_[lwsi_].jsearch == Jsearch::key_of_json and
                                       ws_[lwsi_].stripped.front().empty(); }
         signed_size_t       counter(size_t position) const {
@@ -2946,7 +2947,7 @@ Jnode::Jnode(Json j) {                                          // type conversi
 //
 // Json class definitions:
 //
-Json operator ""_json(const char *c_str, std::size_t unused) {
+Json operator ""_json(const char *c_str, std::size_t) {
  // raw string parsing
  Json x;
  return x.parse(std::string{c_str});
@@ -4018,7 +4019,7 @@ Json::signed_size_t Json::iterator::walk_(void) {
  // walk 'ws' structure from the root building a path vector
  // empty pv_ addresses json.root()
  auto init_sqnc = [&] { pv_.clear(); lwsi_ = SIZE_T(-1); return true; };
- auto exit_sqnc = [&] (bool unused) { if(lwsi_ >= ws_.size()) lwsi_ = ws_.size() - 1; };
+ auto exit_sqnc = [&] (bool) { if(lwsi_ >= ws_.size()) lwsi_ = ws_.size() - 1; };
  GUARD(init_sqnc, exit_sqnc)
 
  Jnode * jnp = & json().root();
@@ -4100,7 +4101,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
   return;
  }
  auto engage_tkn = [&] { json().ns(TKN_EMP) = jn->is_number()? *jn: NUL{}; return true; };
- auto erase_tkn = [&](bool unused) { json().ns().erase(TKN_EMP); };
+ auto erase_tkn = [&](bool) { json().ns().erase(TKN_EMP); };
  GUARD(engage_tkn, erase_tkn)
 
  switch(ws.jsearch) {
@@ -5083,7 +5084,7 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
  }
 
  auto move2json = [&w, &jit](void) { w.root() = std::move(*jit); return true; };
- auto reinstate = [&w, &jit](bool unused) { *jit = std::move(w.root()); };
+ auto reinstate = [&w, &jit](bool) { *jit = std::move(w.root()); };
  GUARD(move2json, reinstate);
 
  auto wi = w.walk(sst.empty()?"":"><w:", Json::CacheState::Keep_cache);// walk only if there tokens
@@ -5232,7 +5233,7 @@ void Json::interpolate_tmp__(std::string &tmp, Json::iterator &jit, map_jne &ns,
  Json j;                                                        // needed for walk()
  j.DBG().severity(NDBG);
  auto move2json = [&j, &nse](void) { j.root() = std::move(nse); return true; };
- auto reinstate = [&j, &nse](bool unused) { nse = std::move(j.root()); };
+ auto reinstate = [&j, &nse](bool) { nse = std::move(j.root()); };
 
  for(size_t ipos = tmp.find(nsk);                               // go by found ns key (namespaces)
             ipos != std::string::npos;                          // ipos: interpolating position

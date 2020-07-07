@@ -545,7 +545,7 @@ class Debug {
   static std::ostream & ftw(std::ostream &os)       // cut output's front by term width
                          { Debug::tos_ = Debug::Trunc_front; return os; }
 
-  friend std::ostream & operator<<(std::ostream & os, Debug::Ctw unused)// ctw is unused, but it's
+  friend std::ostream & operator<<(std::ostream & os, Debug::Ctw)// ctw is unused, but it's
                          { return os; }             // required for ADL type of use
   static  Ctw           ctw(size_t pos)             // center-adjust  and cut by term width
                          { Debug::tos_ = Debug::Trunc_both; Debug::adj_ = pos; return Ctw{}; }

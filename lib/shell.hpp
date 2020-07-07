@@ -66,7 +66,7 @@ Shell & Shell::system(const std::string &cmd) {
         throw EXP(could_not_popen_file_handle);
        return true;
       };
- auto close_pipe = [&](bool unused) {
+ auto close_pipe = [&](bool) {
        rc_ = pclose(fh);
        if(DBG()(0, fn)) {
         ULOCK(DBG().mutex())
