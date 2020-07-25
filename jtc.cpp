@@ -2297,7 +2297,7 @@ void Jtc::compare_jsons_(const Jnode &j1, set<const Jnode*> &s1,
 void Jtc::merge_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *) {
  #include "lib/dbgflow.hpp"
  // merge 2 jsons. convert to array non-array dst jsons (predicated by -m)
- if(it_dst.reinterpret_label())                                 // '<>k' facing
+ if(it_dst.is_koj_last())                                       // '<>k' facing
   { cerr << "error: insert into label not applicable, use update" << endl; return; }
 
  if(it_dst->is_object()) {                                      // dst is object
@@ -2399,7 +2399,7 @@ void Jtc::merge_into_array_(Jnode &dst, const Jnode &src, MergeObj mode) {
 void Jtc::update_jsons_(Json::iterator &it_dst, Json::iterator it_src, string *lbl) {
  #include "lib/dbgflow.hpp"
  // update dst with src, merge jsons with overwrite if -m is given
- if(it_dst.reinterpret_label()) {                               // '<>k' facing
+ if(it_dst.is_koj_last()) {                                     // '<>k' facing
   DBG(2) DOUT() << "label being updated" << endl;               // facilitate '<>k' (empty lexeme)
   if(merge_)
    { cerr << "error: merge not applicable in label update, ignoring" << endl; }

@@ -523,7 +523,7 @@
 #define JSN_ARY_OPN '['                                         // Json syntax char: open array
 #define JSN_ARY_CLS ']'                                         // Json syntax char: close array
 #define JSN_STRQ '"'                                            // Json syntax char: string open
-#define JSN_ASPR ','                                            // Json syntax char: array sep.
+#define JSN_ASPR ','                                            // Json syntax char: val. separator
 #define JSN_NUMM '-'                                            // Json syntax char: minus sign
 #define JSN_NUMP '+'                                            // Json syntax char: plus sign
 #define JSN_NUMD '.'                                            // Json syntax char: dot sign
@@ -632,7 +632,8 @@ class Jnode {
                 unexpected_character_escape, \
                 expected_valid_label, \
                 expected_json_value, \
-                missing_label_separator, \
+                expected_value_separator, \
+                expecting_label_separator, \
                 missed_prior_enumeration, \
                 invalid_number, \
                 unexpected_trailing, \
@@ -1716,6 +1717,11 @@ class Json {
                 Keep_cache
     ENUM(CacheState, CACHE_STATE)
 
+    #define KOJ_ARG             /* argument for is_koj_last() */\
+                EmptyKoj,       /* <>k */\
+                NonEmptyKoj     /* <..>k */
+    ENUM(KeyOfJson, KOJ_ARG)
+
 
                         Json(void) = default;
                         Json(const Jnode &jn): root_{jn.value()} { }
@@ -2581,11 +2587,13 @@ class Json {
                             walks(void) const { return ws_; }
         size_t              walk_uid(void) const { return wuid_; }
         size_t              walk_size(void) const { return ws_.size(); }
-        bool                reinterpret_label(void) const
-                             { return lwsi_ < ws_.size() and
-                                      not ws_[lwsi_].is_locked() and
-                                      ws_[lwsi_].jsearch == Jsearch::key_of_json and
-                                      ws_[lwsi_].stripped.front().empty(); }
+        bool                is_koj_last(Json::KeyOfJson x = Json::EmptyKoj) const
+                             // x - true: check if <>k was last executed; false: if <..>k was
+                             { return
+                                lwsi_ < ws_.size() and
+                                not ws_[lwsi_].is_locked() and
+                                ws_[lwsi_].jsearch == Jsearch::key_of_json and
+                                ((x == Json::NonEmptyKoj) ^ ws_[lwsi_].stripped.front().empty()); }
         signed_size_t       counter(size_t position) const {
                              // returns iterable lexeme's current offset/ounter in the position
                              if(position >= ws_.size())
@@ -2745,24 +2753,24 @@ class Json {
  private:
     #define INTPIDX  /* define index semantics for bitset using in interpolation */ \
                 Normal_pass,            /* first pass interpolation */ \
-                Stringify_atomic,       /* try stringifying atomics in iterables recursively */ \
+                Stringify_atomics,      /* try stringifying atomics in iterables recursively */ \
                 Attempt_as_array,       /* enable interpolating objects as arrays */ \
                 Obj_attempted,          /* indicate if object was processed */ \
                 Is_double_brace_notaion,/* indicate type of interpolation {{}} vs {} */ \
-                Size_of_intpidx
+                Interpolate_labels,     /* interpolate labels instead of values in `"{}"` */ \
+                Size
     ENUM(IntpBit, INTPIDX)
 
     typedef std::vector<std::pair<size_t, size_t>> vec_range;
 
     static void         generate_auto_tokens_(Stringover &tmp,
                                               Json::iterator &, map_jne &ns);
-    static void         interpolate_path_(Stringover &tmp, Json::iterator &, map_jne &ns,
-                                          std::bitset<IntpBit::Size_of_intpidx> &prty);
+    static void         interpolate_path_(Stringover &tmp, Json::iterator &, map_jne &ns);
     static std::string  interpolate_tmp_(std::string templ, Json::iterator &, map_jne &ns,
-                                         std::bitset<IntpBit::Size_of_intpidx> &prty);
+                                         std::bitset<IntpBit::Size> &prty);
     static void         interpolate_tmp__(std::string &tmp, Json::iterator &,
                                           map_jne &ns, std::string &&skey, Jnode &nse,
-                                          std::bitset<IntpBit::Size_of_intpidx> &prty,
+                                          std::bitset<IntpBit::Size> &prty,
                                           vec_range &irng, std::string &u8id);
     static std::string  replace_utf8_ill_(std::string & str, const map_jne &ns);
     static std::string  get_delimiter_(const map_jne &ns, const char *dlm, const char *spr) {
@@ -2901,6 +2909,7 @@ STRINGIFY(Json::iterator::SearchType, SEARCH_TYPE)
 
 #undef JS_ENUM
 #undef CACHE_STATE
+#undef KOJ_ARG
 #undef PARSETRAILING
 #undef WALKSTEPTYPE
 #undef SEARCH_TYPE
@@ -3068,6 +3077,8 @@ void Json::parse_array_(Jnode & node, Streamstr::const_iterator &jsp) {
     if(not comma_read and node.has_children())
      { ++jsp; comma_read = true; continue; }                    // interleaving comma: .. 2, 3, ..
    // here: either a double comma: " ... ,,", or leading comma: "[ , ...
+   if(not comma_read and node.has_children())
+    THROW_EXP(Jnode::ThrowReason::expected_value_separator)     // [ *val* *anything but coma*
    THROW_EXP(Jnode::ThrowReason::expected_json_value)           // e.g.: "[ , ...", or "[ 123,, ]"
   }
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
@@ -3103,12 +3114,14 @@ void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
    }                                                            // else label is not a string
    exr_ = Jnode::ThrowReason::expected_valid_label;
    MAY_RETURN_ON_FAILURE(exp_ = lsp)
+   if(not comma_read and node.has_children())
+    THROW_EXP(Jnode::ThrowReason::expected_value_separator)     // { *val* *anything but coma*
    throw EXP(Jnode::ThrowReason::expected_valid_label);
   }
 
   MAY_RETURN_ON_FAILURE( char lblspr = skip_blanks_(jsp) )      // label just hass been parsed
   if(lblspr != LBL_SPR)                                         // label was read, expecting ':'
-   THROW_EXP(Jnode::ThrowReason::missing_label_separator)
+   THROW_EXP(Jnode::ThrowReason::expecting_label_separator)
 
   Jnode child;
   MAY_RETURN_ON_FAILURE( parse_(child, ++jsp) )
@@ -3896,7 +3909,7 @@ void Json::parse_subscript_type_(WalkStep & ws) const {
 
 Jnode & Json::iterator::operator*(void) {
  // dereference Json::iterator
- if(not reinterpret_label())
+ if(not is_koj_last())
   return pv_.empty()?                                           // then return normal super-node
           sn_(json().root(), this):
           sn_(pv_.back().jit->KEY, pv_.back().jit->VALUE, this);
@@ -4977,7 +4990,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  //  o returned result is JSON, so invalid interpolations indicated by returning Json type Neither
  //  o user might not desire the interpolated value to undergo JSON parsing, then
  //    the indication of that is passed via `parse_type` and result returned as a JSON string
- std::bitset<IntpBit::Size_of_intpidx> prty;                    // various bits used for interp.
+ std::bitset<IntpBit::Size> prty;                               // various bits used for interp.
 
  #define DBG_AND_RET(JSN) \
   { DBG(jit.json(), 4) \
@@ -4987,7 +5000,6 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
     return JSN; }
 
  map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns;
- Stringover tmpc(tmp);                                          // preserved copy of tmp
  map_jne auto_ns;
  auto_ns.emplace("", STR{TKN_EMP});                             // provide an easy phony JSON
  // empty namespace ("") is used to interpolate {}, {{}} tokens, however, defer providing mapping
@@ -4996,17 +5008,19 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  auto_ns.emplace(ITRP_GDLM, GET_DLM_(G, *nsp));                 // set ns for $$?
  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));                 // set ns for $#
  auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));                 // set ns for $_
- interpolate_path_(tmp, jit, auto_ns, prty);                    // set $path, $PATH if present
- generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$b}, {$A}, ... if any
+ interpolate_path_(tmp, jit, auto_ns);                          // set $path, $PATH if present
+ generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$A}, {$b}, ... if any
 
  Json rj;                                                       // returned json value
  if(jit.json().DBG()(0)) rj.DBG().severity(NDBG);               // suppress debugs in rj
  rj.parse_throwing(false);
 
- for(auto p: {IntpBit::Normal_pass,
-              IntpBit::Attempt_as_array, IntpBit::Stringify_atomic}) {
-  if(p == IntpBit::Attempt_as_array and not prty[IntpBit::Obj_attempted]) continue;
-  prty[p] = true;
+ Stringover tmpc(tmp);                                          // preserved copy of tmp
+ std::vector<IntpBit> vb{IntpBit::Normal_pass,
+                         IntpBit::Attempt_as_array, IntpBit::Stringify_atomics};
+ for(auto ivb = vb.begin(); ivb != vb.end(); ++ivb, tmp = tmpc) {
+  if(*ivb == IntpBit::Attempt_as_array and not prty[IntpBit::Obj_attempted]) continue;
+  prty[*ivb] = true;
   tmp = interpolate_tmp_(tmp, jit, auto_ns, prty);              // interpolate {}, {{}}
   if(tmp.front() == *TKN_EMP) DBG_AND_RET(*jit)                 // performance optimization
   tmp = interpolate_tmp_(tmp, jit, *nsp, prty);                 // interpolate all NS values
@@ -5018,8 +5032,14 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
   else                                                          // json parse resulted template
    rj.parse(std::move(tmp), parse_type);
 
-  if(not rj.parsing_failed()) break;                            // successful interpolation, or
-  tmp = tmpc;                                                   // repeat interpolation attempt
+  if(not rj.parsing_failed()) {                                 // successful interpolation
+   if(not jit.is_koj_last(Json::NonEmptyKoj) or jit->is_atomic()// no labels interpolation request
+      or prty[IntpBit::Interpolate_labels] == true)             // or already done
+    break;
+   prty[IntpBit::Interpolate_labels] = true;                    // this ensure correct "phase" for
+   --ivb;                                                       // label interpolation request:
+   continue;                                                    // either `<>w` or `<>a`
+  }
  }
 
  if(rj.parsing_failed()) rj.type(Jnode::Neither);
@@ -5072,8 +5092,8 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
  }
 
  Json w;                                                        // needed for walk()
+ DBG(w, 0) w.DBG().severity(NDBG);
  DBG(w, 4) {                                                    // debug print all found tokens
-  w.DBG().severity(NDBG);
   DOUT(w) << "found tokens: ";
   std::string dlm;
   for(const auto &t: sst) {
@@ -5109,11 +5129,11 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
 
 
 
-void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto_ns,
-                             std::bitset<IntpBit::Size_of_intpidx> &prty) {
+void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto_ns) {
  #include "dbgflow.hpp"
  // facilitate interpolation of {$path, $PATH} namespaces
 
+ std::bitset<IntpBit::Size> prty;
  typedef std::pair<std::string, Jnode> ns_type;
  Jnode jpath{ARY{}};
  auto_ns.emplace(ns_type{ITRP_PSTR, Jnode{}});                  // map "$path" -> {}, for check
@@ -5125,7 +5145,7 @@ void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto
   for(auto &item: jpath) string_path += item.val() + GET_DLM_(P, auto_ns); // stringify from array
   for(size_t i = 0; i < GET_DLM_(P, auto_ns).size(); ++i)
    string_path.pop_back();                                      // remove trailing PATH_SPR
-  auto_ns[ITRP_PSTR] = std::move(STR{string_path});             // incorporate $path into namespace
+  auto_ns[ITRP_PSTR] = std::move(STR{std::move(string_path)});  // incorporate $path into namespace
  }
 
  // then interpolate {$PATH}
@@ -5139,7 +5159,7 @@ void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto
 
 
 std::string Json::interpolate_tmp_(std::string tmp, Json::iterator &jit, map_jne &ns,
-                                   std::bitset<IntpBit::Size_of_intpidx> &prty) {
+                                   std::bitset<IntpBit::Size> &prty) {
  #include "dbgflow.hpp"
  // - interpolate template (tmp) from the namespace (ns),
  // - avoid recursive interpolation within already interpolated templates
@@ -5204,7 +5224,7 @@ std::string Json::replace_utf8_ill_(std::string & str, const map_jne &ns) {
 
 
 void Json::interpolate_tmp__(std::string &tmp, Json::iterator &jit, map_jne &ns, std::string &&nsk,
-                             Jnode &nse,  std::bitset<IntpBit::Size_of_intpidx> &prty,
+                             Jnode &nse,  std::bitset<IntpBit::Size> &prty,
                              vec_range &irng, std::string &u8id) {
  // interpolate_tmp_ factorization
  std::string found;                                             // found ns key
@@ -5220,9 +5240,11 @@ void Json::interpolate_tmp__(std::string &tmp, Json::iterator &jit, map_jne &ns,
         };
  auto intp_arr = [&] (std::string & ns_dlm, Json &jsn) {
        std::string dlm;
-       for(const auto &rec: jsn.walk(prty[IntpBit::Stringify_atomic]? "<>a:": "><w:")) {
-        std::string avs = rec.to_string(Jnode::PrettyType::Raw, 1); // avs: array value stringified
-        if(prty[IntpBit::Stringify_atomic] and avs.front() == '"')
+       for(const auto &rec: jsn.walk(prty[IntpBit::Stringify_atomics]? "<>a:": "><w:")) {
+        std::string avs = prty[IntpBit::Interpolate_labels]?    // avs: array value stringified
+                           rec[-1].is_object()? rec.label(): std::to_string(rec.index()):
+                           rec.to_string(Jnode::PrettyType::Raw, 1);
+        if(prty[IntpBit::Stringify_atomics] and avs.front() == '"')
          avs = avs.substr(1, avs.size()-2);
         found += dlm + avs;
         if(dlm.empty()) dlm = ns_dlm;
