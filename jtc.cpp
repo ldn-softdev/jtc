@@ -794,8 +794,7 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
 
  if(DBG()(0)) cr.display_opts(DOUT());
 
- // speedup cout & cin
- ios_base::sync_with_stdio(false);
+ ios_base::sync_with_stdio(false);                              // speedup cout & cin
  cin.tie(nullptr);
 
  // decide if multithreaded parsing to be engaged
@@ -809,7 +808,8 @@ for a complete user guide visit https://github.com/ldn-softdev/jtc/blob/master/U
  try {
   // if streamed cin, then 1st option set is processed differently: each (newly read) json
   // will trigger processing of all subsequent option sets
-  do run_decomposed_optsets(cr, jsp); while(jsp.is_streamed() and jsp != cr.iss().end());
+  do run_decomposed_optsets(cr, jsp);
+  while(jsp.is_streamed() and jsp != cr.iss().end());
  }
  catch(Jnode::stdException & e) {
   DBG(1) DOUT() << "exception raised by: " << e.where() << endl;
@@ -1110,8 +1110,7 @@ void CommonResource::init_inputs(void) {
  #include "lib/dbgflow.hpp"
  // initialize iss_ with correct read mode: streamed/cin/buffered
  read_from_cin_ = opt()[0].hits() == 0 or opt()[CHR(OPT_RDT)].hits() > 0;   // no files, or '-'
- DBG(0)
-  DOUT() << "reading json from " << (read_from_cin_? "<stdin>": "file-arguments:") << endl;
+ DBG(0) DOUT() << "reading json from " << (read_from_cin_? "<stdin>": "file-arguments:") << endl;
 
  for(int arg = 1; arg <= opt().arguments(); ++arg) {            // register all filenames with iss
   iss_.source_file(opt()[0].str(arg));                          // will set read mode to file
@@ -1971,7 +1970,7 @@ void Jtc::output_by_iterator(Json::iterator &wi, Grouping grp) {
          wi.walk_uid(): key_++ % (opt()[CHR(OPT_TMP)].size() - 1);
   ins_.sync_out(wns_[&wi], map_jnse::NsUpdateRef);              // this is done so that walks could
   tmp = Json::interpolate(tpw_[tmp_idx], wi, wns_[&wi]);        // propagate namespaces interleaved
-  ins_.sync_in(wns_[&wi], map_jnse::NsReferAll);                // way rather than sequentially
+  ins_.sync_in(wns_[&wi], map_jnse::NsReferAll);
   if(use_hpfx_) hwlk_ = move(ARY{tmp.root()});
  }
 

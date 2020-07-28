@@ -1710,7 +1710,7 @@ class Json {
                 Strict_no_trail,    /* don't allow anything past json, throw otherwise */ \
                 /* not for parsing, used by interpolate() only: */ \
                 Dont_parse          /* put result of interpolation into a JSON string */
-    ENUM(ParseTrailing, PARSETRAILING)
+    ENUMSTR(ParseTrailing, PARSETRAILING)
 
     #define CACHE_STATE         /* all non-dynamic searches are cached (when walking) */\
                 Invalidate, \
@@ -2416,6 +2416,13 @@ class Json {
 
         Stringover &        operator=(const std::string &str)
                              { if(not str.empty()) std::string::operator=(str); return *this; }
+
+        bool                ends_with(std::string const &tail) const {
+                             if(std::string::size() < tail.size()) return false;
+                             return std::string::compare(std::string::size() - tail.size(),
+                                                         tail.size(), tail) == 0;
+                            }
+
     };
 
     // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
@@ -2904,6 +2911,7 @@ Json::map_jne Json::dummy_ns_;                                  // facilitate de
 std::map<std::string, std::vector<Json::WalkStep>> Json::compiled_walks_;   // compiled walks cache
 
 STRINGIFY(Json::Jsearch, JS_ENUM)
+STRINGIFY(Json::ParseTrailing, PARSETRAILING)
 STRINGIFY(Json::WalkStep::WsType, WALKSTEPTYPE)
 STRINGIFY(Json::iterator::SearchType, SEARCH_TYPE)
 
@@ -5012,15 +5020,15 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$A}, {$b}, ... if any
 
  Json rj;                                                       // returned json value
- if(jit.json().DBG()(0)) rj.DBG().severity(NDBG);               // suppress debugs in rj
+ rj.DBG().severity(NDBG);                                       // suppress debugs in rj
  rj.parse_throwing(false);
 
  Stringover tmpc(tmp);                                          // preserved copy of tmp
- std::vector<IntpBit> vb{IntpBit::Normal_pass,
+ std::vector<IntpBit> bv{IntpBit::Normal_pass,
                          IntpBit::Attempt_as_array, IntpBit::Stringify_atomics};
- for(auto ivb = vb.begin(); ivb != vb.end(); ++ivb, tmp = tmpc) {
-  if(*ivb == IntpBit::Attempt_as_array and not prty[IntpBit::Obj_attempted]) continue;
-  prty[*ivb] = true;
+ for(auto ibv = bv.begin(); ibv != bv.end(); ++ibv, tmp = tmpc) {
+  if(*ibv == IntpBit::Attempt_as_array and not prty[IntpBit::Obj_attempted]) continue;
+  prty[*ibv] = true;
   tmp = interpolate_tmp_(tmp, jit, auto_ns, prty);              // interpolate {}, {{}}
   if(tmp.front() == *TKN_EMP) DBG_AND_RET(*jit)                 // performance optimization
   tmp = interpolate_tmp_(tmp, jit, *nsp, prty);                 // interpolate all NS values
@@ -5029,15 +5037,19 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 
   if(parse_type == ParseTrailing::Dont_parse)
    rj.root() = std::move(STR{tmp});
-  else                                                          // json parse resulted template
-   rj.parse(std::move(tmp), parse_type);
+  else {                                                        // json parse resulted template
+   Streamstr tis(std::move(tmp));                               // tmp input Streamstr
+   if(not rj.parse(tis.begin(), parse_type).parsing_failed() and// if parsing succeeds, however,
+      parse_type == ParseTrailing::Relaxed_no_trail and         // relaxed trailing succeeds only
+      not tmpc.ends_with(rj.exception_point().str())) continue; // if parsed's tail matches tmp's
+  }
 
   if(not rj.parsing_failed()) {                                 // successful interpolation
    if(not jit.is_koj_last(Json::NonEmptyKoj) or jit->is_atomic()// no labels interpolation request
       or prty[IntpBit::Interpolate_labels] == true)             // or already done
     break;
    prty[IntpBit::Interpolate_labels] = true;                    // this ensure correct "phase" for
-   --ivb;                                                       // label interpolation request:
+   --ibv;                                                       // label interpolation request:
    continue;                                                    // either `<>w` or `<>a`
   }
  }
@@ -5092,15 +5104,15 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
  }
 
  Json w;                                                        // needed for walk()
- DBG(w, 0) w.DBG().severity(NDBG);
- DBG(w, 4) {                                                    // debug print all found tokens
-  DOUT(w) << "found tokens: ";
+ w.DBG().severity(NDBG);
+ DBG(jit.json(), 4) {                                           // debug print all found tokens
+  DOUT(jit.json()) << "found tokens: ";
   std::string dlm;
   for(const auto &t: sst) {
    if(uct.count(to_upper(t))) DOUT(jit.json()) << dlm << to_upper(t); dlm = ", ";
    if(lct.count(t)) DOUT(jit.json()) << dlm << t; dlm = ", ";
   }
-  DOUT(w) << std::endl;
+  DOUT(jit.json()) << std::endl;
  }
 
  auto move2json = [&w, &jit](void) { w.root() = std::move(*jit); return true; };

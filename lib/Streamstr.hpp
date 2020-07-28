@@ -90,6 +90,8 @@ class Streamstr {
 
                         Streamstr(const std::string & fn, Verbosity v): vm_{v}
                          { source_file(fn); }
+                        Streamstr(std::string buf)
+                         { source_buffer(std::move(buf)); }
                         Streamstr(Strmod m = buffered_cin): mod_{m} {}
                         Streamstr(size_t hbs):                  // stream mode, w. hb allocation
                          mod_{streamed_cin}, hb_(hbs) {}
