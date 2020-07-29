@@ -685,6 +685,7 @@ class Jnode {
 
 
                         Jnode(void) = default;                  // DC
+    virtual            ~Jnode(void) = default;                  // DD
                         Jnode(const Jnode &jn): Jnode() {       // CC
 
                          #ifdef BG_CC                           // -DBG_CC to compile this debug
@@ -5155,8 +5156,9 @@ void Json::interpolate_path_(Stringover &tmp, Json::iterator &jit, map_jne &auto
   build_path_(jpath, jit);                                      // build path array [ ... ]
   std::string string_path;
   for(auto &item: jpath) string_path += item.val() + GET_DLM_(P, auto_ns); // stringify from array
-  for(size_t i = 0; i < GET_DLM_(P, auto_ns).size(); ++i)
-   string_path.pop_back();                                      // remove trailing PATH_SPR
+  if(not jpath.is_empty())
+   for(size_t i = 0; i < GET_DLM_(P, auto_ns).size(); ++i)
+    string_path.pop_back();                                     // remove trailing PATH_SPR
   auto_ns[ITRP_PSTR] = std::move(STR{std::move(string_path)});  // incorporate $path into namespace
  }
 
