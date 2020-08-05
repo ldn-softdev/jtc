@@ -1778,7 +1778,7 @@ bash $
 
 
 ### Summary table of search lexemes
-sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment 
+sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment (<ns:..>) 
 --- | :--- | :--- | :---
 _r_ | `<>` matches _empty string_ (`""`) | `<str>` matches given _string_ `"str"` | -
 _R_ | - | `<RE>R` matches _string value_ using _REGEX_ `RE` | -
