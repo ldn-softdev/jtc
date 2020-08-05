@@ -3294,10 +3294,13 @@ Jnode::Jtype Json::classify_jnode_(Streamstr::const_iterator & jsp) {
 
 char Json::skip_blanks_(Streamstr::const_iterator & jsp) {
  // skip_blanks_() sets pointer to the first a non-blank character
+ if(jsp == jsp.streamstr().end())
+  THROW_EXP(Jnode::ThrowReason::unexpected_end_of_string, *jsp)
+
  while(*jsp >= 0 and *jsp <= CHR_SPCE) {                        // '*jsp >= 0' to support UTF-8
+  ++jsp;
   if(jsp == jsp.streamstr().end())
    THROW_EXP(Jnode::ThrowReason::unexpected_end_of_string, *jsp)
-  ++jsp;
  }
  return *jsp;
 }

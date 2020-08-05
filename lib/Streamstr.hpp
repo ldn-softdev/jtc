@@ -35,13 +35,14 @@ class Streamstr {
                              if(cur_ >= hb_.size()) cur_ = 0;
                              hb_[cur_++] = c;
                             }
-        std::string         str(size_t len = -1) const {
+        std::string         str(size_t len = SIZE_T(-1)) const {
                              if(len > hb_.size()) len = hb_.size();
 
                              if(hb_.size() < hb_.capacity()) {
                               size_t offset = len >= hb_.size()? 0: hb_.size() - len;
                               return {&hb_[offset], len};
                              }
+
                              size_t offset = len <= cur_? hb_.size(): cur_ + hb_.size() - len;
                              std::string s(&hb_[offset], hb_.size() - offset);
                              offset = len <= cur_? cur_ - len: 0;
@@ -207,7 +208,7 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
                          { return is_buffered() and pos_ - rwd_ == ssp_->buffer().size() - 1; }
     bool                is_front_chr(void) const                // facing current buf's 1st char?
                          { return is_buffered() and pos_ - rwd_ == 0; }
-    std::string         str(size_t len = -1) const;
+    std::string         str(size_t len = SIZE_T(-1)) const;
     size_t              char_read(void) const { return cnt_; }
     size_t              offset(void) const { return char_read() - rwd_; }
 
@@ -349,20 +350,21 @@ void Streamstr::read_file_(std::ifstream & fin) {
 //
 const char & Streamstr::const_iterator::operator*(void) {
  // demultiplex streamed and buffered dereferencing
+ // if pos = -1 (end of stream), return last read character
  if(is_streamed()) {
   if(cnt_ < ssp_->cnt_)                                         // stream ran away from iterator
    { rwd_ += ssp_->cnt_ - cnt_; cnt_ = ssp_->cnt_; }
 
-  if(rwd_ == 0)                                                  // there was no back out
-   return ssp_->buffer()[pos_];
+  if(rwd_ == 0)                                                 // there was no back out
+   return ssp_->buffer().front();                               // in stream mode buffer size is 1
                                                                 // back-outing occurred
-  return ssp_->hb_.chr(rwd_ - pos_);                            // get data from historical buffer
+  return ssp_->hb_.chr(rwd_);                                   // get data from historical buffer
  }
-
+ // mod_ = buffer
  if(rwd_ == 0)                                                  // there was no back out
-  return ssp_->buffer()[pos_];
+  return ssp_->buffer()[pos_ != SIZE_T(-1)? pos_: ssp_->buffer().size() - 1];
                                                                 // back-outing occurred
- return ssp_->buffer()[pos_ - rwd_];                            // mod_ = buffer
+ return ssp_->buffer()[pos_ - rwd_];
 }
 
 
