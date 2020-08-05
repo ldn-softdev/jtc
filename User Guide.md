@@ -1778,7 +1778,7 @@ bash $
 
 
 ### Summary table of search lexemes
-sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment (<ns:..>) 
+sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment (`<ns:..>`) 
 --- | :--- | :--- | :---
 _r_ | `<>` matches _empty string_ (`""`) | `<str>` matches given _string_ `"str"` | -
 _R_ | - | `<RE>R` matches _string value_ using _REGEX_ `RE` | -
@@ -1805,7 +1805,7 @@ _g_ | `<>g` - matches values in the _ascending_ order | `<val>g` stores (_any_) 
 _G_ | `<>G` - matches values in the _descending_ order | `<val>G` stores (_any_) found _descending value_ in the namespace `val` | `<v:...>G` upon an _descending value match_ stores in the namespace `v` a user's value
 
 ### Summary table of directives
-sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment 
+sfx | Empty lexeme semantic (`<>`)  | Non-empty semantic (`<..>`) | Semantic with namespace assignment (`<ns:..>`)
 --- | :--- | :--- | :---
 _v_ | - | `<val>v` stores a _currently_walked_ JSON value in the namespace `val` | `<val:...>v` stores in the namespace `val` a user's JSON value
 _k_ | `<>k` reinterprets a _currently walked_ JSON's label/index as a value | `<val>k` stores a _currently walked_ JSON value's _label_/_index_ in the namespace `val` | `<val:...>k` stores in the namespace `val` a user's _string_ value
