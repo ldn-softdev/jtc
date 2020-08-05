@@ -180,7 +180,7 @@ typedef ptrdiff_t signed_size_t;
 //   o record resulted namespaces into WNS: remote entries reman remote (i.e copy pointers),
 //                                          local entries to be moved by values
 //
-// - after walking (before destroying Jtc):
+// - after walking (before destroying Jtc class):
 //   o move all values from the last wns snapshot to Global NS
 //
 // = that way it's ensured that all newly created JSON values will not be copied unnecessarily
@@ -192,10 +192,10 @@ class map_jnse: public Json::map_jne {
  public:
 
     #define NSOPT \
-                NsUpdateRef,    /* reference all ns values - only non-existent ones  */\
+                NsUpdateRef,    /* reference all ns values - only non-existent (new) ones */\
                 NsReferAll,     /* reference all ns values - local and remote */\
                 NsMove,         /* move local ns values, reference remote entriess */\
-                NsUpdate,       /* same as NsMove, but for non-existent (new) entries only*/\
+                NsUpdate,       /* same as NsMove, but for non-existent (new) entries only */\
                 NsMoveAll       /* move all ns values - local & remote */
     ENUM(NsOpType, NSOPT)
 
@@ -635,14 +635,16 @@ class Jtc {
     vec_bjit            psrc_;                                  // binding dst walks with src's
     map_json            jtmp_;                                  // for resolving <TMP> in -u/i/c
     map_json            jsrc_;                                  // holding params of -i/u/c
-    Json::iterator      jits_;                                  // current source iterator
+    Json::iterator      jits_;                                  // current source json iterator
     Jitsrc              jsrt_{Jitsrc::Src_input};               // source type of jits_
     size_t              jscur_{0};                              // current walk in jsrc_
+
     map<Json::iterator*, map_jnse>
                         wns_;                                   // namespaces for walked (-w) paths
     map_jnse            ins_;                                   // holds interleaved namespaces
     Json::iterator *    last_dwi_ptr_{nullptr};
     Jnode               hwlk_{ARY{STR{}}};                      // last walked value (interpolated)
+
     set<string>         c2a_;                                   // used in jsonized_output_obj_()
     map<size_t, string> tpw_;                                   // tmp per walk, output_by_iterator
     bool                is_tpw_;                                // templates pertain to walks
@@ -1038,9 +1040,11 @@ void CommonResource::display_opts(std::ostream & out) {
    else
     out << " '" << opt.ordinal(j).c_str() << "'";
 
-  out << " (internally imposed:";
-  for(auto &i: opt.imp()) out << " -" << i;
-  out << " )" << endl;
+  string dlm = " (internally imposed: ";
+  for(auto &i: opt.imp())
+   { out << dlm << (i > 0? "-": "USE_HPFX") << static_cast<char>(i > 0? i: i + 1); dlm = ' '; }
+  if(not opt.imp().empty()) out << ")";
+  out << endl;
  }
 }
 

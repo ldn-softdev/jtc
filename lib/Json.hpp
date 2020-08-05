@@ -2067,17 +2067,24 @@ class Json {
                              if(is_json_capturing_lexeme()) lptr.front() = &empty;
                              if(r.is_json_capturing_lexeme()) rptr.front() = &empty;
 
-                             return jsearch != r.jsearch?       // for caching purpose
-                                     jsearch < r.jsearch:       // quantifiers are not considered
-                                     is_user_json_search() or is_regex()?
+                             return jsearch != r.jsearch?       // for caching purpose quantifiers
+                                     jsearch < r.jsearch:       // are not considered
+                                     is_user_json_search()?
                                       ( user_json != r.user_json?
                                          user_json < r.user_json:
                                          *lptr.back() < *rptr.back()
                                       ):
-                                      ( *lptr.front() != *rptr.front()?
-                                         *lptr.front() < *rptr.front():
-                                         *lptr.back() < *rptr.back()
-                                      );
+                                      is_regex()?
+                                       // regex match uses user_json as a str value and user_json
+                                       // type as a flag for interpolation, thus using val()
+                                       ( user_json.val() != r.user_json.val()?
+                                          user_json.val() < r.user_json.val():
+                                          *lptr.back() < *rptr.back()
+                                       ):
+                                       ( *lptr.front() != *rptr.front()?
+                                          *lptr.front() < *rptr.front():
+                                          *lptr.back() < *rptr.back()
+                                       );
                             }
         bool                resolve_ns(Json::iterator &jit) {
                              // resolve namespace value for dynamic lexemes into user_json:
@@ -3663,8 +3670,8 @@ std::regex::flag_type Json::parse_RE_flags_(std::string & re_str) const {
                                "\\E", "\\S", "\\X", "\\A", "\\G", "\\P"};   // grammar selection
  #define FLEN (sizeof("\\I") - 1)                               // i.e. FLEN = 3 - 1 = 2
 
- auto set_grammar= [&flag, &re_grammar](std::regex::flag_type new_grm)
-                    { flag ^= re_grammar; re_grammar = new_grm; flag |= re_grammar; };
+ auto set_grammar = [&flag, &re_grammar](std::regex::flag_type new_grm)
+                     { flag ^= re_grammar; re_grammar = new_grm; flag |= re_grammar; };
  size_t rest_size;
  do {
   rest_size = re_str.size();
