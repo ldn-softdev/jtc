@@ -496,6 +496,8 @@
 //    - for Array storage values (which do not require JSON labels), map keys will
 //      be auto-sequenced
 
+#define XSFY(X) #X
+#define SFY(X) XSFY(X)                                          // stringify character
 
 #define ARRAY_LMT 4                                             // #bytes per array's index
 #define WLK_SUCCESS LONG_MIN                                    // walk() uses it as success
@@ -2603,7 +2605,7 @@ class Json {
         size_t              walk_uid(void) const { return wuid_; }
         size_t              walk_size(void) const { return ws_.size(); }
         bool                is_koj_last(Json::KeyOfJson x = Json::EmptyKoj) const
-                             // x - true: check if <>k was last executed; false: if <..>k was
+                             // x==EmptyKoj check if <>k was last executed; otherwise if <..>k was
                              { return
                                 lwsi_ < ws_.size() and
                                 not ws_[lwsi_].is_locked() and
@@ -2677,6 +2679,8 @@ class Json {
     std::vector<WalkStep> & walk_path_(void) { return ws_; }
         const std::vector<WalkStep> &
                             walk_path_(void) const { return ws_; }
+        const WalkStep &    last_walked_(void) const            // predicate this call by checking
+                             { return ws_[lwsi_]; }             // if lwsi_ is valid within ws_
         void                end_path_(void)
                              { pv_.emplace_back(json().end_(), true); }
         auto &              sn_type_ref_(void) { return sn_.type_; }    // original container type
@@ -3646,7 +3650,11 @@ void Json::parse_user_json_(WalkStep &ws) const {
   ws.stripped.front().erase(json_start);
  }
  // try parsing user_json
- try { Json j; ws.user_json = std::move(j.parse(json_ptr, ParseTrailing::Strict_no_trail).root()); }
+ try {
+  Json j;
+  j.DBG().severity(NDBG);
+  ws.user_json = std::move(j.parse(json_ptr, ParseTrailing::Strict_no_trail).root());
+ }
  catch(Json::stdException & e) {                                // parsing as JSON fails
   if(ws.jsearch != Jsearch::json_match)                         // i.e. if not <..>j
    try { Json j; ws.user_json = std::move(j.parse(std::string{"\""} + json_ptr + "\"",
@@ -3840,7 +3848,7 @@ Json::signed_size_t Json::parse_index_(std::string::const_iterator &si,
  if(sign_prescribtion == SignLogic::Must_be_signless and *si AMONG(JSN_NUMP, JSN_NUMM)) {
   if(throwing != ParseThrow::May_throw) return 0;
   throw EXP(Jnode::ThrowReason::walk_bad_number_or_suffix);
-}
+ }
 
  auto sic{si};                                                  // si copy for validating number
  if(*sic == PFX_ITR) ++sic;                                     // WA tolerating +N JSON definition
@@ -5055,13 +5063,15 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
       not tmpc.ends_with(rj.exception_point().str())) continue; // if parsed's tail matches tmp's
   }
 
-  if(not rj.parsing_failed()) {                                 // successful interpolation
-   if(not jit.is_koj_last(Json::NonEmptyKoj) or jit->is_atomic()// no labels interpolation request
-      or prty[IntpBit::Interpolate_labels] == true)             // or already done
-    break;
-   prty[IntpBit::Interpolate_labels] = true;                    // this ensure correct "phase" for
+  if(not rj.parsing_failed()) {                                 // if successful interpolation
+   if(not (jit.is_koj_last(Json::NonEmptyKoj) and               // and last walked step is not
+           jit.last_walked_().stripped[0] == SFY(LBL_SPR))      //  <:>k - a label interpolation
+      or jit->is_atomic()                                       // request,
+      or prty[IntpBit::Interpolate_labels] == true)             // or it's already done - then
+    break;                                                      // end interpolation, otherwise -
+   prty[IntpBit::Interpolate_labels] = true;                    // ensure correct "phase" for
    --ibv;                                                       // label interpolation request:
-   continue;                                                    // either `<>w` or `<>a`
+   continue;                                                    // either `><w` or `<>a`
   }
  }
 
@@ -5410,6 +5420,8 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 
 
 
+#undef XSFY
+#undef SFY
 
 #undef ARRAY_LMT
 #undef WLK_SUCCESS
