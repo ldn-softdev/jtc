@@ -496,9 +496,6 @@
 //    - for Array storage values (which do not require JSON labels), map keys will
 //      be auto-sequenced
 
-#define XSFY(X) #X
-#define SFY(X) XSFY(X)                                          // stringify character
-
 #define ARRAY_LMT 4                                             // #bytes per array's index
 #define WLK_SUCCESS LONG_MIN                                    // walk() uses it as success
 #define SIZE_T(N) static_cast<size_t>(N)
@@ -534,6 +531,7 @@
 #define LXM_SCH_OPN '<'                                         // Walk lexeme open search
 #define LXM_SCH_CLS '>'                                         // Walk lexeme close offset
 #define LBL_SPR ':'                                             // Walk lexeme label separator
+#define LBL_KOJ ":"                                             // label generation lexeme (<:>k)
 #define PFX_ITR '+'                                             // prefix of iterable offset
 #define PFX_WFR '^'                                             // walk from root offset
 #define PFX_WFL '-'                                             // walk from end-leaf offset
@@ -5065,7 +5063,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 
   if(not rj.parsing_failed()) {                                 // if successful interpolation
    if(not (jit.is_koj_last(Json::NonEmptyKoj) and               // and last walked step is not
-           jit.last_walked_().stripped[0] == SFY(LBL_SPR))      //  <:>k - a label interpolation
+           jit.last_walked_().stripped[0] == LBL_KOJ)           //  <:>k - a label interpolation
       or jit->is_atomic()                                       // request,
       or prty[IntpBit::Interpolate_labels] == true)             // or it's already done - then
     break;                                                      // end interpolation, otherwise -
@@ -5420,8 +5418,6 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 
 
 
-#undef XSFY
-#undef SFY
 
 #undef ARRAY_LMT
 #undef WLK_SUCCESS
@@ -5458,6 +5454,7 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 #undef LXM_SCH_CLS
 
 #undef LBL_SPR
+#undef LBL_KOJ
 #undef PFX_ITR
 #undef PFX_WFR
 #undef PFX_WFL
