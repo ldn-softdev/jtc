@@ -537,6 +537,7 @@
 #define PFX_WFL '-'                                             // walk from end-leaf offset
 #define RNG_SPR ':'                                             // quantifier range separator
 #define IDX_FIL '0'                                             // fill char for the node index
+#define CHR_NUL '0'                                             // fill char for the node index
 #define QNT_OPN '{'                                             // quantifier interpolation open
 #define QNT_CLS '}'                                             // quantifier interpolation close
 #define TKN_EMP "\x16"                                          // empty token in NS
@@ -596,8 +597,44 @@ class Jnode {
 
     typedef ptrdiff_t signed_size_t;
 
+    struct Jstring: public std::string {
+     // this is a std::string adaptor to facilitate a peculiar label ordering in Jnode Objects:
+     // - labels made of digits only (e.g.: "123") will be ordered *numerically*, e.g.:
+     //   {"10":10, "2":2} will be ordered 2, 10
+     // - all other labels will be ordered *literally*, e.g.:
+     //   {"+10":10, "+2":2} will be ordered 10, 2
+     // this enhancement should not affect ordering of Jnode Arrays (which are made of hex
+     // representations of order sequencing), though very slightly affects std::map performance
+     // the advantage: "numerical" labels are ordered numerically
+
+                        Jstring(const char * cstr):
+                         std::string{cstr} {}
+
+                        Jstring(std::string str):               // type conversion from std::string
+                         std::string{std::move(str)} {}         // with copy-elision
+
+        bool            operator<(const Jstring &r) const {
+                         // implemented non-idiomatic way for performance reason
+                         if(empty()) return std::operator<(*this, r);
+                         unsigned long ml = 0;                  // my label
+                         const char * str = c_str();
+                         while(*str)
+                          if(isdigit(*str)) ml = ml * 10 + (*str++ - CHR_NUL);
+                          else return std::operator<(*this, r);
+
+                         if(r.empty()) return std::operator<(*this, r);
+                         unsigned long rl = 0;                  // r's label
+                         str = r.c_str();
+                         while(*str)
+                          if(isdigit(*str)) rl = rl * 10 + (*str++ - CHR_NUL);
+                          else return std::operator<(*this, r);
+
+                         return ml < rl;
+                        }
+    };
+
  public:
-    typedef std::map<std::string, Jnode> map_jn;
+    typedef std::map<Jnode::Jstring, Jnode> map_jn;
     typedef map_jn::iterator iter_jn;
     typedef map_jn::const_iterator const_iter_jn;
 
@@ -1491,7 +1528,7 @@ Jnode::iter_jn Jnode::iterator_by_idx_(size_t idx) {
  if(is_array()) {                                               // array could be addressed direct
   size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
   if(key < children_().size())                                  // if so, indices are non-tampered
-   return children_().find(std::move(idx2lbl_(idx)));
+   return children_().find(idx2lbl_(idx));
  }                                                              // else: traverse map
  auto it = children_().begin();
  std::advance(it, idx);
@@ -1508,7 +1545,7 @@ Jnode::const_iter_jn Jnode::iterator_by_idx_(size_t idx) const {
  if(is_array()) {                                               // array may be addressed directly
   size_t key = stoul(children_().rbegin()->KEY, nullptr, 16);
   if(key < children_().size())                                  // if so, indices are non-tampered
-   return children_().find(std::move(idx2lbl_(idx)));
+   return children_().find(idx2lbl_(idx));
  }                                                              // else: traverse map
  auto it = children_().cbegin();
  std::advance(it, idx);
@@ -2398,8 +2435,8 @@ class Json {
         const Jnode *       jnp;
         WalkStep            ws;
 
-        static bool         cmp(const CacheKey &l, const CacheKey &r)
-                             { return l.jnp != r.jnp? l.jnp<r.jnp: l.ws<r.ws; }
+        bool                operator<(const CacheKey &r) const      // map comparator
+                             { return jnp != r.jnp? jnp < r.jnp: ws < r.ws; }
 
         const Jnode *       json_node(void) const { return jnp; }   // only for COUTABLE
         COUTABLE(CacheKey, json_node(), ws)
@@ -2408,9 +2445,7 @@ class Json {
     static std::map<std::string, std::vector<WalkStep>>
                         compiled_walks_;                        // compiled walks cache
 
-    typedef std::map<CacheKey,
-                     std::vector<SearchCacheEntry>,
-                     decltype(&CacheKey::cmp)>
+    typedef std::map<CacheKey, std::vector<SearchCacheEntry>>
                         SearchCache;
 
     typedef std::map<unsigned short, SortCacheEntry>
@@ -2808,7 +2843,7 @@ class Json {
     //      key: made of { WalkStep, *Jnode };
     //      value: vector<SearchCacheEntry: { namespace (map_jn); vector<path_vector> }>;
     // - namespace is required to be a part of the cache to support REGEX values only!
-    SearchCache         srchc_{CacheKey::cmp};                  // search lexemes cache itself
+    SearchCache         srchc_;                                 // search lexemes cache itself
                         // search cache is the array of all path_vector's for given
                         // search key (combination of jnode and walk step)
 
@@ -3234,7 +3269,7 @@ Jnode::Jtype Json::json_number_definition(Streamstr::const_iterator & jsp) {
  // conform JSON's definition of a number (https://json.org/index.html)
  if(*jsp == JSN_NUMM) ++jsp;                                    // == '-'
  if(not isdigit(*jsp)) return Jnode::Jtype::Neither;            // digit must follow '-' sign
- if(*jsp > '0')
+ if(*jsp > CHR_NUL)
   while(isdigit(*jsp)) ++jsp;
  else                                                           // next could be only [.eE] or end
   ++jsp;                                                        // skip leading 0
@@ -3449,7 +3484,7 @@ std::string Json::unquote_str(const std::string & src) const {
  // even though it looks static, it's best to keep it in-class, due to throwing mechanism
  std::stringstream ss;
 
- auto h2i = [](char c) { return c >= 'a'? c - 'a' + 10: c >= 'A'? c - 'A' + 10: c - '0'; };
+ auto h2i = [](char c) { return c >= 'a'? c - 'a' + 10: c >= 'A'? c - 'A' + 10: c - CHR_NUL; };
  auto utf8out = [&](size_t cp, short n) {                       // output n utf-8 bytes
        if(n == 1) { ss << static_cast<char>(cp); return; }      // assert: cp <= 0x7F
        short s{5};
