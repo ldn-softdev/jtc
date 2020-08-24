@@ -567,6 +567,7 @@
 #define ITRP_PSPR "_"                                           // stringified path separator
 #define ITRP_PJSN "$PATH"                                       // token for JSON path interp.
 #define ITRP_PSTR "$path"                                       // token for stringified path
+#define ITRP_WUID "$wuid"                                       // auto token for unique walk id
 
 
 
@@ -605,7 +606,8 @@ class Jnode {
      //   {"+10":10, "+2":2} will be ordered 10, 2
      // this enhancement should not affect ordering of Jnode Arrays (which are made of hex
      // representations of order sequencing), though very slightly affects std::map performance
-     // the advantage: "numerical" labels are ordered numerically
+     // the benefit: "numerical" labels are ordered numerically, which is closer to users
+     // expectations
 
                         Jstring(const char * cstr):
                          std::string{cstr} {}
@@ -5059,7 +5061,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
                                   (JSN).to_string(Jnode::PrettyType::Raw, 1)) << std::endl; \
     return JSN; }
 
- map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns;
+ map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns; // demux ns: from jit, or user's
  map_jne auto_ns;
  auto_ns.emplace("", STR{TKN_EMP});                             // provide an easy phony JSON
  // empty namespace ("") is used to interpolate {}, {{}} tokens, however, defer providing mapping
@@ -5068,6 +5070,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  auto_ns.emplace(ITRP_GDLM, GET_DLM_(G, *nsp));                 // set ns for $$?
  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));                 // set ns for $#
  auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));                 // set ns for $_
+ auto_ns.emplace(ITRP_WUID, jit.wuid_);                         // $wuid auto namespace
  interpolate_path_(tmp, jit, auto_ns);                          // set $path, $PATH if present
  generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$A}, {$b}, ... if any
 
