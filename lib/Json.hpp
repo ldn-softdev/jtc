@@ -1728,7 +1728,7 @@ class Json {
                 value_of_json,  /* directive: save current json value */ \
                 key_of_json,    /* directive: treat key (label/index) as a JSON (and save) */ \
                 zip_namespace,  /* directive: erase namespace */ \
-                fail_safe,      /* directive: stop at the preserved point when ws fails */ \
+                fail_safe,      /* directive: <>f: stop at the preserved point when ws fails */ \
                 Forward_itr,    /* directive: proceed to the next iteration (w/o fail_safe) */ \
                 user_handler,   /* directive: user-specific callback to validate the path */ \
                 Increment_num,  /* directive: increments JSON numeric value by offset*/ \
@@ -2300,9 +2300,9 @@ class Json {
         bool                locked{false};                      // indicate locked/unlocked state
         unsigned short      wsuid;                              // unique walk-id for ws
         path_vector         fs_path;                            // preserved path for fail-safe
-        // fail_safe/Forward_itr design notes:
+        // fail_safe (<>f)/ Forward_itr (<>F) design notes:
         // 1. fail_safe (FS) <..>f and Forward_itr (FI) <..>F directives design:
-        //  o directives may be found in 2 states: locked and unlocked
+        //  o lexemes may be found in 2 states: locked and unlocked
         //    - in unlocked state FS can be engaged - i.e. it preserves pv and may intercept
         //      walking upon failure
         //    - in the locked state FS is disengaged - no action is taken (by directive) and
@@ -3092,7 +3092,7 @@ void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
 void Json::parse_bool_(Jnode & node, Streamstr::const_iterator &jsp) {
  // Parse first character of lexeme ([tT] or [fF])
  node.value_ = *jsp;                                            // i.e. store either 't' or 'f'
- if(node.value_.front() == CHR_FALSE) ++jsp;                    // false is 1 char bigger than true
+ if(*jsp == CHR_FALSE) ++jsp;                                   // false is 1 char bigger than true
  advance(jsp, 4);
 }
 
@@ -3304,29 +3304,20 @@ Jnode::Jtype Json::classify_jnode_(Streamstr::const_iterator & jsp) {
   return str.size() == 2 and isdigit(str.back())? Jnode::Jtype::Number: Jnode::Jtype::Neither;
  }
 
- #define JTERM \
-            JT_true, \
-            JT_false, \
-            JT_null
- ENUM(Jterm, JTERM)
- #undef JTERM
- static const std::string jterm[] = {"true", "false", "null"};
+ const char * Jterm_str[] = { "true", "false", "null" };
 
- size_t sjt;                                                    // selected jterm
- switch(*jsp) {
-  case 't': sjt = Jterm::JT_true; break;
-  case 'f': sjt = Jterm::JT_false; break;
-  case 'n': sjt = Jterm::JT_null; break;
-  default: return Jnode::Jtype::Neither;
- }
+ const char *jterm{nullptr};                                    // pointer to Jterm_str element
+ for(auto & cstr: Jterm_str)
+  if(*jsp == *cstr) { jterm = cstr; break; }
+ if(jterm == nullptr) return Jnode::Jtype::Neither;
 
- for(size_t i = 1; i < jterm[sjt].size(); ++i) {                // fully validate jterm
+ for(size_t i = 1; jterm[i] != CHR_NULL; ++i) {                 // fully validate jterm
   std::string str = readup_str_(jsp, i + 1);
-  if(str.size() != i + 1 or jterm[sjt][i] != str[i])
+  if(str.size() != i + 1 or str[i] != jterm[i])
    return Jnode::Jtype::Neither;
  }
 
- return sjt == JT_null? Jnode::Jtype::Null: Jnode::Jtype::Bool;
+ return *jsp == 'n'? Jnode::Jtype::Null: Jnode::Jtype::Bool;
 }
 
 

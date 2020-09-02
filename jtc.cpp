@@ -211,7 +211,8 @@ void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
  // sync all entries from this map to Json namespace `to``
  if(nsopt <= NsOpType::NsReferAll) {                            // reference all entries
   for(auto &ns: *this) {                                        // for all entries in this map
-   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
+   if(ns.KEY.front() < CHR_SPCE and ns.KEY.front() > CHR_NULL)  // sync only valid namespaces
+    continue;
    auto found = to.find(ns.KEY);
    if(found == to.end())
     to.emplace(ns.KEY, Json::JnEntry{}).first->VALUE.ptr(&ns.VALUE.ref());
@@ -225,7 +226,8 @@ void map_jnse::sync_out(Json::map_jne &to, NsOpType nsopt) {
 
  // else: either NsMove
  for(auto &ns: *this) {                                         // for all entries in this map
-  if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
+  if(ns.KEY.front() < CHR_SPCE and ns.KEY.front() > CHR_NULL)   // sync only valid namespaces
+   continue;
   if(ns.VALUE.is_remote() and nsopt == NsOpType::NsMove) {      // refer remote
    auto ip = to.emplace(ns.KEY, Json::JnEntry{});               // ip: insertion pair
    ip.first->VALUE.ptr(&ns.VALUE.ref());                        // override existing or refer new
@@ -244,7 +246,8 @@ void map_jnse::sync_in(Json::map_jne &from, NsOpType nsopt) {
  // sync all entries `from` map according to given handling type `nsopt`
  if(nsopt <= NsOpType::NsReferAll) {                            // reference all entries
   for(auto &ns: from) {                                         // for all entries in from
-   if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue; // sync only valid namespaces
+   if(ns.KEY.front() < CHR_SPCE and ns.KEY.front() > CHR_NULL)  // sync only valid namespaces
+    continue;
    auto mp = emplace(ns.KEY, Json::JnEntry{});                  // mp: my pair
    mp.first->VALUE.ptr(&ns.VALUE.ref());                        // override w/o version check
   }
@@ -253,7 +256,8 @@ void map_jnse::sync_in(Json::map_jne &from, NsOpType nsopt) {
 
  // else: either NsMove or NsMoveAll or NsUpdate
  for(auto &ns: from) {                                          // for all entries in from
-  if(ns.KEY.front() < ' ' and ns.KEY.front() > '\0') continue;  // sync only valid namespaces
+  if(ns.KEY.front() < CHR_SPCE and ns.KEY.front() > CHR_NULL)   // sync only valid namespaces
+   continue;
   auto found = find(ns.KEY);
   if(nsopt == NsOpType::NsUpdate and found != end()) continue;  // update only new records
   if(ns.VALUE.is_remote() and nsopt != NsOpType::NsMoveAll) {   // refer remote (NsMove/NsUpdate)
@@ -1042,7 +1046,7 @@ void CommonResource::display_opts(std::ostream & out) {
 
   string dlm = " (internally imposed: ";
   for(auto &i: opt.imp())
-   { out << dlm << (i > 0? "-": "USE_HPFX") << static_cast<char>(i > 0? i: i + 1); dlm = ' '; }
+   { out << dlm << (i > 0? "-": "USE_HPFX") << static_cast<char>(i > 0? i: i + 1); dlm = " "; }
   if(not opt.imp().empty()) out << ")";
   out << endl;
  }
