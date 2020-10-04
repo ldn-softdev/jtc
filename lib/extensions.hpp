@@ -41,8 +41,10 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "macrolib.hpp"
 #include <type_traits>
+#include <mutex>
+#include <tuple>
+#include "macrolib.hpp"
 
 
 
@@ -300,8 +302,6 @@ bool operator==(const std::string &__a__, std::vector<const char *> __b__) {
 
 
 
-
-
 template <typename T>
 class __Guard_X__ {
  // Guard class itself
@@ -393,11 +393,73 @@ class __Guard_X__ {
  * }
  *
  */
+
 #define ULOCK(MTX) \
     std::unique_lock<std::mutex> STITCH_2TKNS(__ulck__, __LINE__){MTX};
 
 #define TLOCK(MTX) \
     for(std::unique_lock<std::mutex> __tlck__(MTX); __tlck__.owns_lock(); __tlck__.unlock())
+
+
+
+
+
+/*
+ * Sometimes, the code refactoring is required from within the loop, then it's required to 
+ * return flow control code like continue / break / return and none 
+ * - that simple enum defines those in Fc__:
+ * Fc__::Continue / Fc__::Continue / Fc__::Return / Fc__::None
+ *
+ * CBR polymorphic macro handles the return Fc__ codes and the return values as this:
+ *
+ * Synopsis:
+ *  CBR(user_func(..))              // user_func() returns only Fc__, thus
+ *                                  // Fc__::Return returns void
+ * or,
+ *  CBR(user_func(..))              // user_func() returns tuple<Fc__, ret_val_type>
+ *                                  // Fc__::Return returns second value of tuple
+ * or,
+ *  CBR(user_func(..), ret_val)     // user_func() returns only Fc__, and
+ *                                  // Fc__::Return returns rv
+ *
+ */
+
+
+#define __FC__ \
+            None, \
+            Continue, \
+            Break, \
+            Return
+ENUM(Fc__, __FC__)
+#undef __FC__
+
+
+Fc__ __Fctl_first__(Fc__ fc) { return fc; }
+template<typename T>
+T __Fctl_first__(const  std::tuple<Fc__, T> & tpl) { return std::get<0>(tpl); }
+
+template<typename T>
+T __Fctl_second__(const std::tuple<Fc__, T> & tpl) { return std::get<1>(tpl); }
+
+#define __CBR_1_ARG__(RC) \
+        auto const & __OPSRC__ = (RC); \
+        if(__Fctl_first__(__OPSRC__) == Fc__::Continue) continue; \
+        if(__Fctl_first__(__OPSRC__) == Fc__::Break) break; \
+        if(__Fctl_first__(__OPSRC__) == Fc__::Return) return __Fctl_second__(__OPSRC__);
+#define __CBR_2_ARG__(RC, RV) \
+        auto const & __OPSRC__ = (RC); \
+        if(__OPSRC__ == Fc__::Continue) continue; \
+        if(__OPSRC__ == Fc__::Break) break; \
+        if(__OPSRC__ == Fc__::Return) return RV;
+
+#define __CBR_3RD_ARG__(ARG1, ARG2, ARG3, ...) ARG3
+#define __CBR_CHOOSER__(ARGS...) \
+    __CBR_3RD_ARG__(ARGS, __CBR_2_ARG__, __CBR_1_ARG__)
+#define CBR(ARGS...) \
+    __CBR_CHOOSER__(ARGS)(ARGS)
+#define CNT_BRK_RTN(ARGS...) /* longer form of CBR macro */\
+    __CBR_CHOOSER__(ARGS)(ARGS)
+
 
 
 

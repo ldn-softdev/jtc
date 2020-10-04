@@ -272,10 +272,13 @@ void Signal::demangle_(const char *bt, size_t n) {
 
  typedef std::pair<std::string, size_t> btparts_t;              // <symbolic part of bt, width>
  std::vector<btparts_t> parts;
- const char *prtptr = bt;
+ const char *prtptr = bt;                                       // parts pointer
  auto print_bt = [n, bt](void) {
-                  std::cerr << n << (isdigit(*bt)? strchr(bt, ' '): " ")
-                            << (isdigit(*bt)? "": bt) << std::endl; return; };
+                  std::cerr << n << (n % 10 == 9? " ": "")      // compensate for discrepancy
+                            << (isdigit(*bt)? strchr(bt, ' '): " ")
+                            << (isdigit(*bt)? "": bt) << std::endl;
+                  return;
+                 };
  try {                                                          // reserve may throw ...
   parts.reserve(EOBTP);
   for(size_t i = 0; i < offset; ++i) {                          // extract all symbolic parts
@@ -286,13 +289,13 @@ void Signal::demangle_(const char *bt, size_t n) {
    while(*next_prt == ' ') ++next_prt;                          // find a a next part
    if(next_prt == nullptr) break;                               // unexpected
 
-   parts.emplace_back(part, next_prt - prtptr);
+   parts.emplace_back(part, next_prt - prtptr + (i == 0 and n % 10 == 9? 1: 0));
    prtptr = next_prt;
   }
  }
  catch(...) {}
 
- if(parts.size() < offset) return print_bt();
+ if(parts.size() < offset) return print_bt();                   // incomplete parts parsing
  parts.emplace_back(prtptr + 2, 0);                             // add offset, width is unimportant
 
  int status;
