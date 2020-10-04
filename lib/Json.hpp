@@ -473,6 +473,7 @@
 #include <regex>
 #include <cstddef>
 #include <bitset>
+#include <tuple>
 #include <unistd.h>             // for STDOUT_FILENO - for term width
 #include "extensions.hpp"
 #include "dbg.hpp"
@@ -498,10 +499,11 @@
 
 #define ARRAY_LMT 4                                             // #bytes per array's index
 #define WLK_SUCCESS LONG_MIN                                    // walk() uses it as success
-#define SIZE_T(N) static_cast<size_t>(N)
-#define SGNS_T(N) static_cast<signed_size_t>(N)
+#define WLK_MAXLOOPCNT 100000                                   // max default for <>f .. ><f loops
 #define KEY first                                               // semantic for map's pair
 #define VALUE second                                            // instead of first/second
+#define SIZE_T(N) static_cast<size_t>(N)
+#define SGNS_T(N) static_cast<signed_size_t>(N)
 #define GLAMBDA(FUNC) [this](auto&&... arg) { return FUNC(std::forward<decltype(arg)>(arg)...); }
 
 #define PRINT_PRT "\n"                                          // pretty print separator
@@ -696,7 +698,10 @@ class Jnode {
                 walk_root_has_no_label, \
                 walk_non_existant_namespace, \
                 walk_non_numeric_namespace, \
-                Walk_callback_not_engaged, \
+                walk_illegal_ws_type_while_loopping, \
+                walk_start_of_loop_not_found, \
+                walk_maximum_loopcount_exceeded, \
+                walk_callback_not_engaged, \
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
@@ -1932,8 +1937,8 @@ class Json {
  private:
     typedef std::vector<std::string> vec_str;
     struct WalkStep;                                            // required for some methods below
-    bool                quotedsolidus_{false};                  // preserve solidus quoted'\/'?
 
+    bool                quotedsolidus_{false};                  // preserve solidus quoted'\/'?
     auto                end_(void) { return root().children_().end(); } // frequently used shortcut
     auto                end_(void) const { return root().children_().end(); }
     void                parse_(Jnode & node, Streamstr::const_iterator &jsp);
@@ -1963,6 +1968,7 @@ class Json {
     std::string         parse_namespaced_qnt_(std::string::const_iterator &) const;
     signed_size_t       parse_index_(std::string::const_iterator &,
                                      ParseThrow, SignLogic = SignLogic::May_be_any) const;
+    void                parse_fix_subscript_type_(Json::iterator & it) const;
     Json &              erase_ns_(const std::string &s) {       // unlike clear_ns, this one
                          ns()[s].type(Jnode::Jtype::Neither);   // never erases NS, rather
                          ns()[s].ptr(nullptr);
@@ -2061,7 +2067,8 @@ class Json {
         // WalkStep contains data describing one walk lexeme (subscript or search or directive)
         // walk path is made of walk steps instructing how JSON tree to be traversed
         friend SWAP(WalkStep, jsearch, type,
-                              offset, head, tail, step, offsets, heads, tails, steps,
+                              offset_val, head_val, tail_val, step_val,
+                              offset_str, head_str, tail_str, step_str,
                               lexeme, stripped, rexp, user_json, locked, wsuid, fs_path)
 
         #define WALKSTEPTYPE    /* walk types for subscripts only - irrelevant in searches */\
@@ -2070,10 +2077,16 @@ class Json {
             Root_select,        /* [^5], quantifier: NA */ \
             Range_walk,         /* [+0], [1:], [4:10], [-5:-1], quantifiers: +0, 3:, 4:10 */ \
             Directive,          /* this is used for directives only */ \
-            Directive_inactive, /* this is used to deactivate directives */ \
+            Inactive,           /* this is used to deactivate directives */ \
             Cache_complete      /* this is used in **CacheKey** only */
                                 // Note: there's no negative range for iterable quantifier: no way
                                 // to know upfront the number of hits a recursive search'd produce
+            // Some directives [ZzWvkI] can be either active (WsType == Directive), or inactive
+            // (WsType == Inactive). Deactivation occurs when directive is walked and processed
+            // in process_directive_() and re-activation occurs in next_iterable_ws_().
+            // This is needed in order not to process directives unnecessary when walk-path is
+            // reworked each successive time: only those which are past the incrementing walk-step
+            // are getting re-activated
         ENUMSTR(WsType, WALKSTEPTYPE)
 
                             WalkStep(void):                         // DC
@@ -2199,7 +2212,7 @@ class Json {
                              { return is_lexeme_dynamic() or jsearch == Jsearch::json_match; }
 
         bool                is_qnt_namespace_based(void) const
-                             { return not heads.empty() or not tails.empty(); }
+                             { return not head_str.empty() or not tail_str.empty(); }
         bool                is_lbl_based(void) const            // operates on label types l/L/t
                              { return jsearch AMONG(Jsearch::label_match, Jsearch::Label_RE_search,
                                                     Jsearch::tag_from_ns); }
@@ -2256,16 +2269,21 @@ class Json {
                                                   Jsearch::Go_descending
                                                   // Increment_num: don't include here
                                                  ); }
-        signed_size_t       load_offset(const Json &j) const {
-                             if(offsets.empty() or type == WsType::Range_walk) return offset;
-                             return fetch_from_ns(offsets, j);
+        signed_size_t       head(void) const { return head_val; }
+        signed_size_t       head(const Json &j) const
+                             { return head_str.empty()? head_val: fetch_from_ns(head_str, j); }
+        signed_size_t       tail(void) const { return tail_val; }
+        signed_size_t       tail(const Json &j) const
+                             { return tail_str.empty()? tail_val: fetch_from_ns(tail_str, j); }
+        signed_size_t       step(void) const { return step_val; }
+        signed_size_t       step(const Json &j) const
+                             { return step_str.empty()? step_val: fetch_from_ns(step_str,j); }
+        signed_size_t       offset(void) const { return offset_val; }
+        signed_size_t       offset(const Json &j) const {
+                             if(offset_str.empty() or type == WsType::Range_walk)
+                              return offset_val;
+                             return fetch_from_ns(offset_str, j);
                             }
-        signed_size_t       load_head(const Json &j) const
-                             { return heads.empty()? head: fetch_from_ns(heads, j); }
-        signed_size_t       load_tail(const Json &j) const
-                             { return tails.empty()? tail: fetch_from_ns(tails, j); }
-        signed_size_t       load_step(const Json &j) const
-                             { return steps.empty()? step: fetch_from_ns(steps,j); }
         signed_size_t       fetch_from_ns(const std::string &val, const Json &j) const {
                              const auto found = j.ns().find(val);
                              if(found == j.ns().end() or found->VALUE.ref().is_neither())
@@ -2282,14 +2300,14 @@ class Json {
         // Walkstep data:
         Jsearch             jsearch;                            // Jsearch type (r/R/d/D/n/l/L etc)
         WsType              type{WsType::Static_select};        // lexeme's type (static/range/etc)
-        signed_size_t       offset{0};                          // current offset
-        signed_size_t       head{0};                            // range walk type
-        signed_size_t       tail{LONG_MAX};                     // by default - till the end
-        signed_size_t       step{1};                            // increment step
-        std::string         offsets;                            // interpolatable offset
-        std::string         heads;                              // interpolatable head
-        std::string         tails;                              // interpolatable tail
-        std::string         steps;                              // interpolatable step
+        signed_size_t       offset_val{0};                      // current offset
+        signed_size_t       head_val{0};                        // range walk type
+        signed_size_t       tail_val{LONG_MAX};                 // by default - till the end
+        signed_size_t       step_val{1};                        // increment step
+        std::string         offset_str;                         // interpolatable offset
+        std::string         head_str;                           // interpolatable head
+        std::string         tail_str;                           // interpolatable tail
+        std::string         step_str;                           // interpolatable step
         std::string         lexeme;                             // lexeme w/o suffix and quantifier
         vec_str             stripped;                           // stripped lexeme, + optional lbl
                             // stripped[0] (always present): holds a stripped lexeme,
@@ -2327,7 +2345,7 @@ class Json {
         //  - unlocking (of <>f) then must occur when incrementing an iterator prior <>f - (a)
         // ----
         //  o FS is engaged when failure of walk-steps within the FS domain occurs:
-        //    - `failed_stop_(wsi)` - validates FS engagement: starting from WS index (wsi):
+        //    - `find_fail_stop_(wsi)` - validates FS engagement: starting from WS index (wsi):
         //    0.a. if failed WS is a range (e.g. [:])
         //          AND failing JSON is iterable (array/object)
         //          AND ws offset (counter) is >= #iterable's children,
@@ -2394,22 +2412,23 @@ class Json {
         std::string         range() const {
                              if(type != WsType::Range_walk) return "N/A";
                              std::stringstream ss;
-                             ss << "[" << (heads.empty()?
-                                           head == 0? "": std::to_string(head):
-                                           "{" + heads + "}") << ':'
-                                << (tails.empty()?
-                                    tail == LONG_MAX? "": std::to_string(tail):
-                                    "{" + tails + "}")
-                                << (steps.empty()?
-                                    step == 1? "": ":" + std::to_string(step):
-                                    ":{" + steps + "}") << "]";
+                             ss << "[" << (head_str.empty()?
+                                           head_val == 0? "": std::to_string(head_val):
+                                           "{" + head_str + "}") << ':'
+                                << (tail_str.empty()?
+                                    tail_val == LONG_MAX? "": std::to_string(tail_val):
+                                    "{" + tail_str + "}")
+                                << (step_str.empty()?
+                                    step_val == 1? "": ":" + std::to_string(step_val):
+                                    ":{" + step_str + "}") << "]";
                              return ss.str();
                             }
         std::string         ofst() const {                      // only for COUTABLE
-                             if(type == WsType::Range_walk and offset != LONG_MIN)
-                              return std::to_string(offset);
+                             if(type == WsType::Range_walk and offset_val != LONG_MIN)
+                              return std::to_string(offset_val);
                              std::stringstream ss;
-                             ss << (offsets.empty()? std::to_string(offset): "{" + offsets + "}");
+                             ss << (offset_str.empty()? std::to_string(offset_val):
+                                     "{" + offset_str + "}");
                              return ss.str();
                             }
         COUTABLE(WalkStep, search_type(), lexeme, ws_type(), ofst(), range(), label(), json())
@@ -2469,9 +2488,6 @@ class Json {
                             }
 
     };
-
-    // parse_subscript_type_() is dependent on WalkStep definition, hence moved down here
-    void                parse_subscript_type_(WalkStep & state) const;
 
     static map_jne          dummy_ns_;                          // default arg in interpolate()
 
@@ -2651,20 +2667,20 @@ class Json {
                              if(position >= ws_.size())
                               throw json().EXP(Jnode::ThrowReason::walk_bad_position);
                              return ws_[position].type == WalkStep::WsType::Range_walk?
-                                    ws_[position].load_offset(json()): -1;
+                                    ws_[position].offset(json()): -1;
                             }
         signed_size_t       instance(size_t position) const {
                              // returns static lexeme's offset in position (-1 otherwise)
                              if(position >= ws_.size())
                               throw json().EXP(Jnode::ThrowReason::walk_bad_position);
                              return ws_[position].type == WalkStep::WsType::Static_select?
-                                    ws_[position].load_offset(json()): -1;
+                                    ws_[position].offset(json()): -1;
                             }
         signed_size_t       offset(size_t position) const {
                              // returns (static/iterable) lexeme's offset (counter) in position
                              if(position >= ws_.size())
                               throw json().EXP(Jnode::ThrowReason::walk_bad_position);
-                             return ws_[position].load_offset(json());
+                             return ws_[position].offset(json());
                             }
         const std::string & lexeme(size_t position) const {
                              // returns reference to the lexeme (non-stripped)
@@ -2700,12 +2716,12 @@ class Json {
 
 
      private:
-        #define SEARCH_TYPE     /* lexeme type: <..> vs >..< */\
+        #define SEARCH_TYPE     /* walk lexeme type: <..> vs >..< */\
                 Recursive, \
                 Non_recursive
         ENUMSTR(SearchType, SEARCH_TYPE)
 
-        #define ORGSEMANTIC     /* straight/reverse  semantic for is_original_ method */\
+        #define ORGSEMANTIC     /* straight/reverse semantic for is_original_ method */\
                 Straight, \
                 Reverse
         ENUM(OriginalSrch, ORGSEMANTIC)
@@ -2721,6 +2737,8 @@ class Json {
         auto &              sn_type_ref_(void) { return sn_.type_; }    // original container type
 
         signed_size_t       walk_(void);
+        typedef std::tuple<Fc__, signed_size_t> pfw_t;
+        pfw_t               process_failed_walks(size_t &i);
         void                walk_step_(size_t wsi, Jnode *);
         void                process_directive_(size_t wsi, Jnode *jn);
         void                step_walk_(size_t wsi);
@@ -2782,18 +2800,21 @@ class Json {
         signed_size_t       next_iterable_ws_(signed_size_t wsi);
 
         // facilitate <>f and <>F lexemes
-        void                lock_fs_domain_(size_t wsi) {       // lock FS domain till end of FI
-                             for(; wsi < walk_path_().size(); ++wsi) { // traversing forward
+        void                lock_fs_domain_(size_t wsi, size_t cnt = SIZE_T(-1)) {
+                             // lock FS domain till end or facing <>F/><F, or cnt walk steps
+                             walk_path_()[wsi++].locked = true; // first wsi is always <>f/F
+                             for(; wsi < walk_path_().size() and cnt > 0 ; ++wsi, --cnt) {
                               auto & ws = walk_path_()[wsi];
                               ws.locked = true;
                               if(ws.jsearch == Jsearch::Forward_itr) break;
+                              if(ws.jsearch == Jsearch::fail_safe) break;
                              }
                             }
-        void                unlock_fs_domain_(signed_size_t wsi) {  // unlock all FS domains
+        void                unlock_fs_domain_(signed_size_t wsi = -1) { // unlock all FS domains
                              for(++wsi; wsi < SGNS_T(walk_path_().size()); ++wsi)
                               walk_path_()[wsi].locked = false;
                             }
-        signed_size_t       failed_stop_(signed_size_t wsi);
+        signed_size_t       find_fail_stop_(signed_size_t wsi);
     };
     //
     // end of walk Iterator's definition
@@ -3458,8 +3479,7 @@ void Json::compile_walk(const std::string & wstr, iterator & it) const {
  }
 
  parse_lexemes_(wstr, it);
- for(auto & walk_step: it.walk_path_())
-  parse_subscript_type_(walk_step);                             // fix textual offset
+ parse_fix_subscript_type_(it);                                 // fix textual offsets
 
  DBG(0) DOUT() << "dump of completed lexemes:" << std::endl;
  for(size_t i = 0; i < it.walk_path_().size(); ++i)
@@ -3568,7 +3588,7 @@ void Json::parse_lexemes_(const std::string & wstr, iterator & it) const {
    case CHR_SPCE: ++si; continue;                               // space in between lexemes allowed
    case LXM_SUB_OPN:                                            // opening subscript: '['
          if(not req_label.empty())                              // only search [..]:<..> allowed
-          throw EXP(Jnode::ThrowReason::walk_expect_search_label);  // after [label]:
+          throw EXP(Jnode::ThrowReason::walk_expect_search_label);  // after [lbl]: ([..]:[ - ilgl)
          ws.emplace_back(extract_lexeme_(si, LXM_SUB_CLS), Jsearch::numeric_offset);
          break;
    case LXM_SCH_OPN:                                            // opening search fwd '<'
@@ -3636,6 +3656,7 @@ void Json::parse_suffix_(std::string::const_iterator &si,
   ++si;
   return;
  }
+
  // anything besides ':' following subscript [..] is not allowed
  if(back_ws.is_subscript())                                     // i.e. it's '['
   throw EXP(Jnode::ThrowReason::walk_unexpexted_suffix);        // suffix may follow searches only
@@ -3648,6 +3669,9 @@ void Json::parse_suffix_(std::string::const_iterator &si,
     sfx == Jsearch::json_match or sfx == Jsearch::Increment_num)// not capturing wakled Json, but
   parse_user_json_(back_ws);                                    // parsing <ns:user json>
  DBG(1) DOUT() << "search type sfx: " << ENUMS(Jsearch, sfx) << std::endl;
+
+ if(sfx == Jsearch::fail_safe and back_ws.is_non_recursive())   // ><f limits number of loop count
+  back_ws.tail_val = WLK_MAXLOOPCNT;                            // to default value
 
  if(back_ws.stripped.front().empty()) {                         // lexeme is empty, e.g.: <>r
   if(back_ws.is_lexeme_required())
@@ -3789,51 +3813,51 @@ void Json::parse_range_(std::string::const_iterator &si, WalkStep &ws, ParseThro
          throw EXP(Jnode::ThrowReason::walk_bad_number_or_suffix); // >^ not allowed in quantifiers
         ws.type = WalkStep::WsType::Root_select;                // [^ -> a subscript (text or num)
         if(*(si + 1) == CHR_NULL) return;                       // i.e. [^] - indicate text subscr.
-        ws.offset = parse_index_(++si, ParseThrow::Dont_throw, SignLogic::Must_be_signless);
+        ws.offset_val = parse_index_(++si, ParseThrow::Dont_throw, SignLogic::Must_be_signless);
         break;
   case PFX_ITR:                                                 // '+'
         ws.type = WalkStep::WsType::Range_walk;                 // assume for both [+ and >+
-        ws.head = ws.offset = parse_index_(si, throwing, SignLogic::Must_be_non_negative);
+        ws.head_val = ws.offset_val = parse_index_(si, throwing, SignLogic::Must_be_non_negative);
         if(sic == si) return;                                   // indicate text subscript: [+-...
         break;                                                  // process further possible range
   case PFX_WFL:                                                 // '-'
         if(subscript)
          ws.type = WalkStep::WsType::Parent_select;             // [- -> parent select
-        ws.head = ws.offset = parse_index_(si, throwing, SignLogic::Must_be_non_positive);
+        ws.head_val = ws.offset_val = parse_index_(si, throwing, SignLogic::Must_be_non_positive);
         if(sic == si) return;                                   // indicate text subscript: [-+..
         break;
   case QNT_OPN:                                                 // '{'
         if(subscript) return;                                   // [{ - text subscript
-        ws.heads = ws.offsets = parse_namespaced_qnt_(si);      // preserve namespace in ws
-        ws.offset = LONG_MIN;                                   // indicate NS resolution required
+        ws.head_str = ws.offset_str = parse_namespaced_qnt_(si);// preserve namespace in ws
+        ws.offset_val = LONG_MIN;                               // indicate NS resolution required
         break;
  case RNG_SPR:                                                  // ':'
-        if(ws.is_qnt_relative() and ws.heads.empty())           // i.e. if >..<l|t:, but not {idx}:
-         ws.head = ws.offset = LONG_MIN + 1;                    // indicate entire range select [:
+        if(ws.is_qnt_relative() and ws.head_str.empty())        // i.e. if >..<l|t:, but not {idx}:
+         ws.head_val = ws.offset_val = LONG_MIN + 1;            // indicate entire range select [:
         break;
   default:                                                      // must be numeric
-        ws.head = ws.offset = parse_index_(si, throwing);
+        ws.head_val = ws.offset_val = parse_index_(si, throwing);
         if(sic == si) return;
  }
  // all head quantifiers have been classified
  if(*si == RNG_SPR) {                                           // only ':' can pass here
   ws.type = WalkStep::WsType::Range_walk;
   if(*++si == QNT_OPN)                                          // ":{
-   { if(quantifier) ws.tails = parse_namespaced_qnt_(si); }     // preserve namespace in ws
+   { if(quantifier) ws.tail_str = parse_namespaced_qnt_(si); }  // preserve namespace in ws
   else                                                          // ":... - must be a number
    if(not end_of_qnt(si) and not (*si == RNG_SPR))
-    ws.tail = parse_index_(si, throwing);
+    ws.tail_val = parse_index_(si, throwing);
   if(*si == RNG_SPR) {                                          // ':' must be an increment only
    if(*++si == QNT_OPN)                                         // ":{
-    { if(quantifier) ws.steps = parse_namespaced_qnt_(si); }    // preserve namespace in ws
+    { if(quantifier) ws.step_str = parse_namespaced_qnt_(si); } // preserve namespace in ws
    else                                                         // ":... - must be a number
     if(not end_of_qnt(si))
-     ws.step = parse_index_(si, throwing, SignLogic::Must_be_positive);
+     ws.step_val = parse_index_(si, throwing, SignLogic::Must_be_positive);
   }
  }
 
  if(ws.type == WalkStep::WsType::Root_select or (quantifier and not ws.is_qnt_relative()))
-  if(ws.head < 0 or ws.tail < 0)                                // then cannot go negative
+  if(ws.head_val < 0 or ws.tail_val < 0)                        // then cannot go negative
     throw EXP(Jnode::ThrowReason::walk_negative_quantifier);
 }
 
@@ -3862,10 +3886,10 @@ Json::signed_size_t Json::parse_index_(std::string::const_iterator &si,
  #include "dbgflow.hpp"
  // validate if string iterator points to a valid integer.
  // parse_index is called from parse_range, which in turn could be called either from
- // parse_quantifier (<>...), or parse_subscript_type_ ([..]) those 2 parsings assume
+ // parse_quantifier (<>...), or parse_fix_subscript_type_ ([..]) those 2 parsings assume
  // different exception behavior:
  //  o parse_quantifier will throw upon failure
- //  o parse_subscript_type_ does not throw, but indicates successful completion by
+ //  o parse_fix_subscript_type_ does not throw, but indicates successful completion by
  //    updating string iterator 'si' past parsed value (i.e. it should point to '\0')
  // parse_index_ does not update 'si' in case of failure to indicate the failure
  char *endptr;
@@ -3908,6 +3932,33 @@ Json::signed_size_t Json::parse_index_(std::string::const_iterator &si,
 
 
 
+void Json::parse_fix_subscript_type_(Json::iterator & it) const {
+ #include "dbgflow.hpp"
+ // separates numerical subscripts (e.g. [1]) from textual's (e.g. [ 1])
+ // numerical offsets are: [2], [-1], [+3], [3:], [3:1], [-5:-1], [+3:5], [:], [:-1]
+ // parse_fix_subscript_type_ is run after all lexemes are parsed
+ for(auto & ws: it.walk_path_()) {
+  DBG(2) DOUT() << "partial: " << ws << std::endl;
+
+  if(ws.is_search()) {                                          // it's a search lexeme's walkstep
+   if(ws.stripped.size() == 2)                                  // there's an attached label scope
+    if(ws.is_lbl_based())                                       // label (l/L/t) search type cannot
+     throw EXP(Jnode::ThrowReason::walk_search_label_with_attached_label);  // attached label offset
+   continue;                                                    // don't process search lexeme
+  }
+  // if not search (and/or directives too), it must be a subscript: [..]
+  auto si = ws.stripped.front().cbegin();
+  parse_range_(si, ws, ParseThrow::Dont_throw);
+  if(ws.stripped.front().empty() or *si != CHR_NULL) {
+   ws.jsearch = Jsearch::text_offset;                            // parsing failed - it's a text
+   ws.type = WalkStep::WsType::Static_select;                    // text can only be Static_select
+  }
+  DBG(2) DOUT() << "offset / range: " << ws.ofst() << " / " << ws.range() << std::endl;
+ }
+}
+
+
+
 void Json::build_path_(Jnode &jpath, const Json::iterator &jit) {
  // build json path (Json ARRAY) for given Json::iterator - used in interpolate() and in <..>W
  Jnode *node = &jit.json().root();
@@ -3922,31 +3973,6 @@ void Json::build_path_(Jnode &jpath, const Json::iterator &jit) {
    jpath.push_back(itr.lbl);
    node = &(*node)[itr.lbl];
   }
-}
-
-
-
-void Json::parse_subscript_type_(WalkStep & ws) const {
- #include "dbgflow.hpp"
- // separates numerical subscripts (e.g. [1]) from textual's (e.g. [ 1])
- // numerical offsets are: [2], [-1], [+3], [3:], [3:1], [-5:-1], [+3:5], [:], [:-1]
- // parse_subscript_type_ is run after all lexemes are parsed
- DBG(2) DOUT() << "partial: " << ws << std::endl;
-
- if(ws.is_search()) {                                           // it's a search lexeme's walkstep
-  if(ws.stripped.size() == 2)                                   // there's an attached label scope
-   if(ws.is_lbl_based())                                        // label (l/L/t) search type cannot
-    throw EXP(Jnode::ThrowReason::walk_search_label_with_attached_label);  // attached label offset
-  return;                                                       // don't process search lexeme
- }
- // if not search (and/or directives too), it must be a subscript: [..]
- auto si = ws.stripped.front().cbegin();
- parse_range_(si, ws, ParseThrow::Dont_throw);
- if(ws.stripped.front().empty() or *si != CHR_NULL) {
-  ws.jsearch = Jsearch::text_offset;                            // parsing failed - it's a text
-  ws.type = WalkStep::WsType::Static_select;                    // text can only be Static_select
- }
- DBG(2) DOUT() << "offset / range: " << ws.ofst() << " / " << ws.range() << std::endl;
 }
 
 
@@ -3999,20 +4025,22 @@ bool Json::iterator::incremented(void) {
 
  auto is_Fn_replicator = [&](WalkStep &ws)
        { return not ws.is_locked() and ws.jsearch == Jsearch::Forward_itr and
-         ws.is_non_recursive() and  ws.offset > 0; };
+                ws.is_non_recursive() and  ws.offset() > 0; };
+
  if(none_of(ws_.begin(), ws_.end(), is_Fn_replicator)) return false;
  // now we don't know if path is walkable or not, but if there are replicators, will try re-walking
  for(auto &ws: ws_)                                             // decr. first facing replicator
   if(is_Fn_replicator(ws))
-   { --ws.offset; break; }
+   { --ws.offset_val; break; }
 
  for(auto &ws: ws_) {                                           // reset entire walk-path but NS
   if(ws.type == WalkStep::WsType::Range_walk)                   // reload [_:_] or <>_: lexeme
-   ws.offset = ws.type == WalkStep::WsType::Range_walk and not ws.heads.empty()? LONG_MIN: ws.head;
-  if(ws.type == Json::WalkStep::WsType::Directive_inactive)     // activate inactivated directives
+   ws.offset_val = ws.type == WalkStep::WsType::Range_walk and not ws.head_str.empty()?
+                    LONG_MIN: ws.head();
+  if(ws.type == Json::WalkStep::WsType::Inactive)               // activate inactivated directives
      ws.type = Json::WalkStep::WsType::Directive;
  }
- unlock_fs_domain_(-1);                                         // unlock possibly locked domains
+ unlock_fs_domain_();                                           // unlock all locked domains
  // json().clear_ns();                                          // let NS survive over reps.
 
  DBG(json(), 2) DOUT(json()) << "replicating entire walk" << std::endl;
@@ -4033,10 +4061,18 @@ bool Json::iterator::incremented_(void) {
  for(bool fs_seen = false; wsi < SGNS_T(walk_path_().size()); ++wsi) {
   const auto & ws = walk_path_()[ wsi ];
   if(ws.is_locked()) continue;                                  // ignore locked out domains
-  if(ws.jsearch == Jsearch::fail_safe) { fs_seen = true; continue; }
-  if(fs_seen and ws.jsearch == Jsearch::Forward_itr and ws.offset == 0)
+  if(ws.jsearch == Jsearch::fail_safe and ws.is_recursive())    // if ws is <..>f
+   { fs_seen = true; continue; }
+  if(ws.jsearch == Jsearch::Forward_itr and ws.is_non_recursive())
+   break;                                                       // ><F[n] seen
+  if(not fs_seen) continue;
+  if(ws.jsearch == Jsearch::fail_safe and ws.is_non_recursive()) // <>f .. ><f facing end of loop
+   { fs_seen = false; continue; }
+  if(ws.jsearch == Jsearch::Forward_itr and ws.offset() == 0)   // <>f seen & it's <>F/><F
    break;                                                       // end of unlocked FS domain
  }
+ // here wsi points either to the end of walk path (beyond the last step),
+ // or to the Forward_itr (<>F/><F) of the first unlocked domain
 
  wsi = next_iterable_ws_(wsi);
  if(wsi < 0) {
@@ -4090,7 +4126,8 @@ Json::signed_size_t Json::iterator::walk_(void) {
 
  Jnode * jnp = & json().root();
  for(size_t i = 0; i < ws_.size(); lwsi_ = i++) {
-  if(ws_[i].is_locked()) continue;                              // locked domain - do not process
+  auto & ws = ws_[i];
+  if(ws.is_locked()) continue;                                  // locked domain - do not process
   walk_step_(i, jnp);                                           // walkStep builds up a path-vector
   DBG(json(), 2) show_built_pv_(DOUT(json()));
   if(pv_.empty())
@@ -4099,27 +4136,67 @@ Json::signed_size_t Json::iterator::walk_(void) {
    { jnp = &pv_.back().jit->VALUE; continue; }                  // continue walking then
 
   // walk_step FAILED here (pv_.back().jit == json().end_())
-  if(ws_[i].jsearch == Jsearch::Forward_itr) {                  // Forward_itr faced while walking
-   DBG(json(), 3)
-    DOUT(json()) << ENUMS(Json::Jsearch, Forward_itr) << " at [" << i << "], "
-                 << (ws_[i].is_recursive()? "skipping (qnt: ":"stopping (qnt: ")
-                 << ws_[i].load_offset(json()) << ")" << std::endl;
-   if(ws_[i].is_non_recursive())                                // ><F, - "stop" type
-    { pv_.pop_back(); lwsi_ = i - 1; break; }
-   if(ws_[i].load_offset(json()) != 0)                          // facilitate <>Fn
-    { pv_.pop_back(); i += ws_[i].load_offset(json()) - 1; continue; }
-   return -i;                                                   // facilitate <>F0 (continue)
-  }
-
-  signed_size_t fs_wsi = failed_stop_(i);                       // check if FS gets locked there
-  if(fs_wsi < 0) return i;                                      // no fail_safe, return failing wsi
-  // else - continue, the domain is locked by now, pv is restored
-  jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;
+  // process failed walks
+  CNT_BRK_RTN(process_failed_walks(i))
+  jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;    // restore jnp
  }
                                                                 // successfully walked ws
  DBG(json(), 2) { DOUT(json()) << "finished walking with "; show_built_pv_(DOUT(json())); }
  sn_type_ref_() = pv_.size()>1? pv_[pv_.size()-2].jit->VALUE.type(): json().type();
  return WLK_SUCCESS;
+}
+
+
+
+Json::iterator::pfw_t Json::iterator::process_failed_walks(size_t &i) {
+ #include "dbgflow.hpp"
+ // this is a refactored walk_() call - processing failed walk part
+ auto & ws = ws_[i];
+ if(ws.jsearch == Jsearch::Forward_itr) {                       // Forward_itr faced while walking
+  DBG(json(), 3)                                                // Forward_itr inserted end_()
+   DOUT(json()) << ENUMS(Json::Jsearch, Forward_itr) << " at [" << i << "], "
+                << (ws.is_recursive()? "skipping (qnt: ":"stopping (qnt: ")
+                << ws.offset(json()) << ")" << std::endl;
+  if(ws.is_non_recursive())                                     // ><F, - "stop" type
+   { pv_.pop_back(); lwsi_ = i - 1; return pfw_t{Fc__::Break, 0}; }
+  if(ws.offset(json()) != 0)                                    // facilitate <>Fn
+   { pv_.pop_back(); i += ws.offset(json()) - 1; return pfw_t{Fc__::Continue, 0}; }
+  return pfw_t{Fc__::Return, -SGNS_T(i)};                       // facilitate <>F0 (continue)
+ }
+
+ if(ws.jsearch == Jsearch::fail_safe) {                         // >..<f inserted end_() - loop
+  pv_.pop_back();                                               // remove trailing end_()
+  // now go backward till start of loop (<>f) & activate all inactive Directives
+  for(; SGNS_T(i) >= 0; --i) {
+   auto & ws = ws_[i];
+   if(ws.jsearch == Jsearch::fail_safe and ws.is_recursive())   // faced <>f: start of loop
+    return pfw_t{Fc__::Continue, --i};
+   if(ws.type == WalkStep::WsType::Inactive)                    // activate deactivated directives
+    ws.type = WalkStep::WsType::Directive;
+   if(ws.type == WalkStep::WsType::Range_walk or
+      ws.jsearch == Jsearch::Forward_itr)                       // <>F/><F:
+    throw json().EXP(Jnode::ThrowReason::walk_illegal_ws_type_while_loopping);
+  }
+  throw json().EXP(Jnode::ThrowReason::walk_start_of_loop_not_found);
+ }
+ // neither F-directives nor ><f inserted end_() - must be walk path failure: find fail stop
+ auto fs_wsi = find_fail_stop_(i);
+ if(fs_wsi < 0) return pfw_t{Fc__::Return, i};                  // no fail_safe found (ie, no <>f)
+ // preceding <>f is found here, now check if it's part of a loop (<>f .. ><f)
+ size_t j = i + 1;
+ for(; j < ws_.size(); ++j) {                                   // check the rest of walk path
+  auto & ws = ws_[j];
+  if(ws.jsearch != Jsearch::fail_safe) continue;
+  if(ws.is_recursive())                                         // <>f
+   return pfw_t{Fc__::None, i = j - 1};                         // let <>f execute
+  if(ws.offset() == 0)                                          // ><f, execute next ws after <>f
+   return pfw_t{Fc__::None, i = j};                             // - no path restoring here
+  ws.offset_val = 0;                                            // ><fn, n>0,
+  pv_ = ws_[j].fs_path;                                         // restore the path vector
+  unlock_fs_domain_(fs_wsi);                                    // was locked by find_fail_stop_
+  return pfw_t{Fc__::None, i = j};                              // execute next ws after <>f
+ }
+ return pfw_t{Fc__::None, 0};                                   // no f-directive were found
 }
 
 
@@ -4162,7 +4239,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
  #include "dbgflow.hpp"
  // factoring walk_step_
  auto & ws = ws_[wsi];
- if(ws.type == Json::WalkStep::WsType::Directive_inactive) {
+ if(ws.type == Json::WalkStep::WsType::Inactive) {
   DBG(json(), 3) DOUT(json()) << "directive is inactive, skipping" << std::endl;
   return;
  }
@@ -4174,7 +4251,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
   case Jsearch::Zip_size:                                       // facilitate <..>Z
         json().ns()[ws.stripped.front()] = ws.is_non_recursive()?
                                             jn->children():     // >..<Z
-                                            ws.load_head(json()) == 1?  // <..>Z[1]
+                                            ws.head(json()) == 1?  // <..>Z[1]
                                              (jn->is_string()? jn->str().size(): -1.): jn->size();
         break;
   case Jsearch::zip_namespace:                                  // facilitate <..>z
@@ -4187,13 +4264,20 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
         break;
   case Jsearch::Step_walk:                                      // facilitate <..>S
         return step_walk_(wsi);
-  case Jsearch::fail_safe:                                      // facilitate <..>f:
+  case Jsearch::fail_safe:                                      // facilitate <..>f / >..<f:
         ws.fs_path = pv_;                                       // preserve path vector if WS fails
         DBG(json(), 3) DOUT(json()) << "recorded fail-safe: [" << wsi << "]" << std::endl;
+        if(ws.is_non_recursive()) {                               // >..<f facilitate "while" loop:
+         if(++ws.offset_val > ws.tail())
+          throw json().EXP(Jnode::ThrowReason::walk_maximum_loopcount_exceeded);
+         end_path_();
+        }                          // indicate was hit at least once
         return maybe_nsave_(ws, jn);                            // cannot be inactive, hence return
-  case Jsearch::Forward_itr:                                    // facilitate <..>F / >..<F
-        if(ws.is_non_recursive() and ws.offset == LONG_MIN)     // offset is in NS, needs init'ing
-         ws.offset = ws.fetch_from_ns(ws.offsets, json());      // LONG_MIN triggers init from NS
+  case Jsearch::Forward_itr:                                    // facilitate F - directive
+        if(ws.is_non_recursive() and ws.offset() == LONG_MIN)   // offset is in NS, needs init'ing
+         ws.offset_val = ws.fetch_from_ns(ws.offset_str, json());// LONG_MIN triggers init from NS
+        if(ws.is_recursive() and ws.head() > 1)                 // <>Fn, n > 1
+         lock_fs_domain_(wsi, ws.head() - 1);
         end_path_();                                            // let process it in walk_()
         return maybe_nsave_(ws, jn);
   case Jsearch::value_of_json:                                  // facilitate <..>v (non-empty)
@@ -4205,9 +4289,9 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
         break;
   case Jsearch::user_handler:                                   // facilitate <..>u#
         if(not json().is_engaged(CbType::Lexeme_callback)
-           or ws.load_offset(json()) >= SGNS_T(json().uws_callbacks().size()))
-         throw json().EXP(Jnode::ThrowReason::Walk_callback_not_engaged);
-        if(not json().uws_callbacks()[ws.load_offset(json())](ws.stripped.front(), *this))
+           or ws.offset(json()) >= SGNS_T(json().uws_callbacks().size()))
+         throw json().EXP(Jnode::ThrowReason::walk_callback_not_engaged);
+        if(not json().uws_callbacks()[ws.offset(json())](ws.stripped.front(), *this))
          end_path_();
         return;                                                 // don't inactivate this directive
   default:
@@ -4215,7 +4299,7 @@ void Json::iterator::process_directive_(size_t wsi, Jnode *jn) {
  }
  // all directives which made to this point have to be deactivated until re-activated
  // in next_iterable_ws_() - i.e. when lexeme with most significant position was incremneted
- ws.type = Json::WalkStep::WsType::Directive_inactive;
+ ws.type = Json::WalkStep::WsType::Inactive;
 }
 
 
@@ -4252,7 +4336,7 @@ void Json::iterator::step_walk_(size_t wsi) {
          lbl = &pe.str();
          break;
    default:
-         return end_path_();;                                   // path can be made of num and str
+         return end_path_();                                    // path can be made of num and str
   }
 
   auto found = jnp->children_().find(*lbl);
@@ -4287,8 +4371,8 @@ void Json::iterator::process_directive_I_(size_t wsi, Jnode *jn) {
    return;                                                      // <..>I processes only numerics
 
  // namespace already exists
- signed_size_t incr = ws.load_head(json());
- signed_size_t mult = ws.load_tail(json());
+ signed_size_t incr = ws.head(json());
+ signed_size_t mult = ws.tail(json());
 
  if(not ws.user_json.is_neither() and incr == 0 and mult == LONG_MAX) { // it's init-only <v:..>I
   if(not already_nsaved) maybe_nsave_(ws, jn);                  // must nsave, (if not already)
@@ -4307,16 +4391,17 @@ void Json::iterator::walk_numeric_offset_(size_t wsi, Jnode *jn) {
  auto &ws = ws_[wsi];
 
  if(ws.type == WalkStep::WsType::Root_select)                   // root offset, e.g.: [^2]
-  return pv_.resize(ws.offset > SGNS_T(pv_.size())?
-         pv_.size(): ws.offset);                                // shrinking path
+  return pv_.resize(ws.offset() > SGNS_T(pv_.size())?
+         pv_.size(): ws.offset());                              // shrinking path
 
  if(ws.type == WalkStep::WsType::Parent_select)                 // negative offset, e.g.: [-2]
-  return pv_.resize(-ws.offset <= SGNS_T(pv_.size())? pv_.size() + ws.offset: 0);
+  return pv_.resize(-ws.offset() <= SGNS_T(pv_.size())? pv_.size() + ws.offset(): 0);
  // [0], [+1], [..:..] etc
  size_t node_size = jn->children_().size();
- size_t offset = normalize_(ws.offset, jn);
- if(ws.type == WalkStep::WsType::Range_walk) ws.offset = offset;// ws iterable, require normalizing
- if(offset >= node_size or offset >= normalize_(ws.tail, jn))   // beyond children's size/tail
+ size_t offset = normalize_(ws.offset(), jn);
+ if(ws.type == WalkStep::WsType::Range_walk)
+  ws.offset_val = offset;                                       // ws iterable, require normalizing
+ if(offset >= node_size or offset >= normalize_(ws.tail(), jn)) // beyond children's size/tail
   return end_path_();
 
  if(ws.type == WalkStep::WsType::Static_select and jn->is_array())  // [N] - subscript array
@@ -4339,7 +4424,7 @@ Jnode::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
  auto found_cache = cache_map.find(skey);
  bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
                     (found_cache->KEY.ws.type != WalkStep::WsType::Cache_complete and // not cached
-                     SIZE_T(ws.offset) >= found_cache->VALUE.front().pv.size());
+                     SIZE_T(ws.offset()) >= found_cache->VALUE.front().pv.size());
 
  if(build_cache) {
   DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
@@ -4347,7 +4432,8 @@ Jnode::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
   if(cache.empty())
    { cache.resize(1); cache.front().pv.emplace_back(jn->children_().begin()); }
 
-  size_t size = ws.type == WalkStep::WsType::Static_select? ws.offset: normalize_(ws.tail, jn) - 1;
+  size_t size = ws.type == WalkStep::WsType::Static_select?
+                 ws.offset(): normalize_(ws.tail(), jn) - 1;
   for(size_t i = cache.front().pv.size(); i <= size; ++i) {
    auto it = cache.front().pv.back().jit;
    cache.front().pv.emplace_back(++it);
@@ -4367,7 +4453,7 @@ Jnode::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
                 << std::endl;
  }
 
- return found_cache->VALUE.front().pv[ws.offset].jit;
+ return found_cache->VALUE.front().pv[ws.offset()].jit;
 }
 
 
@@ -4404,13 +4490,13 @@ void Json::iterator::walk_search_(size_t wsi, Jnode *jn) {
  #include "dbgflow.hpp"
  // check range (if offset beyond the tail) and do cache-less search, then engaged cached search
  auto & ws = ws_[wsi];
- if(ws.offset == LONG_MIN)                                      // offset is in NS, needs reloading
-  ws.offset = ws.fetch_from_ns(ws.offsets, json());             // LONG_MIN triggers init from NS
+ if(ws.offset() == LONG_MIN)                                    // offset is in NS, needs reloading
+  ws.offset_val = ws.fetch_from_ns(ws.offset_str, json());      // LONG_MIN triggers init from NS
 
- size_t offset = ws.load_offset(json());
- size_t tail = ws.load_tail(json());
+ size_t offset = ws.offset(json());
+ size_t tail = ws.tail(json());
  if(ws.is_qnt_relative()) {                                     // offset & tail must be signed
-  if(re_normalize_(ws.load_offset(json()), jn) >= re_normalize_(ws.load_tail(json()), jn))
+  if(re_normalize_(ws.offset(json()), jn) >= re_normalize_(ws.tail(json()), jn))
    return end_path_();
  }
  else
@@ -4487,8 +4573,8 @@ void Json::iterator::research_(Jnode *jn, size_t wsi,
  auto & ws = ws_[wsi];
 
  signed_size_t i = ws.is_cacheless()?                           // i: instance
-                    ws.load_offset(json()):                     // find only current instance
-                    ws.load_tail(json()) -1;                    // find all up to 'tail' instance
+                    ws.offset(json()):                          // find only current instance
+                    ws.tail(json()) -1;                         // find all up to 'tail' instance
  if(ws.jsearch == Jsearch::go_ascending or ws.jsearch == Jsearch::Go_descending) i = LONG_MAX - 1;
  signed_size_t cache_down_from = vpv? i - vpv->size(): i;
 
@@ -4749,14 +4835,14 @@ bool Json::iterator::label_match_(Jnode::map_jn::iterator jit, const Jnode *jn, 
  if(ws.jsearch == Jsearch::Label_RE_search)                     // facilitate >..<L
   return regex_match_(jit->KEY, ws, nsp);
                                                                 // >..<: quant. is relative here
- signed_size_t ws_off = ws.load_offset(json()),
+ signed_size_t ws_off = ws.offset(json()),
                jn_size = SGNS_T(jn->children_().size());
 
  if(ws.jsearch == Jsearch::tag_from_ns and found->VALUE.ref().is_number()) {    // >..<t is numeric
   signed_size_t idx_val = found->VALUE.ref().num();             // resolve >..<t value in NS
   if(idx_val < 0 or idx_val >= jn_size) return false;           // outside of jn's chldren?
   if(ws_off < -idx_val)                                         // ws_off value too low?
-   ws.head = ws.offset = ws_off = -idx_val;                     // fix too low head/offset values
+   ws.head_val = ws.offset_val = ws_off = -idx_val;             // fix too low head/offset values
   return idx - ws_off == idx_val;                               // return position match
  }
                                                                 // jn is OBJ, all ARY processed
@@ -4766,7 +4852,7 @@ bool Json::iterator::label_match_(Jnode::map_jn::iterator jit, const Jnode *jn, 
  if(idx == 0) {                                                 // first run:
   signed_size_t idx_val = std::distance(jn->children_().begin(), found_lbl);
   if(ws_off < -idx_val)                                         // offset too low?
-   ws.head = ws.offset = ws_off = -idx_val;                     // fix too low offset
+   ws.head_val = ws.offset_val = ws_off = -idx_val;             // fix too low offset
  }
  if(idx - ws_off < 0) return false;                             // outside of jn's children
  std::advance(jit, -ws_off);
@@ -4934,8 +5020,8 @@ Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
  // increment walk step and re-walk: returns true / false upon successful / unsuccessful walk
  auto & ws = walk_path_()[ wsi ];
 
- auto step = ws.load_step(json());
- ws.offset += step <= 0? 1: step;                               // next iteration
+ auto step = ws.step(json());
+ ws.offset_val += step <= 0? 1: step;                           // next iteration
  unlock_fs_domain_(wsi);
  DBG(json(), 2) DOUT(json()) << "next incremented: [" << wsi << "] " << ws << std::endl;
 
@@ -4965,8 +5051,8 @@ Json::signed_size_t Json::iterator::increment_(signed_size_t wsi) {
  if(next_wsi < 0) return next_wsi;                              // out of iteratables
 
  // here we need to reload the walkstep's offset with the head's value
- ws.offset = ws.type == WalkStep::WsType::Range_walk and not ws.heads.empty()?
-              LONG_MIN: ws.head;
+ ws.offset_val = ws.type == WalkStep::WsType::Range_walk and not ws.head_str.empty()?
+                  LONG_MIN: ws.head();
               // LONG_MIN: indicates delayed (until next actual walk) resolution
               // cannot resolve right now, cause NS might have changed by the next walking this ws
  DBG(json(), 3) DOUT(json()) << "head-initialized offset [" << wsi << "]" << std::endl;
@@ -4983,7 +5069,7 @@ Json::signed_size_t Json::iterator::next_iterable_ws_(signed_size_t wsi) {
   auto & ws = walk_path_()[ wsi ];
   if(ws.is_locked()) continue;
 
-  if(ws.type == Json::WalkStep::WsType::Directive_inactive)
+  if(ws.type == Json::WalkStep::WsType::Inactive)
    ws.type = Json::WalkStep::WsType::Directive;
   if(ws.type == WalkStep::WsType::Range_walk) break;
  }
@@ -4995,25 +5081,27 @@ Json::signed_size_t Json::iterator::next_iterable_ws_(signed_size_t wsi) {
 
 
 
-Json::signed_size_t Json::iterator::failed_stop_(signed_size_t wsi) {
+Json::signed_size_t Json::iterator::find_fail_stop_(signed_size_t wsi) {
  #include "dbgflow.hpp"
  // check if there's a valid fail stop in the path (only first found FS should be checked)
  // assert pv_.back().jit == json().end_()
- // return fail_safe ws index, or -1 (no fs found, or fs should not be engaged)
+ // return <>f / ><f ws index, or WLK_SUCCESS (no fs found, or fs should not be engaged)
  const auto & ws = walk_path_()[wsi];
  if(ws.type == WalkStep::WsType::Range_walk) {                  // ws is a range search
-  const auto & j =  pv_.size() >= 2?                            // j here is a failing json node
-                     pv_[pv_.size()-2].jit->VALUE.value(): json().root();
-  if(j.is_iterable() and ws.offset >= SGNS_T(j.children()))
+  const auto & j = pv_.size() >= 2?                             // j here is a failing json node
+                    pv_[pv_.size()-2].jit->VALUE.value():       // and last pv_ node is end_()
+                    json().root();
+  if(j.is_iterable() and ws.offset() >= SGNS_T(j.children()))
    return WLK_SUCCESS;                                          // iterable is failing counter here
-  if(ws.offset > ws.load_head(json()))                          // means there were already matches
+  if(ws.offset() > ws.head(json()))                             // means there were already matches
    return WLK_SUCCESS;                                          // in that iterable
  }
 
- for(; wsi >= 0; --wsi) {                                       // going backwards
+ for(; wsi >= 0; --wsi) {                                       // going backward:
   auto & ws = walk_path_()[wsi];
-  if(ws.jsearch == Jsearch::Forward_itr) return WLK_SUCCESS;    // not FS domain
-  if(ws.jsearch != Jsearch::fail_safe) continue;                // some other walk-step
+  if(ws.jsearch == Jsearch::Forward_itr) return WLK_SUCCESS;    // it's past (outside of) FS domain
+  if(ws.jsearch != Jsearch::fail_safe) continue;                // it's not <..>f / >..<f lexeme
+  if(ws.is_non_recursive()) return WLK_SUCCESS;                 // facing >..<f: outside of loop
   pv_ = ws.fs_path;                                             // restore the path vector
   DBG(json(), 3)
    { DOUT(json()) << "found fs[" << wsi << "], restored "; show_built_pv_(DOUT(json())); }
