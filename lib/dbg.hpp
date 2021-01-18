@@ -315,7 +315,7 @@
 #define __DEBUGGABLE_false__() \
     Debug   __dbg__;
 #define __DEBUGGABLE_true__(ARGS...) \
-    Debug   __dbg__{*this}; \
+    Debug   __dbg__{*this}; /* ensure debug severity proliferation upon init */\
     void    __dbg_propagate__(int __sev__) \
              { MACRO_TO_ARGS(__DEBUGGABLE_PROPAGATE__, ##ARGS) }
 
@@ -406,6 +406,7 @@ class Debug {
                 Trunc_front, \
                 Trunc_both
     ENUM(TosType, TOS_TYPE)
+    #undef TOS_TYPE
 
     struct Ctw {};                                              // used only as enablement for ctw
 
@@ -449,6 +450,7 @@ class Debug {
 
 
                         Debug(void) = default;
+                        Debug(short x): ds_{x} {};
     template<class X>   Debug(X &x) { x.DBG().severity(x); };
 
     short               level(void) const { return udl_; }
@@ -472,7 +474,7 @@ class Debug {
     Debug &             filter_out(bool x) { ft_ = x; return *this; }
     Debug &             filter(const char *s) { filter_.push_back(s); return *this; }
     Debug &             reset_filter(void) { filter_.clear(); filter_out(false); return *this; }
-    std::mutex &        mutex(void) const { return Debug::mtx_; }
+    std::mutex &        mutex(void) const { return *Debug::mp_; }
     Debug &             mutex(std::mutex & mtx) { mp_ = &mtx; return *this; }
     Debug &             reset_mutex(void) { mp_ = &mtx_; return *this; }
     std::ostream &      dout(void) const { return dos_; }
@@ -492,12 +494,12 @@ class Debug {
     template<typename T, typename... Rest>
     typename std::enable_if<std::is_integral<T>::value, void>::type
                         severity(T sev, Rest &&... rest)
-                         { ds_=sev; severity(std::forward<decltype(rest)>(rest)...); }
+                         { ds_ = sev; severity(std::forward<decltype(rest)>(rest)...); }
     template<typename Subclass, typename... Rest>
     typename std::enable_if<__is_dbg_propagatable__<Subclass>(0), void>::type
                         severity(Subclass & s, Rest &&... rest) {
                          if(&s.DBG() != this)                   // updating foreign debuggable
-                          s.DBG().severity(severity()+1);       // compel s' severity to mine
+                          s.DBG().severity(severity() + 1);     // compel s' severity to mine
                          s.__dbg_propagate__(s.DBG().severity());   // propagate down s' members
                          severity(std::forward<decltype(rest)>(rest)...);
                         }
@@ -506,7 +508,7 @@ class Debug {
         not __is_dbg_propagatable__<Subclass>(0) and std::is_class<Subclass>::value, void>::type
                         severity(Subclass & s, Rest &&... rest) {
                          if(&s.DBG() != this)                   // updating foreign debuggable
-                          s.DBG().severity(severity()+1);       // compel s' severity to mine
+                          s.DBG().severity(severity() + 1);     // compel s' severity to mine
                          severity(std::forward<decltype(rest)>(rest)...);
                         }
 
@@ -514,12 +516,12 @@ class Debug {
     template<typename T, typename... Rest>
     typename std::enable_if<std::is_integral<T>::value, void>::type
                         increment(T sev, Rest &&... rest)
-                         { ds_+=sev; increment(std::forward<decltype(rest)>(rest)...); }
+                         { ds_ += sev; increment(std::forward<decltype(rest)>(rest)...); }
     template<typename Subclass, typename... Rest>
     typename std::enable_if<__is_dbg_propagatable__<Subclass>(0), void>::type
                         increment(Subclass & s, Rest &&... rest) {
                          if(&s.DBG() != this)                   // updating foreign debuggable
-                          s.DBG().severity(severity()+1);       // compel s' severity to mine
+                          s.DBG().severity(severity() + 1);     // compel s' severity to mine
                          s.__dbg_propagate__(s.DBG().severity());   // propagate down s' members
                          increment(std::forward<decltype(rest)>(rest)...);
                         }
@@ -528,7 +530,7 @@ class Debug {
         not __is_dbg_propagatable__<Subclass>(0) and std::is_class<Subclass>::value, void>::type
                         increment(Subclass & s, Rest &&... rest) {
                          if(&s.DBG() != this)                   // updating foreign debuggable
-                          s.DBG().severity(severity()+1);       // compel s' severity to mine
+                          s.DBG().severity(severity() + 1);     // compel s' severity to mine
                          increment(std::forward<decltype(rest)>(rest)...);
                         }
 
@@ -557,6 +559,7 @@ class Debug {
  private:
     #define MONTH Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
     ENUMSTR( Month, MONTH )
+    #undef MONTH
 
     static short        udl_;                                   // user debug level - set by user
     static bool         indented_;                              // is prompt indented?
@@ -579,16 +582,11 @@ class Debug {
     static TosType      tos_;                                   // flag: truncate output stream
     static size_t       adj_;                                   // value for Trunc_both
 
-    static const std::string
-                        timestamp_(void);
-    static const std::string
-                        stamp_str_(time_t t_stamp);
-    static bool         match_(const char *f);
+    const std::string   timestamp_(void) const;
+    const std::string   stamp_str_(time_t t_stamp) const;
+    bool                match_(const char *f) const;
 };
 
-STRINGIFY( Debug::Month, MONTH)
-#undef MONTH
-#undef TOS_TYPE
 
 
 short                   Debug::udl_{0};                         // 0: debugs disabled
@@ -667,7 +665,7 @@ size_t Debug::term_width(bool forced) {
 
 
 
-const std::string Debug::timestamp_(void) {
+const std::string Debug::timestamp_(void) const {
  // build a time-stamp of the local TZ, possibly including ms and us
  std::stringstream so;
 
@@ -696,7 +694,7 @@ const std::string Debug::timestamp_(void) {
 
 
 
-const std::string Debug::stamp_str_(time_t t_stamp) {
+const std::string Debug::stamp_str_(time_t t_stamp) const {
  // build a date-time-stamp in the format: YYYY-MMM-DD hh:mm:ss
  std::stringstream so;
 
@@ -707,7 +705,7 @@ const std::string Debug::stamp_str_(time_t t_stamp) {
 
  tm * tmp = localtime(&t_stamp);
 
- so << tmp->tm_year+1900 << '-'
+ so << tmp->tm_year + 1900 << '-'
     << Debug::Month_str[tmp->tm_mon] << '-'
     << std::setfill('0') << std::setw(2) << tmp->tm_mday << ' '
     << std::setfill('0') << std::setw(2) << tmp->tm_hour << ':'
@@ -719,7 +717,7 @@ const std::string Debug::stamp_str_(time_t t_stamp) {
 
 
 
-bool Debug::match_(const char *fn) {
+bool Debug::match_(const char *fn) const {
  // filter-in or filter-out any matches setup in Debug::filter_
  // if Debug::filter is not set, always return true
  // match occurs from the beginning of the function's name only.

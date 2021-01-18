@@ -45,7 +45,7 @@ void GuideWp::print(void) {
                  std::string sfx;
                  for(int js = 0; js < Json::end_of_lexemes; ++js) {
                   ws.jsearch = static_cast<Json::Jsearch>(js);
-                  if(rt.second()) sfx += ENUMS(Json::Jsearch, js)[0];
+                  if(rt.second()) sfx += STRENM(Json::Jsearch, js)[0];
                  }
                  // replace token with the built suffix list
                  GuideWp::wp_guide_ = std::regex_replace(GuideWp::wp_guide_,

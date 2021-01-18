@@ -157,6 +157,7 @@
  *
  *  Another example: say, we want to dump all phone numbers (knowing those stored
  *  irregularly - as strings and arrays of strings):
+ *
  *      for(auto const &rec: json["Address Book"])
  *       if(rec.find("Phone") != rec.end()) {
  *        for(auto const & ph_rec: rec["Phone"])
@@ -430,7 +431,7 @@
  *  to compare Json::iterator with Jnode::iterator (only '==' and '!=' operators)
  *
  *  When iterator (either) is dereferenced, it returns a reference to a supernode,
- *  which in turn s child class from Jnode. The supernode is catered by the iterator
+ *  which in turn is a child class from Jnode. The supernode is catered by the iterator
  *  and thus the supernode's lifetime is the same as iterator's from which it was
  *  dereferenced.
  *
@@ -524,7 +525,7 @@
 #define JSN_ARY_OPN '['                                         // Json syntax char: open array
 #define JSN_ARY_CLS ']'                                         // Json syntax char: close array
 #define JSN_STRQ '"'                                            // Json syntax char: string open
-#define JSN_ASPR ','                                            // Json syntax char: val. separator
+#define JSN_VSPR ','                                            // Json syntax char: val. separator
 #define JSN_NUMM '-'                                            // Json syntax char: minus sign
 #define JSN_NUMP '+'                                            // Json syntax char: plus sign
 #define JSN_NUMD '.'                                            // Json syntax char: dot sign
@@ -705,7 +706,7 @@ class Jnode {
                 walk_a_bug, \
                 end_of_walk_exceptions, \
                 end_of_throw
-    ENUMSTR(ThrowReason, THROWREASON)
+    ENUMSTC(ThrowReason, THROWREASON)
 
     #define JTYPE \
                 Object, \
@@ -715,7 +716,7 @@ class Jnode {
                 Bool, \
                 Null, \
                 Neither
-    ENUMSTR(Jtype, JTYPE)
+    ENUMSTC(Jtype, JTYPE)
 
     #define CLASHINGLABELS \
                 Override, \
@@ -733,13 +734,12 @@ class Jnode {
                         Jnode(const Jnode &jn): Jnode() {       // CC
 
                          #ifdef BG_CC                           // -DBG_CC to compile this debug
-                          if(DBG()(__Dbg_flow__::ind())) {        // dodge DBG's mutex dead-lock
-                           GUARD(DBG().alt_prefix, DBG().alt_prefix)
-                           DBG().alt_prefix(">");
+                          if(DBG()(__Dbg_flow__::ind())) {      // dodge DBG's mutex dead-lock
+                           GUARD(DBG().alt_prefix, DBG().alt_prefix, ">")
                            DOUT() << DBG().prompt(__func__,
                                                   __Dbg_flow__::ind() + 1,
                                                   Debug::Indention::Alternative)
-                                  << "CC copying: "
+                                  << "CC copying: " << Debug::btw
                                   << jn.to_string(Jnode::PrettyType::Raw, 0) << std::endl;
                           }
                          #endif
@@ -1704,7 +1704,7 @@ class Json {
     };
     typedef std::map<std::string, JnEntry> map_jne;
 
-    // suffixes taken : abcdDefFgGiIjklLnNoPrRstuvqQwWzZ
+    // suffixes taken : abcdDefFgGiIjklLnNoPrRsStuvqQwWzZ
     #define JS_ENUM /* first letter defines the lexeme */\
                 regular_match,  /* string match */ \
                 Regex_search,   /* RE match for JSON strings only */ \
@@ -1743,7 +1743,7 @@ class Json {
                 end_of_lexemes, \
                 text_offset,    /* in addition to search, these two used for subscript offsets */ \
                 numeric_offset  /* to disambiguate numeric subscripts [0], from textual [zero] */
-    ENUMSTR(Jsearch, JS_ENUM)
+    ENUMSTC(Jsearch, JS_ENUM)
     // Jsearch lexemes are defined so that their first letter corresponds to the suffix
 
     #define PARSETRAILING \
@@ -1767,10 +1767,12 @@ class Json {
                 NonEmptyKoj     /* <..>k */
     ENUM(KeyOfJson, KOJ_ARG)
 
+    enum ParseType { Jsn, Tmp };                                // parse as Json or Template
+    enum TmpPlacement { Label, Value };                         // where template is being parsed
 
-                        Json(void) = default;
-                        Json(const Jnode &jn): root_{jn.value()} { }
-                        Json(Jnode &&jn): root_{std::move(jn.value())} { }
+                        Json(void) = default;                               // DC
+                        Json(const Jnode &jn): root_{jn.value()} { }        // CC
+                        Json(Jnode &&jn): root_{std::move(jn.value())} { }  // MC
 
                         Json(const std::string &str) { parse(str); }
                         Json(const char *c_str) { parse( std::string{c_str} ); }
@@ -1778,14 +1780,24 @@ class Json {
     // class interface:
     Jnode &             root(void) { return root_; }
     const Jnode &       root(void) const { return root_; }
+
+    // parsing methods
+    // - Why parsing is in Json and not in Jnode class?
+    // - parsing has some memory overheads, like exceptions pointer, reason, debug, etc
+    //   adding those to Jnode data (given it's highly recursive) would be a waste of space
+    //   making those overheads as static would render Jnode parsing non-concurrentable.
+
+    template<ParseType X = Jsn>
     Json &              parse(std::string jstr, ParseTrailing trail = Relaxed_trailing) {
                          Streamstr tmp;
                          DBG().severity(tmp);
                          tmp.source_buffer(std::move(jstr));
-                         return parse(tmp.begin(), trail);
+                         return parse<X>(tmp.begin(), trail);
                         }
+    template<ParseType X = Jsn>
     Json &              parse(Streamstr::const_iterator && jsi, ParseTrailing t = Relaxed_trailing)
-                         { return parse(jsi, t); }
+                         { return parse<X>(jsi, t); }
+    template<ParseType X = Jsn>
     Json &              parse(Streamstr::const_iterator & jsi, ParseTrailing = Relaxed_trailing);
     Json &              parse_throwing(bool x) {
                          parse_throw_ = x? ParseThrow::May_throw: ParseThrow::Dont_throw;
@@ -1793,12 +1805,14 @@ class Json {
                         }
     bool                parse_throwing(void) const
                          { return parse_throw_ == ParseThrow::May_throw; }
+
     Streamstr::const_iterator
                         exception_point(void) { return exp_; }
-    Jnode::ThrowReason
-                        exception_reason(void) { return exr_; }
+    Jnode::ThrowReason  exception_reason(void) { return exr_; }
     bool                parsing_failed(void) const
                          { return exr_ != Jnode::ThrowReason::start_of_json_parsing_exceptions; }
+
+    // walk interface
     class iterator;
     iterator            walk(const std::string & walk_string = std::string{},
                              CacheState = Invalidate);
@@ -1932,6 +1946,7 @@ class Json {
     map_jne             jns_;                                   // jnode namespace
     const char *        jsn_fbdn_{JSN_FBDN};                    // JSN_FBDN pointer
     const char *        jsn_qtd_{JSN_QTD};                      // JSN_QTD pointer
+    static std::map<TmpPlacement, char> tp_;
 
 
  private:
@@ -1941,12 +1956,22 @@ class Json {
     bool                quotedsolidus_{false};                  // preserve solidus quoted'\/'?
     auto                end_(void) { return root().children_().end(); } // frequently used shortcut
     auto                end_(void) const { return root().children_().end(); }
+    template<ParseType X>
     void                parse_(Jnode & node, Streamstr::const_iterator &jsp);
     void                parse_bool_(Jnode & node, Streamstr::const_iterator &jsp);
     void                parse_string_(Jnode & node, Streamstr::const_iterator &jsp);
     void                parse_number_(Jnode & node, Streamstr::const_iterator &jsp);
+    template<ParseType X>
     void                parse_array_(Jnode & node, Streamstr::const_iterator &jsp);
+    template<ParseType X>
     void                parse_object_(Jnode & node, Streamstr::const_iterator &jsp);
+    template<ParseType X>
+    bool                parse_template_(Jnode &node,
+                                        Streamstr::const_iterator &jsp, TmpPlacement);
+    template<>
+    bool                parse_template_<Jsn>(Jnode &,
+                                             Streamstr::const_iterator &, TmpPlacement)
+                         { return false; }
     void                merge_(std::set<std::string> &c2a, Jnode &n, Jnode &&l, Jnode &&c);
     char                skip_blanks_(Streamstr::const_iterator & jsp);
     std::string         readup_str_(Streamstr::const_iterator & jsp, size_t n);
@@ -1996,9 +2021,10 @@ class Json {
         Itr &               operator=(Itr itr) noexcept         // CA, MA
                              { swap(*this, itr); return *this; }
 
+        enum EmplaceEnd { End };                                // to differentiate emplacements
                             Itr(const Jnode::iter_jn &it):      // for emplacement of good itr
                              jit(it), lbl(it->KEY), jnp(&it->VALUE) {}
-                            Itr(const Jnode::iter_jn &it, bool):
+                            Itr(const Jnode::iter_jn &it, EmplaceEnd):
                              jit(it) {}                         // for emplacement of end() only!
 
         // reminder:    typedef std::map<std::string, Jnode>::iterator iter_jn;
@@ -2087,7 +2113,7 @@ class Json {
             // This is needed in order not to process directives unnecessary when walk-path is
             // reworked each successive time: only those which are past the incrementing walk-step
             // are getting re-activated
-        ENUMSTR(WsType, WALKSTEPTYPE)
+        ENUMSTC(WsType, WALKSTEPTYPE)
 
                             WalkStep(void):                         // DC
                              wsuid{Json::iterator::uuid_++} {}
@@ -2277,7 +2303,7 @@ class Json {
                              { return tail_str.empty()? tail_val: fetch_from_ns(tail_str, j); }
         signed_size_t       step(void) const { return step_val; }
         signed_size_t       step(const Json &j) const
-                             { return step_str.empty()? step_val: fetch_from_ns(step_str,j); }
+                             { return step_str.empty()? step_val: fetch_from_ns(step_str, j); }
         signed_size_t       offset(void) const { return offset_val; }
         signed_size_t       offset(const Json &j) const {
                              if(offset_str.empty() or type == WsType::Range_walk)
@@ -2291,8 +2317,10 @@ class Json {
                              if(found->VALUE.ref().type() != Jnode::Jtype::Number)
                               throw j.EXP(Jnode::ThrowReason::walk_non_numeric_namespace);
                              signed_size_t x = strtol(found->VALUE.ref().val().c_str(),nullptr,10);
-                             if(x < 0 and not is_tag_based())   // only t/l can go negative
-                              throw j.EXP(Jnode::ThrowReason::walk_negative_quantifier);
+                             // disabled below check, because it's programmatically resolved
+                             // quantifier and thus should fail programmatically (silently)
+                             //if(x < 0 and not is_tag_based())   // only t/l can go negative
+                             // throw j.EXP(Jnode::ThrowReason::walk_negative_quantifier);
                              return x;
                             }
         bool                is_locked(void) const { return locked; }
@@ -2400,7 +2428,7 @@ class Json {
 
         // Below definitions only for COUTABLE interface
         const char *        search_type() const
-                             { return ENUMS(Jsearch, jsearch); }
+                             { return STRENM(Jsearch, jsearch); }
         const std::string   label() const
                              { return stripped.size()==2? stripped.back(): "N/A"; }
         std::string         json() const
@@ -2408,7 +2436,7 @@ class Json {
                                        "N/A": user_json.to_string(Jnode::PrettyType::Raw, 1); }
         const char *        ws_type(void) const
                              { return jsearch != Jsearch::numeric_offset?
-                                       "N/A": ENUMS(WsType, type); }
+                                       "N/A": STRENM(WsType, type); }
         std::string         range() const {
                              if(type != WsType::Range_walk) return "N/A";
                              std::stringstream ss;
@@ -2452,6 +2480,8 @@ class Json {
 
                             CacheKey(const Jnode *jp, const WalkStep & w):// for emplacement
                              jnp(jp), ws(w) {}
+                            CacheKey(const Jnode *jp, WalkStep && w):
+                             jnp(jp), ws(std::move(w)) {}
 
         const Jnode *       jnp;
         WalkStep            ws;
@@ -2514,7 +2544,7 @@ class Json {
         friend Json;
         friend class GuideWp;
 
-        friend COPY(Json::iterator, lwsi_, ws_, pv_, jp_, wuid_, sn_.parent_type())
+        COPY(Json::iterator, lwsi_, ws_, pv_, jp_, wuid_, sn_.parent_type())
         friend SWAP(Json::iterator, lwsi_, ws_, pv_, jp_, wuid_, sn_.parent_type())
         // sn_.parent_type(): supernode requires swapping of type_ values only
 
@@ -2634,8 +2664,11 @@ class Json {
         bool                incremented_(void);
         iterator &          begin(void)
                              { return *this; }
-        iterator            end(void) const
-                             { iterator it; it.pv_.emplace_back(json().end_(), true); return it; }
+        iterator            end(void) const {
+                             iterator it;
+                             it.pv_.emplace_back(json().end_(), Itr::End);
+                             return it;
+                            }
         bool                is_valid(void) const {
                              // end iterator is considered invalid path
                              if(jp_ == nullptr) return false;       // iterator un-initialized
@@ -2708,7 +2741,7 @@ class Json {
       std::vector<WalkStep> ws_;                                // walk state vector (walk path)
         path_vector         pv_;                                // path_vector (result of walking)
         Json *              jp_{nullptr};                       // json pointer (for json().end())
-        unsigned short      wuid_;                              // unique walk-id
+        unsigned short      wuid_;                              // unique walk-id (from uuid_)
         SuperJnode          sn_{Jnode::Jtype::Neither};         // supernode, type_ holds parent's
 
         static std::string  dummy_lbl_;                         // empty (default) label
@@ -2733,7 +2766,7 @@ class Json {
         const WalkStep &    last_walked_(void) const            // predicate this call by checking
                              { return ws_[lwsi_]; }             // if lwsi_ is valid within ws_
         void                end_path_(void)
-                             { pv_.emplace_back(json().end_(), true); }
+                             { pv_.emplace_back(json().end_(), Itr::End); }
         auto &              sn_type_ref_(void) { return sn_.type_; }    // original container type
 
         signed_size_t       walk_(void);
@@ -2838,8 +2871,8 @@ class Json {
 
     typedef std::vector<std::pair<size_t, size_t>> vec_range;
 
-    static void         generate_auto_tokens_(Stringover &tmp,
-                                              Json::iterator &, map_jne &ns);
+    static void         setup_auto_ns_(map_jne &, Stringover &, Json::iterator &, bool = true);
+    static void         generate_auto_tokens_(map_jne &ns, Stringover &tmp, Json::iterator &);
     static void         interpolate_path_(Stringover &tmp, Json::iterator &, map_jne &ns);
     static std::string  interpolate_tmp_(std::string templ, Json::iterator &, map_jne &ns,
                                          std::bitset<IntpBit::Size> &prty);
@@ -2975,13 +3008,15 @@ const uws_callback_vec& uws_callbacks(void) const { return ucb_; }
 
 
 // Json class static definitions
+std::map<Json::TmpPlacement, char> Json::tp_{
+                                             {Json::Label, '\x1'},
+                                             {Json::Value, '\x2'}
+                                            };
 Json::map_jne Json::dummy_ns_;                                  // facilitate default arg
 std::map<std::string, std::vector<Json::WalkStep>> Json::compiled_walks_;   // compiled walks cache
 
 STRINGIFY(Json::Jsearch, JS_ENUM)
-STRINGIFY(Json::ParseTrailing, PARSETRAILING)
 STRINGIFY(Json::WalkStep::WsType, WALKSTEPTYPE)
-STRINGIFY(Json::iterator::SearchType, SEARCH_TYPE)
 
 #undef JS_ENUM
 #undef CACHE_STATE
@@ -3014,7 +3049,7 @@ STRINGIFY(Json::iterator::SearchType, SEARCH_TYPE)
 // MAY_RETURN_ON_FAILURE macro wrapper handles code which might throw when throwing is disabled
 #define MAY_RETURN_ON_FAILURE(CODE) \
     CODE; \
-    if(not parse_throwing() and parsing_failed()) \
+    if(parsing_failed()) \
      { node.type(Jnode::Jtype::Neither); return; }
 
 
@@ -3040,17 +3075,20 @@ Json operator ""_json(const char *c_str, std::size_t) {
 
 
 
+template<Json::ParseType X>
 Json & Json::parse(Streamstr::const_iterator & jsp, ParseTrailing trail) {
- // parse input string. this is a wrapper for parse_(), where actual parsing occurs
+ // parse input string. this is a wrapper for parse_<X>(), where actual parsing occurs
  exp_ = Streamstr::const_iterator{};                            // reset exception pointer
  exr_ = Jnode::ThrowReason::start_of_json_parsing_exceptions;   // reset exception reason
  root() = OBJ{};                                                // most probable JSON root
- parse_(root(), jsp);
+
+ if(not parse_template_<X>(root(), jsp, TmpPlacement::Value))
+  parse_<X>(root(), jsp);
  // when parse_throwing is disabled, it also affects (disables throwing) the strict trailing modes,
  // however, the exception_reason is still set to `unexpected_trailing`
  // root node is invalidated (set to Neither) only if parsing failed due to other than
  // unexpected_trailing (regardless parse_throwing mode)
- if(not parse_throwing() and parsing_failed())                  // throwing disabled and failed
+ if(parsing_failed())                                           // throwing is disabled then
   { type(Jnode::Jtype::Neither); return *this; }
 
  if(is_neither())                                               // parsing could not classify node
@@ -3078,6 +3116,7 @@ Json & Json::parse(Streamstr::const_iterator & jsp, ParseTrailing trail) {
 
 
 
+template<Json::ParseType X>
 void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
  // recursively parse JSON from string (unicode UTF-8 compliant)
  MAY_RETURN_ON_FAILURE( skip_blanks_(jsp) )
@@ -3085,21 +3124,21 @@ void Json::parse_(Jnode & node, Streamstr::const_iterator &jsp) {
 
  #ifndef NDBG_PARSER
  DBG(4) {                                                       // print currently parsed point
-  if(not jsp.is_streamed())
-   DOUT() << Debug::btw << "parsing point ->" << jsp.str(Debug::term_width() * 4) << std::endl;
-  else                                                         // streamed input
+  if(jsp.is_streamed())
    DOUT() << Debug::ftw << jsp.str(Debug::term_width() * 4) << "<- parsing point" << std::endl;
+  else                                                          // buffered input
+   DOUT() << Debug::btw << "parsing point ->" << jsp.str(Debug::term_width() * 4) << std::endl;
 
   if(DBG()(5))
    if(not node.is_neither())
     DOUT() << DBG_PROMPT(5)
-           << "parsing as " << ENUMS(Jnode::Jtype, node.type()) << std::endl;
+           << "parsing as " << STRENM(Jnode::Jtype, node.type()) << std::endl;
  }
  #endif
 
  switch(node.type()) {
-  case Jnode::Jtype::Object: parse_object_(node, ++jsp); break; // skip '{' with ++jsp
-  case Jnode::Jtype::Array: parse_array_(node, ++jsp); break;   // skip '[' with ++jsp
+  case Jnode::Jtype::Object: parse_object_<X>(node, ++jsp); break; // skip '{' with ++jsp
+  case Jnode::Jtype::Array: parse_array_<X>(node, ++jsp); break;   // skip '[' with ++jsp
   case Jnode::Jtype::String: parse_string_(node, ++jsp); break; // skip '"' with ++jsp
   case Jnode::Jtype::Number: parse_number_(node, jsp); break;
   case Jnode::Jtype::Bool: parse_bool_(node, jsp); break;
@@ -3138,18 +3177,22 @@ void Json::parse_number_(Jnode & node, Streamstr::const_iterator &jsp) {
 
 
 
+template<Json::ParseType X>
 void Json::parse_array_(Jnode & node, Streamstr::const_iterator &jsp) {
  // parse elements of JSON Array (recursively)
  for(bool comma_read = false; true;) {
+  MAY_RETURN_ON_FAILURE( skip_blanks_(jsp) )
+
   Jnode child;
-  MAY_RETURN_ON_FAILURE( parse_(child, jsp) )
+  if(not parse_template_<X>(child, jsp, TmpPlacement::Value))
+   MAY_RETURN_ON_FAILURE( parse_<X>(child, jsp) )
 
   if(child.is_neither()) {
    if(*jsp == JSN_ARY_CLS) {
     if(node.is_empty()) { ++jsp; return; }                      // empty array: [ ]
     if(not comma_read) { ++jsp; return; }                       // end of array: ..., "last" ]
    }
-   if(*jsp == JSN_ASPR)                                         // == ','
+   if(*jsp == JSN_VSPR)                                         // == ','
     if(not comma_read and node.has_children())
      { ++jsp; comma_read = true; continue; }                    // interleaving comma: .. 2, 3, ..
    // here: either a double comma: " ... ,,", or leading comma: "[ , ...
@@ -3167,6 +3210,7 @@ void Json::parse_array_(Jnode & node, Streamstr::const_iterator &jsp) {
 
 
 
+template<Json::ParseType X>
 void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
  // parse elements of JSON Object (recursively)
  std::set<std::string> c2a;                                     // converted to array (-m)
@@ -3176,33 +3220,32 @@ void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
   auto lsp = jsp;                                               // label's begin pointer
 
   Jnode label;
-  MAY_RETURN_ON_FAILURE( parse_(label, jsp) )                   // must be a string (label)
-
-  if(not label.is_string()) {
-   if(label.is_neither()) {                                     // parsing if label failed
-    if(*jsp == JSN_OBJ_CLS) {                                   // == '}'
-     if(node.is_empty()) { ++jsp; return; }                     // empty object: { }
-     if(not comma_read) { ++jsp; return; }                      // end of object: ..."last" }
+  if(not parse_template_<X>(label, jsp, TmpPlacement::Label)) {
+   MAY_RETURN_ON_FAILURE( parse_<X>(label, jsp) )                // must be a string (label)
+   if(not label.is_string()) {                                   // label was not a valid Json str
+    if(label.is_neither() and not comma_read) {                  // then process '}', or ','
+     if(*jsp == JSN_OBJ_CLS) { ++jsp; return; }                  // == '}'
+     if(*jsp == JSN_VSPR and node.has_children())                // == ','
+      { ++jsp; comma_read = true; continue; }                    // interleaving comma
     }
-    if(*jsp == JSN_ASPR)                                        // == ','
-     if(not comma_read and node.has_children())
-      { ++jsp; comma_read = true; continue; }                   // interleaving comma
-   }                                                            // else label is not a string
-   exr_ = Jnode::ThrowReason::expected_valid_label;
-   MAY_RETURN_ON_FAILURE(exp_ = lsp)
-   if(not comma_read and node.has_children())
-    THROW_EXP(Jnode::ThrowReason::expected_value_separator)     // { *val* *anything but coma*
-   throw EXP(Jnode::ThrowReason::expected_valid_label);
+    // here label could be either a valid JSON (but not str), or Neither
+    exr_ = Jnode::ThrowReason::expected_valid_label;
+    jsp = lsp;
+    if(not comma_read and node.has_children())
+     THROW_EXP(Jnode::ThrowReason::expected_value_separator)
+    THROW_EXP(Jnode::ThrowReason::expected_valid_label)
+   }
   }
-
   MAY_RETURN_ON_FAILURE( char lblspr = skip_blanks_(jsp) )      // label just hass been parsed
   if(lblspr != LBL_SPR)                                         // label was read, expecting ':'
    THROW_EXP(Jnode::ThrowReason::expecting_label_separator)
 
   Jnode child;
-  MAY_RETURN_ON_FAILURE( parse_(child, ++jsp) )
-  if(child.is_neither())                                        // after 'label:' there must follow
-   THROW_EXP(Jnode::ThrowReason::expected_json_value)           // a valid JSON value
+  if(not parse_template_<X>(child, ++jsp, TmpPlacement::Value)) {
+   MAY_RETURN_ON_FAILURE( parse_<X>(child, jsp) )
+   if(child.is_neither())                                        // after 'label:' there must follow
+    THROW_EXP(Jnode::ThrowReason::expected_json_value)           // a valid JSON value
+  }
 
   if(not comma_read and node.has_children())                    // e.g.: [ "abc" 3.14 ]
    THROW_EXP(Jnode::ThrowReason::missed_prior_enumeration)
@@ -3214,6 +3257,30 @@ void Json::parse_object_(Jnode & node, Streamstr::const_iterator &jsp) {
     merge_(c2a, node, std::move(label), std::move(child));
   comma_read = false;
  }
+}
+
+
+
+template<Json::ParseType X>
+bool Json::parse_template_(Jnode &node, Streamstr::const_iterator &jsp, TmpPlacement plc) {
+ // this is template parsing `{{..}}` for PraseType = Tmp only (Jsn instance always returns false)
+ // for simplicity of processing, template name should not contain '}'
+ bool unguard{false};
+ auto getter = [&] { return jsp; };
+ auto setter = [&] (Streamstr::const_iterator &x) { if(not unguard) jsp = std::move(x); };
+ GUARD(getter, setter)
+
+ if(*jsp != JSN_OBJ_OPN or *++jsp != JSN_OBJ_OPN)  return false;
+
+ auto sp = ++jsp;                                               // copy, for a work-around
+ auto ep = find_delimiter_(JSN_OBJ_CLS, jsp);
+ if(parsing_failed()) return false;
+ std::string ns = readup_str_(sp, distance(sp, ep));
+ if(*jsp != JSN_OBJ_CLS or *++jsp != JSN_OBJ_CLS)  return false;
+
+ ++jsp;
+ node = std::string{Json::tp_[plc]} + ns;
+ return unguard = true;
 }
 
 
@@ -3364,8 +3431,8 @@ std::string Json::readup_str_(Streamstr::const_iterator & jsp, size_t n) {
  std::string str;
  for(size_t i = 0; i < n; ++i) {
   str += *jsp;
-  if(quotedsolidus_ == false and
-     str.size() >= 2 and str[str.size() - 2] == CHR_QUOT and str.back() == CHR_SLDS)
+  if(quotedsolidus_ == false and str.back() == CHR_SLDS
+     and str.size() >= 2 and str[str.size() - 2] == CHR_QUOT)
    { str.pop_back(); str.pop_back(); str += CHR_SLDS; }         // replace '\/' with '/'
   if(jsp.is_back_chr())                                         // do not advance to next file,
    { advance(jsp, -SGNS_T(i)); return str; }                    // return string up to end of file
@@ -3443,8 +3510,8 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  //                        by the walk string, otherwise end-iterator returned
  DBG(0) DOUT() << "walk string: '" << wstr << "'" << std::endl;
 
- iterator it{this}, &itr = it;                                  // itr - for return by reference
- if(wstr.empty()) return itr;                                   // empty walk() optimization
+ iterator it{this};                                             // itr - for return by reference
+ if(wstr.empty()) return it;                                    // empty walk() optimization
 
  compile_walk(wstr, it);
  it.pv_.reserve(it.walk_path_().size());                        // iter's performance optimization
@@ -3457,7 +3524,7 @@ Json::iterator Json::walk(const std::string & wstr, CacheState action) {
  it.walk_();
  if(it.pv_.empty() or it.pv_.back().jit != end_()) {
   DBG(0) DOUT() << "initial walk: successful match" << std::endl;
-  return itr;                                                   // must resolve reference
+  return it;
  }
  // here walk_() returned end(), but it might not be a true end, an increment step is required
  // in order to confirm that it's either a true end; return then incremented reference
@@ -3668,7 +3735,7 @@ void Json::parse_suffix_(std::string::const_iterator &si,
  if(back_ws.is_json_capturing_lexeme() or
     sfx == Jsearch::json_match or sfx == Jsearch::Increment_num)// not capturing wakled Json, but
   parse_user_json_(back_ws);                                    // parsing <ns:user json>
- DBG(1) DOUT() << "search type sfx: " << ENUMS(Jsearch, sfx) << std::endl;
+ DBG(1) DOUT() << "search type sfx: " << STRENM(Jsearch, sfx) << std::endl;
 
  if(sfx == Jsearch::fail_safe and back_ws.is_non_recursive())   // ><f limits number of loop count
   back_ws.tail_val = WLK_MAXLOOPCNT;                            // to default value
@@ -3766,7 +3833,7 @@ Json::Jsearch Json::search_suffix_(char sfx) const {
  #include "dbgflow.hpp"
  // Jsearch is defined so that its first letter corresponds to the suffix
  for(int i = Jsearch::regular_match; i < Jsearch::end_of_lexemes; ++i)
-  if(sfx == ENUMS(Jsearch, i)[0])
+  if(sfx == STRENM(Jsearch, i)[0])
    return static_cast<Jsearch>(i);
  return Jsearch::end_of_lexemes;                                // when no match found
 }
@@ -4136,9 +4203,8 @@ Json::signed_size_t Json::iterator::walk_(void) {
    { jnp = &pv_.back().jit->VALUE; continue; }                  // continue walking then
 
   // walk_step FAILED here (pv_.back().jit == json().end_())
-  // process failed walks
-  CNT_BRK_RTN(process_failed_walks(i))
-  jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;    // restore jnp
+  CNT_BRK_RTN(process_failed_walks(i))                          // process failed walks
+  jnp = pv_.empty()? & json().root(): &pv_.back().jit->VALUE;   // restore jnp
  }
                                                                 // successfully walked ws
  DBG(json(), 2) { DOUT(json()) << "finished walking with "; show_built_pv_(DOUT(json())); }
@@ -4154,7 +4220,7 @@ Json::iterator::pfw_t Json::iterator::process_failed_walks(size_t &i) {
  auto & ws = ws_[i];
  if(ws.jsearch == Jsearch::Forward_itr) {                       // Forward_itr faced while walking
   DBG(json(), 3)                                                // Forward_itr inserted end_()
-   DOUT(json()) << ENUMS(Json::Jsearch, Forward_itr) << " at [" << i << "], "
+   DOUT(json()) << STRENM(Json::Jsearch, Forward_itr) << " at [" << i << "], "
                 << (ws.is_recursive()? "skipping (qnt: ":"stopping (qnt: ")
                 << ws.offset(json()) << ")" << std::endl;
   if(ws.is_non_recursive())                                     // ><F, - "stop" type
@@ -4449,7 +4515,7 @@ Jnode::iter_jn Json::iterator::build_cache_(Jnode *jn, size_t wsi) {
   found_cache = cache_map.find(skey);
   DBG(json(), 1)
    DOUT(json()) << "built cache size: " << found_cache->VALUE.front().pv.size()
-                << ", cache status: " << ENUMS(WalkStep::WsType, found_cache->KEY.ws.type)
+                << ", cache status: " << STRENM(WalkStep::WsType, found_cache->KEY.ws.type)
                 << std::endl;
  }
 
@@ -4530,20 +4596,23 @@ void Json::iterator::walk_search_cached_(size_t wsi, Jnode *jn, size_t offset) {
   // a local significance of a search
 
  auto & cache_map = json().srchc_;                              // all caches map
- CacheKey skey{jn, ws};                                         // prepare a search key
+ CacheKey skey(jn, std::move(ws));                              // prepare a search key
  auto found_cache = cache_map.find(skey);
  bool build_cache = found_cache == cache_map.end() or           // cache does not exist, or
                     (found_cache->KEY.ws.type != WalkStep::Cache_complete and   // not cached yet
-                     offset >= found_cache->VALUE.size());
+                     offset >= found_cache->VALUE.size());      // or offset is past cached range
  if(build_cache) {
+  ws = skey.ws;                                                 // skey.ws will be modified
   DBG(json(), 1) DOUT(json()) << "building cache for [" << wsi << "] " << skey << std::endl;
   auto & cache = found_cache == cache_map.end()? cache_map[skey]: found_cache->VALUE;
   research_(jn, wsi, &cache, &skey);                            // build cache
   found_cache = cache_map.find(skey);
   DBG(json(), 1)
    DOUT(json()) << "built cache size: " << found_cache->VALUE.size() << ", cache status: "
-                << ENUMS(WalkStep::WsType, found_cache->KEY.ws.type) << std::endl;
+                << STRENM(WalkStep::WsType, found_cache->KEY.ws.type) << std::endl;
  }
+ else                                                           // cache was already built
+  ws = std::move(skey.ws);                                      // reinstate ws (after use in skey)
 
  // find cached entry (if one exist in the cache):
  if(offset >= found_cache->VALUE.size()) {                      // offset outside of cache:
@@ -4583,7 +4652,7 @@ void Json::iterator::research_(Jnode *jn, size_t wsi,
   DOUT(json()) << "top instance idx: " << (i == LONG_MAX - 1? "all": std::to_string(i))
                << ", cache down from: " << (cache_down_from > LONG_MAX/2? "tail":
                                              std::to_string(cache_down_from))
-               << ", descend: " << ENUMS(SearchType, ws.is_recursive()? Recursive: Non_recursive)
+               << ", descend: " << STRENM(SearchType, ws.is_recursive()? Recursive: Non_recursive)
                << ", caching? " << (vpv? "yes": "no") << std::endl;
 
  bool found = re_search_(jn, ws, nullptr, i, cache_down_from, SearchType::Non_recursive, vpv);
@@ -4609,7 +4678,7 @@ bool Json::iterator::re_search_(Jnode *jn, WalkStep &ws, const char *lbl, signed
                                 signed_size_t cdf, SearchType pass,
                                 std::vector<Json::SearchCacheEntry> * vpv) {
  #include "dbgflow.hpp"
- // build cache recursively, return true/false if match found (i'th instance), otherwise false
+ // build cache recursively, return true if match found (i'th instance), otherwise false
  // returning false globally indicates entire json has been searched up
  // 1. implementing recursive, const/static type (building cache, vpv != nullptr)
  // 2. implementing recursive, dynamic type (vpv == nullptr)
@@ -4633,6 +4702,8 @@ bool Json::iterator::re_search_(Jnode *jn, WalkStep &ws, const char *lbl, signed
   if(vpv) vpv->back().pv.emplace_back(it); else pv_.emplace_back(it);
 
   signed_size_t j = 0;                                          // to be used in lieu of i
+  // required so that cache_entry_ returns true in the next call for relative quantifier
+  // non-recursive label_match needs to be hoisted out of loop and rewritten - TBD later
   if(ws.is_lbl_based())
    if(label_match_(it, jn, idx, ws, &(vpv? vpv->back().ns: json().ns())) and
       cache_entry_(ws.is_qnt_relative()? j: i, ws.is_qnt_relative()? j: cdf, vpv))
@@ -4654,7 +4725,7 @@ bool Json::iterator::re_search_(Jnode *jn, WalkStep &ws, const char *lbl, signed
 bool Json::iterator::cache_entry_(signed_size_t &i, signed_size_t cdf,
                                   std::vector<Json::SearchCacheEntry> * vpv) {
  #include "dbgflow.hpp"
- // cache in entry if cache pointer was given (if vpv != nullptr)
+ // cache-in entry if cache pointer was given (if vpv != nullptr)
  // if "to idx" (i) above "cache_from" -
  // but only upon i <= 0 return true, otherwise return false (not requested instance yet)
  if(--i >= cdf) return false;                                   // index above "cache from"
@@ -4997,8 +5068,7 @@ void Json::iterator::wlk_callback_(const Jnode *jnp) {
   if(&ic.itr->value() != jnp) continue;                         // it's a different node
 
   ic.callback( *ic.itr );                                       // call back passing a super node
-  GUARD(jp_->is_engaged, jp_->engage_callbacks)
-  json().engage_callbacks(false);
+  GUARD(jp_->is_engaged, jp_->engage_callbacks, false)
   ++ic.itr;
  }
 }
@@ -5118,8 +5188,69 @@ Json::signed_size_t Json::iterator::find_fail_stop_(signed_size_t wsi) {
 
 
 
- #define DBGBL_REF (jit.json())
+//                          Template Interpolation
+// Template is a JSON model with embedded tokens for interpolation. Tokens are:
+//  - {..} - a.k.a. naked token
+//  - {{..}} - a.k.a. dressed token
+// Each of tokens may occur as empty: {}/{{}}, or carrying the namespaces {foo}/{{bar}}
+//  - empty tokens will cause interpolation of a currently walked JSON element
+//  - non-empty tokens will cause interpolation of the relevant namespaces (if exists)
+// Tokens may occur in any part of the JSON (as root, in labels, as value element), as well as
+// inside of strings (and labels), e.g.: "array: {}", or {"lbl_{}": {{foo}} }
+//
+// Token interpolation notations:
+//  {..}:   when interpolation occurs, the outer encasement is dropped and interpolation attempted.
+//          E.g.: if namespace Foo is [2,3], then interpolation of '[1,{Foo}]' results in [1,2,3]
+//  {{..}}: upon interpolation the full element is attempted interpolation. E.g.: if Bar is
+//          {"pi":3.14}, then interpolation of '[{{Bar}}, 123]' results in [{"pi":3.14}, 123]
+//
+// Interpolation may occurs in two ways:
+//  - via binary construction (fast)
+//  - via serialization / deserialization (slow)
+//  o Binary type of interpolation may occur only via dressed tokens {{..}} with exemption when
+//    token appears within a string
+//  o In all other cases the serdes type of interpolation occurs (i.e. anywhere with token {..}
+//    and when dressed token appears within the strings/labels)
+//
+// Interpolation logic description:
+// 1. when template to be processed, first it's attempted to be parsed as a _templated_ JSON: 
+// parse<ParseType::Tmp>(..) - if parsed successfully it means that the template is either
+// a valid JSON (i.e. no templated elements found), or a _templated_ JSON.
+//   o _templated_ JSON is almost a valid JSON, but may include encoded dressed token {{..}}. Such
+//     tokens translated into JSON strings, where 1st character is encoded and used as a magic
+//     number '\x1', or '\x2' representing either `label` or `value` placement of the token
+//     following the name of the token. E.g. this source template: "{ {{bar}}: {{foo}} }"
+//     will be parsed into a following _templated Json_ { "\x1bar": "\x2foo" }
+//   o a fully valid JSON may still carry string-embedded template tokens, e.g.:
+//     '[ "example", "of", "JSON embedded {foo} token" ]' - this is a valid JSON, but once it
+//     undergoes interpolation, the 3rd element will be expanded with the value in the namespace
+//     `foo`
+// 2. If parsing in 1. fails - then serdes type of interpolation applied. If that one fails too
+// then the template interpolations fails silently (as always)
+// 3. If 1. is successful, then each string in the JSON will undergo expansion:
+//    -  each templated string elements (e.g. "\x2bar") will be replaced out of the respective
+//    namespace (if any fails, then interpolation fails too)
+//    - each regular (non-templated) JSON string will be attempted for serdes interpolation (b/c
+//    it may carry embedded tokens)
+//
+// Thus for performance reason, whenever there's a choice to express template via either of
+// tokens {}, or {{}}, always chose the latter notation.
+// E.g.: if namespace `foo` contains null, then following interpolation will occur:
+//  - '[ {foo} ]' will result in [ null ] JSON, but interpolation will take a slow (serdes) route
+//  - '[ {{foo}} ]' will result in the same JSON, but it'll be fast (via binary copy of JSON)
+// - the bigger JSON stored in `foo` the more noticeable performance difference will be
+//
+// Namespaces interpolation:
+// Serdes interpolation occurs via going thru each namespace and finding it in the template string.
+// Once all namespaces are processed then resulting string is attempted to be parsed as a JSON.
+// Some of the namespaces are automatic - they exist only virtually - i.e. {$path}, {$a}, {}, etc.,
+// Problem with such approach, is that some auto-tokens might take a heavy toll on the cpu, 
+// e.g.: {$PATH}, {}, etc
+// The best approach then would be to setup a token placeholder (TKN_EMP) in the NS and resolve it
+// only if such token is found in the template string - it will save the unnecessary processing
+//
 
+#define DBGBL_REF (jit.json())                                  // DEBUGGABLE class for dbgflow.hpp
 
 Json Json::interpolate(Stringover tmp, Json::iterator &jit,
                        map_jne &ns, Json::ParseTrailing parse_type) {
@@ -5131,31 +5262,29 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
  //  o returned result is JSON, so invalid interpolations indicated by returning Json type Neither
  //  o user might not desire the interpolated value to undergo JSON parsing, then
  //    the indication of that is passed via `parse_type` and result returned as a JSON string
- std::bitset<IntpBit::Size> prty;                               // various bits used for interp.
-
  #define DBG_AND_RET(JSN) \
   { DBG(jit.json(), 4) \
      DOUT(jit.json()) << Debug::btw << "result" << (tmp.front() == *TKN_EMP? " (shortcut)":"") \
                       << ": " << ((JSN).is_neither()? "failed interpolation": \
                                   (JSN).to_string(Jnode::PrettyType::Raw, 1)) << std::endl; \
     return JSN; }
+ std::bitset<IntpBit::Size> prty;                               // various bits used for interp.
 
  map_jne *nsp = &ns == &Json::dummy_ns_? &jit.json().ns(): &ns; // demux ns: from jit, or user's
  map_jne auto_ns;
  auto_ns.emplace("", STR{TKN_EMP});                             // provide an easy phony JSON
  // empty namespace ("") is used to interpolate {}, {{}} tokens, however, defer providing mapping
  // here - JSON might be huge but such tokens might not even be present in the template, load later
- // only when needed (if tokens {}/{{}} are found)
+ // only when needed (once tokens {}/{{}} found)
  auto_ns.emplace(ITRP_GDLM, GET_DLM_(G, *nsp));                 // set ns for $$?
  auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));                 // set ns for $#
  auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));                 // set ns for $_
  auto_ns.emplace(ITRP_WUID, jit.wuid_);                         // $wuid auto namespace
  interpolate_path_(tmp, jit, auto_ns);                          // set $path, $PATH if present
- generate_auto_tokens_(tmp, jit, auto_ns);                      // {$a}, {$A}, {$b}, ... if any
+ generate_auto_tokens_(auto_ns, tmp, jit);                      // {$a}, {$A}, {$b}, ... if any
 
  Json rj;                                                       // returned json value
- rj.DBG().severity(NDBG);                                       // suppress debugs in rj
- rj.parse_throwing(false);
+ rj.parse_throwing(false).DBG().severity(NDBG);                 // suppress debugs in rj
 
  Stringover tmpc(tmp);                                          // preserved copy of tmp
  std::vector<IntpBit> bv{IntpBit::Normal_pass,
@@ -5173,6 +5302,7 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
    rj.root() = std::move(STR{tmp});
   else {                                                        // json parse resulted template
    Streamstr tis(std::move(tmp));                               // tmp input Streamstr
+   //rj.parse<Tmp>(tis.begin(), parse_type);
    if(not rj.parse(tis.begin(), parse_type).parsing_failed() and// if parsing succeeds, however,
       parse_type == ParseTrailing::Relaxed_no_trail and         // relaxed trailing succeeds only
       not tmpc.ends_with(rj.exception_point().str())) continue; // if parsed's tail matches tmp's
@@ -5198,9 +5328,35 @@ Json Json::interpolate(Stringover tmp, Json::iterator &jit,
 
 
 
-void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &ns) {
+void Json::setup_auto_ns_(map_jne &ns, Stringover &tmp, Json::iterator &jit, bool setup) {
  #include "dbgflow.hpp"
- // generate auto tokens {$a}, {$b}, {$A}, ... for iterables
+ // adding various auto_ns (and their placeholders) to the ns
+
+ std::vector<std::pair<std::string, Jnode>> ans = {
+  {"", STR{TKN_EMP}},                                           // {}/{{}} tokens
+  {ITRP_GDLM, GET_DLM_(G, ns)},                                 // {$$?}
+  {ITRP_ADLM, GET_DLM_(A, ns)},                                 // {$$?}
+ };
+
+ //auto_ns.emplace("", STR{TKN_EMP});                             // provide an easy phony JSON
+ // empty namespace ("") is used to interpolate {}, {{}} tokens, however, defer providing mapping
+ // here - JSON might be huge but such tokens might not even be present in the template, load later
+ // only when needed (once tokens {}/{{}} found)
+ //auto_ns.emplace(ITRP_GDLM, GET_DLM_(G, *nsp));                 // set ns for $$?
+ //auto_ns.emplace(ITRP_ADLM, GET_DLM_(A, *nsp));                 // set ns for $#
+ //auto_ns.emplace(ITRP_PDLM, GET_DLM_(P, *nsp));                 // set ns for $_
+ //auto_ns.emplace(ITRP_WUID, jit.wuid_);                         // $wuid auto namespace
+ //interpolate_path_(tmp, jit, auto_ns);                          // set $path, $PATH if present
+ //generate_auto_tokens_(auto_ns, tmp, jit);                      // {$a}, {$A}, {$b}, ... if any
+
+
+}
+
+
+
+void Json::generate_auto_tokens_(map_jne &ns, Stringover &tmp, Json::iterator &jit) {
+ #include "dbgflow.hpp"
+ // generate auto tokens {$a}, {$b}, ... {$A}, {$B}, ... for iterables
  static auto sre = std::regex(R"(\{\$a\})", std::regex::optimize | std::regex::icase);
  static auto mre = std::regex(R"(\{(?:(\$[a-z]{1,3})|(\$[A-Z]{1,3}))\})", std::regex::optimize);
  std::smatch m;
@@ -5255,7 +5411,7 @@ void Json::generate_auto_tokens_(Stringover &tmp, Json::iterator &jit, map_jne &
  auto reinstate = [&w, &jit](bool) { *jit = std::move(w.root()); };
  GUARD(move2json, reinstate);
 
- auto wi = w.walk(sst.empty()?"":"><w:", Json::CacheState::Keep_cache);// walk only if there tokens
+ auto wi = w.walk(sst.empty()? "": "><w:", Json::CacheState::Keep_cache);// walk only if there tkns
  signed_size_t last_idx{0};
  for(const auto &t: sst) {                                      // interpolate found tokens into ns
   auto idx = str2idx(t);
@@ -5322,12 +5478,13 @@ std::string Json::interpolate_tmp_(std::string tmp, Json::iterator &jit, map_jne
          {std::string(2, ITRP_BRC[0]), std::string(2, ITRP_BRC[1])},    // pair: "{{", "}}"
          {{ITRP_BRC[0]}, {ITRP_BRC[1]}}                                 // pair: "{", "}"
         };
+
  // this is an interpolation optimization: when tmp is "{{}}" or "{{..}}" then no need
  // going through the entire interpolation (which is quite expensive), instead indicate
  // (via returning the special symbol TKN_EMP + key) that json can be taken directly
  // from the iterator or a namespace and hence skip interpolations and following parsing
  auto opn = tmp.find(ibv.front().ITRP_OPN);                     // find opening "{{"
- if(opn != std::string::npos and tmp.find_first_not_of(" ", 0) == opn) {    // tmb begins with "{{"
+ if(opn != std::string::npos and tmp.find_first_not_of(" ", 0) == opn) {    // tmp begins with "{{"
   auto cls = tmp.find(ibv.front().ITRP_CLS);                    // find closing "}}"
   if(cls != std::string::npos) {
    std::string key = tmp.substr(opn + 2, cls - opn - 2);        // extract key between {{..}}
@@ -5561,7 +5718,7 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 #undef JSN_ARY_OPN
 #undef JSN_ARY_CLS
 #undef JSN_STRQ
-#undef JSN_ASPR
+#undef JSN_VSPR
 #undef JSN_NUMM
 #undef JSN_NUMP
 #undef JSN_NUMD

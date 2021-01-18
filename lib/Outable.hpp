@@ -227,7 +227,7 @@ typename std::enable_if<std::is_member_function_pointer<decltype(& T::__outme__)
 __out_arg__(std::ostream & os, int ind,
             const char *class_name, const char *var_name, const T & var) {
  os << std::endl << __OUTABLE_IND__(ind) << class_name << "::" << var_name << ": ";
- var.__outme__(os, -ind);
+ var.__outme__(os, -ind, var_name);
 }
 
 // cout-able format

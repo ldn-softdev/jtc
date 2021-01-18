@@ -47,18 +47,20 @@ class ThreadMaster {
                 Bug_unreachable_point, \
                 End_of_throw
     ENUMSTR(ThrowReason, THROWREASON)
+    #undef THROWREASON
 
     #define SEATSTATE \
                 Seat_vacant, \
                 Seat_taken
-
     ENUM(SeatState, SEATSTATE)
+    #undef SEATSTATE
 
                         ThreadMaster(size_t trds = 0) {         // DC
                          if(trds == 0)
                           trds = std::thread::hardware_concurrency();
                          vt_.resize(trds);
                          vs_.resize(trds, Seat_vacant);
+                         ussm_ = std::unique_lock<std::mutex>(ssm_, std::defer_lock_t());
                         }
                         ThreadMaster(const ThreadMaster &) = delete;
                         ThreadMaster(ThreadMaster &&) = delete;
@@ -114,6 +116,11 @@ class ThreadMaster {
     // runs a user task in a new thread in a given seat (seat must be vacant!)
     // and returns given seat number
 
+    void                start_sync(void);                       // "go" signal for start_sync(..)
+    template<typename... Args>
+    size_t              start_sync(Args&&... args);
+    // starts a new thread to run user task but suspends until start_sync(void) called
+
     void                join(void)
                          { for(auto &t: vt_) if(t.joinable()) t.join(); }
 
@@ -130,15 +137,16 @@ class ThreadMaster {
     std::mutex          rm_;                                    // release mutex (used by class)
 std::condition_variable crm_;                                   // for thread arbitration (with rm_)
 
+    std::mutex          ssm_;                                   // start_sync's mutex
+std::unique_lock<std::mutex>
+                        ussm_;                                  // ulock for start_sync's mutex
+std::condition_variable ssc_;                                   // start_sync's condition_variable
+
     template <class Fn, class... Args>
     void                run_(Fn &&fn, Args&&... args);          // thread wrapper
     void                availale_seats_(void);                  // debug output only
 
 };
-
-STRINGIFY(ThreadMaster::ThrowReason, THROWREASON)
-#undef THROWREASON
-#undef SEATSTATE
 
 
 
@@ -167,12 +175,43 @@ size_t ThreadMaster::run_seat(size_t vs, Args&&... args) {
  if(vs_[vs] == Seat_taken)
   throw EXP(Seat_must_be_vacant);
 
- DBG(2) DOUT() << "a new thread is taking up a vacant seat[" << vs << std::endl;
+ DBG(2) DOUT() << "a new thread is taking up a vacant seat[" << vs << "]" << std::endl;
  vt_[vs] = std::thread(glambda, std::forward<decltype(args)>(args)...);
  vs_[vs] = Seat_taken;                                          // indicate seat taken
  return vs;
 }
 
+
+
+template<typename... Args>
+size_t ThreadMaster::start_sync(Args&&... args) {
+ // newly dispatched threads will wait for "go" signal by calling start_sync(void)
+ auto glambda = [&] (auto&&... arg) {
+  ssc_.wait(ussm_);                                             // unlock ussm_ and suspend
+  ussm_.mutex()->unlock();
+  return run_(std::forward<decltype(arg)>(arg)...);
+ };
+
+ size_t vs = await_seat();                                      // next vacant seat;
+ ULOCK(mtx())
+ availale_seats_();                                             // debug output
+ DBG(2) DOUT() << "a new thread is taking up a seat[" << vs << "] and suspends" << std::endl;
+ ussm_.lock();                                                  // thread will unlck once suspended
+ vt_[vs] = std::thread(glambda, std::forward<decltype(args)>(args)...);
+ vs_[vs] = Seat_taken;
+ ussm_.mutex()->lock();                                         // wait for the thread to suspend
+ ussm_.unlock();
+
+ return vs;
+}
+
+
+
+void ThreadMaster::start_sync(void) {
+ // this call provides "go" signal for start_sync
+ DBG(2) DOUT() << "releasing all suspended threads" << std::endl;
+ ssc_.notify_all();
+}
 
 
 size_t ThreadMaster::await_seat(void) {
@@ -186,7 +225,7 @@ size_t ThreadMaster::await_seat(void) {
   DBG(2) DOUT() << "no seats available, continue waiting..." << std::endl;
   unlock();
   crm_.wait(rmulck);    // wait here for signal (via 'notify_one'), also, unlocks rm_
-  // condition_variable wait() works this way:
+  // condition_variable::wait() works this way:
   // 1. unlocks the mutex (by lock rmulck here)
   // 2. suspends the thread (now via mutex way)
   // 3. upon receiving a notification from `notify_one()` (attempts to) locks the mutex again

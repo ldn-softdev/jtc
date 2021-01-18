@@ -30,6 +30,7 @@ class Shell {
                 could_not_popen_file_handle, \
                 end_of_trhow
     ENUMSTR(ThrowReason, THROWREASON)
+    #undef THROWREASON
 
                         Shell(size_t s = 1024) { buf_.resize(s); }
 
@@ -49,9 +50,6 @@ class Shell {
  private:
     std::vector<char>   buf_;
 };
-
-STRINGIFY(Shell::ThrowReason, THROWREASON)
-#undef THROWREASON
 
 
 

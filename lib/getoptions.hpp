@@ -176,6 +176,7 @@ class Option {
              opt, \
              arg
     ENUMSTR(ArgKind, ARGKIND)
+    #undef ARGKIND
 
     #define OPTTYPE \
              boolean, \
@@ -267,8 +268,7 @@ class Option {
                         // for negative values -1, -2, ... returns size()-1, size()-2, etc
 };
 
-STRINGIFY(Option::ArgKind, ARGKIND)
-#undef ARGKIND
+
 
 
 
@@ -401,6 +401,7 @@ class Getopt {
                 inconsistent_format_string, \
                 end_of_throw
     ENUMSTR(ThrowReason, THROWREASON)
+    #undef THROWREASON
 
 
                         Getopt(void) = default;                 // DC
@@ -491,8 +492,6 @@ class Getopt {
     void                outputOpt_(std::stringstream &ss, int indent, const std::string &);
 };
 
-STRINGIFY(Getopt::ThrowReason, THROWREASON)
-#undef THROWREASON
 
 
 

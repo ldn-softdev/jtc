@@ -75,7 +75,7 @@ class Streamstr {
                 buffered_src,       /* buffer set programmatically (via source_buffer )*/ \
                 buffered_cin,       /* facilitates buffered cin */ \
                 buffered_file       /* facilitate multiple files, read file by file */
-    ENUMSTR(Strmod, STRMOD)
+    ENUMSTC(Strmod, STRMOD)
 
     #define VERBOSITY \
                 Vocal, \
@@ -115,7 +115,7 @@ class Streamstr {
     const std::vector<std::string> &
                         filenames(void) const { return fn_; }
     const std::vector<Filestatus> &
-                        filestatuses(void) const { return fs_; }
+                        file_status_store(void) const { return fs_; }
     size_t              file_idx(void) const                    // current file index being read
                          { return mod_ == buffered_file? nf_idx_ - 1: 0; };
     void                source_file(const std::string &fn) {
@@ -127,6 +127,11 @@ class Streamstr {
     void                source_file(std::string first, Args... rest)
                          { source_file(first); source_file(rest...); }
     Streamstr &         source_buffer(std::string buf) {
+                         // buf_ is a common resource for all modes, so it must be resizable (not
+                         // in case of buffered_src though). Thus it cannot be passed as
+                         // a reference (e.g.: const std::string & buf), so user has a choice:
+                         // either pass by value (i.e. copy), or move it.
+                         // For sake of design simplicity, it's best to implement it that way.
                          mod_ = buffered_src;
                          buf_ = std::move(buf);
                          return *this;
@@ -194,7 +199,7 @@ class Streamstr::const_iterator: public std::iterator<std::bidirectional_iterato
                                  (r.pos_ - r.rwd_) - (l.pos_ - l.rwd_);     // buffer
                         }
  public:
-                        const_iterator(void) = default;
+                        const_iterator(void) = default;         // DC
 
     Streamstr &         streamstr(void) { return *ssp_; }
     const Streamstr &   streamstr(void) const { return *ssp_; }
@@ -278,7 +283,7 @@ void Streamstr::ss_init_(const_iterator &it) {
        if(DBG()(0)) {
         ULOCK(DBG().mutex())
         DBG().dout() << DBG().prompt(func, 1)
-                     << "initializing mode: " << ENUMS(Streamstr::Strmod, mod_) << std::endl;
+                     << "initializing mode: " << STRENM(Streamstr::Strmod, mod_) << std::endl;
        }
        return true;
       };
@@ -335,7 +340,7 @@ void Streamstr::ss_init_(const_iterator &it) {
 
 
 void Streamstr::read_file_(std::ifstream & fin) {
- // read file into buffer; return true/false if file is read/deferred
+ // read file into buffer
  fin.seekg(0, std::ios::end);
  buf_.resize(fin.tellg());
  fin.seekg(0, std::ios::beg);

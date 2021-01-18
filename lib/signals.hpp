@@ -61,7 +61,7 @@ class Signal {
                 PROF, \
                 USR1, \
                 USR2
-    ENUMSTR(eSignal, __SIGNALS__);
+    ENUMSTC(eSignal, __SIGNALS__);
 
     #define __INTCPT__ \
                 none, \
@@ -184,7 +184,7 @@ void Signal::SIGINT_handler(int sig) {
   return;
  }
  std::cerr << Signal::int_activated << (sig < 0? "deferred " : "")
-           << "SIG" << ENUMS(eSignal, INT) << " (" << abs(sig) << ")" << std::endl;
+           << "SIG" << STRENM(eSignal, INT) << " (" << abs(sig) << ")" << std::endl;
  if(vpi_[INT] != nullptr) vpi_[INT](SIGINT);                    // pass on the interrupt
  exit(EXIT_FAILURE);
 }
@@ -221,7 +221,7 @@ void Signal::SIGINT_handler(int sig) {
 
 void Signal::rip_(const char *str, eSignal esgn, int sig) {
  // terminate procedure, prints the stack trace
- std::cerr << str << ": SIG" << ENUMS(eSignal, esgn) << " (" << abs(sig) << ")" << std::endl;
+ std::cerr << str << ": SIG" << STRENM(eSignal, esgn) << " (" << abs(sig) << ")" << std::endl;
 
  char ** bt_symbols{nullptr};
  std::vector<void*> vtrace;

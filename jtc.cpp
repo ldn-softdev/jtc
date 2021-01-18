@@ -360,13 +360,12 @@ class CommonResource {
      // facilitate JSON storage for concurrent reading/parsing
                             JsonStore(void)
                              { task_complete.lock(); }          // DC
-        deque<Json>         json_queue;
+        deque<Json>         json_queue;                         // file may have multiple JSONs
         mutex               task_complete;
         bool                await_completion{true};
       Streamstr::Filestatus file_status;
         size_t              err_location;
     };
-    typedef deque<JsonStore> dequeJS;
 
  public:
 
@@ -408,7 +407,7 @@ class CommonResource {
 
     ThreadMaster &      tm(void) { return tm_; }
     void                decide_on_multithreaded_parsing(void);
-    dequeJS &           json_store(void) { return jsd_; };
+    deque<JsonStore> &  json_store(void) { return jsd_; };
     size_t              jsq_idx(void) const { return jsq_idx_; };
     void                jsq_idx(size_t x) { jsq_idx_ = x; };
 
@@ -434,9 +433,9 @@ class CommonResource {
     int                 rc_{RC_OK};
     size_t              elocation_{SIZE_T(-1)};                 // exception location
 
-    ThreadMaster        tm_;
-    dequeJS             jsd_;                                   // JsonStore dequeue
-    size_t              jsq_idx_{0};
+    ThreadMaster        tm_;                                    // thread manager
+    deque<JsonStore>    jsd_;                                   // JsonStore dequeue
+    size_t              jsq_idx_{0};                            // index into jsd_ store
 
  public:
     DEBUGGABLE(iss_, gjsn_, tm_)
@@ -527,7 +526,7 @@ class Jtc {
                 No_exec, \
                 Per_walk_exec, \
                 Bulk_exec
-    ENUMSTR(Ecli, ECLI)
+    ENUM(Ecli, ECLI)
 
  public:
                         Jtc(void) = delete;
@@ -687,7 +686,6 @@ class Jtc {
 
 #undef MERGEOBJ
 #undef JSONZIZE
-STRINGIFY(Jtc::Jitsrc, JITSRC)
 #undef JITSRC
 
 
@@ -874,7 +872,7 @@ void run_decomposed_optsets(CommonResource &cr, Streamstr::const_iterator &jsp) 
    cr.disable_global_output();
    cr.opt()[CHR(OPT_JAL)].reset();
    if(cr.opt()[CHR(OPT_JSN)].hits() == 0) cr.opt()[CHR(OPT_JSN)].hit();
-   cerr << "notice: in " << ENUMS(Streamstr::Strmod, Streamstr::Strmod::streamed_cin)
+   cerr << "notice: in " << STRENM(Streamstr::Strmod, Streamstr::Strmod::streamed_cin)
         << " mode, behavior of option -" STR(OPT_JAL) " is reduced to -" STR(OPT_JSN) << endl;
   }
   GUARD(cr.opt())
@@ -1059,7 +1057,7 @@ char CommonResource::parse_opt(v_string & args) {
  // 2. reinstate -w options from -x/-y
  // 3. process options dependencies
  char opt_eval{CHR_NULL};                                       // holds either 'i' or 'u' for -e
- if(is_recompile_required_(args))                               // re-compiling required?
+ if(is_recompile_required_(args))
   opt_eval = recompile_args_(args);
  parse_arguments_(args);
 
@@ -1072,7 +1070,7 @@ char CommonResource::parse_opt(v_string & args) {
   enable_global_output();
 
  for(auto &o: opt()[CHR(OPT_TMP)])                              // check every -T
-  if(o.find(string{"{"} + WLK_HPFX + "}" ) != string::npos)     // if {$?} detected
+  if(o.find(string{"{"} + WLK_HPFX + "}") != string::npos)      // if {$?} detected
    opt().impose(USE_HPFX);                                      // enable tracking last walk output
 
  if(any_of(wm().begin(), wm().end(),                            // if any of -x is -x0/-1
@@ -1169,7 +1167,7 @@ void CommonResource::decide_on_multithreaded_parsing(void) {
 
  json_store().resize(iss().filenames().size());                 // enable multithreading
  DBG(0) DOUT() << "starting dispatcher for json parsers in a new thread" << endl;
- tm().run(GLAMBDA(fetch_dispatcher_));                          // fetch jsons starting from 2 file
+ tm().run(GLAMBDA(fetch_dispatcher_));                          // fetch jsons
  iss().defer_reading_files();                                   // b/c m-thread reading is engaged
 }
 
@@ -1182,9 +1180,10 @@ bool CommonResource::is_recompile_required_(const v_string & args) {
  // check if option -e is present in the arguments (if so, indicate re-parsing is required)
  char *nargv[args.size()];                                      // here, build a new argv
  auto alloc_args = [&] {                                        // populate nargv from args
-       for(size_t i = 0; i < args.size(); ++i)
-        { nargv[i] = new char[args[i].size() + 1];
-          strcpy(nargv[i], args[i].c_str()); }
+       for(size_t i = 0; i < args.size(); ++i) {
+        nargv[i] = new char[args[i].size() + 1];
+        strcpy(nargv[i], args[i].c_str());
+       }
        return true;                                             // facilitate return type for GUARD
       };
  auto free_args = [&](bool)
@@ -1195,11 +1194,12 @@ bool CommonResource::is_recompile_required_(const v_string & args) {
  catch(GETopt::stdException &e)
   { opt().usage(); exit(e.code() + OFF_GETOPT); }
 
- bool irr = opt()[CHR(OPT_EXE)];
- if(irr)
+ bool is_recomp_required = opt()[CHR(OPT_EXE)];
+ if(is_recomp_required)
   for(auto &o: opt().ordinal()) {
    if(o.id() == CHR(OPT_EXE)) break;
-   if(static_cast<char>(o.id()) AMONG(static_cast<char>(CHR(OPT_INS)),CHR(OPT_UPD),CHR(OPT_CMP))) {
+   if(static_cast<char>(o.id())
+      AMONG(static_cast<char>(CHR(OPT_INS)),CHR(OPT_UPD),CHR(OPT_CMP))) {
     cerr << "fail: option -'" << CHR(OPT_EXE)
          << "' must precede options -" STR(OPT_INS) ", -" STR(OPT_UPD) ", -" STR(OPT_CMP) << endl;
     exit(RC_ARG_FAIL);
@@ -1207,7 +1207,7 @@ bool CommonResource::is_recompile_required_(const v_string & args) {
  }
 
  opt().reset();
- return irr;
+ return is_recomp_required;
 }
 
 
@@ -1335,10 +1335,10 @@ void CommonResource::fetch_dispatcher_(void) {
  DBG(0) DOUT() << "got " << json_store().size() << " filename(s) to fetch via dispatcher" << endl;
  auto & fnv = iss().filenames();                                // file name vector
 
- auto rpj = [&](auto&&... arg)
+ auto rpj = [&](auto&&... arg)                                  // rpj: read & parse json
        { read_and_parse_json_(std::forward<decltype(arg)>(arg)...); };
 
- for(size_t i = 0; i < json_store().size(); ++i)
+ for(size_t i = 0; i < json_store().size(); ++i)                // spawn thread per each file
   tm().run(rpj, ref(fnv[i]), ref(json_store()[i]));
 }
 
@@ -1350,12 +1350,12 @@ void CommonResource::read_and_parse_json_(const string &filename, JsonStore & js
  auto remove_lock = [&](bool) { js.task_complete.unlock(); };
  GUARD(dummy, remove_lock)
 
- // debugs may interfere with cout outputs (as the latter not mutex'ed), hence commented out
+ // debugs may interleave with cout outputs (as the latter not mutex'ed), hence commented out
  //DBG(0) DOUT() << "parsing file " << filename << endl;
  Streamstr jstream{filename, Streamstr::Verbosity::Quiet};
  if(DBG()(0)) jstream.DBG().severity(NDBG);
  auto jsp = jstream.begin();
- js.file_status = jstream.filestatuses().front();
+ js.file_status = jstream.file_status_store().front();
 
  while(jsp != jstream.end()) {
   Json j;
@@ -1741,7 +1741,7 @@ bool Jtc::advance_to_next_src(Json::iterator &jit, signed_size_t i) {
  auto idx = [&i, this] { return i < 0? jscur_: i; };            // index select
 
  DBG(4)
-  DOUT() << (i < 0? "non-": "")  << "recusive call, type: " << ENUMS(Jtc::Jitsrc, jsrt_)
+  DOUT() << (i < 0? "non-": "")  << "recusive call, type: " << STRENM(Jtc::Jitsrc, jsrt_)
          << ", src walk/json[ " << idx() << " ]: " << Debug::btw
          << (jsrc_[idx()].is_neither()? jsrc_[idx()].val(): jsrc_[idx()].to_string(Jnode::Raw, 1))
          << endl;
@@ -2144,7 +2144,7 @@ void Jtc::ready_params_(char option) {
 
  jscur_ = walk_options_start_idx_();
  DBG(1)  DOUT() << "total jsons: " << (jsrc_.size())
-                << ", arg mode: " << ENUMS(Jtc::Jitsrc, jsrt_)
+                << ", arg mode: " << STRENM(Jtc::Jitsrc, jsrt_)
                 << ", starting walk idx: " << jscur_ << endl;
 }
 
@@ -2190,7 +2190,7 @@ void Jtc::ready_params_walks_(const string &arg, size_t jkey) {
 
   if(jsrt_ == Jitsrc::Src_optarg and jsrc_.size() > 2) {
    cerr << "fail: argument walk-type (" << arg << ") not allowed, due to mode "
-         << ENUMS(Jtc::Jitsrc, Src_optarg) << " already set" << endl;
+         << STRENM(Jtc::Jitsrc, Src_optarg) << " already set" << endl;
    exit(RC_ARG_FAIL);
   }
   jsrc_[jkey].root() = arg;
@@ -2210,7 +2210,7 @@ void Jtc::ready_params_walks_(const string &arg, size_t jkey) {
   if(jkey == 0) { jsrt_ = Jitsrc::Src_optarg; return; }         // 1st argument: Src_optarg
   if(jsrt_ == Jitsrc::Src_mixed) {                              // jsrc_[0] already exists!
    cerr << "fail: non-walk argument (" << arg << ") not allowed, due to mode "
-        << ENUMS(Jtc::Jitsrc, Src_mixed) << " already set" << endl;
+        << STRENM(Jtc::Jitsrc, Src_mixed) << " already set" << endl;
    exit(RC_ARG_FAIL);
   }
   if(jsrt_ == Jitsrc::Src_input)                                // only walks recorded so far
@@ -2591,7 +2591,7 @@ Jtc::vec_jit Jtc::collect_walks_(const string &walk_path) {
    if(not it.is_valid()) continue;
    walk_itr.push_back(move(it));
   }
-  DBG(0) DOUT() << "source of iterations: '" << ENUMS(Jitsrc, jsrt_)
+  DBG(0) DOUT() << "source of iterations: '" << STRENM(Jitsrc, jsrt_)
                 << "', instances: " << walk_itr.size() << endl;
   return walk_itr;
  }
