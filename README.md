@@ -418,9 +418,9 @@ bash $ case2='[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29},
 ```
 a natural, idiomatic `jtc` solution would be:
 ```bash
-bash $ <<<$case1 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
+bash $ <<<$case1 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Patrick", "Lynch" ]
-bash $ <<<$case2 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
+bash $ <<<$case2 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Patrick", "Lynch" ]
 [ "Alice", "Price" ]
 ```
@@ -438,7 +438,7 @@ while `jtc` will keep working even if JSON is reshaped into an _irregular_ struc
 #jtc:
 bash $ case3='{"root":[{"Name":"Patrick", "Surname":"Lynch", "gender":"male", "age":29}, {"closed circle":[{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}, {"Name":"Rebecca", "Surname":"Hernandez", "gender":"female", "age":28}]}]}'
 bash $ 
-bash $ <<<$case3 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
+bash $ <<<$case3 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Patrick", "Lynch" ]
 [ "Alice", "Price" ]
 [ "Rebecca", "Hernandez" ]
@@ -453,7 +453,7 @@ entries in case 2, `jtc` solution still works correctly:
 #jtc:
 bash $ case2='[{"Surname":"Lynch", "gender":"male", "age":29},{"Name":"Alice", "Surname":"Price", "gender":"female", "age":27}]'
 bash $ 
-bash $ <<<$case2 jtc -w'<Name>l:<N>v[-1]' -rT'[{{$a}},{{$b}}]'
+bash $ <<<$case2 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Alice", "Price" ]
 
 #jq:
