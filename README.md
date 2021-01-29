@@ -92,7 +92,14 @@ Following debug related flags could be passed to `jtc` when compiling:
 
 #### Linux and MacOS precompiled binaries are available for download
 Choose the latest **precompiled binary**:
-- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-macos-64.latest)
+- _latest_ [macOS](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-macos-64.latest)  
+  >if you don't want to go through _macOS_ security hurdle, then remove the _quarantine_ attribute from the file
+  >after binary download, e.g. (assuming you opened terminal in the folder where downloaded binary is):
+  >```
+  >bash $ mv ./jtc-macos-64.latest ./jtc
+  >bash $ chmod 754 ./jtc
+  >bash $ xattr -r -d com.apple.quarantine ./jtc
+  >```
 - _latest_ [linux 64 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-64.latest)
 - _latest_ [linux 32 bit](https://github.com/ldn-softdev/jtc/releases/download/LatestBuild/jtc-linux-32.latest)
 
