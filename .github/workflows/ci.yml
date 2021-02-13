@@ -1,0 +1,46 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container_image: ["fedora:latest", "ubuntu:latest"]
+        compiler: [g++, clang++]
+        optflag: ["-O0", "-O2"]
+        memcheck: [off, asan, valgrind]
+    container:
+      image: ${{ matrix.container_image }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: install dependencies (Fedora)
+      if: ${{ matrix.container_image == 'fedora:latest' }}
+      run: dnf -y install clang gcc-c++ valgrind libasan libubsan jq
+    - name: install dependencies (Ubuntu)
+      if: ${{ matrix.container_image == 'ubuntu:latest' }}
+      run: |
+        apt-get -y update
+        apt-get -y install bash clang g++ valgrind libasan5 libubsan1 jq
+    - name: build and test
+      shell: bash
+      run: |
+        export CXX=${{ matrix.compiler }}
+        export CXXFLAGS="-std=gnu++14 -g -pthread -lpthread ${{ matrix.optflag }} -Wall -Wextra"
+        export TESTFLAG=""
+        if [[ "${{ matrix.memcheck }}" = "asan" ]]; then
+            export CXXFLAGS="${CXXFLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer"
+            if [[ "${{ matrix.compiler }}" = "g++" ]]; then
+                export CXXFLAGS="${CXXFLAGS} -fno-sanitize-recover"
+            else
+                export CXXFLAGS="${CXXFLAGS} -fno-sanitize-recover=all"
+            fi
+        elif [[ "${{ matrix.memcheck }}" = "valgrind" ]]; then
+            export TESTFLAG="--valgrind"
+        fi
+        ${{ matrix.compiler }} -o jtc $CXXFLAGS jtc.cpp
+        python3 run_tests.py -v $TESTFLAG User\ Guide.md Walk-path\ tutorial.md README.md

@@ -173,8 +173,12 @@
                               __funcname__, __filename__, __line__}; }
 
 
+constexpr const char * drop_leading_dot_slash(const char * path) {
+  return path[0] == '.' && path[1] == '/' ? path + 2 : path;
+}
+
 // for in-place throw parameter
-#define EXP(TROW_REASON) __exp__(TROW_REASON, __func__, __FILE__, __LINE__)
+#define EXP(TROW_REASON) __exp__(TROW_REASON, __func__, drop_leading_dot_slash(__FILE__), __LINE__)
 
 
 

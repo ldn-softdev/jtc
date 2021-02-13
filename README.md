@@ -342,7 +342,7 @@ Enabling too many debugs might be overwhelming, though one specific case many wo
 a failing JSON:
 ```bash
 bash $ <addressbook-sample.json jtc 
-jtc json exception: expected_json_value
+jtc json parsing exception (<stdin>:263): expected_json_value
 ```
 If JSON is big, it's desirable to locate the parsing failure point. Passing just one `-d` let easily spotting the
 parsing failure point and its locus:
@@ -350,9 +350,9 @@ parsing failure point and its locus:
 bash $ <addressbook-sample.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
-.exception_locus_(), ...         }|       ],|       "children": [,],|       "spouse": null|    },|    {|  ...
-.exception_spot_(), -------------------------------------------->| (offset: 967)
-jtc json parsing exception (<stdin>:967): expected_json_value
+.exception_locus_(), ...    "age": 31,|        "children": [,],|        "phoneNumbers": [|     ...
+.exception_spot_(), --------------------------------------->| (offset: 263)
+jtc json parsing exception (<stdin>:263): expected_json_value
 bash $ 
 ```
 
@@ -449,7 +449,7 @@ bash $ <<<$case3 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Patrick", "Lynch" ]
 [ "Alice", "Price" ]
 [ "Rebecca", "Hernandez" ]
-
+#
 #jq:
 bash $ <<<$case3 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
 [null,null]
@@ -462,7 +462,7 @@ bash $ case2='[{"Surname":"Lynch", "gender":"male", "age":29},{"Name":"Alice", "
 bash $ 
 bash $ <<<$case2 jtc -w'<Name>l:[-1]' -rT'[{{$a}},{{$b}}]'
 [ "Alice", "Price" ]
-
+#
 #jq:
 bash $ <<<$case2 jq -c 'if type == "array" then .[] else . end | [.Name, .Surname]'
 [null,"Lynch"]
@@ -535,7 +535,7 @@ _**`updating JSON recursively by label:`**_ | _**`updating JSON recursively by l
 
 
 **_Comparison of `jtc` to `jtc` (single-threaded to multi-threaded parsing performance):_**
-```bash
+```bash SKIP
 bash $ unset TIMEFORMAT
 bash $ 
 bash $ # concurrent (multi-threaded) parsing:

@@ -196,7 +196,7 @@ bash $
 ```
 option `-t` controls the indentation of the pretty-printing format (default is 3 white spaces):
 ```bash
-bash $ <ab.json jtc -t10
+bash $ <ab.json jtc -t10 | head -13
 {
           "Directory": [
                     {
@@ -210,7 +210,6 @@ bash $ <ab.json jtc -t10
                               "children": [
                                         "Olivia"
                               ],
-...
 ```
 Majority of the examples and explanations in this document are based on the above simplified version of the above address book JSON model.
 
@@ -299,19 +298,19 @@ bash $
 When JSON is read (from a file, or from `stdin`), it get parsed and validated. If an invalid JSON is detected, a short exception
 message will be displayed, e.g,:
 ```bash
-bash $ <ab.json jtc
-jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
+bash $ <ab_eol.json jtc
+jtc json parsing exception (<stdin>:1215): unexpected_end_of_line
 bash $ 
 ```
 and though the message lets us knowing that there's a problem with the input JSON, it not very informative with regards whereabouts the
 the problem. To visualize the spot where the problem is, as well as its locus pass a single debug option (`-d`):
 ```bash
-bash $ <ab.json jtc -d
+bash $ <ab_eol.json jtc -d
 .display_opts(), option set[0]: -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
-.exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "6213...
-.exception_spot_(), --------------------------------------->| (offset: 1214)
-jtc json parsing exception (<stdin>:1214): unexpected_end_of_line
+.exception_locus_(), ...e": 80206,|            "state": "CO,|            "street address": "621...
+.exception_spot_(), --------------------------------------->| (offset: 1215)
+jtc json parsing exception (<stdin>:1215): unexpected_end_of_line
 bash $ 
 ```
 the vertical pipe symbol `|` in the debug showing JSON locus replaces new lines, thus it becomes easy to spot the problem. 
@@ -665,7 +664,7 @@ bash $ <ab.json jtc -w'<>L' -ddd
 .display_opts(), option set[0]: -w'<>L' -d -d -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: buffered_cin
-..ss_init_(), buffer (from <stdin>) size after initialization: 1674
+..ss_init_(), buffer (from <stdin>) size after initialization: 1675
 ..run_decomposed_optsets(), pass for set[0]
 ...parse(), finished parsing json
 ..demux_opt(), option: '-w', hits: 1
@@ -677,7 +676,7 @@ bash $ <ab.json jtc -w'<>L' -ddd
 ...parse_lexemes_(), walked string: <>L
 ...parse_lexemes_(), parsing here: -->|
 ...parse_suffix_(), search type sfx: Label_RE_search
-..main(), exception raised by: file: './lib/Json.hpp', func: 'parse_suffix_()', line: 3573
+..main(), exception raised by: file: 'lib/Json.hpp', func: 'parse_suffix_()', line: 3590
 jtc json exception: walk_empty_lexeme
 bash $ 
 ```
@@ -1400,55 +1399,55 @@ bash $
 ```
 >Note: such grouping is only possible with labeled values (obviously), it won't be possible to group array elements that easily,
 > e.g., let's break array into pairs:
->```bash
->bash $ array='[0,1,2,3,4,5,6,7,8,9]'
->bash $ <<<$array jtc -w[::2] -w[1::2] -j -tc
->[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
->bash $ 
->```
+```bash
+bash $ array='[0,1,2,3,4,5,6,7,8,9]'
+bash $ <<<$array jtc -w[::2] -w[1::2] -j -tc
+[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+bash $
+```
 > it won't work even if we try relating walks:
->```bash
->bash $ <<<$array jtc -w[::2] -w'[::2]<I>k[-1]>I<t1' -j -tc
->[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
->bash $ 
->```
+```bash
+bash $ <<<$array jtc -w[::2] -w'[::2]<I>k[-1]>I<t1' -j -tc
+[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+bash $
+```
 >Thus grouping here should be achieved differently. One way is to use only a single walk collecting required elements of the group into
 >the namespaces and then using template interpolating the latter:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}},{{}}]' -j -tc
->[
->   [ 0, 1 ],
->   [ 2, 3 ],
->   [ 4, 5 ],
->   [ 6, 7 ],
->   [ 8, 9 ]
->]
->bash $
->```
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k<V>v[-1]>I<t1' -T'[{{V}},{{}}]' -j -tc
+[
+   [ 0, 1 ],
+   [ 2, 3 ],
+   [ 4, 5 ],
+   [ 6, 7 ],
+   [ 8, 9 ]
+]
+bash $
+```
 >Another way is to transofrm the walks into objects assigning labels from the first walk's index:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -tc
->{
->   "0": [ 0, 1 ],
->   "2": [ 2, 3 ],
->   "4": [ 4, 5 ],
->   "6": [ 6, 7 ],
->   "8": [ 8, 9 ]
->}
->bash $ 
->```
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -tc
+{
+   "0": [ 0, 1 ],
+   "2": [ 2, 3 ],
+   "4": [ 4, 5 ],
+   "6": [ 6, 7 ],
+   "8": [ 8, 9 ]
+}
+bash $ 
+```
 >and then re-walk dropping labels and encapsulating into the outer array:
->```bash
->bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -jw[:] -tc
->[
->   [ 0, 1 ],
->   [ 2, 3 ],
->   [ 4, 5 ],
->   [ 6, 7 ],
->   [ 8, 9 ]
->]
->bash $ 
-
+```bash
+bash $ <<<$array jtc -w'[::2]<I>k' -w[1::2] -T'{"{I}":{{}}}' -ll / -jw[:] -tc
+[
+   [ 0, 1 ],
+   [ 2, 3 ],
+   [ 4, 5 ],
+   [ 6, 7 ],
+   [ 8, 9 ]
+]
+bash $ 
+```
 
 #### Aggregating walks
 the walks results that have labels also could be aggregated (per label), option `-nn` facilitates the ask:
@@ -1529,9 +1528,9 @@ Sometimes, when displaying outputs wrapped into an object, it's desirable to ext
 (i.e., reach inside the object and use inner label rather than outer). This become especially handy when dealing with templates.
 
 Let's consider a following query:  
-Say, the ask here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
+Say, the task here is to extract all names of all the people from `ab.json` and group them with newly crafted record indicating if a person
 has children or not, like this:
-```bash
+```json
 [
    { "name": "John", "has children": "yes" },
    ...
@@ -1650,15 +1649,15 @@ bash $
 
 > all the above examples just illustrate capabilities of the options for instructional purpose. Practically,
 the same ask would be easier to achive using just a single walk:  
->```bash
->bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]<C:no>f[0]<C:yes>v' -T'{"name":{{N}}, "has children": {{C}}}' -jtc
->[
->   { "has children": "yes", "name": "John" },
->   { "has children": "no", "name": "Ivan" },
->   { "has children": "yes", "name": "Jane" }
->]
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]<C:no>f[0]<C:yes>v' -T'{"name":{{N}}, "has children": {{C}}}' -jtc
+[
+   { "has children": "yes", "name": "John" },
+   { "has children": "no", "name": "Ivan" },
+   { "has children": "yes", "name": "Jane" }
+]
+bash $
+```
 
 
 #### Succinct walk-path syntax
@@ -1691,8 +1690,7 @@ bash $ <ab.json jtc -x'[Directory][:]' -y'<name>l:' -y'<number>l:' -jlnn
 a syntactical sugar and do not apply any walk-path parsing or validation, instead they just reconcile into respective `-w` options 
 created internally, then the latter get processed. Thus, it's even possible to write it with what it seems a broken syntax at first:
 ```bash
-bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:' -jlnn
-...
+bash $ <ab.json jtc -x'[Directory][:' -y']<name>l:' -y']<number>l:' -jlnn > /dev/null
 ```
 However, if a reinstatement of the options results in a valid walk-path - that's all what matters.
 
@@ -1756,7 +1754,7 @@ bash $ <<<$jsn jtc -w[:] -x4
 4
 8
 bash $ 
- ```
+```
 To display _every 4th walk starting from 3rd one_, use this notation:
 ```bash
 bash $ <<<$jsn jtc -w[:] -x4/2
@@ -2085,11 +2083,11 @@ bash $ <<<$jsn jtc -w'<args>l:' -u'<Func>l:<(.+)[ +*]+(.+)>R[-1][args]' -T'[{}, 
 [
    {
       "Func": "x + y",
-      "args": [ 123, "x", "y" ]
+      "args": [ 123, "x +", "y" ]
    },
    {
       "Func": "a * b",
-      "args": [ "a", "b" ]
+      "args": [ "a *", "b" ]
    }
 ]
 bash $ 
@@ -2133,10 +2131,10 @@ applied onto each value of the iterable one by one).
 
 By default, for such kind of interpolations (stringifying iterables) the enumeration separator used is held in the namespace `$#` 
 (default value `", "`), which means, it could be altered by a user:
-```json
+```bash
 bash $ <<<'[1,2,3,4,5]' jtc -w'<$#:\t>v' -qqT'"good for TSV conversion:\n{}"'
 good for TSV conversion:
-1       2       3       4       5
+1	2	3	4	5
 bash $ 
 ```
 
@@ -2237,11 +2235,11 @@ _to play safe with the templates, always surround them with single quotes (to do
 here's an example how to join path tokens using a custom separator:
 ```bash
 bash $ <ab.json jtc -w'<$_:\t>v<NY>' -qqT'{{$path}}'
-Directory       0       address state
+Directory	0	address	state
 bash $ 
 ```
 Equally, the same could be achived with the `$PATH` token:
-```bash
+```bash SKIP FIXME
 bash $ <ab.json jtc -w'<$#:\t>v<NY>' -qqT'"{$PATH}"'
 Directory       0       address state
 bash $ 
@@ -2311,14 +2309,14 @@ bash $
 
 > The example above is shown for instructive purpose. Probably the easier (and more efficient) way achieving the same result
 > would be this one:
->```bash
->bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' -T'{"{N}": "{}"}' -jjll / -pw'<>'
->{
->   "Jane": "Robert, Lila",
->   "John": "Olivia"
->}
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<name>l:<N>v[-1][children]' -T'{"{N}": "{}"}' -jjll / -pw'<>'
+{
+   "Jane": "Robert, Lila",
+   "John": "Olivia"
+}
+bash $ 
+```
 
 
 #### Iterables auto tokens
@@ -2817,11 +2815,11 @@ By default `jtc` expects the input from `stdin`. If the standalone argument(s) `
 file (ignoring `stdin`), see below:
 ```bash
 # show content of the file:
-bash $ cat file.json 
+bash $ echo '[ "JSON", "in", "file" ]' | tee file.json
 [ "JSON", "in", "file" ]
 bash $ 
 # both input sources present: stdin and file 
-bash $ <<<'[ "<stdin>", "JSON" ]' jtc file.json
+bash $ echo '[ "<stdin>", "JSON" ]' | jtc file.json
 [
    "JSON",
    "in",
@@ -2846,7 +2844,7 @@ format of the file.
 #### Forcing input read from `stdin`
 The bare hyphen (`-`) overrides file _input_ and ensures that the input is read from the `stdin`:
 ```bash
-  bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f - file.json
+bash $ <<<'[ "<stdin>", "JSON" ]' jtc -f - file.json
 bash $ cat file.json
 [
    "<stdin>",
@@ -2874,10 +2872,26 @@ bash $
 Of course there's a bit more succinct syntax:
 ```bash
 bash $ <ab.json jtc -x[type]: -y'<home>:[-1]' -y'<office>:[-1]' -p  / -w'<phone>l:' -ltc
+"phone": [
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
+]
+"phone": [
+   { "number": "223-283-0372", "type": "mobile" }
+]
+"phone": []
 ```
 or, using even a single walk-path:
 ```bash
 bash $ <ab.json jtc -w'[type]:<home|office>R:[-1]' -p / -w'<phone>l:' -ltc
+"phone": [
+   { "number": "112-555-1234", "type": "mobile" },
+   { "number": "113-123-2368", "type": "mobile" }
+]
+"phone": [
+   { "number": "223-283-0372", "type": "mobile" }
+]
+"phone": []
 ```
 
 Another use-case example: remove all the JSON elements _except_ walked ones, while preserving original JSON structure - that's
@@ -2987,6 +3001,7 @@ argument w.r.t. any trailing characters is _relaxed_ - it attempts parsing what 
 if insert/update occurs from a _file_ and such file caters multiple JSONS (a.k.a. _stream of JSONs_), then the stream of JSON is 
 automatically converted into array of JSONs:
 ```bash
+bash $ cp inserting_updating.json file.json
 bash $ cat file.json 
 [ "first", "JSON" ]
 { "second": "JSON" }
@@ -3194,9 +3209,8 @@ The labels can be updated with any atomic value (and not with the iterable value
 ```bash
 bash $ <ab.json jtc -w'<John><>k' -u true / -w'<John>' -l
 "true": "John"
-bash $ <ab.json jtc -w'<name>l<>k' -u '[true]' / -w'[0][0]' -tc
+bash $ <ab.json jtc -w'<name>l<>k' -u '[true]' / -w'[0][0]' -tc > /dev/null
 error: label could be updated only with JSON atomic value
-...
 ```
 
 
@@ -3517,10 +3531,9 @@ bash $
 ```
 Otherwise (JSONs are different) a non-zero code is returned:
 ```bash
-bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr
+bash $ <<<'[1,2,3]' jtc -c'[2,3]' -lr; echo $?
 "json_1": [ 1, 2, 3 ]
 "json_2": [ 2, 3 ]
-bash $ echo $?
 4
 bash $
 ```
@@ -3566,11 +3579,11 @@ bash $
 ```
 > NOTE: _usage of '<>k' is only restricted to JSON elements which have labels/indices. JSON `root` does not have any of those, thus
 attempting to print a label of the root always results in the exception:_
->```bash
->bash $ <ab.json jtc -w'<>k'
->jtc json exception: walk_root_has_no_label
->bash $ 
->```
+```bash
+bash $ <ab.json jtc -w'<>k'
+jtc json exception: walk_root_has_no_label
+bash $ 
+```
 
 
 ## Processing input JSONs
@@ -3635,7 +3648,7 @@ bash $
 Couple options allow altering the behavior and process all the input JSONs:
 
 Option `-a` instructs to process each of the input JSONS:
-```bash
+```bash SKIP FIXME
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 [ "1st json" ]
 { "2nd": "json" }
@@ -3643,7 +3656,7 @@ bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -ar
 bash $ 
 ```
 \- respected processing (of all given options) will occur for all of the input JSONs:
-```bash
+```bash SKIP FIXME
 bash $ <<<'[ "1st json" ] { "2nd": "json" } "3rd json"' jtc -a -w'<json>R'
 "1st json"
 "json"
@@ -3668,20 +3681,21 @@ bash $
 
 > The exception locus is only shown up to a violating point and not past it because of `streamed_cin` type of read. If the same
 > steam of JSONs was in the file, then the read type woudl be `buffered_file` and then the entire locus would be shown:
->```bash
->bash $ jtc -ad file.json 
->.display_opts(), option set[0]: -a -d 'file.json' (internally imposed: )
->.init_inputs(), reading json from file-arguments:
->.init_inputs(), file argument: file.json
->.write_json(), outputting json to <stdout>
->[
->   "1st json"
->]
->.exception_locus_(), { "2nd": json" } "3rd json"
->.exception_spot_(), --------->| (offset: 9)
->jtc json parsing exception (file.json:9): expected_json_value
->bash $ 
->```
+```bash
+bash $ echo '["1st json"] { "2nd": json" } "3rd json"' > file.json
+bash $ jtc -ad file.json 
+.display_opts(), option set[0]: -a -d 'file.json' (internally imposed: )
+.init_inputs(), reading json from file-arguments:
+.init_inputs(), file argument: file.json
+.write_json(), outputting json to <stdout>
+[
+   "1st json"
+]
+.exception_locus_(), { "2nd": json" } "3rd json"
+.exception_spot_(), --------->| (offset: 9)
+jtc json parsing exception (file.json:9): expected_json_value
+bash $ 
+```
 
 Another option trigerring all JSONs processing (from any number of sources) is `-J` - that option tells that aggregation of all JSONs
 is required and thus assumes option `-a` implicitely (no need giving both):
@@ -3729,7 +3743,9 @@ bash $ jtc -w'[0][:][name]' -aj ab.json ab.json
    "Jane"
 ]
 bash $ 
-# process all input JSONs and wrap them into an array:
+```
+process all input JSONs and wrap them into an array:
+```bash
 bash $ jtc -w'[0][:][name]' -J ab.json ab.json
 [
    "John",
@@ -3740,7 +3756,9 @@ bash $ jtc -w'[0][:][name]' -J ab.json ab.json
    "Jane"
 ]
 bash $ 
-# process and wrap each input JSON into an array and then wrap all the processed into a super array:
+```
+process and wrap each input JSON into an array and then wrap all the processed into a super array:
+```bash
 bash $ jtc -w'[0][:][name]' -Jj ab.json ab.json
 [
    [
@@ -3783,34 +3801,32 @@ a network-based streaming)
 We can see the difference in the parsing when debugging `jtc`:
 \- in a _buffered read_ mode, the debug will show the _parsing point_ with the data following behind it:
 ```bash
-bash $ <ab.json jtc -dddddd
+bash $ <ab.json jtc -dddddd 2>&1 | head -9
 .display_opts(), option set[0]: -d -d -d -d -d -d (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: buffered_cin
-..ss_init_(), buffer (from <stdin>) size after initialization: 1674
+..ss_init_(), buffer (from <stdin>) size after initialization: 1675
 ..run_decomposed_optsets(), pass for set[0]
-......parse_(), parsing point ->{|   "Directory": [|      {|         "address": {|        ...
-......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "...
-......parse_(), parsing point ->[|      {|         "address": {|            "city": "New Y...
-......parse_(), parsing point ->{|         "address": {|            "city": "New York",|  ...
-...
+......parse_(), parsing point ->{|    "Directory": [|      {|         "address": {|            "...
+......parse_(), parsing point ->"Directory": [|      {|         "address": {|            "city":...
+......parse_(), parsing point ->[|      {|         "address": {|            "city": "New York",|...
+......parse_(), parsing point ->{|         "address": {|            "city": "New York",|        ...
 ```
 \- in a _streamed read_ mode, the _parsing point_ would point to the last read character from the `<stdin>`:
 ```bash
-bash $ <ab.json jtc -dddddd -a
+bash $ <ab.json jtc -dddddd -a 2>&1 | head -12
 .display_opts(), option set[0]: -d -d -d -d -d -d -a (internally imposed: )
 .init_inputs(), reading json from <stdin>
 ..ss_init_(), initializing mode: streamed_cin
 ..ss_init_(), buffer (stream) size after initialization: 1
 ..run_decomposed_optsets(), pass for set[0]
 ......parse_(), {<- parsing point
-......parse_(), {|   "<- parsing point
-......parse_(), {|   "Directory": [<- parsing point
-......parse_(), {|   "Directory": [|      {<- parsing point
-......parse_(), {|   "Directory": [|      {|         "<- parsing point
-......parse_(), {|   "Directory": [|      {|         "address": {<- parsing point
-......parse_(), ..."Directory": [|      {|         "address": {|            "<- parsing point
-...
+......parse_(), {|    "<- parsing point
+......parse_(), {|    "Directory": [<- parsing point
+......parse_(), {|    "Directory": [|      {<- parsing point
+......parse_(), {|    "Directory": [|      {|         "<- parsing point
+......parse_(), {|    "Directory": [|      {|         "address": {<- parsing point
+......parse_(), {|    "Directory": [|      {|         "address": {|            "<- parsing point
 ```
 
 Here's an example of how _streamed read_ works in `jtc`:
@@ -3856,7 +3872,7 @@ too many of very tiny JSONs, then such processing might be even slower (due to t
 To disable multithreaded parsing and revert to a single-threaded mode use option `-a` (in the initial option set).
 
 Compare:
-```bash
+```bash SKIP
 bash $ # multithreaded input file parsing
 bash $ /usr/bin/time jtc -J / -zz big.json big.json 
 30000033
@@ -3917,6 +3933,7 @@ If `file.json` contains multiple JSONs (a.k.a. _stream of JSONs_) and predicated
 from the file will be processed first in `option-set1` then all (walk) ouputputs are passed to the input of `option-set2` and again all
 JSONs will be processed in `option-set2` (predicated `option-set2` caters `-a`) and so on and so forth:
 ```bash
+bash $ cp stream.json file.json
 bash $ jtc -ar file.json 
 { "1": "first JSON" }
 { "2": "second JSON" }
@@ -3940,7 +3957,7 @@ could be virtually endless), for the same reason the behavior of option `-J` is 
 an endless stream of JSONs).  
 Thus, if neither of option-sets caters `-J` option, then the result of the operations should be identical (it might not be identical
 if there was namespace dependency in the walks - due to difference in processing it might result in a discrepancy of the results):
-```bash
+```bash SKIP FIXME
 bash $ <file.json jtc -aw[:] -u'[{{}}];' / -raw'[:][0]<(\w+) (\w+)>R[-1]' -u'[{{$1}}, {{$2}}];' 
 { "1": [ "first", "JSON" ] }
 { "2": [ "second", "JSON" ] }
@@ -4132,7 +4149,7 @@ it's just a reverse action.
 Counting any number of properties is JSON could be done using external `wc` unix utility. E.g., let's count all `number`s in `ab.json`:
 ```bash
 bash $ <ab.json jtc -w'<number>l:' | wc -l
-       6
+6
 bash $ 
 ```
 
