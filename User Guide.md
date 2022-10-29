@@ -4302,11 +4302,3 @@ When comparing the same iterable types (comparing atomic values is trivial) the 
 [Here](https://github.com/ldn-softdev/stackoverflow-json/blob/master/README.md)
 you could find some answers using **`jtc`** for JSON queries taken from
 [stackoverflow.com](https://stackoverflow.com/questions/tagged/jq+or+bash+json)
-
-
-
-
-
-
-
-

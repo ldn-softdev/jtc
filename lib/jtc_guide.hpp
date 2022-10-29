@@ -443,25 +443,3 @@ std::string GuideJtc::jtc_examples_{R"(
 #undef STR
 #undef XCHR
 #undef CHR
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

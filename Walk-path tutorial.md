@@ -1483,27 +1483,3 @@ reactions for each of the form (this is the only directive so far that is sensit
 #### Fail-safe directive
 `<>f` is a _fail-safe_ directive (facilitating `if` part). Once walked, it memorizes the internally maintained path to the
 currently walked JSON element and reinstate it, shall the walk _past_ `<>f` directive fails:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

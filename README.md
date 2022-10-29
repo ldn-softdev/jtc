@@ -578,9 +578,3 @@ feasibility of the solutions, test relevant performance, etc
 
 
 Refer to a complete [User Guide](https://github.com/ldn-softdev/jtc/blob/master/User%20Guide.md) for further examples and guidelines.
-
-
-
-
-
-

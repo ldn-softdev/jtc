@@ -348,28 +348,3 @@ void Signal::demangle_(const char *bt, size_t n) {
 
 
 #undef STACK_DEPTH
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

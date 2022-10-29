@@ -287,17 +287,3 @@ void ThreadMaster::availale_seats_(void) {
          << " available (out of 0.." << seats_total()-1 << ')' << std::endl;
  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -495,15 +495,3 @@ T __Fctl_second__(const std::tuple<Fc__, T> & tpl) { return std::get<1>(tpl); }
     __CBR_CHOOSER__(ARGS)(ARGS)
 #define CNT_BRK_RTN(ARGS...) /* longer form of CBR macro */\
     __CBR_CHOOSER__(ARGS)(ARGS)
-
-
-
-
-
-
-
-
-
-
-
-

@@ -2951,24 +2951,3 @@ string sh_quote_str(const string &src) {
  }
  return quoted;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
