@@ -5213,7 +5213,7 @@ Json::signed_size_t Json::iterator::find_fail_stop_(signed_size_t wsi) {
 //    and when dressed token appears within the strings/labels)
 //
 // Interpolation logic description:
-// 1. when template to be processed, first it's attempted to be parsed as a _templated_ JSON: 
+// 1. when template to be processed, first it's attempted to be parsed as a _templated_ JSON:
 // parse<ParseType::Tmp>(..) - if parsed successfully it means that the template is either
 // a valid JSON (i.e. no templated elements found), or a _templated_ JSON.
 //   o _templated_ JSON is almost a valid JSON, but may include encoded dressed token {{..}}. Such
@@ -5244,7 +5244,7 @@ Json::signed_size_t Json::iterator::find_fail_stop_(signed_size_t wsi) {
 // Serdes interpolation occurs via going thru each namespace and finding it in the template string.
 // Once all namespaces are processed then resulting string is attempted to be parsed as a JSON.
 // Some of the namespaces are automatic - they exist only virtually - i.e. {$path}, {$a}, {}, etc.,
-// Problem with such approach, is that some auto-tokens might take a heavy toll on the cpu, 
+// Problem with such approach, is that some auto-tokens might take a heavy toll on the cpu,
 // e.g.: {$PATH}, {}, etc
 // The best approach then would be to setup a token placeholder (TKN_EMP) in the NS and resolve it
 // only if such token is found in the template string - it will save the unnecessary processing
@@ -5768,18 +5768,3 @@ size_t Json::utf8_adjusted(size_t start, const std::string &jsrc, size_t end) {
 #undef __THROW_EXP_3RD_ARG__
 #undef __THROW_EXP_CHOOSER__
 #undef MAY_RETURN_ON_FAILURE
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

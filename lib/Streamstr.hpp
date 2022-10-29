@@ -424,20 +424,3 @@ std::string Streamstr::const_iterator::str(size_t len) const {
 #undef RB_SIZE
 
 #undef SIZE_T
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

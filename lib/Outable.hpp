@@ -55,7 +55,7 @@
 
 #define __OUTABLE_TAB__ 3
 #define __OUTABLE_IND__(X) std::string(__OUTABLE_TAB__ * (X>0? X: 0), ' ')
-#define __COUTABLE_S__ ','                                      // separator used by COUTABLE 
+#define __COUTABLE_S__ ','                                      // separator used by COUTABLE
 #define __COUTABLE_T__ ';'                                      // separator of COUTABLE classes
 #define __COUTABLE_SFX__ ", "
 #define __COUTABLE_TRM__ "; "
@@ -507,14 +507,3 @@ __cout_arg__(std::ostream & os, const char *var_name, const Container<K, V, H, E
 
 
 // add other types as needed ....
-
-
-
-
-
-
-
-
-
-
-

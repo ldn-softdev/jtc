@@ -858,4 +858,3 @@ void Getopt::outputOpt_(std::stringstream &ss, int indent, const std::string &st
 
 #undef OPT_ARG_OFFSET
 #undef OPT_WIDTH
-
