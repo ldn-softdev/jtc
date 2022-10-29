@@ -49,7 +49,7 @@ remove, copy, move, compare, transform, swap around and many other operations).
   - support **_in-place modifications_** of the input/source JSON file
   - features **_namespaces_**, facilitating interpolation of preserved JSON values in templates
   - supports **_buffered_** and **_streamed_** modes of input read
-  - sports **_concurrent_** input JSON reading/parsing (on multi-core CPU)
+  - supports **_concurrent_** input JSON reading/parsing (on multi-core CPU)
   - written entirely in **_C++14_**, no dependencies (STL only, idiomatic C++, **_no memory leaks_**)
   - extensively debuggable
   - conforms JSON specification ([json.org](http://json.org/index.html))
