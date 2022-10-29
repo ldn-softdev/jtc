@@ -16,10 +16,10 @@ Below is the code sample how that could be achieved using `Json.hpp` class and t
 using namespace std;
 
 
-int main(int argc, char *argv[]) { 
+int main(int argc, char *argv[]) {
  // read and parse json from cin:
  Json jin{ {istream_iterator<char>{cin>>noskipws}, istream_iterator<char>{}} };
- 
+
  // get all the names into vector and sort them
  vector<string> names{jin.walk("<Name>l:"), jin.walk().end()};
  sort(names.begin(), names.end());
@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
  for(const auto &name: names)
   sorted.push_back(move( *jin.walk("[Name]:<" + name + ">[-1]") ));
 
- // // put back into the original container and print using indentation 3 
- jin["AddressBook"].clear().push_back( move(sorted) ); 
+ // // put back into the original container and print using indentation 3
+ jin["AddressBook"].clear().push_back( move(sorted) );
  cout << jin.tab(3) << endl;
 }
 ```
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 **Output result:**
 ```bash
 bash $ c++ -o sort_ab -Wall -std=c++14 sorting_ab.cpp
-bash $ 
+bash $
 bash $ <addressbook-sample.json sort_ab | jtc -tc      # using jtc here only for a compact view
 {
    "AddressBook": [
@@ -79,7 +79,7 @@ bash $ <addressbook-sample.json sort_ab | jtc -tc      # using jtc here only for
       ]
    ]
 }
-bash $ 
+bash $
 ```
 for the complete description of Json class interface, refer to [Json.hpp](https://github.com/ldn-softdev/jtc/blob/master/lib/Json.hpp)
 
